@@ -318,7 +318,6 @@ Grid BipolarField(const int xdim, const int ydim, const double b0, const double 
 //Computes cell-centered conductive flux from temperature "temp"
 //k0 is conductive 
 Grid conductive_flux(const Grid &temp, const double k0){
-
 }
 
 int main(int argc,char* argv[]){
