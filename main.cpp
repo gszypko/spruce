@@ -6,22 +6,24 @@
 #include <cmath>
 #include "Eigen/Core"
 
-#define XDIM 100
-#define YDIM 100
+#define XDIM 50
+#define YDIM 50
 
-#define DX 0.05
-#define DY 0.05
-#define NT 2500
+#define DX 0.1
+#define DY 0.1
+#define NT 1000
 #define OUTPUT_INTERVAL 5 //time steps between file outputs
 
 #define EPSILON 0.1 //dynamic time stepping safety factor
 #define GRIDFLOOR 0.0001 //min value for non-negative parameters
+#define SUBCYCLES 0 //subcycles per cycle for thermal conduction
 
 #define MU_0 1.0 //permeability of free space
 #define K_B 1.0 //boltzmann constant
 #define M_I 1.0 //ion mass
 #define GRAV 1.0 //acceleration due to gravity
 #define GAMMA 1.666667 //adiabatic index
+#define KAPPA_0 1.0 //thermal conductivity coefficient
 #define PI 3.14159265358979323846
 
 //Boundary condition labels
@@ -31,8 +33,14 @@
 
 #define XBOUND1 0
 #define XBOUND2 0
-#define YBOUND1 1
-#define YBOUND2 2
+#define YBOUND1 0
+#define YBOUND2 0
+
+//Output variables (0 to turn off output, 1 to turn on output)
+#define RHO_OUT 1
+#define TEMP_OUT 1
+#define PRESS_OUT 0
+#define ENERGY_OUT 0
 
 using Grid = Eigen::Array<double,Eigen::Dynamic,Eigen::Dynamic>;
 
@@ -289,10 +297,10 @@ Grid GaussianGrid(int xdim, int ydim, double min, double max){
   double sigmax = 0.05*xdim;
   double sigmay = 0.05*ydim;
   for(int i=0; i<xdim; i++){
-    gauss_x(i) = std::exp(-0.5*std::pow(((double)i-0.5*(double)xdim)/sigmax,2.0));
+    gauss_x(i) = std::exp(-0.5*std::pow(((double)i-0.5*(double)(xdim-1))/sigmax,2.0));
   }
   for(int j=0; j<ydim; j++){
-    gauss_y(j) = std::exp(-0.5*std::pow(((double)j-0.5*(double)ydim)/sigmay,2.0));
+    gauss_y(j) = std::exp(-0.5*std::pow(((double)j-0.5*(double)(ydim-1))/sigmay,2.0));
   }
   Eigen::MatrixXd gauss_2d = gauss_x * gauss_y.transpose();
   gauss_2d = gauss_2d*(max-min) + min*Eigen::MatrixXd::Ones(xdim,ydim);
@@ -316,8 +324,18 @@ Grid BipolarField(const int xdim, const int ydim, const double b0, const double 
 }
 
 //Computes cell-centered conductive flux from temperature "temp"
-//k0 is conductive 
-Grid conductive_flux(const Grid &temp, const double k0){
+//Flux computed in direction indicated by "index": 0 for x, 1 for y
+//k0 is conductive coefficient
+Grid conductive_flux(const Grid &temp, const double k0, const int index){
+  int xdim = temp.rows();
+  int ydim = temp.cols();
+  Grid flux = Grid::Zero(xdim,ydim);
+  for(int i=0; i<xdim; i++){
+    for(int j=0; j<ydim; j++){
+      flux(i,j) = std::pow(temp(i,j),7.0/2.0);
+    }
+  }
+  return -2.0/7.0*k0*divergence1D(flux,index);
 }
 
 int main(int argc,char* argv[]){
@@ -326,7 +344,7 @@ int main(int argc,char* argv[]){
   out_file.open ("output.txt");
   out_file << XDIM << "," << YDIM << std::endl;
 
-  Grid rho, mom_x, mom_y, temp, bx, by, bz;
+  Grid rho, mom_x, mom_y, temp, press, energy, bx, by, bz;
 
   // rho = Grid::Ones(XDIM,YDIM);
   // for(int i=0; i<XDIM; i++)
@@ -337,20 +355,17 @@ int main(int argc,char* argv[]){
 
   mom_x = Grid::Zero(XDIM,YDIM); //x momentum density
   mom_y = Grid::Zero(XDIM,YDIM); //y momentum density
-  temp = Grid::Ones(XDIM,YDIM); //temperature
+  // temp = Grid::Ones(XDIM,YDIM); //temperature
+  temp = GaussianGrid(XDIM, YDIM, 1.0, 2.0); //temperature
   double b0 = 1.0;
   double h = 1.0;
   double l = 0.25*XDIM*DX;
-  bx = BipolarField(XDIM, YDIM, b0, h, l, 0);
-  by = BipolarField(XDIM, YDIM, b0, h, l, 1);
+  // bx = BipolarField(XDIM, YDIM, b0, h, l, 0);
+  // by = BipolarField(XDIM, YDIM, b0, h, l, 1);
+  // bz = Grid::Zero(XDIM,YDIM);
+  bx = Grid::Zero(XDIM,YDIM);
+  by = Grid::Zero(XDIM,YDIM);
   bz = Grid::Zero(XDIM,YDIM);
-  // energy = GaussianGrid(XDIM, YDIM, 5.0, 6.0); //energy per unit volume (= mass density times specific total energy)
-
-  // std::cout << rho << std::endl << std::endl;
-  double t=0.0;
-  double dt=1.0;
-  out_file << "t=" << t << std::endl;
-  out_file << rho.matrix().format(one_line_format);
 
   Grid mag_press = (bx*bx + by*by + bz*bz)/(2.0*MU_0);
   Grid mag_pxx = (-bx*bx + by*by + bz*bz)/(2.0*MU_0);
@@ -359,6 +374,29 @@ int main(int argc,char* argv[]){
   Grid mag_pxy = -bx*by/MU_0;
   Grid mag_pxz = -bx*bz/MU_0;
   Grid mag_pyz = -by*bz/MU_0;
+  press = 2.0*K_B*rho*temp/M_I; //assumes 
+  energy = press/(GAMMA - 1.0) + 0.5*(mom_x*mom_x + mom_y*mom_y)/rho + mag_press;
+
+  //Output intial state
+  double t=0.0;
+  double dt=1.0;
+  out_file << "t=" << t << std::endl;
+  if(RHO_OUT){
+    out_file << "rho\n";
+    out_file << rho.matrix().format(one_line_format);
+  }
+  if(TEMP_OUT){
+    out_file << "temp\n";
+    out_file << temp.matrix().format(one_line_format);
+  }
+  if(PRESS_OUT){
+    out_file << "press\n";
+    out_file << press.matrix().format(one_line_format);
+  }
+  if(ENERGY_OUT){
+    out_file << "energy\n";
+    out_file << energy.matrix().format(one_line_format);
+  }
 
   for (int iter = 0; iter < NT; iter++){
     // Enforce rigid lower boundary
@@ -370,10 +408,20 @@ int main(int argc,char* argv[]){
     //Compute values needed for time evolution
     Grid vx = mom_x/rho;
     Grid vy = mom_y/rho;
-    Grid press = 2.0*K_B*rho*temp/M_I; //assumes 
-    Grid energy = press/(GAMMA - 1.0) + 0.5*(mom_x*vx + mom_y*vy) + mag_press;
+    press = 2.0*K_B*rho*temp/M_I; //assumes 
+    energy = press/(GAMMA - 1.0) + 0.5*(mom_x*vx + mom_y*vy) + mag_press;
     // Grid press = (GAMMA - 1.0)*(energy - 0.5*(mom_x*vx + mom_y*vy));
     dt = recompute_dt(press, rho, vx, vy);
+
+    //Subcycle to simulate thermal diffusion
+    Grid energy_relaxed = energy;
+    for(int subcycle = 0; subcycle < SUBCYCLES; subcycle++){
+      Grid con_flux_x = conductive_flux(temp, KAPPA_0, 0);
+      Grid con_flux_y = conductive_flux(temp, KAPPA_0, 1);
+      energy_relaxed = energy_relaxed - (dt/(double)SUBCYCLES)*(divergence1D(con_flux_x,0)+divergence1D(con_flux_y,1));
+      press = (GAMMA - 1.0)*(energy_relaxed - 0.5*(mom_x*vx + mom_y*vy) - mag_press);
+      temp = M_I*press/(2.0*K_B*rho);
+    }
 
     // std::cout << "rho: " << rho.matrix().format(one_line_format);
     // std::cout << "mom_x: " << mom_x.matrix().format(one_line_format);
@@ -385,7 +433,8 @@ int main(int argc,char* argv[]){
     Grid rho_next = rho - dt*divergence(rho,zero,zero,vx,vy);
     Grid mom_x_next = mom_x - dt*divergence(mom_x, press + mag_pxx, mag_pxy, vx, vy);
     Grid mom_y_next = mom_y - dt*divergence(mom_y, mag_pxy, press + mag_pyy, vx, vy) - dt*rho*GRAV;
-    Grid energy_next = energy - dt*divergence(energy+press, mag_pxx*vx + mag_pxy*vy, mag_pxy*vx + mag_pyy*vy, vx, vy) - dt*rho*vy*GRAV;
+    //NOTE: This is a naive implementation of thermal conduction; need to implement subcycling for thermal diffusion
+    Grid energy_next = energy_relaxed - dt*divergence(energy_relaxed+press, mag_pxx*vx + mag_pxy*vy, mag_pxy*vx + mag_pyy*vy, vx, vy) - dt*rho*vy*GRAV;
     //CENTRAL DIFFERENCING VERSION
     // Grid rho_next = rho - dt*divergence(zero,rho*vx,rho*vy,vx,vy);
     // Grid mom_x_next = mom_x - dt*divergence(zero, mom_x*vx+press, mom_x*vy, vx, vy);
@@ -418,7 +467,22 @@ int main(int argc,char* argv[]){
 
     if(iter%OUTPUT_INTERVAL == 0){
       out_file << "t=" << t << std::endl;
-      out_file << rho.matrix().format(one_line_format);
+      if(RHO_OUT){
+        out_file << "rho\n";
+        out_file << rho.matrix().format(one_line_format);
+      }
+      if(TEMP_OUT){
+        out_file << "temp\n";
+        out_file << temp.matrix().format(one_line_format);
+      }
+      if(PRESS_OUT){
+        out_file << "press\n";
+        out_file << press.matrix().format(one_line_format);
+      }
+      if(ENERGY_OUT){
+        out_file << "energy\n";
+        out_file << energy.matrix().format(one_line_format);
+      }
     }
   }
   std::cout << "\rIterations: " << NT << "/" << NT << "\n";
