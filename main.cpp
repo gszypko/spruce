@@ -16,7 +16,7 @@
 
 #define EPSILON 0.1 //dynamic time stepping safety factor
 #define GRIDFLOOR 0.0001 //min value for non-negative parameters
-#define SUBCYCLES 0 //subcycles per cycle for thermal conduction
+#define SUBCYCLES 10 //subcycles per cycle for thermal conduction
 
 #define MU_0 1.0 //permeability of free space
 #define K_B 1.0 //boltzmann constant
@@ -33,8 +33,8 @@
 
 #define XBOUND1 0
 #define XBOUND2 0
-#define YBOUND1 0
-#define YBOUND2 0
+#define YBOUND1 1
+#define YBOUND2 2
 
 //Output variables (0 to turn off output, 1 to turn on output)
 #define RHO_OUT 1
@@ -310,14 +310,14 @@ Grid GaussianGrid(int xdim, int ydim, double min, double max){
 //Generates potential bipolar field for component corresponding to index "index"
 //Centered s.t. origin lies at bottom middle of domain
 //Pressure scale height h, field poles at +/- l, field strength at poles b0
-Grid BipolarField(const int xdim, const int ydim, const double b0, const double h, const double l, const int index){
+Grid BipolarField(const int xdim, const int ydim, const double b0, const double h, const int index){
   Grid result = Grid::Zero(xdim, ydim);
   for(int i=0; i<xdim; i++){
     for(int j=0; j<ydim; j++){
       double x = (i - (double)(xdim-1)*0.5)*DX;
       double y = (j - (double)(ydim-1)*0.5)*DY;
-      if(index == 0) result(i,j) = std::exp(-0.5*y/h)*std::cos(0.5*PI*x/l);
-      else result(i,j) = -std::exp(-0.5*y/h)*std::sin(0.5*PI*x/l);
+      if(index == 0) result(i,j) = std::exp(-0.5*y/h)*std::cos(0.5*x/h);
+      else result(i,j) = -std::exp(-0.5*y/h)*std::sin(0.5*x/h);
     }
   }
   return result;
@@ -358,14 +358,16 @@ int main(int argc,char* argv[]){
   // temp = Grid::Ones(XDIM,YDIM); //temperature
   temp = GaussianGrid(XDIM, YDIM, 1.0, 2.0); //temperature
   double b0 = 1.0;
-  double h = 1.0;
-  double l = 0.25*XDIM*DX;
-  // bx = BipolarField(XDIM, YDIM, b0, h, l, 0);
-  // by = BipolarField(XDIM, YDIM, b0, h, l, 1);
-  // bz = Grid::Zero(XDIM,YDIM);
-  bx = Grid::Zero(XDIM,YDIM);
-  by = Grid::Zero(XDIM,YDIM);
+  double h = 4.0*PI/(XDIM*DX);
+  bx = BipolarField(XDIM, YDIM, b0, h, 0);
+  by = BipolarField(XDIM, YDIM, b0, h, 1);
   bz = Grid::Zero(XDIM,YDIM);
+  // bx = Grid::Zero(XDIM,YDIM);
+  // by = Grid::Zero(XDIM,YDIM);
+  // bz = Grid::Zero(XDIM,YDIM);
+
+  out_file << bx.matrix().format(one_line_format);
+  out_file << by.matrix().format(one_line_format);
 
   Grid mag_press = (bx*bx + by*by + bz*bz)/(2.0*MU_0);
   Grid mag_pxx = (-bx*bx + by*by + bz*bz)/(2.0*MU_0);

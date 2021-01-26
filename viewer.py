@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import sys
 
+vec_interval = 4 #interval between B field vectors to display
+
 input_file = open(sys.argv[1])
 display_interval = float(sys.argv[2])
 output_var = sys.argv[3] #must be one of rho, temp, press
@@ -13,6 +15,15 @@ output_var = sys.argv[3] #must be one of rho, temp, press
 dim = input_file.readline().split(',')
 xdim = int(dim[0])
 ydim = int(dim[1])
+
+#read in static magnetic field
+bx = np.zeros([xdim,ydim], dtype=float)
+by = np.zeros([xdim,ydim], dtype=float)
+rows_x = input_file.readline().split(';')
+rows_y = input_file.readline().split(';')
+for i in range(xdim):
+  bx[i] = np.asarray(rows_x[i].split(','))
+  by[i] = np.asarray(rows_y[i].split(','))
 
 var = []
 t = []
@@ -58,6 +69,12 @@ frame = 0
 im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', interpolation='nearest', vmin=0.0, vmax=(np.max(var[0])+1.0))
 ax.set(xlabel="x",ylabel="y",title=output_var+", t="+str(t[frame]))
 fig.colorbar(im)
+X, Y = np.mgrid[0:xdim, 0:ydim]
+ax.quiver(X[::vec_interval, ::vec_interval], \
+  Y[::vec_interval, ::vec_interval], \
+    bx[::vec_interval, ::vec_interval], \
+      by[::vec_interval, ::vec_interval])
+
 
 def updatefig(*args):
     global frame
