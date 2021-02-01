@@ -11,10 +11,11 @@
 
 #define DX 0.1
 #define DY 0.1
-#define NT 1000
+#define NT 1500
 #define OUTPUT_INTERVAL 5 //time steps between file outputs
 
 #define EPSILON 0.1 //dynamic time stepping safety factor
+#define EPSILON_THERMAL 0.1 //safety factor for thermal conduction (<0.5)
 #define GRIDFLOOR 0.0001 //min value for non-negative parameters
 #define SUBCYCLES 10 //subcycles per cycle for thermal conduction
 
@@ -186,12 +187,30 @@ Grid transport_divergence1D(const Grid &quantity, const Grid &vel, const int ind
           i2 = (i2+XDIM)%XDIM;
           i2surf = (i2surf+XDIM)%XDIM;
         }
-        if(XBOUND1 == WALL || XBOUND1 == OPEN){
+        if(XBOUND1 == WALL){
+          if(i1 == 0 || i1 == 1){
+            div(i1,j1) = 0.0;
+            continue;
+          }
+        }
+        if(XBOUND1 == OPEN){
           if(i1 == 0) i0 = i1;
         }
-        if(XBOUND2 == WALL || XBOUND2 == OPEN){
+        if(XBOUND2 == WALL){
+          if(i1 == XDIM-1 || i1 == XDIM-2){
+            div(i1,j1) = 0.0;
+            continue;
+          }
+        }
+        if(XBOUND2 == OPEN){
           if(i1 == XDIM-1) i2 = i1;
         }
+        // if(XBOUND1 == WALL || XBOUND1 == OPEN){
+        //   if(i1 == 0) i0 = i1;
+        // }
+        // if(XBOUND2 == WALL || XBOUND2 == OPEN){
+        //   if(i1 == XDIM-1) i2 = i1;
+        // }
       }
       else{
         //Handle Y boundary conditions
@@ -202,12 +221,30 @@ Grid transport_divergence1D(const Grid &quantity, const Grid &vel, const int ind
           j2 = (j2+YDIM)%YDIM;
           j2surf = (j2surf+YDIM)%YDIM;
         }
-        if(YBOUND1 == WALL || YBOUND1 == OPEN){
+        if(YBOUND1 == WALL){
+          if(j1 == 0 || j1 == 1){
+            div(i1,j1) = 0.0;
+            continue;
+          }
+        }
+        if(YBOUND1 == OPEN){
           if(j1 == 0) j0 = j1;
         }
-        if(YBOUND2 == WALL || YBOUND2 == OPEN){
+        if(YBOUND2 == WALL){
+          if(j1 == YDIM-1 || j1 == YDIM-2){
+            div(i1,j1) = 0.0;
+            continue;
+          }
+        }
+        if(YBOUND2 == OPEN){
           if(j1 == YDIM-1) j2 = j1;
         }
+        // if(YBOUND1 == WALL || YBOUND1 == OPEN){
+        //   if(j1 == 0) j0 = j1;
+        // }
+        // if(YBOUND2 == WALL || YBOUND2 == OPEN){
+        //   if(j1 == YDIM-1) j2 = j1;
+        // }
       }
       div(i1,j1) = (surf_quantity(i2surf,j2surf)*0.5*(vel(i1,j1)+vel(i2,j2))
                 - surf_quantity(i1,j1)*0.5*(vel(i1,j1)+vel(i0,j0)))/denom;
@@ -215,7 +252,6 @@ Grid transport_divergence1D(const Grid &quantity, const Grid &vel, const int ind
   }
   return div;
 }
-
 
 //Compute single-direction divergence term for non-transport term (central differencing)
 Grid divergence1D(const Grid &quantity, const int index){
@@ -236,10 +272,22 @@ Grid divergence1D(const Grid &quantity, const int index){
           i0 = (i0+xdim)%xdim;
           i2 = (i2+xdim)%xdim;
         }
-        if(XBOUND1 == WALL || XBOUND1 == OPEN){
+        if(XBOUND1 == WALL){
+          if(i1 == 0 || i1 == 1){
+            div(i1,j1) = 0.0;
+            continue;
+          }
+        }
+        if(XBOUND1 == OPEN){
           if(i1 == 0) i0 = i1;
         }
-        if(XBOUND2 == WALL || XBOUND2 == OPEN){
+        if(XBOUND2 == WALL){
+          if(i1 == XDIM-1 || i1 == XDIM-2){
+            div(i1,j1) = 0.0;
+            continue;
+          }
+        }
+        if(XBOUND2 == OPEN){
           if(i1 == XDIM-1) i2 = i1;
         }
       }
@@ -251,10 +299,22 @@ Grid divergence1D(const Grid &quantity, const int index){
           j0 = (j0+ydim)%ydim;
           j2 = (j2+ydim)%ydim;
         }
-        if(YBOUND1 == WALL || YBOUND1 == OPEN){
+        if(YBOUND1 == WALL){
+          if(j1 == 0 || j1 == 1){
+            div(i1,j1) = 0.0;
+            continue;
+          }
+        }
+        if(YBOUND1 == OPEN){
           if(j1 == 0) j0 = j1;
         }
-        if(YBOUND2 == WALL || YBOUND2 == OPEN){
+        if(YBOUND2 == WALL){
+          if(j1 == YDIM-1 || j1 == YDIM-2){
+            div(i1,j1) = 0.0;
+            continue;
+          }
+        }
+        if(YBOUND2 == OPEN){
           if(j1 == YDIM-1) j2 = j1;
         }
       }
@@ -291,6 +351,19 @@ double recompute_dt(const Grid &press, const Grid &rho, const Grid &vx, const Gr
   return EPSILON*running_min_dt;
 }
 
+//Enforce dynamic time stepping for thermal conduction
+double recompute_dt_thermal(const Grid &rho, const Grid &temp){
+  double running_min_dt = std::numeric_limits<double>::max();
+  for(int i=0; i<XDIM; i++){
+    for(int j=0; j<YDIM; j++){
+      double this_dt = K_B/KAPPA_0*(rho(i,j)/M_I)*DX*DY/std::pow(temp(i,j),2.5);
+      running_min_dt = std::min(running_min_dt, this_dt);
+    }
+  }
+  return EPSILON_THERMAL*running_min_dt;
+}
+
+
 //Generates gaussian initial condition for a variable, centered at middle of grid
 Grid GaussianGrid(int xdim, int ydim, double min, double max){
   Eigen::VectorXd gauss_x(xdim), gauss_y(ydim);
@@ -316,8 +389,8 @@ Grid BipolarField(const int xdim, const int ydim, const double b0, const double 
     for(int j=0; j<ydim; j++){
       double x = (i - (double)(xdim-1)*0.5)*DX;
       double y = (j - (double)(ydim-1)*0.5)*DY;
-      if(index == 0) result(i,j) = std::exp(-0.5*y/h)*std::cos(0.5*x/h);
-      else result(i,j) = -std::exp(-0.5*y/h)*std::sin(0.5*x/h);
+      if(index == 0) result(i,j) = b0*std::exp(-0.5*y/h)*std::cos(0.5*x/h);
+      else result(i,j) = -b0*std::exp(-0.5*y/h)*std::sin(0.5*x/h);
     }
   }
   return result;
@@ -346,25 +419,16 @@ int main(int argc,char* argv[]){
 
   Grid rho, mom_x, mom_y, temp, press, energy, bx, by, bz;
 
-  // rho = Grid::Ones(XDIM,YDIM);
-  // for(int i=0; i<XDIM; i++)
-  // for(int j=0; j<YDIM; j++)
-  // rho(i,j) = (1.0 - 0.1*abs(i-XDIM*0.5)/XDIM);
-
   rho = GaussianGrid(XDIM, YDIM, 1.0, 5.0);
 
   mom_x = Grid::Zero(XDIM,YDIM); //x momentum density
   mom_y = Grid::Zero(XDIM,YDIM); //y momentum density
-  // temp = Grid::Ones(XDIM,YDIM); //temperature
   temp = GaussianGrid(XDIM, YDIM, 1.0, 2.0); //temperature
-  double b0 = 1.0;
-  double h = 4.0*PI/(XDIM*DX);
+  double b0 = 0.1;
+  double h = (XDIM*DX)/(4.0*PI);
   bx = BipolarField(XDIM, YDIM, b0, h, 0);
   by = BipolarField(XDIM, YDIM, b0, h, 1);
   bz = Grid::Zero(XDIM,YDIM);
-  // bx = Grid::Zero(XDIM,YDIM);
-  // by = Grid::Zero(XDIM,YDIM);
-  // bz = Grid::Zero(XDIM,YDIM);
 
   out_file << bx.matrix().format(one_line_format);
   out_file << by.matrix().format(one_line_format);
@@ -382,6 +446,7 @@ int main(int argc,char* argv[]){
   //Output intial state
   double t=0.0;
   double dt=1.0;
+  double dt_thermal=1.0;
   out_file << "t=" << t << std::endl;
   if(RHO_OUT){
     out_file << "rho\n";
@@ -401,35 +466,50 @@ int main(int argc,char* argv[]){
   }
 
   for (int iter = 0; iter < NT; iter++){
-    // Enforce rigid lower boundary
-    // for(int i=0; i<XDIM; i++){
-    //   mom_x(i,0) = 0.0;
-    //   mom_y(i,0) = 0.0;
-    // }
-
     //Compute values needed for time evolution
     Grid vx = mom_x/rho;
     Grid vy = mom_y/rho;
-    press = 2.0*K_B*rho*temp/M_I; //assumes 
+    press = 2.0*K_B*rho*temp/M_I;
+
+    // Enforce rigid boundaries
+    if(YBOUND1 == WALL || YBOUND2 == WALL){
+      if(YBOUND1 == WALL) for(int i=0; i<XDIM; i++){
+        mom_x(i,0) = 0.0;
+        mom_y(i,0) = 0.0;
+      }
+      if(YBOUND2 == WALL) for(int i=0; i<XDIM; i++){
+        mom_x(i,YDIM-1) = 0.0;
+        mom_y(i,YDIM-1) = 0.0;
+      }
+    }
+    if(XBOUND1 == WALL || XBOUND2 == WALL){
+      if(XBOUND1 == WALL) for(int j=0; j<YDIM; j++){
+        mom_x(0,j) = 0.0;
+        mom_y(0,j) = 0.0;
+      }
+      if(XBOUND2 == WALL) for(int j=0; j<YDIM; j++){
+        mom_x(XDIM-1,j) = 0.0;
+        mom_y(XDIM-1,j) = 0.0;
+      }
+    }
+
     energy = press/(GAMMA - 1.0) + 0.5*(mom_x*vx + mom_y*vy) + mag_press;
     // Grid press = (GAMMA - 1.0)*(energy - 0.5*(mom_x*vx + mom_y*vy));
     dt = recompute_dt(press, rho, vx, vy);
+    dt_thermal = recompute_dt_thermal(rho, temp);
 
     //Subcycle to simulate thermal diffusion
     Grid energy_relaxed = energy;
-    for(int subcycle = 0; subcycle < SUBCYCLES; subcycle++){
+    int subcycles = (int)(dt/dt_thermal)+1;
+    std::cout << subcycles << std::endl;
+    for(int subcycle = 0; subcycle < subcycles; subcycle++){
       Grid con_flux_x = conductive_flux(temp, KAPPA_0, 0);
       Grid con_flux_y = conductive_flux(temp, KAPPA_0, 1);
-      energy_relaxed = energy_relaxed - (dt/(double)SUBCYCLES)*(divergence1D(con_flux_x,0)+divergence1D(con_flux_y,1));
+      energy_relaxed = energy_relaxed - (dt/(double)subcycles)*(divergence1D(con_flux_x,0)+divergence1D(con_flux_y,1));
       press = (GAMMA - 1.0)*(energy_relaxed - 0.5*(mom_x*vx + mom_y*vy) - mag_press);
       temp = M_I*press/(2.0*K_B*rho);
     }
 
-    // std::cout << "rho: " << rho.matrix().format(one_line_format);
-    // std::cout << "mom_x: " << mom_x.matrix().format(one_line_format);
-    // std::cout << "mom_y: " << mom_y.matrix().format(one_line_format);
-    // std::cout << "energy: " << energy.matrix().format(one_line_format);
-    // std::cout << "press: " << press.matrix().format(one_line_format);
     //Advance time by dt
     Grid zero = Grid::Zero(1,1);
     Grid rho_next = rho - dt*divergence(rho,zero,zero,vx,vy);
