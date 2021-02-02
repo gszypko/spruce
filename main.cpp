@@ -6,6 +6,14 @@
 #include <cmath>
 #include "Eigen/Core"
 
+#define MU_0 1.0 //permeability of free space
+#define K_B 1.0 //boltzmann constant
+#define M_I 1.0 //ion mass
+#define GRAV 1.0 //acceleration due to gravity
+#define GAMMA 1.666667 //adiabatic index
+#define KAPPA_0 1.0 //thermal conductivity coefficient
+#define PI 3.14159265358979323846
+
 #define XDIM 50
 #define YDIM 50
 
@@ -15,17 +23,8 @@
 #define OUTPUT_INTERVAL 5 //time steps between file outputs
 
 #define EPSILON 0.1 //dynamic time stepping safety factor
-#define EPSILON_THERMAL 0.1 //safety factor for thermal conduction (<0.5)
+#define EPSILON_THERMAL 0.3 //safety factor for thermal conduction (<0.5)
 #define GRIDFLOOR 0.0001 //min value for non-negative parameters
-#define SUBCYCLES 10 //subcycles per cycle for thermal conduction
-
-#define MU_0 1.0 //permeability of free space
-#define K_B 1.0 //boltzmann constant
-#define M_I 1.0 //ion mass
-#define GRAV 1.0 //acceleration due to gravity
-#define GAMMA 1.666667 //adiabatic index
-#define KAPPA_0 1.0 //thermal conductivity coefficient
-#define PI 3.14159265358979323846
 
 //Boundary condition labels
 #define PERIODIC 0
@@ -188,7 +187,11 @@ Grid transport_divergence1D(const Grid &quantity, const Grid &vel, const int ind
           i2surf = (i2surf+XDIM)%XDIM;
         }
         if(XBOUND1 == WALL){
-          if(i1 == 0 || i1 == 1){
+          // if(i1 == 0 || i1 == 1){
+          //   div(i1,j1) = 0.0;
+          //   continue;
+          // }
+          if(i1 == 0){
             div(i1,j1) = 0.0;
             continue;
           }
@@ -197,7 +200,11 @@ Grid transport_divergence1D(const Grid &quantity, const Grid &vel, const int ind
           if(i1 == 0) i0 = i1;
         }
         if(XBOUND2 == WALL){
-          if(i1 == XDIM-1 || i1 == XDIM-2){
+          // if(i1 == XDIM-1 || i1 == XDIM-2){
+          //   div(i1,j1) = 0.0;
+          //   continue;
+          // }
+          if(i1 == XDIM-1){
             div(i1,j1) = 0.0;
             continue;
           }
@@ -222,7 +229,11 @@ Grid transport_divergence1D(const Grid &quantity, const Grid &vel, const int ind
           j2surf = (j2surf+YDIM)%YDIM;
         }
         if(YBOUND1 == WALL){
-          if(j1 == 0 || j1 == 1){
+          // if(j1 == 0 || j1 == 1){
+          //   div(i1,j1) = 0.0;
+          //   continue;
+          // }
+          if(j1 == 0){
             div(i1,j1) = 0.0;
             continue;
           }
@@ -231,7 +242,11 @@ Grid transport_divergence1D(const Grid &quantity, const Grid &vel, const int ind
           if(j1 == 0) j0 = j1;
         }
         if(YBOUND2 == WALL){
-          if(j1 == YDIM-1 || j1 == YDIM-2){
+          // if(j1 == YDIM-1 || j1 == YDIM-2){
+          //   div(i1,j1) = 0.0;
+          //   continue;
+          // }
+          if(j1 == YDIM-1){
             div(i1,j1) = 0.0;
             continue;
           }
@@ -273,7 +288,11 @@ Grid divergence1D(const Grid &quantity, const int index){
           i2 = (i2+xdim)%xdim;
         }
         if(XBOUND1 == WALL){
-          if(i1 == 0 || i1 == 1){
+          // if(i1 == 0 || i1 == 1){
+          //   div(i1,j1) = 0.0;
+          //   continue;
+          // }
+          if(i1 == 0){
             div(i1,j1) = 0.0;
             continue;
           }
@@ -282,7 +301,11 @@ Grid divergence1D(const Grid &quantity, const int index){
           if(i1 == 0) i0 = i1;
         }
         if(XBOUND2 == WALL){
-          if(i1 == XDIM-1 || i1 == XDIM-2){
+          // if(i1 == XDIM-1 || i1 == XDIM-2){
+          //   div(i1,j1) = 0.0;
+          //   continue;
+          // }
+          if(i1 == XDIM-1){
             div(i1,j1) = 0.0;
             continue;
           }
@@ -300,7 +323,11 @@ Grid divergence1D(const Grid &quantity, const int index){
           j2 = (j2+ydim)%ydim;
         }
         if(YBOUND1 == WALL){
-          if(j1 == 0 || j1 == 1){
+          // if(j1 == 0 || j1 == 1){
+          //   div(i1,j1) = 0.0;
+          //   continue;
+          // }
+          if(j1 == 0){
             div(i1,j1) = 0.0;
             continue;
           }
@@ -309,7 +336,11 @@ Grid divergence1D(const Grid &quantity, const int index){
           if(j1 == 0) j0 = j1;
         }
         if(YBOUND2 == WALL){
-          if(j1 == YDIM-1 || j1 == YDIM-2){
+          // if(j1 == YDIM-1 || j1 == YDIM-2){
+          //   div(i1,j1) = 0.0;
+          //   continue;
+          // }
+          if(j1 == YDIM-1){
             div(i1,j1) = 0.0;
             continue;
           }
@@ -388,9 +419,22 @@ Grid BipolarField(const int xdim, const int ydim, const double b0, const double 
   for(int i=0; i<xdim; i++){
     for(int j=0; j<ydim; j++){
       double x = (i - (double)(xdim-1)*0.5)*DX;
-      double y = (j - (double)(ydim-1)*0.5)*DY;
+      double y = j*DY;
       if(index == 0) result(i,j) = b0*std::exp(-0.5*y/h)*std::cos(0.5*x/h);
       else result(i,j) = -b0*std::exp(-0.5*y/h)*std::sin(0.5*x/h);
+    }
+  }
+  return result;
+}
+
+//Generates grid with exponential falloff in the y-direction, with the quantity
+//"base_value" at y=0. Assumes isothermal atmosphere with temperature "iso_temp".
+Grid HydrostaticFalloff(const double base_value, const double scale_height, const int xdim, const int ydim){
+  Grid result = Grid::Zero(xdim, ydim);
+  for(int i=0; i<xdim; i++){
+    for(int j=0; j<ydim; j++){
+      double y = j*DY;
+      result(i,j) = base_value*std::exp(-y/scale_height);
     }
   }
   return result;
@@ -419,19 +463,13 @@ int main(int argc,char* argv[]){
 
   Grid rho, mom_x, mom_y, temp, press, energy, bx, by, bz;
 
-  rho = GaussianGrid(XDIM, YDIM, 1.0, 5.0);
-
-  mom_x = Grid::Zero(XDIM,YDIM); //x momentum density
-  mom_y = Grid::Zero(XDIM,YDIM); //y momentum density
-  temp = GaussianGrid(XDIM, YDIM, 1.0, 2.0); //temperature
   double b0 = 0.1;
-  double h = (XDIM*DX)/(4.0*PI);
-  bx = BipolarField(XDIM, YDIM, b0, h, 0);
-  by = BipolarField(XDIM, YDIM, b0, h, 1);
+  double iso_temp = 1.0;
+  double base_press = 1.0; //thermal pressure at base of domain
+  double scale_height = 2.0*K_B*iso_temp/(M_I*GRAV);
+  bx = BipolarField(XDIM, YDIM, b0, scale_height, 0);
+  by = BipolarField(XDIM, YDIM, b0, scale_height, 1);
   bz = Grid::Zero(XDIM,YDIM);
-
-  out_file << bx.matrix().format(one_line_format);
-  out_file << by.matrix().format(one_line_format);
 
   Grid mag_press = (bx*bx + by*by + bz*bz)/(2.0*MU_0);
   Grid mag_pxx = (-bx*bx + by*by + bz*bz)/(2.0*MU_0);
@@ -440,8 +478,30 @@ int main(int argc,char* argv[]){
   Grid mag_pxy = -bx*by/MU_0;
   Grid mag_pxz = -bx*bz/MU_0;
   Grid mag_pyz = -by*bz/MU_0;
-  press = 2.0*K_B*rho*temp/M_I; //assumes 
+
+  // //Simple Gaussian test case
+  // rho = GaussianGrid(XDIM, YDIM, 1.0, 5.0);
+  // mom_x = Grid::Zero(XDIM,YDIM); //x momentum density
+  // mom_y = Grid::Zero(XDIM,YDIM); //y momentum density
+  // temp = GaussianGrid(XDIM, YDIM, 1.0, 2.0); //temperature
+  // double b0 = 0.1;
+  // double h = (XDIM*DX)/(4.0*PI);
+  // bx = BipolarField(XDIM, YDIM, b0, h, 0);
+  // by = BipolarField(XDIM, YDIM, b0, h, 1);
+  // bz = Grid::Zero(XDIM,YDIM);
+
+  //Isothermal hydrostatic initial condition
+  double base_rho = M_I*(base_press)/(2.0*K_B*iso_temp);
+  rho = HydrostaticFalloff(base_rho,scale_height,XDIM,YDIM);
+  mom_x = Grid::Zero(XDIM,YDIM); //x momentum density
+  mom_y = Grid::Zero(XDIM,YDIM); //y momentum density
+  temp = iso_temp*Grid::Ones(XDIM,YDIM); //temperature
+
+  press = 2.0*K_B*rho*temp/M_I;
   energy = press/(GAMMA - 1.0) + 0.5*(mom_x*mom_x + mom_y*mom_y)/rho + mag_press;
+
+  out_file << bx.matrix().format(one_line_format);
+  out_file << by.matrix().format(one_line_format);
 
   //Output intial state
   double t=0.0;
