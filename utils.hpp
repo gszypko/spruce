@@ -1,0 +1,50 @@
+#ifndef UTILS_HPP
+#define UTILS_HPP
+
+#include "grid.hpp"
+
+//Enforce dynamic time stepping
+double recompute_dt(const Grid &press, const Grid &rho, const Grid &vx, const Grid &vy, Grid &local_dt);
+
+//Enforce dynamic time stepping for thermal conduction
+double recompute_dt_thermal(const Grid &rho, const Grid &temp, Grid &local_dt, const Grid &b_hat_x, const Grid &b_hat_y);
+
+//Enforce minimum dynamic time step for radiation
+double recompute_dt_radiative(const Grid &energy, const Grid &rad_loss_rate, Grid &local_dt);
+
+//Generates gaussian initial condition for a variable, centered at middle of grid
+Grid GaussianGrid(int xdim, int ydim, double min, double max);
+
+//Generates potential bipolar field for component corresponding to index "index"
+//Centered s.t. origin lies at bottom middle of domain
+//Pressure scale height h, field poles at +/- l, field strength at poles b0
+Grid BipolarField(const int xdim, const int ydim, const double b0, const double h, const int index);
+
+//Generates grid with exponential falloff in the y-direction, with the quantity
+//"base_value" at y=0. Assumes isothermal atmosphere with temperature "iso_temp".
+Grid HydrostaticFalloff(const double base_value, const double scale_height, const int xdim, const int ydim);
+
+//Generates Grid containing magnitude of gravitational
+//acceleration (in y-direction) at each grid cell
+Grid Gravity(const double base_grav, const double r_sun, const int xdim, const int ydim);
+
+//Computes 1D cell-centered conductive flux from temperature "temp"
+//Flux computed in direction indicated by "index": 0 for x, 1 for y
+//k0 is conductive coefficient
+Grid onedim_conductive_flux(const Grid &temp, const Grid &rho, const double k0, const int index);
+
+//Computes cell-centered, field-aligned conductive flux from temperature "temp"
+//temp is temperature Grid
+//b_hat_x, b_hat_y are the components of the *unit* vector b_hat
+//k0 is conductive coefficient
+//Output is written to flux_out_x and flux_out_y
+void field_aligned_conductive_flux(Grid &flux_out_x, Grid &flux_out_y, const Grid &temp, const Grid &rho,
+                                    const Grid &b_hat_x, const Grid &b_hat_y, const double k0);
+
+//Computes saturated conductive flux at each point in grid,
+//then ensures that provided fluxes do not exceed the saturation point
+void saturate_conductive_flux(Grid &flux_out_x, Grid &flux_out_y, const Grid &rho, const Grid &temp);
+
+Grid radiative_losses(const Grid &rho, const Grid &temp, const int xdim, const int ydim);
+
+#endif
