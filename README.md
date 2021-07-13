@@ -2,7 +2,7 @@
 A two-dimensional quasi-MHD simulation for static magnetic field
 
 # Compiling
-The Makefile is very dumb and doesn't keep track of any dependencies. It only has phony targets clang, intel, and gnu corresponding to full compilation commands using clang++, icc, and gcc compilers respectively. For instance, execute `make intel` to compile using icc.
+The Makefile is very dumb and doesn't keep track of any dependencies. It only has phony targets clang, intel, and gnu corresponding to full compilation commands using clang++, icc, and g++ compilers respectively. For instance, execute `make intel` to compile using icc.
 
 # Running
 Executing the resulting executable (`mhdtoy` or `mhdtoy.exe`) with zero command line arguments will initialize the system with an initial hydrostatic solar atmosphere. The resulting simulation will be output as a time series to the file `output.out` and as a state file to `output.state` (which can be used to initialize a future simulation from the end point of that simulation; see below).
