@@ -2,6 +2,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <iostream>
 #include <assert.h>
 #include <algorithm>
 #include <iterator>
@@ -16,7 +17,7 @@
 //Enum allows each variable's index to be referred to directly
 enum Variable{
   rho,temp,mom_x,mom_y,b_x,b_y,b_z, //base variables (carried over between iterations)
-  press,energy,v_x,v_y,rad,dt,dt_thermal,dt_rad, //derived variables (derived from base variables)
+  press,energy,rad,dt,dt_thermal,dt_rad,v_x,v_y, //derived variables (derived from base variables)
   grav_x,grav_y,b_magnitude,b_hat_x,b_hat_y, //constant variables (unchanging bw iterations)
   mag_press,mag_pxx,mag_pyy,mag_pzz,mag_pxy,mag_pxz,mag_pyz, //constant variables
   num_variables //never add new variable after this in the enum!
@@ -26,17 +27,18 @@ enum Variable{
 //Must match the ordering of the Variable enum above
 const std::vector<std::string> PlasmaDomain::m_var_names = {
   "rho","temp","mom_x","mom_y","b_x","b_y","b_z",
-  "press","energy","v_x","v_y","rad","dt","dt_thermal","dt_rad",
+  "press","energy","rad","dt","dt_thermal","dt_rad","v_x","v_y",
   "grav_x","grav_y","b_magnitude","b_hat_x","b_hat_y",
   "mag_press","mag_pxx","mag_pyy","mag_pzz","mag_pxy","mag_pxz","mag_pyz"
 };
 
-PlasmaDomain::PlasmaDomain() : PlasmaDomain::PlasmaDomain(1,1,"run") {}
-PlasmaDomain::PlasmaDomain(const char* run_name) : PlasmaDomain::PlasmaDomain(1,1,run_name) {}
+PlasmaDomain::PlasmaDomain() : PlasmaDomain::PlasmaDomain(1,1,1.0,1.0,"run") {}
+PlasmaDomain::PlasmaDomain(const char* run_name) : PlasmaDomain::PlasmaDomain(1,1,1.0,1.0,run_name) {}
 
-PlasmaDomain::PlasmaDomain(size_t xdim, size_t ydim, const char* run_name)
+PlasmaDomain::PlasmaDomain(size_t xdim, size_t ydim, double dx, double dy, const char* run_name)
 {
   m_xdim = xdim; m_ydim = ydim;
+  m_dx = dx; m_dy = dy;
   m_time = 0.0; m_iter = 0;
   m_run_name = std::string(run_name);
   m_out_file.open(m_run_name+".out");
@@ -55,6 +57,24 @@ void PlasmaDomain::hydrostaticInitialize()
   m_grids[temp] = Grid(m_xdim,m_ydim,temp_chromosphere);
   m_grids[b_x] = BipolarField(m_xdim, m_ydim, b_0, scale_height, 0);
   m_grids[b_y] = BipolarField(m_xdim, m_ydim, b_0, scale_height, 1);
+  computeMagneticTerms();
+  recomputeDerivedVariables();
+}
+
+void PlasmaDomain::gaussianInitialize()
+{
+  //Simple Gaussian test case (no magnetic field)
+  m_grids[rho] = GaussianGrid(m_xdim, m_ydim, 1.0e-15, 1.0e-10);
+  m_grids[mom_x] = Grid::Zero(m_xdim,m_ydim);
+  m_grids[mom_y] = Grid::Zero(m_xdim,m_ydim);
+  m_grids[temp] = GaussianGrid(m_xdim, m_ydim, temp_chromosphere, 2.0*temp_chromosphere);
+  computeMagneticTerms();
+  recomputeDerivedVariables();
+  // double b0 = 0.1;
+  // double h = (m_xdim*DX)/(4.0*PI);
+  // b_x = BipolarField(m_xdim, m_ydim, b0, h, 0);
+  // b_y = BipolarField(m_xdim, m_ydim, b0, h, 1);
+  // b_z = Grid::Zero(m_xdim,m_ydim);
 }
 
 void PlasmaDomain::advanceTime(bool verbose)
@@ -80,7 +100,6 @@ void PlasmaDomain::advanceTime(bool verbose)
     if(radiative_losses) printf("|Rad. Subcyc: %i",subcycles_rad);
     printf("\n");
   }
-
   if(thermal_conduction) subcycleConduction(subcycles_thermal,min_dt);
   if(radiative_losses) subcycleRadiation(subcycles_rad,min_dt);
 
@@ -100,6 +119,8 @@ void PlasmaDomain::advanceTime(bool verbose)
                     + min_dt*m_rho*(m_v_x*m_grids[grav_x] + m_v_y*m_grids[grav_y]) + min_dt*(m_v_x*viscous_force_x + m_v_y*viscous_force_y);
   if(ambient_heating) energy_next += min_dt*heating_rate;
 
+  clampWallBoundaries(mom_x_next, mom_y_next, rho_next, energy_next);
+
   m_rho = rho_next;
   m_mom_x = mom_x_next;
   m_mom_y = mom_y_next;
@@ -107,6 +128,10 @@ void PlasmaDomain::advanceTime(bool verbose)
   
   m_time += min_dt;
   m_iter++;
+
+  catchUnderdensity();
+  recomputeTemperature();
+  recomputeDerivedVariables();
 }
 
 void PlasmaDomain::subcycleConduction(int subcycles_thermal, double dt_total)
@@ -165,7 +190,7 @@ void PlasmaDomain::readStateFile(const char* in_filename)
 {
   std::ifstream in_file(in_filename);
 
-  //Ensure that file being read matches dimensions of exectuable
+  //Read in grid dimensions
   std::string line, element;
   std::getline(in_file, line);
   std::istringstream ss_dim(line);
@@ -174,8 +199,13 @@ void PlasmaDomain::readStateFile(const char* in_filename)
   std::getline(ss_dim,element,',');
   m_ydim = std::stoi(element);
 
-  //Skip over physical dimensions
+  //Read in physical dimensions
   std::getline(in_file,line);
+  std::istringstream ss_dxdy(line);
+  std::getline(ss_dxdy,element,',');
+  m_dx = std::stod(element);
+  std::getline(ss_dxdy,element,',');
+  m_dy = std::stod(element);
 
   //Read in time of state file
   std::getline(in_file,line);
@@ -210,9 +240,51 @@ void PlasmaDomain::readStateFile(const char* in_filename)
   }
   in_file.close();
   computeMagneticTerms();
+  recomputeDerivedVariables();
 }
 
-void PlasmaDomain::outputPreamble() const
+void PlasmaDomain::setDefaultSettings()
+{
+  x_bound_1 = static_cast<BoundaryCondition>(XBOUND1);
+  x_bound_2 = static_cast<BoundaryCondition>(XBOUND2);
+  y_bound_1 = static_cast<BoundaryCondition>(YBOUND1);
+  y_bound_2 = static_cast<BoundaryCondition>(YBOUND2);
+  radiative_losses = RADIATIVE_LOSSES_ON;
+  ambient_heating = AMBIENT_HEATING_ON;
+  thermal_conduction = THERMAL_CONDUCTION_ON;
+  flux_saturation = FLUX_SATURATION;
+  temp_chromosphere = TEMP_CHROMOSPHERE; //Minimum allowed temperature
+  radiation_ramp = RADIATION_RAMP;  //Width of cutoff ramp, in units of temperature, for low-temp radiation
+  heating_rate = HEATING_RATE;  //Constant ambient heating rate
+  b_0 = B0;  //Base value of magnetic field
+  chromosphere_depth = CHROMOSPHERE_DEPTH; //In number of Grid cells
+  epsilon = EPSILON; epsilon_thermal = EPSILON_THERMAL; epsilon_rad = EPSILON_RADIATIVE; //Time step calculation
+  epsilon_viscous = EPSILON_VISCOUS; //Prefactor for artificial viscosity
+  dt_thermal_min = DT_THERMAL_MIN; //Minimum timestep for thermal conduction
+  rho_min = GRIDFLOOR;
+  thermal_energy_min = THERMALENERGYFLOOR; //Lower bounds for mass density and thermal energy density
+  n_iterations = NT;
+  output_interval = OUTPUT_INTERVAL;
+  m_output_flags[rho] = RHO_OUT;
+  m_output_flags[temp] = TEMP_OUT;
+  m_output_flags[press] = PRESS_OUT;
+  m_output_flags[rad] = RAD_OUT;
+  m_output_flags[energy] = ENERGY_OUT;
+  m_output_flags[v_x] = VX_OUT;
+  m_output_flags[v_y] = VY_OUT;
+  m_output_flags[dt] = DT_OUT;
+  m_output_flags[dt_thermal] = DT_THERMAL_OUT;
+  m_output_flags[dt_rad] = DT_RAD_OUT;
+  m_state_flags[rho] = true;
+  m_state_flags[mom_x] = true;
+  m_state_flags[mom_y] = true;
+  m_state_flags[temp] = true;
+  m_state_flags[b_x] = true;
+  m_state_flags[b_y] = true;
+  m_state_flags[b_z] = true;
+}
+
+void PlasmaDomain::outputPreamble()
 {
   m_out_file << m_xdim << "," << m_ydim << std::endl;
   m_out_file << m_dx << "," << m_dy << std::endl;
@@ -220,7 +292,7 @@ void PlasmaDomain::outputPreamble() const
   m_out_file << m_grids[b_y].format(',',';');
 }
 
-void PlasmaDomain::outputCurrentState() const
+void PlasmaDomain::outputCurrentState()
 {
   m_out_file << "t=" << m_time << std::endl;
   for(int i=0; i<num_variables; i++){
@@ -248,6 +320,14 @@ void PlasmaDomain::writeStateFile() const
     }
   }
   state_file.close();
+}
+
+//Gets rid of the older of the two state files at the end of the sim run
+void PlasmaDomain::cleanUpStateFiles() const
+{
+  rename((m_run_name+std::to_string((m_iter-1)%2)+".state").c_str(),
+          (m_run_name+".state").c_str());
+  remove((m_run_name+std::to_string((m_iter-2)%2)+".state").c_str());
 }
 
 //Computes the magnetic magnitude, direction, and pressure terms
@@ -307,6 +387,39 @@ void PlasmaDomain::catchUnderdensity()
         std::cout << "Density too low at (" << i << "," << j << ")" << "\n";
         m_grids[rho](i,j) = rho_min;
       }
+    }
+  }
+}
+
+//Enforces zero motion and unchanging rho and energy at Wall boundaries
+void PlasmaDomain::clampWallBoundaries(Grid& mom_x_next, Grid& mom_y_next, Grid& rho_next, Grid& energy_next)
+{
+  if(y_bound_1 == BoundaryCondition::Wall || y_bound_2 == BoundaryCondition::Wall){
+    if(y_bound_1 == BoundaryCondition::Wall) for(int i=0; i<m_xdim; i++){
+      mom_x_next(i,0) = 0.0;
+      mom_y_next(i,0) = 0.0;
+      rho_next(i,0) = m_grids[rho](i,0);
+      energy_next(i,0) = m_grids[energy](i,0);
+    }
+    if(y_bound_2 == BoundaryCondition::Wall) for(int i=0; i<m_xdim; i++){
+      mom_x_next(i,m_ydim-1) = 0.0;
+      mom_y_next(i,m_ydim-1) = 0.0;
+      rho_next(i,m_ydim-1) = m_grids[rho](i,m_ydim-1);
+      energy_next(i,m_ydim-1) = m_grids[energy](i,m_ydim-1);
+    }
+  }
+  if(x_bound_1 == BoundaryCondition::Wall || x_bound_2 == BoundaryCondition::Wall){
+    if(x_bound_1 == BoundaryCondition::Wall) for(int j=0; j<m_ydim; j++){
+      mom_x_next(0,j) = 0.0;
+      mom_y_next(0,j) = 0.0;
+      rho_next(0,j) = m_grids[rho](0,j);
+      energy_next(0,j) = m_grids[energy](0,j);
+    }
+    if(x_bound_2 == BoundaryCondition::Wall) for(int j=0; j<m_ydim; j++){
+      mom_x_next(m_xdim-1,j) = 0.0;
+      mom_y_next(m_xdim-1,j) = 0.0;
+      rho_next(m_xdim-1,j) = m_grids[rho](m_xdim-1,j);
+      energy_next(m_xdim-1,j) = m_grids[energy](m_xdim-1,j);
     }
   }
 }

@@ -20,6 +20,7 @@ public:
   enum BoundaryCondition { Periodic, Wall, Open };
 
   /******** SETTINGS (to be accessed and set directly, currently) ********/
+  /*** All settings false or zero by default unless modified after construction ***/
   //Boundary condition settings
   BoundaryCondition x_bound_1, x_bound_2, y_bound_1, y_bound_2;
   //Physics settings
@@ -40,32 +41,36 @@ public:
   int n_iterations, output_interval;
   /*********************************************************************/ 
 
-  PlasmaDomain(size_t xdim, size_t ydim, const char* run_name);
+  PlasmaDomain(size_t xdim, size_t ydim, double dx, double dy, const char* run_name);
   PlasmaDomain(const char* run_name);
   PlasmaDomain();
 
   //Implemented
   void readStateFile(const char* in_filename);
+  void setDefaultSettings();
   void hydrostaticInitialize();
-  void outputPreamble() const;
-  void outputCurrentState() const;
+  void gaussianInitialize();
+  void outputPreamble();
+  void outputCurrentState();
   void setSolarGravity(double base_gravity, double r_solar);
   void writeStateFile() const;
   void setOutputFlag(int var, bool new_flag = true);
   void setOutputFlags(const std::vector<int> vars, bool new_flag = true);
   void setStateFlag(int var, bool new_flag = true);
   void setStateFlags(const std::vector<int> vars, bool new_flag = true);
-  void recomputeDerivedVariables();
-  void recomputeTemperature();
-  void catchUnderdensity();
   void advanceTime(bool verbose = true);
+  void cleanUpStateFiles() const;
 
   //Not yet implemented
   // void clampWallBoundaries();
   // void cleanUpStateFiles();
 
 private:
+  void recomputeDerivedVariables();
   void computeMagneticTerms();
+  void recomputeTemperature();
+  void catchUnderdensity();
+  void clampWallBoundaries(Grid& mom_x_next, Grid& mom_y_next, Grid& rho_next, Grid& energy_next);
   void recomputeRadiativeLosses();
   void recomputeDT();
   void recomputeDTThermal();
@@ -75,8 +80,8 @@ private:
 
   static const std::vector<std::string> m_var_names;
   std::vector<Grid> m_grids;
-  std::vector<bool> m_output_flags; //Variables that are printed in .out files
-  std::vector<bool> m_state_flags; //Variables that are printed in .state files
+  std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
+  std::vector<bool> m_state_flags; //Variables that are printed in .state files (should be a minimal complete description of the plasma)
 
   size_t m_xdim, m_ydim;
   double m_dx, m_dy;

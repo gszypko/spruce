@@ -16,6 +16,7 @@ fullnames = {
   'energy': "Energy Density",
   'b': "Magnetic Field",
   'vel': "Velocity",
+  'v': "Velocity",
   'vel_x': "X Velocity",
   'vel_y': "Y Velocity",
   'dt': "CFL Timestep",
@@ -30,6 +31,7 @@ fullunits = {
   'energy': r'erg cm$^{-3}$',
   'b': r'G',
   'vel': r'cm s$^{-1}$',
+  'v': r'cm s$^{-1}$',
   'vel_x': r'cm s$^{-1}$',
   'vel_y': r'cm s$^{-1}$',
   'dt': r's',
@@ -41,7 +43,7 @@ parser = argparse.ArgumentParser(description='View the output from mhdtoy.')
 parser.add_argument('filename', help="the name of the file output from mhdtoy")
 parser.add_argument('timestep', type=float, help="the interval (in simulation time units) between frames of output animation")
 parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', 'energy', 'vel_x', 'vel_y', 'dt', 'dt_thermal', 'dt_rad'])
-parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['b','vel'])
+parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['b','vel','v'])
 parser.add_argument('--density', metavar="vec_display_density", type=int, help="set the interval between displayed vectors", default=5)
 parser.add_argument('-d', '--diff', metavar='diff_filename', help="filename to difference with original file")
 parser.add_argument('-r', '--realtime', action='store_true')
@@ -162,7 +164,8 @@ elif output_var == "dt" or output_var == "dt_thermal" or output_var == "dt_rad":
   im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(0.0,dx*xdim,0.0,dy*ydim),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-10, base=10))
   ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
-  im.set_clim(vmin=1e-4)
+  if(np.isnan(np.nanmax(var))): im.set_clim(vmin=1e-4,vmax=1.0)
+  else: im.set_clim(vmin=1e-4,vmax=np.nanmax(var))
   var_colorbar = fig.colorbar(im)
   var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
 elif output_var == "vel_x" or output_var == "vel_y":

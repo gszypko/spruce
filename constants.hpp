@@ -7,7 +7,7 @@
 #define CHROMOSPHERE_DEPTH 10 //number of cells deep to maintain chromospheric temperature
 #define DX 2.2649e9/XDIM
 #define DY 2.2649e9/YDIM
-#define NT 100000 //number of iterations to simulate
+#define NT 10 //number of iterations to simulate
 /****************************************************************************/
 
 /***************************** PHYSICS SETTINGS ****************************/
@@ -31,7 +31,7 @@
 
 /*********************** TIME EVOLUTION SAFETY FACTORS **********************/
 #define EPSILON 0.1 //time stepping safety factor (for CFL condition)
-#define EPSILON_THERMAL 0.3 //safety factor for thermal conduction timestep (<0.5)
+#define EPSILON_THERMAL 0.1 //safety factor for thermal conduction timestep (<0.5)
 #define DT_THERMAL_MIN 1.0e-4 //minimum timestep for thermal conduction, s
 #define EPSILON_VISCOUS 1.0 //controls strength of artificial viscosity
 #define EPSILON_RADIATIVE 0.1 //max fraction of total energy allowed to be lost in single radiative cycle
@@ -40,7 +40,7 @@
 /****************************************************************************/
 
 /*************************** OUTPUT FILE SETTINGS ***************************/
-#define OUTPUT_INTERVAL 100 //time steps between file outputs
+#define OUTPUT_INTERVAL 1 //time steps between file outputs
 //Control which variables are output in .out file
 #define RHO_OUT 1
 #define TEMP_OUT 1
