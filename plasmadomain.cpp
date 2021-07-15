@@ -173,7 +173,7 @@ void PlasmaDomain::subcycleRadiation(int subcycles_rad, double dt_total)
     m_press = (GAMMA - 1.0)*(m_energy - nonthermal_energy);
     m_temp = M_I*m_press/(2.0*K_B*m_grids[rho]);
     // Enforce constant chromospheric temperature
-    for(int i=0; i<m_xdim; i++) for(int j=0; j<chromosphere_depth; j++) m_temp(i,j) = temp_chromosphere;
+    // for(int i=0; i<m_xdim; i++) for(int j=0; j<chromosphere_depth; j++) m_temp(i,j) = temp_chromosphere;
     // Enforce temp floor everywhere
     m_temp = m_temp.max(temp_chromosphere);
     // Recompute energy after flooring temperature
@@ -499,37 +499,40 @@ void PlasmaDomain::recomputeRadiativeLosses()
       for(int j=0; j<m_ydim; j++){
         if(m_grids[temp](i,j) < temp_chromosphere){
           m_grids[rad](i,j) = 0.0;
-          continue;
         }
-        double logtemp = std::log10(m_grids[temp](i,j));
-        double n = m_grids[rho](i,j)/M_I;
-        double chi, alpha;
-        if(logtemp <= 4.97){
-          chi = 1.09e-31;
-          alpha = 2.0;
-        } else if(logtemp <= 5.67){
-          chi = 8.87e-17;
-          alpha = -1.0;
-        } else if(logtemp <= 6.18){
-          chi = 1.90e-22;
-          alpha = 0.0;
-        } else if(logtemp <= 6.55){
-          chi = 3.53e-13;
-          alpha = -1.5;
-        } else if(logtemp <= 6.90){
-          chi = 3.46e-25;
-          alpha = 1.0/3.0;
-        } else if(logtemp <= 7.63){
-          chi = 5.49e-16;
-          alpha = -1.0;
-        } else{
-          chi = 1.96e-27;
-          alpha = 0.5;
-        }
-        m_grids[rad](i,j) = n*n*chi*std::pow(m_grids[temp](i,j),alpha);
-        if(m_grids[temp](i,j) < temp_chromosphere + radiation_ramp){
-          double ramp = 0.5*(1.0 - std::cos((m_grids[temp](i,j) - temp_chromosphere)*PI/radiation_ramp));
-          m_grids[rad](i,j) *= ramp;
+        else {
+          double logtemp = std::log10(m_grids[temp](i,j));
+          double n = m_grids[rho](i,j)/M_I;
+          double chi, alpha;
+          if(logtemp <= 4.97){
+            chi = 1.09e-31; //also adjust chi to ensure continuity
+            alpha = 2.0; //alpha 3 might be better approx?
+          } else if(logtemp <= 5.67){
+            chi = 8.87e-17;
+            alpha = -1.0;
+          } else if(logtemp <= 6.18){
+            chi = 1.90e-22;
+            alpha = 0.0;
+          } else if(logtemp <= 6.55){
+            chi = 3.53e-13;
+            alpha = -1.5;
+          } else if(logtemp <= 6.90){
+            chi = 3.46e-25;
+            alpha = 1.0/3.0;
+          } else if(logtemp <= 7.63){
+            chi = 5.49e-16;
+            alpha = -1.0;
+          } else{
+            chi = 1.96e-27;
+            alpha = 0.5;
+          }
+          m_grids[rad](i,j) = n*n*chi*std::pow(m_grids[temp](i,j),alpha);
+          if(m_grids[temp](i,j) < temp_chromosphere + radiation_ramp){
+            //Also try using linear ramp
+            // double ramp = (m_grids[temp](i,j) - temp_chromosphere)/radiation_ramp;
+            double ramp = 0.5*(1.0 - std::cos((m_grids[temp](i,j) - temp_chromosphere)*PI/radiation_ramp));
+            m_grids[rad](i,j) *= ramp;
+          }
         }
       }
     }

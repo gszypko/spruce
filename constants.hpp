@@ -14,7 +14,7 @@
 #define RADIATIVE_LOSSES_ON 1
 #define AMBIENT_HEATING_ON 1
 #define THERMAL_CONDUCTION_ON 1
-#define FIELD_ALIGNED_GRAVITY 1 //when on, gravity constrained to only act along field lines
+#define FIELD_ALIGNED_GRAVITY 0 //when on, gravity constrained to only act along field lines
 #define FLUX_SATURATION 1 //caps thermal conductive flux at physical limit of plasma
 #define DT_CALCULATION_MODE 1 
 // 0 is same method as no-saturation thermal conduction
