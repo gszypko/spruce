@@ -7,7 +7,7 @@
 #define CHROMOSPHERE_DEPTH 10 //number of cells deep to maintain chromospheric temperature
 #define DX 2.2649e9/XDIM
 #define DY 2.2649e9/YDIM
-#define NT 10 //number of iterations to simulate
+#define NT 100000 //number of iterations to simulate
 /****************************************************************************/
 
 /***************************** PHYSICS SETTINGS ****************************/
@@ -40,7 +40,7 @@
 /****************************************************************************/
 
 /*************************** OUTPUT FILE SETTINGS ***************************/
-#define OUTPUT_INTERVAL 1 //time steps between file outputs
+#define OUTPUT_INTERVAL 100 //time steps between file outputs
 //Control which variables are output in .out file
 #define RHO_OUT 1
 #define TEMP_OUT 1

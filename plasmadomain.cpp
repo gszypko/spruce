@@ -505,8 +505,10 @@ void PlasmaDomain::recomputeRadiativeLosses()
           double n = m_grids[rho](i,j)/M_I;
           double chi, alpha;
           if(logtemp <= 4.97){
-            chi = 1.09e-31; //also adjust chi to ensure continuity
-            alpha = 2.0; //alpha 3 might be better approx?
+            // chi = 1.09e-31; //also adjust chi to ensure continuity
+            // alpha = 2.0; //alpha 3 might be better approx?
+            chi = 1.17e-36;
+            alpha = 3.0;
           } else if(logtemp <= 5.67){
             chi = 8.87e-17;
             alpha = -1.0;
