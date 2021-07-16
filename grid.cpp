@@ -14,25 +14,21 @@
 #define INPLACE_SCALAR_LAMBDA(expr) [](double& this_comp, double scalar){return expr;}
 #define INPLACE_COMPONENTWISE_LAMBDA(expr) [](double& this_comp, double that_comp){return expr;}
 
-Grid::Grid(size_t rows, size_t cols): m_rows(rows), m_cols(cols), m_data(rows * cols) {}
-Grid::Grid(size_t rows, size_t cols, double val): m_rows(rows), m_cols(cols), m_data(rows * cols, val) {}
-Grid::Grid(): m_rows(1), m_cols(1), m_data(1) {}
+Grid::Grid(size_t rows, size_t cols): m_rows(rows), m_cols(cols), m_size(rows * cols), m_data(rows * cols) {}
+Grid::Grid(size_t rows, size_t cols, double val): m_rows(rows), m_cols(cols), m_size(rows * cols), m_data(rows * cols, val) {}
+Grid::Grid(): m_rows(1), m_cols(1), m_size(1), m_data(1) {}
 Grid Grid::Zero(size_t rows, size_t cols) { return Grid(rows,cols,0.0); }
 Grid Grid::Ones(size_t rows, size_t cols) { return Grid(rows,cols,1.0); }
 
 double Grid::rows() const { return m_rows; }
 double Grid::cols() const { return m_cols; }
-double Grid::size() const { return m_rows*m_cols; }
+double Grid::size() const { return m_size; }
 
 double Grid::min() const
 {
   double curr_min = std::numeric_limits<double>::max();
-  #pragma omp parallel for reduction(min: curr_min) collapse(2)
-  for(int i=0; i<m_rows; i++){
-    for(int j=0; j<m_cols; j++){
-      curr_min = std::min(curr_min,(*this)(i,j));
-    }
-  }
+  #pragma omp parallel for reduction(min: curr_min)
+  for(int i=0; i<m_size; i++) curr_min = std::min(curr_min,m_data[i]);
   return curr_min;
 }
 
@@ -43,12 +39,8 @@ Grid Grid::min(const Grid& b) const { return ComponentWiseOperation( b, COMPONEN
 double Grid::max() const
 {
   double curr_max = -std::numeric_limits<double>::max();
-  #pragma omp parallel for reduction(max: curr_max) collapse(2)
-  for(int i=0; i<m_rows; i++){
-    for(int j=0; j<m_cols; j++){
-      curr_max = std::max(curr_max,(*this)(i,j));
-    }
-  }
+  #pragma omp parallel for reduction(max: curr_max)
+  for(int i=0; i<m_size; i++) curr_max = std::max(curr_max,m_data[i]);
   return curr_max;
 }
 

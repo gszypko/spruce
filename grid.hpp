@@ -9,6 +9,7 @@
 #include <functional>
 #include <assert.h>
 #include <omp.h>
+#include "instrumentor.hpp"
 
 class Grid
 {
@@ -61,73 +62,63 @@ public:
 private:
   size_t m_rows;
   size_t m_cols;
+  size_t m_size; //m_rows * m_cols
   std::vector<double> m_data;
   Grid ComponentWiseOperation(const Grid& b, const std::function<double(double,double)>& func) const
   {
     assert(m_rows == b.m_rows && m_cols == b.m_cols);
     Grid result(m_rows, m_cols);
+    std::vector<double> &result_data = result.m_data;
+    const std::vector<double> &b_data = b.m_data;
     #pragma omp parallel
     {
       #if BENCHMARKING_ON
       InstrumentationTimer timer("componentwise op loop thread");
       #endif
-      #pragma omp for collapse(2)
-      for(int i=0; i<m_rows; i++){
-        for(int j=0; j<m_cols; j++){
-          result(i,j) = func((*this)(i,j),b(i,j));
-        }
-      }
+      #pragma omp for
+      for(int i=0; i<m_size; i++) result_data[i] = func(m_data[i],b_data[i]);
     }
     return result;
   }
   Grid ScalarOperation(double b, const std::function<double(double,double)>& func) const
   {
     Grid result(m_rows, m_cols);
+    std::vector<double> &result_data = result.m_data;
     #pragma omp parallel
     {
       #if BENCHMARKING_ON
       InstrumentationTimer timer("scalar op loop thread");
       #endif
-      #pragma omp for collapse(2)
-      for(int i=0; i<m_rows; i++){
-        for(int j=0; j<m_cols; j++){
-          result(i,j) = func((*this)(i,j),b);
-        }
-      }
+      #pragma omp for
+      for(int i=0; i<m_size; i++) result_data[i] = func(m_data[i],b);
     }
     return result;
   }
   Grid UnaryOperation(const std::function<double(double)>& func) const
   {
     Grid result(m_rows, m_cols);
+    std::vector<double> &result_data = result.m_data;
     #pragma omp parallel
     {
       #if BENCHMARKING_ON
       InstrumentationTimer timer("unary op loop thread");
       #endif
-      #pragma omp for collapse(2)
-      for(int i=0; i<m_rows; i++){
-        for(int j=0; j<m_cols; j++){
-          result(i,j) = func((*this)(i,j));
-        }
-      }
+      #pragma omp for
+      for(int i=0; i<m_size; i++) result_data[i] = func(m_data[i]);
     }
     return result;
   }
   Grid& InPlaceComponentWiseOperation(const Grid& b, const std::function<double(double&,double)>& func)
   {
     assert(m_rows == b.m_rows && m_cols == b.m_cols);
+    const std::vector<double> &b_data = b.m_data;
     #pragma omp parallel
     {
       #if BENCHMARKING_ON
-      InstrumentationTimer timer("arithmetic loop thread");
+      InstrumentationTimer timer("in place componentwise op loop thread");
       #endif
-      #pragma omp for collapse(2)
-      for(int i=0; i<m_rows; i++){
-        for(int j=0; j<m_cols; j++){
-          func((*this)(i,j),b(i,j));
-        }
-      }
+      #pragma omp for
+      for(int i=0; i<m_size; i++) func(m_data[i],b_data[i]);
     }
     return *this;
   }
@@ -136,14 +127,10 @@ private:
     #pragma omp parallel
     {
       #if BENCHMARKING_ON
-      InstrumentationTimer timer("arithmetic loop thread");
+      InstrumentationTimer timer("in place scalar op loop thread");
       #endif
-      #pragma omp for collapse(2)
-      for(int i=0; i<m_rows; i++){
-        for(int j=0; j<m_cols; j++){
-          func((*this)(i,j),b);
-        }
-      }
+      #pragma omp for
+      for(int i=0; i<m_size; i++) func(m_data[i],b);
     }
     return *this;
   }
