@@ -150,8 +150,6 @@ void PlasmaDomain::subcycleConduction(int subcycles_thermal, double dt_total)
     m_energy = m_energy.max(energy_floor);
     m_press = (GAMMA - 1.0)*(m_energy - nonthermal_energy);
     m_temp = M_I*m_press/(2.0*K_B*m_grids[rho]);
-    // Enforce constant chromospheric temperature
-    for(int i=0; i<m_xdim; i++) for(int j=0; j<chromosphere_depth; j++) m_temp(i,j) = temp_chromosphere;
     // Enforce temp floor everywhere
     m_temp = m_temp.max(temp_chromosphere);
     // Recompute energy after flooring temperature
@@ -172,8 +170,6 @@ void PlasmaDomain::subcycleRadiation(int subcycles_rad, double dt_total)
     m_energy = m_energy.max(energy_floor);
     m_press = (GAMMA - 1.0)*(m_energy - nonthermal_energy);
     m_temp = M_I*m_press/(2.0*K_B*m_grids[rho]);
-    // Enforce constant chromospheric temperature
-    // for(int i=0; i<m_xdim; i++) for(int j=0; j<chromosphere_depth; j++) m_temp(i,j) = temp_chromosphere;
     // Enforce temp floor everywhere
     m_temp = m_temp.max(temp_chromosphere);
     // Recompute energy after flooring temperature
@@ -257,11 +253,10 @@ void PlasmaDomain::setDefaultSettings()
   radiation_ramp = RADIATION_RAMP;  //Width of cutoff ramp, in units of temperature, for low-temp radiation
   heating_rate = HEATING_RATE;  //Constant ambient heating rate
   b_0 = B0;  //Base value of magnetic field
-  chromosphere_depth = CHROMOSPHERE_DEPTH; //In number of Grid cells
   epsilon = EPSILON; epsilon_thermal = EPSILON_THERMAL; epsilon_rad = EPSILON_RADIATIVE; //Time step calculation
   epsilon_viscous = EPSILON_VISCOUS; //Prefactor for artificial viscosity
   dt_thermal_min = DT_THERMAL_MIN; //Minimum timestep for thermal conduction
-  rho_min = GRIDFLOOR;
+  rho_min = RHO_MIN;
   thermal_energy_min = THERMALENERGYFLOOR; //Lower bounds for mass density and thermal energy density
   n_iterations = NT;
   output_interval = OUTPUT_INTERVAL;
@@ -371,12 +366,6 @@ void PlasmaDomain::recomputeTemperature()
   m_press = (GAMMA - 1.0)*(m_grids[energy] - 0.5*(m_grids[mom_x].square() + m_grids[mom_y].square())/m_grids[rho] - m_grids[mag_press]);
   m_press = m_press.max((GAMMA - 1.0)*thermal_energy_min);
   m_grids[temp] = (M_I*m_press/(2.0*K_B*m_grids[rho])).max(temp_chromosphere);
-  //Enforce chromosphere temperature
-  for(int i=0; i<m_xdim; i++){
-    for(int j=0; j<chromosphere_depth; j++){
-      m_grids[temp](i,j) = temp_chromosphere;
-    }
-  }
 }
 
 void PlasmaDomain::catchUnderdensity()

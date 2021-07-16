@@ -31,7 +31,6 @@ public:
   double radiation_ramp;  //Width of cutoff ramp, in units of temperature, for low-temp radiation
   double heating_rate;  //Constant ambient heating rate
   double b_0;  //Base value of magnetic field
-  int chromosphere_depth; //In number of Grid cells
   //Safety factors
   double epsilon, epsilon_thermal, epsilon_rad; //Time step calculation
   double epsilon_viscous; //Prefactor for artificial viscosity

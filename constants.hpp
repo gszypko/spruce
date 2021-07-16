@@ -4,7 +4,6 @@
 /***************************** SIMULATION PARAMETERS ****************************/
 #define XDIM 100
 #define YDIM 100
-#define CHROMOSPHERE_DEPTH 10 //number of cells deep to maintain chromospheric temperature
 #define DX 2.2649e9/XDIM
 #define DY 2.2649e9/YDIM
 #define NT 100000 //number of iterations to simulate
@@ -14,9 +13,9 @@
 #define RADIATIVE_LOSSES_ON 1
 #define AMBIENT_HEATING_ON 1
 #define THERMAL_CONDUCTION_ON 1
-#define FIELD_ALIGNED_GRAVITY 0 //when on, gravity constrained to only act along field lines
+//#define FIELD_ALIGNED_GRAVITY 0 //when on, gravity constrained to only act along field lines
 #define FLUX_SATURATION 1 //caps thermal conductive flux at physical limit of plasma
-#define DT_CALCULATION_MODE 1 
+//#define DT_CALCULATION_MODE 1 
 // 0 is same method as no-saturation thermal conduction
 // 1 modifies the spitzer coefficient given the saturated flux for dt calculation, keeping the T^2.5  dependence
 // 2 modifies the spitzer term while absorbing the T^2.5 dependence
@@ -32,10 +31,10 @@
 /*********************** TIME EVOLUTION SAFETY FACTORS **********************/
 #define EPSILON 0.1 //time stepping safety factor (for CFL condition)
 #define EPSILON_THERMAL 0.1 //safety factor for thermal conduction timestep (<0.5)
-#define DT_THERMAL_MIN 1.0e-4 //minimum timestep for thermal conduction, s
 #define EPSILON_VISCOUS 1.0 //controls strength of artificial viscosity
 #define EPSILON_RADIATIVE 0.1 //max fraction of total energy allowed to be lost in single radiative cycle
-#define GRIDFLOOR 1.0e-30 //min value for non-negative parameters
+#define DT_THERMAL_MIN 1.0e-4 //minimum timestep for thermal conduction, s
+#define RHO_MIN 1.0e-30 //min value for density (to avoid negative values)
 #define THERMALENERGYFLOOR 1.0e-6 //min (nonzero) value for thermal energy density, erg cm^-3
 /****************************************************************************/
 
