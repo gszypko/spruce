@@ -13,12 +13,7 @@
 #define RADIATIVE_LOSSES_ON 1
 #define AMBIENT_HEATING_ON 1
 #define THERMAL_CONDUCTION_ON 1
-//#define FIELD_ALIGNED_GRAVITY 0 //when on, gravity constrained to only act along field lines
 #define FLUX_SATURATION 1 //caps thermal conductive flux at physical limit of plasma
-//#define DT_CALCULATION_MODE 1 
-// 0 is same method as no-saturation thermal conduction
-// 1 modifies the spitzer coefficient given the saturated flux for dt calculation, keeping the T^2.5  dependence
-// 2 modifies the spitzer term while absorbing the T^2.5 dependence
 /****************************************************************************/
 
 /**************************** PHYSICAL PARAMETERS ***************************/
@@ -78,8 +73,8 @@
 /****************************************************************************/
 
 //Performance Benchmarking (Handle with care!)
-//When turned on, outputs a .json file readable by chrome://tracing on Google Chrome
-//for visual profiling purposes
+//When turned on, outputs a .json file readable by chrome://tracing
+//on Google Chrome for visual profiling purposes
 #define BENCHMARKING_ON 0
 
 #endif
