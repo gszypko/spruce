@@ -72,13 +72,16 @@ void PlasmaDomain::subcycleConduction(int subcycles_thermal, double dt_total)
   Grid &m_energy = m_grids[energy], &m_temp = m_grids[temp], &m_press = m_grids[press];
   Grid nonthermal_energy = 0.5*(m_grids[mom_x]*m_grids[v_x] + m_grids[mom_y]*m_grids[v_y]) + m_grids[mag_press];
   Grid energy_floor = nonthermal_energy + thermal_energy_min; //To ensure non-negative thermal pressure
+  Grid energy_next;
+  Grid dummy_grid(m_xdim,m_ydim,0.0); //to feed into clampWallBoundaries, since rho and mom are unchanged here
   for(int subcycle = 0; subcycle < subcycles_thermal; subcycle++){
     Grid con_flux_x(m_xdim,m_ydim,0.0);
     Grid con_flux_y(m_xdim,m_ydim,0.0);
     field_aligned_conductive_flux(con_flux_x, con_flux_y, m_temp, m_grids[rho], m_grids[b_hat_x], m_grids[b_hat_y], KAPPA_0);
     if(flux_saturation) saturate_conductive_flux(con_flux_x, con_flux_y, m_grids[rho], m_temp);
-    m_energy = m_energy - (dt_total/(double)subcycles_thermal)*(derivative1D(con_flux_x,0)+derivative1D(con_flux_y,1));
-    m_energy = m_energy.max(energy_floor);
+    energy_next = m_energy - (dt_total/(double)subcycles_thermal)*(derivative1D(con_flux_x,0)+derivative1D(con_flux_y,1));
+    clampWallBoundaries(dummy_grid, dummy_grid, dummy_grid, energy_next);
+    m_energy = energy_next.max(energy_floor);
     m_press = (GAMMA - 1.0)*(m_energy - nonthermal_energy);
     m_temp = M_I*m_press/(2.0*K_B*m_grids[rho]);
     // Enforce temp floor everywhere
@@ -95,10 +98,13 @@ void PlasmaDomain::subcycleRadiation(int subcycles_rad, double dt_total)
   //Subcycle to simulate radiative losses
   Grid nonthermal_energy = 0.5*(m_grids[mom_x]*m_grids[v_x] + m_grids[mom_y]*m_grids[v_y]) + m_grids[mag_press];
   Grid energy_floor = nonthermal_energy + thermal_energy_min; //To ensure non-negative thermal pressure
+  Grid energy_next;
+  Grid dummy_grid(m_xdim,m_ydim,0.0); //to feed into clampWallBoundaries, since rho and mom are unchanged here
   for(int subcycle = 0; subcycle < subcycles_rad; subcycle++){
     recomputeRadiativeLosses();
-    m_energy = m_energy - (dt_total/(double)subcycles_rad)*m_grids[rad];
-    m_energy = m_energy.max(energy_floor);
+    energy_next = m_energy - (dt_total/(double)subcycles_rad)*m_grids[rad];
+    clampWallBoundaries(dummy_grid,dummy_grid,dummy_grid,energy_next);
+    m_energy = energy_next.max(energy_floor);
     m_press = (GAMMA - 1.0)*(m_energy - nonthermal_energy);
     m_temp = M_I*m_press/(2.0*K_B*m_grids[rho]);
     // Enforce temp floor everywhere
