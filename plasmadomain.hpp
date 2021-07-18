@@ -60,22 +60,16 @@ public:
   void advanceTime(bool verbose = true);
   void cleanUpStateFiles() const;
 
-  //Not yet implemented
-  // void clampWallBoundaries();
-  // void cleanUpStateFiles();
-
 private:
-  void recomputeDerivedVariables();
-  void computeMagneticTerms();
-  void recomputeTemperature();
-  void catchUnderdensity();
-  void clampWallBoundaries(Grid& mom_x_next, Grid& mom_y_next, Grid& rho_next, Grid& energy_next);
-  void recomputeRadiativeLosses();
-  void recomputeDT();
-  void recomputeDTThermal();
-  void recomputeDTRadiative();
-  void subcycleConduction(int subcycles_thermal, double dt_total);
-  void subcycleRadiation(int subcycles_rad, double dt_total);
+  //Enum to allow indexing for each variable
+  //NOTE: Must be kept in the same order as m_var_names defined in plasmadomain.cpp
+  enum Variable{
+    rho,temp,mom_x,mom_y,b_x,b_y,b_z, //base variables (carried over between iterations)
+    press,energy,rad,dt,dt_thermal,dt_rad,v_x,v_y, //derived variables (derived from base variables)
+    grav_x,grav_y,b_magnitude,b_hat_x,b_hat_y, //constant variables (unchanging bw iterations)
+    mag_press,mag_pxx,mag_pyy,mag_pzz,mag_pxy,mag_pxz,mag_pyz, //constant variables
+    num_variables //never add new variable after this in the enum!
+  };
 
   static const std::vector<std::string> m_var_names;
   std::vector<Grid> m_grids;
@@ -90,6 +84,18 @@ private:
 
   double m_time;
   int m_iter;
+
+  void recomputeDerivedVariables();
+  void computeMagneticTerms();
+  void recomputeTemperature();
+  void catchUnderdensity();
+  void clampWallBoundaries(Grid& mom_x_next, Grid& mom_y_next, Grid& rho_next, Grid& energy_next);
+  void recomputeRadiativeLosses();
+  void recomputeDT();
+  void recomputeDTThermal();
+  void recomputeDTRadiative();
+  void subcycleConduction(int subcycles_thermal, double dt_total);
+  void subcycleRadiation(int subcycles_rad, double dt_total);
 };
 
 #endif

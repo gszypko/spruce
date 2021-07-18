@@ -3,15 +3,6 @@
 
 #include "grid.hpp"
 
-//Enforce dynamic time stepping
-// double recompute_dt(const Grid &press, const Grid &rho, const Grid &vx, const Grid &vy, Grid &local_dt);
-
-//Enforce dynamic time stepping for thermal conduction
-// double recompute_dt_thermal(const Grid &rho, const Grid &temp, Grid &local_dt, const Grid &b_hat_x, const Grid &b_hat_y);
-
-//Enforce minimum dynamic time step for radiation
-// double recompute_dt_radiative(const Grid &energy, const Grid &rad_loss_rate, Grid &local_dt);
-
 //Generates gaussian initial condition for a variable, centered at middle of grid
 Grid GaussianGrid(int xdim, int ydim, double min, double max);
 
@@ -23,10 +14,6 @@ Grid BipolarField(int xdim, int ydim, double b0, double h, int index);
 //Generates grid with exponential falloff in the y-direction, with the quantity
 //"base_value" at y=0. Assumes isothermal atmosphere with temperature "iso_temp".
 Grid HydrostaticFalloff(double base_value, double scale_height, int xdim, int ydim);
-
-//Generates Grid containing magnitude of gravitational
-//acceleration (in y-direction) at each grid cell
-// Grid Gravity(double base_grav, double r_sun, int xdim, int ydim);
 
 //Computes 1D cell-centered conductive flux from temperature "temp"
 //Flux computed in direction indicated by "index": 0 for x, 1 for y
@@ -44,7 +31,5 @@ void field_aligned_conductive_flux(Grid &flux_out_x, Grid &flux_out_y, const Gri
 //Computes saturated conductive flux at each point in grid,
 //then ensures that provided fluxes do not exceed the saturation point
 void saturate_conductive_flux(Grid &flux_out_x, Grid &flux_out_y, const Grid &rho, const Grid &temp);
-
-// Grid radiative_losses(const Grid &rho, const Grid &temp, const int xdim, const int ydim);
 
 #endif

@@ -74,22 +74,6 @@ Grid HydrostaticFalloff(double base_value, double scale_height, int xdim, int yd
   return result;
 }
 
-//Generates Grid containing magnitude of gravitational
-//acceleration (in y-direction) at each grid cell
-// Grid Gravity(const double base_grav, const double r_sun, const int xdim, const int ydim){
-//   #if BENCHMARKING_ON
-//   InstrumentationTimer timer(__PRETTY_FUNCTION__);
-//   #endif
-//   Grid result = Grid::Zero(xdim,ydim);
-//   for(int j=0; j<ydim; j++){
-//     double y = j*DY;
-//     for(int i=0; i<xdim; i++){
-//       result(i,j) = base_grav*std::pow(r_sun/(r_sun+y),2.0);
-//     }
-//   }
-//   return result;
-// }
-
 //Computes 1D cell-centered conductive flux from temperature "temp"
 //Flux computed in direction indicated by "index": 0 for x, 1 for y
 //k0 is conductive coefficient

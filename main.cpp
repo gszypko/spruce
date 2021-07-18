@@ -44,10 +44,9 @@ int main(int argc,char* argv[]){
   }
   else{ //Default, hard coded initial condition
     simulation.hydrostaticInitialize();
+    simulation.setSolarGravity(BASE_GRAV,R_SUN);
     // simulation.gaussianInitialize();
   }
-
-  simulation.setSolarGravity(BASE_GRAV,R_SUN);
 
   simulation.outputPreamble();
   simulation.outputCurrentState();
