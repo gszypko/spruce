@@ -30,6 +30,7 @@
 #define EPSILON_RADIATIVE 0.1 //max fraction of total energy allowed to be lost in single radiative cycle
 #define DT_THERMAL_MIN 1.0e-4 //minimum timestep for thermal conduction, s
 #define RHO_MIN 1.0e-30 //min value for density (to avoid negative values)
+#define TEMP_MIN 1.0e4 //minimum allowed temperature
 #define THERMALENERGYFLOOR 1.0e-6 //min (nonzero) value for thermal energy density, erg cm^-3
 /****************************************************************************/
 

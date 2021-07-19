@@ -35,7 +35,7 @@ public:
   double epsilon, epsilon_thermal, epsilon_rad; //Time step calculation
   double epsilon_viscous; //Prefactor for artificial viscosity
   double dt_thermal_min; //Minimum timestep for thermal conduction
-  double rho_min, thermal_energy_min; //Lower bounds for mass density and thermal energy density
+  double rho_min, temp_min, thermal_energy_min; //Lower bounds for mass density and thermal energy density
   //Output settings
   int n_iterations, output_interval;
   /*********************************************************************/ 

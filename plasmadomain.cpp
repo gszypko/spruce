@@ -78,6 +78,7 @@ void PlasmaDomain::setDefaultSettings()
   epsilon_viscous = EPSILON_VISCOUS; //Prefactor for artificial viscosity
   dt_thermal_min = DT_THERMAL_MIN; //Minimum timestep for thermal conduction
   rho_min = RHO_MIN;
+  temp_min = TEMP_MIN;
   thermal_energy_min = THERMALENERGYFLOOR; //Lower bounds for mass density and thermal energy density
   n_iterations = NT;
   output_interval = OUTPUT_INTERVAL;
