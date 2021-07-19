@@ -85,7 +85,7 @@ void PlasmaDomain::subcycleConduction(int subcycles_thermal, double dt_total)
     m_press = (GAMMA - 1.0)*(m_energy - nonthermal_energy);
     m_temp = M_I*m_press/(2.0*K_B*m_grids[rho]);
     // Enforce temp floor everywhere
-    m_temp = m_temp.max(temp_chromosphere);
+    m_temp = m_temp.max(temp_min);
     // Recompute energy after flooring temperature
     m_press = 2.0*K_B*m_grids[rho]*m_temp/M_I;
     m_energy = m_press/(GAMMA - 1.0) + nonthermal_energy;
@@ -108,7 +108,7 @@ void PlasmaDomain::subcycleRadiation(int subcycles_rad, double dt_total)
     m_press = (GAMMA - 1.0)*(m_energy - nonthermal_energy);
     m_temp = M_I*m_press/(2.0*K_B*m_grids[rho]);
     // Enforce temp floor everywhere
-    m_temp = m_temp.max(temp_chromosphere);
+    m_temp = m_temp.max(temp_min);
     // Recompute energy after flooring temperature
     m_grids[press] = 2.0*K_B*m_grids[rho]*m_temp/M_I;
     m_energy = m_press/(GAMMA - 1.0) + nonthermal_energy;
@@ -155,7 +155,7 @@ void PlasmaDomain::recomputeTemperature()
   Grid &m_press = m_grids[press];
   m_press = (GAMMA - 1.0)*(m_grids[energy] - 0.5*(m_grids[mom_x].square() + m_grids[mom_y].square())/m_grids[rho] - m_grids[mag_press]);
   m_press = m_press.max((GAMMA - 1.0)*thermal_energy_min);
-  m_grids[temp] = (M_I*m_press/(2.0*K_B*m_grids[rho])).max(temp_chromosphere);
+  m_grids[temp] = (M_I*m_press/(2.0*K_B*m_grids[rho])).max(temp_min);
 }
 
 void PlasmaDomain::catchUnderdensity()
@@ -295,8 +295,8 @@ void PlasmaDomain::recomputeRadiativeLosses()
           m_grids[rad](i,j) = n*n*chi*std::pow(m_grids[temp](i,j),alpha);
           if(m_grids[temp](i,j) < temp_chromosphere + radiation_ramp){
             //Also try using linear ramp
-            // double ramp = (m_grids[temp](i,j) - temp_chromosphere)/radiation_ramp;
-            double ramp = 0.5*(1.0 - std::cos((m_grids[temp](i,j) - temp_chromosphere)*PI/radiation_ramp));
+            double ramp = (m_grids[temp](i,j) - temp_chromosphere)/radiation_ramp;
+            // double ramp = 0.5*(1.0 - std::cos((m_grids[temp](i,j) - temp_chromosphere)*PI/radiation_ramp));
             m_grids[rad](i,j) *= ramp;
           }
         }
