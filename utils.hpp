@@ -4,7 +4,7 @@
 #include "grid.hpp"
 
 //Generates gaussian initial condition for a variable, centered at middle of grid
-Grid GaussianGrid(int xdim, int ydim, double min, double max);
+Grid GaussianGrid(int xdim, int ydim, double min, double max, double std_dev_x, double std_dev_y);
 
 //Generates potential bipolar field for component corresponding to index "index"
 //Centered s.t. origin lies at bottom middle of domain

@@ -44,11 +44,10 @@ public:
   PlasmaDomain(const char* run_name);
   PlasmaDomain();
 
-  //Implemented
   void readStateFile(const char* in_filename);
   void setDefaultSettings();
   void hydrostaticInitialize();
-  void gaussianInitialize();
+  void gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp, double std_dev_x, double std_dev_y));
   void outputPreamble();
   void outputCurrentState();
   void setSolarGravity(double base_gravity, double r_solar);

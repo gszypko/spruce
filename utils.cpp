@@ -12,18 +12,20 @@
 #endif
 
 //Generates gaussian initial condition for a variable, centered at middle of grid
-Grid GaussianGrid(int xdim, int ydim, double min, double max){
+//std_dev_x and std_dev_y are the standard deviation of the distribution in the x
+//and y directions, in units of grid cell widths
+Grid GaussianGrid(int xdim, int ydim, double min, double max, double std_dev_x, double std_dev_y){
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
   std::vector<double> gauss_x(xdim), gauss_y(ydim);
-  double sigmax = 0.05*xdim;
-  double sigmay = 0.05*ydim;
+  // double sigmax = 0.05*xdim;
+  // double sigmay = 0.05*ydim;
   for(int i=0; i<xdim; i++){
-    gauss_x[i] = std::exp(-0.5*std::pow(((double)i-0.5*(double)(xdim-1))/sigmax,2.0));
+    gauss_x[i] = std::exp(-0.5*std::pow(((double)i-0.5*(double)(xdim-1))/std_dev_x,2.0));
   }
   for(int j=0; j<ydim; j++){
-    gauss_y[j] = std::exp(-0.5*std::pow(((double)j-0.5*(double)(ydim-1))/sigmay,2.0));
+    gauss_y[j] = std::exp(-0.5*std::pow(((double)j-0.5*(double)(ydim-1))/std_dev_y,2.0));
   }
   Grid result(xdim,ydim);
   for(int i=0; i<xdim; i++){
@@ -32,9 +34,6 @@ Grid GaussianGrid(int xdim, int ydim, double min, double max){
     }
   }
   return result;
-  // Eigen::MatrixXd gauss_2d = gauss_x * gauss_y.transpose();
-  // gauss_2d = gauss_2d*(max-min) + min*Eigen::MatrixXd::Ones(xdim,ydim);
-  // return gauss_2d.array();
 }
 
 //Generates potential bipolar field for component corresponding to index "index"

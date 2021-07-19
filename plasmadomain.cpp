@@ -44,13 +44,16 @@ void PlasmaDomain::hydrostaticInitialize()
   recomputeDerivedVariables();
 }
 
-void PlasmaDomain::gaussianInitialize()
+//Generates gaussian distribution in density and temperature, with given min
+//and max density and temperature, distributed with the given standard deviations
+//in x and y (in units of grid cell widths)
+void PlasmaDomain::gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp,
+                                      double std_dev_x, double std_dev_y)
 {
-  //Simple Gaussian test case (no magnetic field)
-  m_grids[rho] = GaussianGrid(m_xdim, m_ydim, 1.0e-15, 1.0e-10);
+  m_grids[rho] = GaussianGrid(m_xdim, m_ydim, min_rho, max_rho, std_dev_x, std_dev_y);
   m_grids[mom_x] = Grid::Zero(m_xdim,m_ydim);
   m_grids[mom_y] = Grid::Zero(m_xdim,m_ydim);
-  m_grids[temp] = GaussianGrid(m_xdim, m_ydim, temp_chromosphere, 2.0*temp_chromosphere);
+  m_grids[temp] = GaussianGrid(m_xdim, m_ydim, min_temp, max_temp, std_dev_x, std_dev_y);
   computeMagneticTerms();
   recomputeDerivedVariables();
   // double b0 = 0.1;
