@@ -294,9 +294,7 @@ void PlasmaDomain::recomputeRadiativeLosses()
           }
           m_grids[rad](i,j) = n*n*chi*std::pow(m_grids[temp](i,j),alpha);
           if(m_grids[temp](i,j) < temp_chromosphere + radiation_ramp){
-            //Also try using linear ramp
             double ramp = (m_grids[temp](i,j) - temp_chromosphere)/radiation_ramp;
-            // double ramp = 0.5*(1.0 - std::cos((m_grids[temp](i,j) - temp_chromosphere)*PI/radiation_ramp));
             m_grids[rad](i,j) *= ramp;
           }
         }
