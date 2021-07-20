@@ -17,7 +17,7 @@
 class PlasmaDomain
 {
 public:
-  enum BoundaryCondition { Periodic, Wall, Open };
+  enum class BoundaryCondition { Periodic, Wall, Open };
 
   /******** SETTINGS (to be accessed and set directly, currently) ********/
   /*** All settings false or zero by default unless modified after construction ***/
@@ -40,24 +40,29 @@ public:
   int n_iterations, output_interval;
   /*********************************************************************/ 
 
+  //Constructors and Initialization
   PlasmaDomain(size_t xdim, size_t ydim, double dx, double dy, const char* run_name);
   PlasmaDomain(const char* run_name);
   PlasmaDomain();
-
-  void readStateFile(const char* in_filename);
   void setDefaultSettings();
   void hydrostaticInitialize();
   void gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp, double std_dev_x, double std_dev_y);
-  void outputPreamble();
-  void outputCurrentState();
   void setSolarGravity(double base_gravity, double r_solar);
-  void writeStateFile() const;
   void setOutputFlag(int var, bool new_flag = true);
   void setOutputFlags(const std::vector<int> vars, bool new_flag = true);
   void setStateFlag(int var, bool new_flag = true);
   void setStateFlags(const std::vector<int> vars, bool new_flag = true);
-  void advanceTime(bool verbose = true);
+
+  //File I/O
+  void readStateFile(const char* in_filename);
+  void readSettingsFile(const char* settings_filename);
+  void outputPreamble();
+  void outputCurrentState();
+  void writeStateFile(int precision = -1) const;
   void cleanUpStateFiles() const;
+
+  //Time Evolution
+  void advanceTime(bool verbose = true);
 
 private:
   //Enum to allow indexing for each variable
@@ -70,7 +75,11 @@ private:
     num_variables //never add new variable after this in the enum!
   };
 
+  //Strings corresponding to variables, settings, boundary conditions for file I/O
   static const std::vector<std::string> m_var_names;
+  static const std::vector<std::string> m_setting_names;
+  static const std::vector<std::string> m_boundary_condition_names;
+  
   std::vector<Grid> m_grids;
   std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
   std::vector<bool> m_state_flags; //Variables that are printed in .state files (should be a minimal complete description of the plasma)
@@ -95,6 +104,7 @@ private:
   void recomputeDTRadiative();
   void subcycleConduction(int subcycles_thermal, double dt_total);
   void subcycleRadiation(int subcycles_rad, double dt_total);
+  BoundaryCondition stringToBoundaryCondition(const std::string str) const;
 };
 
 #endif
