@@ -1,0 +1,30 @@
+#Default settings file
+#Lines started with '#' are treated as comments
+#Each setting statement must be on its own line, with no whitespace and ended with
+#a semicolon. Anything after a semicolon in a line is ignored.
+xdim=100;
+ydim=100;
+dx=2.2649e7;
+dy=2.2649e7;
+n_iterations=5;
+output_interval=1;
+x_bound_1=periodic;
+x_bound_2=periodic;
+y_bound_1=wall;
+y_bound_2=open;
+radiative_losses=true;
+ambient_heating=true;
+thermal_conduction=true;
+flux_saturation=true;
+temp_chromosphere=3.0e4;
+radiation_ramp=1.0e3;
+heating_rate=1.0e-4;
+b_0=100;
+epsilon=0.1;
+epsilon_thermal=0.1;
+epsilon_rad=0.1;
+epsilon_viscous=1.0;
+dt_thermal_min=1.0e-4;
+rho_min=1.0e-30;
+temp_min=1.0e4;
+thermal_energy_min=1.0e-6;

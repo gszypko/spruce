@@ -7,6 +7,11 @@
 #include <cstdio>
 #include "plasmadomain.hpp"
 
+//Must match ordering of BoundaryCondition enum in plasmadomain.hpp
+const std::vector<std::string> PlasmaDomain::m_boundary_condition_names = {
+  "periodic","wall","open"
+};
+
 //Corresponding variable names for file I/O
 //Must match the ordering of the Variable enum defined in plasmadomain.hpp
 const std::vector<std::string> PlasmaDomain::m_var_names = {
@@ -14,6 +19,24 @@ const std::vector<std::string> PlasmaDomain::m_var_names = {
   "press","energy","rad","dt","dt_thermal","dt_rad","v_x","v_y",
   "grav_x","grav_y","b_magnitude","b_hat_x","b_hat_y",
   "mag_press","mag_pxx","mag_pyy","mag_pzz","mag_pxy","mag_pxz","mag_pyz"
+};
+
+//For purposes of reading in .settings files
+//Must match ordering of Settings enum below
+const std::vector<std::string> PlasmaDomain::m_setting_names = {
+  "x_bound_1","x_bound_2","y_bound_1","y_bound_2","radiative_losses","ambient_heating",
+  "thermal_conduction","flux_saturation","temp_chromosphere","radiation_ramp","heating_rate",
+  "b_0","epsilon","epsilon_thermal","epsilon_rad","epsilon_viscous","dt_thermal_min","rho_min",
+  "temp_min","thermal_energy_min","n_iterations","output_interval","output_flags","state_flags",
+  "xdim","ydim","dx","dy"
+};
+
+enum class Setting {
+  x_bound_1, x_bound_2, y_bound_1, y_bound_2, radiative_losses, ambient_heating,
+  thermal_conduction, flux_saturation, temp_chromosphere, radiation_ramp, heating_rate,
+  b_0, epsilon, epsilon_thermal, epsilon_rad, epsilon_viscous, dt_thermal_min, rho_min,
+  temp_min, thermal_energy_min, n_iterations, output_interval, output_flags, state_flags,
+  xdim, ydim, dx, dy
 };
 
 //Read in variables from .state file
@@ -77,6 +100,56 @@ void PlasmaDomain::readStateFile(const char* in_filename)
   recomputeDerivedVariables();
 }
 
+//Read in simulation settings from .settings file
+//Allows to change settings without recompiling
+//constants.hpp still used for default settings
+void PlasmaDomain::readSettingsFile(const char* settings_filename)
+{
+  std::ifstream in_file(settings_filename);
+  std::string line;
+  while(std::getline(in_file, line)){
+    if(line[0] == '#') continue; //skip comment lines
+    std::istringstream ss_line(line);
+    std::string lhs, rhs;
+    std::getline(ss_line,lhs,'=');
+    std::getline(ss_line,rhs,';');
+    auto it = std::find(m_setting_names.begin(),m_setting_names.end(),lhs);
+    assert(it != m_setting_names.end());
+    auto index = std::distance(m_setting_names.begin(),it);
+    switch (static_cast<int>(index)) {
+    case static_cast<int>(Setting::x_bound_1): x_bound_1 = stringToBoundaryCondition(rhs); break;
+    case static_cast<int>(Setting::x_bound_2): x_bound_2 = stringToBoundaryCondition(rhs); break;
+    case static_cast<int>(Setting::y_bound_1): y_bound_1 = stringToBoundaryCondition(rhs); break;
+    case static_cast<int>(Setting::y_bound_2): y_bound_2 = stringToBoundaryCondition(rhs); break;
+    case static_cast<int>(Setting::radiative_losses): radiative_losses = (rhs == "true"); break;
+    case static_cast<int>(Setting::ambient_heating): ambient_heating = (rhs == "true"); break;
+    case static_cast<int>(Setting::thermal_conduction): thermal_conduction = (rhs == "true"); break;
+    case static_cast<int>(Setting::flux_saturation): flux_saturation = (rhs == "true"); break;
+    case static_cast<int>(Setting::temp_chromosphere): temp_chromosphere = std::stod(rhs); break;
+    case static_cast<int>(Setting::radiation_ramp): radiation_ramp = std::stod(rhs); break;
+    case static_cast<int>(Setting::heating_rate): heating_rate = std::stod(rhs); break;
+    case static_cast<int>(Setting::b_0): b_0 = std::stod(rhs); break;
+    case static_cast<int>(Setting::epsilon): epsilon = std::stod(rhs); break;
+    case static_cast<int>(Setting::epsilon_thermal): epsilon_thermal = std::stod(rhs); break;
+    case static_cast<int>(Setting::epsilon_rad): epsilon_rad = std::stod(rhs); break;
+    case static_cast<int>(Setting::epsilon_viscous): epsilon_viscous = std::stod(rhs); break;
+    case static_cast<int>(Setting::dt_thermal_min): dt_thermal_min = std::stod(rhs); break;
+    case static_cast<int>(Setting::rho_min): rho_min = std::stod(rhs); break;
+    case static_cast<int>(Setting::temp_min): temp_min = std::stod(rhs); break;
+    case static_cast<int>(Setting::thermal_energy_min): thermal_energy_min = std::stod(rhs); break;
+    case static_cast<int>(Setting::n_iterations): n_iterations = std::stoi(rhs); break;
+    case static_cast<int>(Setting::output_interval): output_interval = std::stoi(rhs); break;
+    case static_cast<int>(Setting::output_flags): /*TODO*/ break;
+    case static_cast<int>(Setting::state_flags): /*TODO*/ break;
+    case static_cast<int>(Setting::xdim): m_xdim = std::stoi(rhs); break;
+    case static_cast<int>(Setting::ydim): m_ydim = std::stoi(rhs); break;
+    case static_cast<int>(Setting::dx): m_dx = std::stod(rhs); break;
+    case static_cast<int>(Setting::dy): m_dy = std::stod(rhs); break;
+    default: break;
+    }
+  }
+}
+
 void PlasmaDomain::outputPreamble()
 {
   m_out_file << m_xdim << "," << m_ydim << std::endl;
@@ -99,7 +172,7 @@ void PlasmaDomain::outputCurrentState()
 //Output current state into state file (toggles between overwriting two different files
 //so that the most recent state is still written in event of a crash)
 //All variables marked in m_state_flags are output here
-void PlasmaDomain::writeStateFile() const
+void PlasmaDomain::writeStateFile(int precision) const
 {
   std::ofstream state_file;
   state_file.open(m_run_name+std::to_string(m_iter%2)+".state");
@@ -109,7 +182,7 @@ void PlasmaDomain::writeStateFile() const
   for(int i=0; i<num_variables; i++){
     if(m_state_flags[i]){
       state_file << m_var_names[i] << std::endl;
-      state_file << m_grids[i].format(',',';',-1);
+      state_file << m_grids[i].format(',',';',precision);
     }
   }
   state_file.close();
@@ -121,4 +194,12 @@ void PlasmaDomain::cleanUpStateFiles() const
   rename((m_run_name+std::to_string((m_iter-1)%2)+".state").c_str(),
           (m_run_name+".state").c_str());
   remove((m_run_name+std::to_string((m_iter-2)%2)+".state").c_str());
+}
+
+PlasmaDomain::BoundaryCondition PlasmaDomain::stringToBoundaryCondition(const std::string str) const
+{
+  auto it = std::find(m_boundary_condition_names.begin(),m_boundary_condition_names.end(),str);
+  assert(it != m_boundary_condition_names.end()); //Ensure that given name is valid boundary condition
+  auto index = std::distance(m_boundary_condition_names.begin(),it);
+  return static_cast<BoundaryCondition>(index);
 }

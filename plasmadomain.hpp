@@ -18,6 +18,13 @@ class PlasmaDomain
 {
 public:
   enum class BoundaryCondition { Periodic, Wall, Open };
+  enum Variable {
+    rho,temp,mom_x,mom_y,b_x,b_y,b_z, //base variables (carried over between iterations)
+    press,energy,rad,dt,dt_thermal,dt_rad,v_x,v_y, //derived variables (derived from base variables)
+    grav_x,grav_y,b_magnitude,b_hat_x,b_hat_y, //constant variables (unchanging bw iterations)
+    mag_press,mag_pxx,mag_pyy,mag_pzz,mag_pxy,mag_pxz,mag_pyz, //constant variables
+    num_variables //never add new variable after this in the enum!
+  };
 
   /******** SETTINGS (to be accessed and set directly, currently) ********/
   /*** All settings false or zero by default unless modified after construction ***/
@@ -42,6 +49,7 @@ public:
 
   //Constructors and Initialization
   PlasmaDomain(size_t xdim, size_t ydim, double dx, double dy, const char* run_name);
+  PlasmaDomain(const char* run_name, const char* settings_file_name);
   PlasmaDomain(const char* run_name);
   PlasmaDomain();
   void setDefaultSettings();
@@ -67,19 +75,12 @@ public:
 private:
   //Enum to allow indexing for each variable
   //NOTE: Must be kept in the same order as m_var_names defined in plasmadomain.cpp
-  enum Variable{
-    rho,temp,mom_x,mom_y,b_x,b_y,b_z, //base variables (carried over between iterations)
-    press,energy,rad,dt,dt_thermal,dt_rad,v_x,v_y, //derived variables (derived from base variables)
-    grav_x,grav_y,b_magnitude,b_hat_x,b_hat_y, //constant variables (unchanging bw iterations)
-    mag_press,mag_pxx,mag_pyy,mag_pzz,mag_pxy,mag_pxz,mag_pyz, //constant variables
-    num_variables //never add new variable after this in the enum!
-  };
 
   //Strings corresponding to variables, settings, boundary conditions for file I/O
   static const std::vector<std::string> m_var_names;
   static const std::vector<std::string> m_setting_names;
   static const std::vector<std::string> m_boundary_condition_names;
-  
+
   std::vector<Grid> m_grids;
   std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
   std::vector<bool> m_state_flags; //Variables that are printed in .state files (should be a minimal complete description of the plasma)

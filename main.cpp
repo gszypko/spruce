@@ -34,9 +34,7 @@ int main(int argc,char* argv[]){
 
   auto start_time = std::chrono::steady_clock::now();
 
-  //Set up initial conditions
-  PlasmaDomain simulation(XDIM,YDIM,DX,DY,out_filename.c_str()); //Note: dimensions given here can be overridden by state file
-  simulation.setDefaultSettings(); //Applies #define macros to member variables of PlasmaDomain object
+  PlasmaDomain simulation(out_filename.c_str(),"default.settings");
 
   if(argc == 3){ //Initial condition from .state file
     const char* in_filename = argv[2];
@@ -51,14 +49,14 @@ int main(int argc,char* argv[]){
   simulation.outputPreamble();
   simulation.outputCurrentState();
 
-  for (int iter = 0; iter < NT; iter++){
+  for (int iter = 0; iter < simulation.n_iterations; iter++){
     #if BENCHMARKING_ON
     InstrumentationTimer timer((std::string("iteration ") + std::to_string(iter)).c_str());
     #endif
 
     simulation.advanceTime();
 
-    if(iter%OUTPUT_INTERVAL == 0){
+    if(iter%simulation.output_interval == 0){
       simulation.outputCurrentState();
     }
 
@@ -68,13 +66,13 @@ int main(int argc,char* argv[]){
   simulation.cleanUpStateFiles();
 
   //Information about run time
-  std::cout << "\rIterations: " << NT << "/" << NT << "\n";
+  std::cout << "\rIterations: " << simulation.n_iterations << "/" << simulation.n_iterations << "\n";
   auto stop_time = std::chrono::steady_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop_time - start_time);
   double minutes = (int)(duration.count()/60.0);
   double seconds = duration.count() - 60*minutes;
   std::cout << "\rTotal runtime: " << minutes << " min " << seconds << " sec (approx. " 
-    << (double)duration.count()/(double)NT << " sec per iteration)" << std::endl;
+    << (double)duration.count()/(double)(simulation.n_iterations) << " sec per iteration)" << std::endl;
 
   #if BENCHMARKING_ON
   Instrumentor::Get().EndSession();
