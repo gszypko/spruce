@@ -34,7 +34,12 @@ int main(int argc,char* argv[]){
 
   auto start_time = std::chrono::steady_clock::now();
 
-  PlasmaDomain simulation(out_filename.c_str(),"default.settings");
+  //Initialize PlasmaDomain with settings from define macros
+  PlasmaDomain simulation(XDIM,YDIM,DX,DY,out_filename.c_str()); //Note: dimensions given here can be overridden by state file
+  simulation.setDefaultSettings(); //Applies #define macros to member variables of PlasmaDomain object
+
+  // //Initialize PlasmaDomain with settings from .settings file (under construction)
+  // PlasmaDomain simulation(out_filename.c_str(),"default.settings");
 
   if(argc == 3){ //Initial condition from .state file
     const char* in_filename = argv[2];
