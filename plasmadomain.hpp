@@ -26,8 +26,43 @@ public:
     num_variables //never add new variable after this in the enum!
   };
 
-  /******** SETTINGS (to be accessed and set directly, currently) ********/
-  /*** All settings false or zero by default unless modified after construction ***/
+  //Constructors and Initialization
+  PlasmaDomain(size_t xdim, size_t ydim, double dx, double dy, const char* run_name);
+  PlasmaDomain(const char* run_name, const char* settings_file_name);
+  PlasmaDomain(const char* run_name);
+  PlasmaDomain();
+  void setDefaultSettings();
+  void hydrostaticInitialize();
+  void gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp, double std_dev_x, double std_dev_y);
+  void setSolarGravity(double base_gravity, double r_solar);
+
+  void readStateFile(const char* in_filename);
+  void readSettingsFile(const char* settings_filename);
+
+  //Time Evolution
+  void run();
+
+private:
+  //Strings corresponding to variables, settings, boundary conditions for file I/O
+  static const std::vector<std::string> m_var_names;
+  static const std::vector<std::string> m_setting_names;
+  static const std::vector<std::string> m_boundary_condition_names;
+
+  std::vector<Grid> m_grids;
+  std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
+  std::vector<bool> m_state_flags; //Variables that are printed in .state files (should be a minimal complete description of the plasma)
+
+  std::string m_run_name;
+  std::ofstream m_out_file;
+
+  double m_time;
+  int m_iter;
+
+  /**************************** SETTINGS ******************************/
+  size_t m_xdim, m_ydim;
+  double m_dx, m_dy;
+  int max_iterations; //Upper bound on simulation iterations; unbounded if negative
+  double max_time; //Upper bound on simulation time; unbounded if negative
   //Boundary condition settings
   BoundaryCondition x_bound_1, x_bound_2, y_bound_1, y_bound_2;
   //Physics settings
@@ -44,67 +79,35 @@ public:
   double dt_thermal_min; //Minimum timestep for thermal conduction
   double rho_min, temp_min, thermal_energy_min; //Lower bounds for mass density and thermal energy density
   //Output settings
-  int n_iterations, output_interval;
+  int output_interval;
   /*********************************************************************/ 
 
-  //Constructors and Initialization
-  PlasmaDomain(size_t xdim, size_t ydim, double dx, double dy, const char* run_name);
-  PlasmaDomain(const char* run_name, const char* settings_file_name);
-  PlasmaDomain(const char* run_name);
-  PlasmaDomain();
-  void setDefaultSettings();
-  void hydrostaticInitialize();
-  void gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp, double std_dev_x, double std_dev_y);
-  void setSolarGravity(double base_gravity, double r_solar);
-  void setOutputFlag(int var, bool new_flag = true);
-  void setOutputFlags(const std::vector<int> vars, bool new_flag = true);
-  void setStateFlag(int var, bool new_flag = true);
-  void setStateFlags(const std::vector<int> vars, bool new_flag = true);
+  void advanceTime(bool verbose = true);
+  void subcycleConduction(int subcycles_thermal, double dt_total);
+  void subcycleRadiation(int subcycles_rad, double dt_total);
 
-  //File I/O
-  void readStateFile(const char* in_filename);
-  void readSettingsFile(const char* settings_filename);
+  void recomputeDerivedVariables();
+  void recomputeTemperature();
+  void computeMagneticTerms();
+
+  void catchUnderdensity();
+  void clampWallBoundaries(Grid& mom_x_next, Grid& mom_y_next, Grid& rho_next, Grid& energy_next);
+
+  void recomputeRadiativeLosses();
+  void recomputeDT();
+  void recomputeDTThermal();
+  void recomputeDTRadiative();
+
   void outputPreamble();
   void outputCurrentState();
   void writeStateFile(int precision = -1) const;
   void cleanUpStateFiles() const;
 
-  //Time Evolution
-  void advanceTime(bool verbose = true);
+  void setOutputFlag(int var, bool new_flag = true);
+  void setOutputFlags(const std::vector<int> vars, bool new_flag = true);
+  void setStateFlag(int var, bool new_flag = true);
+  void setStateFlags(const std::vector<int> vars, bool new_flag = true);
 
-private:
-  //Enum to allow indexing for each variable
-  //NOTE: Must be kept in the same order as m_var_names defined in plasmadomain.cpp
-
-  //Strings corresponding to variables, settings, boundary conditions for file I/O
-  static const std::vector<std::string> m_var_names;
-  static const std::vector<std::string> m_setting_names;
-  static const std::vector<std::string> m_boundary_condition_names;
-
-  std::vector<Grid> m_grids;
-  std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
-  std::vector<bool> m_state_flags; //Variables that are printed in .state files (should be a minimal complete description of the plasma)
-
-  size_t m_xdim, m_ydim;
-  double m_dx, m_dy;
-
-  std::string m_run_name;
-  std::ofstream m_out_file;
-
-  double m_time;
-  int m_iter;
-
-  void recomputeDerivedVariables();
-  void computeMagneticTerms();
-  void recomputeTemperature();
-  void catchUnderdensity();
-  void clampWallBoundaries(Grid& mom_x_next, Grid& mom_y_next, Grid& rho_next, Grid& energy_next);
-  void recomputeRadiativeLosses();
-  void recomputeDT();
-  void recomputeDTThermal();
-  void recomputeDTRadiative();
-  void subcycleConduction(int subcycles_thermal, double dt_total);
-  void subcycleRadiation(int subcycles_rad, double dt_total);
   BoundaryCondition stringToBoundaryCondition(const std::string str) const;
 };
 

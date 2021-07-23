@@ -51,33 +51,14 @@ int main(int argc,char* argv[]){
     // simulation.gaussianInitialize(1.0e-15,1.0e-12,1.0e4,3.0e4,0.05*XDIM,0.05*YDIM);
   }
 
-  simulation.outputPreamble();
-  simulation.outputCurrentState();
-
-  for (int iter = 0; iter < simulation.n_iterations; iter++){
-    #if BENCHMARKING_ON
-    InstrumentationTimer timer((std::string("iteration ") + std::to_string(iter)).c_str());
-    #endif
-
-    simulation.advanceTime();
-
-    if(iter%simulation.output_interval == 0){
-      simulation.outputCurrentState();
-    }
-
-    simulation.writeStateFile();
-  }
-
-  simulation.cleanUpStateFiles();
+  simulation.run();
 
   //Information about run time
-  std::cout << "\rIterations: " << simulation.n_iterations << "/" << simulation.n_iterations << "\n";
   auto stop_time = std::chrono::steady_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop_time - start_time);
   double minutes = (int)(duration.count()/60.0);
   double seconds = duration.count() - 60*minutes;
-  std::cout << "\rTotal runtime: " << minutes << " min " << seconds << " sec (approx. " 
-    << (double)duration.count()/(double)(simulation.n_iterations) << " sec per iteration)" << std::endl;
+  std::cout << "\rTotal runtime: " << minutes << " min " << seconds << " sec" << std::endl;
 
   #if BENCHMARKING_ON
   Instrumentor::Get().EndSession();

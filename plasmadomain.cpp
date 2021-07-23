@@ -96,7 +96,8 @@ void PlasmaDomain::setDefaultSettings()
   rho_min = RHO_MIN;
   temp_min = TEMP_MIN;
   thermal_energy_min = THERMALENERGYFLOOR; //Lower bounds for mass density and thermal energy density
-  n_iterations = NT;
+  max_iterations = MAX_ITERATIONS;
+  max_time = MAX_TIME;
   output_interval = OUTPUT_INTERVAL;
   m_output_flags[rho] = RHO_OUT;
   m_output_flags[temp] = TEMP_OUT;

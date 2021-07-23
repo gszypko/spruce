@@ -27,7 +27,7 @@ const std::vector<std::string> PlasmaDomain::m_setting_names = {
   "x_bound_1","x_bound_2","y_bound_1","y_bound_2","radiative_losses","ambient_heating",
   "thermal_conduction","flux_saturation","temp_chromosphere","radiation_ramp","heating_rate",
   "b_0","epsilon","epsilon_thermal","epsilon_rad","epsilon_viscous","dt_thermal_min","rho_min",
-  "temp_min","thermal_energy_min","n_iterations","output_interval","output_flags","state_flags",
+  "temp_min","thermal_energy_min","max_iterations","max_time","output_interval","output_flags","state_flags",
   "xdim","ydim","dx","dy"
 };
 
@@ -35,7 +35,7 @@ enum class Setting {
   x_bound_1, x_bound_2, y_bound_1, y_bound_2, radiative_losses, ambient_heating,
   thermal_conduction, flux_saturation, temp_chromosphere, radiation_ramp, heating_rate,
   b_0, epsilon, epsilon_thermal, epsilon_rad, epsilon_viscous, dt_thermal_min, rho_min,
-  temp_min, thermal_energy_min, n_iterations, output_interval, output_flags, state_flags,
+  temp_min, thermal_energy_min, max_iterations, max_time, output_interval, output_flags, state_flags,
   xdim, ydim, dx, dy
 };
 
@@ -137,7 +137,8 @@ void PlasmaDomain::readSettingsFile(const char* settings_filename)
     case static_cast<int>(Setting::rho_min): rho_min = std::stod(rhs); break;
     case static_cast<int>(Setting::temp_min): temp_min = std::stod(rhs); break;
     case static_cast<int>(Setting::thermal_energy_min): thermal_energy_min = std::stod(rhs); break;
-    case static_cast<int>(Setting::n_iterations): n_iterations = std::stoi(rhs); break;
+    case static_cast<int>(Setting::max_iterations): max_iterations = std::stoi(rhs); break;
+    case static_cast<int>(Setting::max_time): max_time = std::stod(rhs); break;
     case static_cast<int>(Setting::output_interval): output_interval = std::stoi(rhs); break;
     case static_cast<int>(Setting::output_flags): /*TODO*/ break;
     case static_cast<int>(Setting::state_flags): /*TODO*/ break;

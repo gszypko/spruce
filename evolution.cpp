@@ -8,6 +8,21 @@
 #include "plasmadomain.hpp"
 #include "constants.hpp"
 
+void PlasmaDomain::run()
+{
+  outputPreamble();
+  outputCurrentState();
+  while( (max_iterations < 0 || m_iter < max_iterations) && (max_time < 0.0 || m_time < max_time) ){
+    #if BENCHMARKING_ON
+    InstrumentationTimer timer((std::string("iteration ") + std::to_string(iter)).c_str());
+    #endif
+    advanceTime();
+    if(m_iter%output_interval == 0) outputCurrentState();
+    writeStateFile();
+  }
+  cleanUpStateFiles();
+}
+
 void PlasmaDomain::advanceTime(bool verbose)
 {
   double min_dt, min_dt_thermal, min_dt_rad;
@@ -26,7 +41,11 @@ void PlasmaDomain::advanceTime(bool verbose)
   }
 
   if(verbose){
-    printf("Iter: %i/%i|t: %f|dt: %f",m_iter,n_iterations,m_time,min_dt);
+    printf("Iter: %i",m_iter);
+    if(max_iterations > 0) printf("/%i",max_iterations);
+    printf("|t: %f",m_time);
+    if(max_time > 0.0) printf("/%f",max_time);
+    printf("|dt: %f",min_dt);
     if(thermal_conduction) printf("|Cond. Subcyc: %i",subcycles_thermal);
     if(radiative_losses) printf("|Rad. Subcyc: %i",subcycles_rad);
     printf("\n");
