@@ -79,7 +79,8 @@ private:
   double dt_thermal_min; //Minimum timestep for thermal conduction
   double rho_min, temp_min, thermal_energy_min; //Lower bounds for mass density and thermal energy density
   //Output settings
-  int output_interval;
+  int iter_output_interval;
+  double time_output_interval;
   /*********************************************************************/ 
 
   void advanceTime(bool verbose = true);
@@ -102,6 +103,7 @@ private:
   void outputCurrentState();
   void writeStateFile(int precision = -1) const;
   void cleanUpStateFiles() const;
+  void printUpdate(double min_dt, int subcycles_thermal, int subcycles_rad) const;
 
   void setOutputFlag(int var, bool new_flag = true);
   void setOutputFlags(const std::vector<int> vars, bool new_flag = true);

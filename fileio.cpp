@@ -27,16 +27,16 @@ const std::vector<std::string> PlasmaDomain::m_setting_names = {
   "x_bound_1","x_bound_2","y_bound_1","y_bound_2","radiative_losses","ambient_heating",
   "thermal_conduction","flux_saturation","temp_chromosphere","radiation_ramp","heating_rate",
   "b_0","epsilon","epsilon_thermal","epsilon_rad","epsilon_viscous","dt_thermal_min","rho_min",
-  "temp_min","thermal_energy_min","max_iterations","max_time","output_interval","output_flags","state_flags",
-  "xdim","ydim","dx","dy"
+  "temp_min","thermal_energy_min","max_iterations","max_time","iter_output_interval","time_output_interval",
+  "output_flags","state_flags","xdim","ydim","dx","dy"
 };
 
 enum class Setting {
   x_bound_1, x_bound_2, y_bound_1, y_bound_2, radiative_losses, ambient_heating,
   thermal_conduction, flux_saturation, temp_chromosphere, radiation_ramp, heating_rate,
   b_0, epsilon, epsilon_thermal, epsilon_rad, epsilon_viscous, dt_thermal_min, rho_min,
-  temp_min, thermal_energy_min, max_iterations, max_time, output_interval, output_flags, state_flags,
-  xdim, ydim, dx, dy
+  temp_min, thermal_energy_min, max_iterations, max_time, iter_output_interval, time_output_interval,
+  output_flags, state_flags, xdim, ydim, dx, dy
 };
 
 //Read in variables from .state file
@@ -139,7 +139,8 @@ void PlasmaDomain::readSettingsFile(const char* settings_filename)
     case static_cast<int>(Setting::thermal_energy_min): thermal_energy_min = std::stod(rhs); break;
     case static_cast<int>(Setting::max_iterations): max_iterations = std::stoi(rhs); break;
     case static_cast<int>(Setting::max_time): max_time = std::stod(rhs); break;
-    case static_cast<int>(Setting::output_interval): output_interval = std::stoi(rhs); break;
+    case static_cast<int>(Setting::iter_output_interval): iter_output_interval = std::stoi(rhs); break;
+    case static_cast<int>(Setting::time_output_interval): time_output_interval = std::stod(rhs); break;
     case static_cast<int>(Setting::output_flags): /*TODO*/ break;
     case static_cast<int>(Setting::state_flags): /*TODO*/ break;
     case static_cast<int>(Setting::xdim): m_xdim = std::stoi(rhs); break;
@@ -203,4 +204,16 @@ PlasmaDomain::BoundaryCondition PlasmaDomain::stringToBoundaryCondition(const st
   assert(it != m_boundary_condition_names.end()); //Ensure that given name is valid boundary condition
   auto index = std::distance(m_boundary_condition_names.begin(),it);
   return static_cast<BoundaryCondition>(index);
+}
+
+void PlasmaDomain::printUpdate(double min_dt, int subcycles_thermal, int subcycles_rad) const
+{
+  printf("Iter: %i",m_iter);
+  if(max_iterations > 0) printf("/%i",max_iterations);
+  printf("|t: %f",m_time);
+  if(max_time > 0.0) printf("/%f",max_time);
+  printf("|dt: %f",min_dt);
+  if(thermal_conduction) printf("|Cond. Subcyc: %i",subcycles_thermal);
+  if(radiative_losses) printf("|Rad. Subcyc: %i",subcycles_rad);
+  printf("\n");
 }

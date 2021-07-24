@@ -14,10 +14,12 @@ void PlasmaDomain::run()
   outputCurrentState();
   while( (max_iterations < 0 || m_iter < max_iterations) && (max_time < 0.0 || m_time < max_time) ){
     #if BENCHMARKING_ON
-    InstrumentationTimer timer((std::string("iteration ") + std::to_string(iter)).c_str());
+    InstrumentationTimer timer((std::string("iteration ") + std::to_string(m_iter)).c_str());
     #endif
+    double old_time = m_time;
     advanceTime();
-    if(m_iter%output_interval == 0) outputCurrentState();
+    if((iter_output_interval > 0 && m_iter%iter_output_interval == 0) || (time_output_interval > 0.0 &&
+       (int)(m_time/time_output_interval) > (int)(old_time/time_output_interval))) outputCurrentState();
     writeStateFile();
   }
   cleanUpStateFiles();
@@ -40,16 +42,8 @@ void PlasmaDomain::advanceTime(bool verbose)
     subcycles_rad = (int)(min_dt/min_dt_rad)+1;
   }
 
-  if(verbose){
-    printf("Iter: %i",m_iter);
-    if(max_iterations > 0) printf("/%i",max_iterations);
-    printf("|t: %f",m_time);
-    if(max_time > 0.0) printf("/%f",max_time);
-    printf("|dt: %f",min_dt);
-    if(thermal_conduction) printf("|Cond. Subcyc: %i",subcycles_thermal);
-    if(radiative_losses) printf("|Rad. Subcyc: %i",subcycles_rad);
-    printf("\n");
-  }
+  if(verbose) printUpdate(min_dt,subcycles_thermal,subcycles_rad);
+
   if(thermal_conduction) subcycleConduction(subcycles_thermal,min_dt);
   if(radiative_losses) subcycleRadiation(subcycles_rad,min_dt);
 

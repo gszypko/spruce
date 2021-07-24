@@ -6,8 +6,8 @@
 #define YDIM 100
 #define DX 2.2649e9/XDIM
 #define DY 2.2649e9/YDIM
-#define MAX_ITERATIONS 5 //number of iterations to simulate
-#define MAX_TIME 1.0 //upper bound on simulation time (negative leaves unbounded)
+#define MAX_ITERATIONS 5 //number of iterations to simulate (negative defers to MAX_TIME)
+#define MAX_TIME -1.0 //upper bound on simulation time (negative defers to MAX_ITERATIONS)
 /****************************************************************************/
 
 /***************************** PHYSICS SETTINGS ****************************/
@@ -36,7 +36,8 @@
 /****************************************************************************/
 
 /*************************** OUTPUT FILE SETTINGS ***************************/
-#define OUTPUT_INTERVAL 1 //time steps between file outputs
+#define OUTPUT_INTERVAL -1 //time steps between file outputs (set as negative to defer to TIME_OUTPUT_INTERVAL)
+#define TIME_OUTPUT_INTERVAL 1.0 //simulation time between file outputs (set as negative to defer to OUTPUT_INTERVAL)
 //Control which variables are output in .out file
 #define RHO_OUT 1
 #define TEMP_OUT 1
