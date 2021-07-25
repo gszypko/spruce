@@ -67,9 +67,10 @@
 #define K_B 1.3807e-16 //boltzmann constant, erg K^-1
 #define M_I 1.6726e-24 //ion mass, g
 #define M_ELECTRON 9.1094e-28 //electron mass, g
-#define GRAV 2.748e4 
 #define BASE_GRAV 2.748e4 //acceleration due to gravity at surface, cm sec^-2
 #define R_SUN 6.957e10 //radius of sun, cm
+#define M_SUN 1.989e33 //mass of sun, g
+#define GRAV_CONST 6.674e-8 //gravitational constant, dyn cm^2 g^-2
 #define GAMMA 1.666667 //adiabatic index
 #define KAPPA_0 1.0e-6 //thermal conductivity coefficient
 #define PI 3.14159265358979323846

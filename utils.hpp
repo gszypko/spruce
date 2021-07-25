@@ -9,11 +9,11 @@ Grid GaussianGrid(int xdim, int ydim, double min, double max, double std_dev_x, 
 //Generates potential bipolar field for component corresponding to index "index"
 //Centered s.t. origin lies at bottom middle of domain
 //Pressure scale height h, field poles at +/- l, field strength at poles b0
-Grid BipolarField(int xdim, int ydim, double b0, double h, int index);
+Grid BipolarField(int xdim, int ydim, double b0, double h, double dx, double dy, int index);
 
 //Generates grid with exponential falloff in the y-direction, with the quantity
 //"base_value" at y=0. Assumes isothermal atmosphere with temperature "iso_temp".
-Grid HydrostaticFalloff(double base_value, double scale_height, int xdim, int ydim);
+Grid HydrostaticFalloff(double base_value, double scale_height, int xdim, int ydim, double dy);
 
 //Computes 1D cell-centered conductive flux from temperature "temp"
 //Flux computed in direction indicated by "index": 0 for x, 1 for y

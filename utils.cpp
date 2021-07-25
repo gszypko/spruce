@@ -39,7 +39,7 @@ Grid GaussianGrid(int xdim, int ydim, double min, double max, double std_dev_x, 
 //Generates potential bipolar field for component corresponding to index "index"
 //Centered s.t. origin lies at bottom middle of domain
 //Pressure scale height h, field poles at +/- l, field strength at poles b0
-Grid BipolarField(int xdim, int ydim, double b0, double h, int index){
+Grid BipolarField(int xdim, int ydim, double b0, double h, double dx, double dy, int index){
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
@@ -47,8 +47,8 @@ Grid BipolarField(int xdim, int ydim, double b0, double h, int index){
   #pragma omp parallel for collapse(2)
   for(int i=0; i<xdim; i++){
     for(int j=0; j<ydim; j++){
-      double x = (i - (double)(xdim-1)*0.5)*DX;
-      double y = j*DY;
+      double x = (i - (double)(xdim-1)*0.5)*dx;
+      double y = j*dy;
       if(index == 0) result(i,j) = b0*std::exp(-0.5*y/h)*std::cos(0.5*x/h);
       else result(i,j) = -b0*std::exp(-0.5*y/h)*std::sin(0.5*x/h);
     }
@@ -58,7 +58,7 @@ Grid BipolarField(int xdim, int ydim, double b0, double h, int index){
 
 //Generates grid with exponential falloff in the y-direction, with the quantity
 //"base_value" at y=0. Assumes isothermal atmosphere with temperature "iso_temp".
-Grid HydrostaticFalloff(double base_value, double scale_height, int xdim, int ydim){
+Grid HydrostaticFalloff(double base_value, double scale_height, int xdim, int ydim, double dy){
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
@@ -66,8 +66,9 @@ Grid HydrostaticFalloff(double base_value, double scale_height, int xdim, int yd
   #pragma omp parallel for collapse(2)
   for(int i=0; i<xdim; i++){
     for(int j=0; j<ydim; j++){
-      double y = j*DY;
-      result(i,j) = base_value*std::exp(-y/scale_height);
+      double y = j*dy;
+      //result(i,j) = base_value*std::exp(-y/scale_height);
+      result(i,j) = base_value*std::exp(M_SUN*GRAV_CONST/BASE_GRAV/scale_height*(1/(y+R_SUN) - 1/R_SUN));
     }
   }
   return result;
