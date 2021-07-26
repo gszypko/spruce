@@ -2,8 +2,8 @@
 //PlasmaDomain functionality relating to time-evolution of the plasma
 
 #include <cmath>
+#include <omp.h>
 #include "utils.hpp"
-#include "derivs.hpp"
 #include "grid.hpp"
 #include "plasmadomain.hpp"
 #include "constants.hpp"
@@ -90,8 +90,8 @@ void PlasmaDomain::subcycleConduction(int subcycles_thermal, double dt_total)
   for(int subcycle = 0; subcycle < subcycles_thermal; subcycle++){
     Grid con_flux_x(m_xdim,m_ydim,0.0);
     Grid con_flux_y(m_xdim,m_ydim,0.0);
-    field_aligned_conductive_flux(con_flux_x, con_flux_y, m_temp, m_grids[rho], m_grids[b_hat_x], m_grids[b_hat_y], KAPPA_0);
-    if(flux_saturation) saturate_conductive_flux(con_flux_x, con_flux_y, m_grids[rho], m_temp);
+    fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_temp, m_grids[rho], m_grids[b_hat_x], m_grids[b_hat_y], KAPPA_0);
+    if(flux_saturation) saturateConductiveFlux(con_flux_x, con_flux_y, m_grids[rho], m_temp);
     energy_next = m_energy - (dt_total/(double)subcycles_thermal)*(derivative1D(con_flux_x,0)+derivative1D(con_flux_y,1));
     clampWallBoundaries(dummy_grid, dummy_grid, dummy_grid, energy_next);
     m_energy = energy_next.max(energy_floor);
@@ -240,10 +240,10 @@ void PlasmaDomain::recomputeDTThermal()
     Grid con_flux_y(m_xdim,m_ydim,0.0);
     Grid field_temp_gradient = derivative1D(m_grids[temp],0)*m_grids[b_hat_x]
                               + derivative1D(m_grids[temp],1)*m_grids[b_hat_y];
-    field_aligned_conductive_flux(con_flux_x, con_flux_y, m_grids[temp], m_grids[rho],
+    fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_grids[temp], m_grids[rho],
                                   m_grids[b_hat_x], m_grids[b_hat_y], KAPPA_0);
     Grid flux_c = (con_flux_x.square() + con_flux_y.square()).sqrt();
-    saturate_conductive_flux(con_flux_x, con_flux_y, m_grids[rho], m_grids[temp]);
+    saturateConductiveFlux(con_flux_x, con_flux_y, m_grids[rho], m_grids[temp]);
     Grid flux_sat = (con_flux_x.square() + con_flux_y.square()).sqrt();
     kappa_modified = (flux_sat/field_temp_gradient).abs();
     m_grids[dt_thermal] = K_B/kappa_modified*(m_grids[rho]/M_I)*m_dx*m_dy;
@@ -316,4 +316,68 @@ void PlasmaDomain::recomputeRadiativeLosses()
   }
 }
 
+//Computes 1D cell-centered conductive flux from temperature "temp"
+//Flux computed in direction indicated by "index": 0 for x, 1 for y
+//k0 is conductive coefficient
+Grid PlasmaDomain::oneDimConductiveFlux(const Grid &temp, const Grid &rho, double k0, int index){
+  #if BENCHMARKING_ON
+  InstrumentationTimer timer(__PRETTY_FUNCTION__);
+  #endif
+  Grid kappa_max = m_dx*m_dy*K_B*(rho/M_I)/dt_thermal_min;
+  int xdim = temp.rows();
+  int ydim = temp.cols();
+  Grid flux = Grid::Zero(xdim,ydim);
+  flux = temp.pow(7.0/2.0);
+  #pragma omp parallel for collapse(2)
+  for(int i=0; i<xdim; i++){
+    for(int j=0; j<ydim; j++){
+      flux(i,j) = std::pow(temp(i,j),7.0/2.0);
+    }
+  }
+  return -(k0*temp.pow(5.0/2.0)).min(kappa_max)*derivative1D(temp,index);
+  // return -2.0/7.0*k0*derivative1D(flux,index);
+}
+
+//Computes cell-centered, field-aligned conductive flux from temperature "temp"
+//temp is temperature Grid
+//b_hat_x, b_hat_y are the components of the *unit* vector b_hat
+//k0 is conductive coefficient
+//Output is written to flux_out_x and flux_out_y
+void PlasmaDomain::fieldAlignedConductiveFlux(Grid &flux_out_x, Grid &flux_out_y, const Grid &temp, const Grid &rho,
+                                    const Grid &b_hat_x, const Grid &b_hat_y, double k0){
+  #if BENCHMARKING_ON
+  InstrumentationTimer timer(__PRETTY_FUNCTION__);
+  #endif
+  int xdim = temp.rows();
+  int ydim = temp.cols();
+  Grid con_flux_x = oneDimConductiveFlux(temp, rho, k0, 0);
+  Grid con_flux_y = oneDimConductiveFlux(temp, rho, k0, 1);
+  #pragma omp parallel
+  {
+    #if BENCHMARKING_ON
+    InstrumentationTimer timer("loop thread");
+    #endif
+    #pragma omp for collapse(2)
+    for(int i=0; i<xdim; i++){
+      for(int j=0; j<ydim; j++){
+        double flux_magnitude = con_flux_x(i,j)*b_hat_x(i,j) + con_flux_y(i,j)*b_hat_y(i,j);
+        flux_out_x(i,j) = flux_magnitude*b_hat_x(i,j);
+        flux_out_y(i,j) = flux_magnitude*b_hat_y(i,j);
+      }
+    }
+  }
+}
+
+//Computes saturated conductive flux at each point in grid,
+//then ensures that provided fluxes do not exceed the saturation point
+void PlasmaDomain::saturateConductiveFlux(Grid &flux_out_x, Grid &flux_out_y, const Grid &rho, const Grid &temp){
+  #if BENCHMARKING_ON
+  InstrumentationTimer timer(__PRETTY_FUNCTION__);
+  #endif
+  Grid sat_flux_mag = (1.0/6.0)*(3.0/2.0)*(rho/M_I)*(K_B*temp).pow(1.5)/std::sqrt(M_ELECTRON);
+  Grid flux_mag = (flux_out_x.square() + flux_out_y.square()).sqrt();
+  Grid scale_factor = sat_flux_mag /((sat_flux_mag.square() + flux_mag.square()).sqrt());
+  flux_out_x *= scale_factor;
+  flux_out_y *= scale_factor;
+}
 

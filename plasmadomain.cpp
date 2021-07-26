@@ -10,7 +10,6 @@
 #include <cmath>
 #include <limits>
 #include "utils.hpp"
-#include "derivs.hpp"
 #include "grid.hpp"
 #include "plasmadomain.hpp"
 #include "constants.hpp"
@@ -23,12 +22,12 @@ PlasmaDomain::PlasmaDomain(const char* run_name, const char* settings_file_name)
   m_run_name = std::string(run_name);
   m_out_file.open(m_run_name+".out");
   m_time = 0.0; m_iter = 0;
- readSettingsFile(settings_file_name);
   for(int i=0; i<num_variables; i++){
-    m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
     m_output_flags.push_back(false);
     m_state_flags.push_back(false);
   }
+  readSettingsFile(settings_file_name);
+  for(int i=0; i<num_variables; i++) m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
 }
 
 PlasmaDomain::PlasmaDomain(size_t xdim, size_t ydim, double dx, double dy, const char* run_name)
@@ -76,49 +75,6 @@ void PlasmaDomain::gaussianInitialize(double min_rho, double max_rho, double min
   // b_z = Grid::Zero(m_xdim,m_ydim);
 }
 
-void PlasmaDomain::setDefaultSettings()
-{
-  x_bound_1 = static_cast<BoundaryCondition>(XBOUND1);
-  x_bound_2 = static_cast<BoundaryCondition>(XBOUND2);
-  y_bound_1 = static_cast<BoundaryCondition>(YBOUND1);
-  y_bound_2 = static_cast<BoundaryCondition>(YBOUND2);
-  radiative_losses = RADIATIVE_LOSSES_ON;
-  ambient_heating = AMBIENT_HEATING_ON;
-  thermal_conduction = THERMAL_CONDUCTION_ON;
-  flux_saturation = FLUX_SATURATION;
-  temp_chromosphere = TEMP_CHROMOSPHERE; //Minimum allowed temperature
-  radiation_ramp = RADIATION_RAMP;  //Width of cutoff ramp, in units of temperature, for low-temp radiation
-  heating_rate = HEATING_RATE;  //Constant ambient heating rate
-  b_0 = B0;  //Base value of magnetic field
-  epsilon = EPSILON; epsilon_thermal = EPSILON_THERMAL; epsilon_rad = EPSILON_RADIATIVE; //Time step calculation
-  epsilon_viscous = EPSILON_VISCOUS; //Prefactor for artificial viscosity
-  dt_thermal_min = DT_THERMAL_MIN; //Minimum timestep for thermal conduction
-  rho_min = RHO_MIN;
-  temp_min = TEMP_MIN;
-  thermal_energy_min = THERMALENERGYFLOOR; //Lower bounds for mass density and thermal energy density
-  max_iterations = MAX_ITERATIONS;
-  max_time = MAX_TIME;
-  iter_output_interval = OUTPUT_INTERVAL;
-  time_output_interval = TIME_OUTPUT_INTERVAL;
-  m_output_flags[rho] = RHO_OUT;
-  m_output_flags[temp] = TEMP_OUT;
-  m_output_flags[press] = PRESS_OUT;
-  m_output_flags[rad] = RAD_OUT;
-  m_output_flags[energy] = ENERGY_OUT;
-  m_output_flags[v_x] = VX_OUT;
-  m_output_flags[v_y] = VY_OUT;
-  m_output_flags[dt] = DT_OUT;
-  m_output_flags[dt_thermal] = DT_THERMAL_OUT;
-  m_output_flags[dt_rad] = DT_RAD_OUT;
-  m_state_flags[rho] = true;
-  m_state_flags[mom_x] = true;
-  m_state_flags[mom_y] = true;
-  m_state_flags[temp] = true;
-  m_state_flags[b_x] = true;
-  m_state_flags[b_y] = true;
-  m_state_flags[b_z] = true;
-}
-
 //Sets gravity to fall off from base_gravity at bottom of the domain,
 //as though from the surface of a planet with radius r_solar
 void PlasmaDomain::setSolarGravity(double base_gravity, double r_solar)
@@ -132,23 +88,5 @@ void PlasmaDomain::setSolarGravity(double base_gravity, double r_solar)
     for(int i=0; i<m_xdim; i++){
       m_grav_y(i,j) = -base_gravity*std::pow(r_solar/(r_solar+y),2.0);
     }
-  }
-}
-
-void PlasmaDomain::setOutputFlag(int var, bool new_flag) { m_output_flags[var] = new_flag; }
-
-void PlasmaDomain::setOutputFlags(const std::vector<int> vars, bool new_flag)
-{
-  for(int var : vars){
-    m_output_flags[var] = new_flag;
-  }
-}
-
-void PlasmaDomain::setStateFlag(int var, bool new_flag) { m_state_flags[var] = new_flag; }
-
-void PlasmaDomain::setStateFlags(const std::vector<int> vars, bool new_flag)
-{
-  for(int var : vars){
-    m_state_flags[var] = new_flag;
   }
 }

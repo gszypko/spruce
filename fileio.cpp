@@ -6,6 +6,7 @@
 #include <sstream>
 #include <cstdio>
 #include "plasmadomain.hpp"
+#include "utils.hpp"
 
 //Must match ordering of BoundaryCondition enum in plasmadomain.hpp
 const std::vector<std::string> PlasmaDomain::m_boundary_condition_names = {
@@ -108,47 +109,18 @@ void PlasmaDomain::readSettingsFile(const char* settings_filename)
   std::ifstream in_file(settings_filename);
   std::string line;
   while(std::getline(in_file, line)){
-    if(line[0] == '#') continue; //skip comment lines
+    clearWhitespace(line);
+    if(line.empty() || line[0] == '#') continue; //skip comment and empty lines
     std::istringstream ss_line(line);
     std::string lhs, rhs;
     std::getline(ss_line,lhs,'=');
-    std::getline(ss_line,rhs,';');
+    std::getline(ss_line,rhs,'#');
+    std::vector<std::string> rhs_vec = splitString(rhs,',');
     auto it = std::find(m_setting_names.begin(),m_setting_names.end(),lhs);
     assert(it != m_setting_names.end());
     auto index = std::distance(m_setting_names.begin(),it);
-    switch (static_cast<int>(index)) {
-    case static_cast<int>(Setting::x_bound_1): x_bound_1 = stringToBoundaryCondition(rhs); break;
-    case static_cast<int>(Setting::x_bound_2): x_bound_2 = stringToBoundaryCondition(rhs); break;
-    case static_cast<int>(Setting::y_bound_1): y_bound_1 = stringToBoundaryCondition(rhs); break;
-    case static_cast<int>(Setting::y_bound_2): y_bound_2 = stringToBoundaryCondition(rhs); break;
-    case static_cast<int>(Setting::radiative_losses): radiative_losses = (rhs == "true"); break;
-    case static_cast<int>(Setting::ambient_heating): ambient_heating = (rhs == "true"); break;
-    case static_cast<int>(Setting::thermal_conduction): thermal_conduction = (rhs == "true"); break;
-    case static_cast<int>(Setting::flux_saturation): flux_saturation = (rhs == "true"); break;
-    case static_cast<int>(Setting::temp_chromosphere): temp_chromosphere = std::stod(rhs); break;
-    case static_cast<int>(Setting::radiation_ramp): radiation_ramp = std::stod(rhs); break;
-    case static_cast<int>(Setting::heating_rate): heating_rate = std::stod(rhs); break;
-    case static_cast<int>(Setting::b_0): b_0 = std::stod(rhs); break;
-    case static_cast<int>(Setting::epsilon): epsilon = std::stod(rhs); break;
-    case static_cast<int>(Setting::epsilon_thermal): epsilon_thermal = std::stod(rhs); break;
-    case static_cast<int>(Setting::epsilon_rad): epsilon_rad = std::stod(rhs); break;
-    case static_cast<int>(Setting::epsilon_viscous): epsilon_viscous = std::stod(rhs); break;
-    case static_cast<int>(Setting::dt_thermal_min): dt_thermal_min = std::stod(rhs); break;
-    case static_cast<int>(Setting::rho_min): rho_min = std::stod(rhs); break;
-    case static_cast<int>(Setting::temp_min): temp_min = std::stod(rhs); break;
-    case static_cast<int>(Setting::thermal_energy_min): thermal_energy_min = std::stod(rhs); break;
-    case static_cast<int>(Setting::max_iterations): max_iterations = std::stoi(rhs); break;
-    case static_cast<int>(Setting::max_time): max_time = std::stod(rhs); break;
-    case static_cast<int>(Setting::iter_output_interval): iter_output_interval = std::stoi(rhs); break;
-    case static_cast<int>(Setting::time_output_interval): time_output_interval = std::stod(rhs); break;
-    case static_cast<int>(Setting::output_flags): /*TODO*/ break;
-    case static_cast<int>(Setting::state_flags): /*TODO*/ break;
-    case static_cast<int>(Setting::xdim): m_xdim = std::stoi(rhs); break;
-    case static_cast<int>(Setting::ydim): m_ydim = std::stoi(rhs); break;
-    case static_cast<int>(Setting::dx): m_dx = std::stod(rhs); break;
-    case static_cast<int>(Setting::dy): m_dy = std::stod(rhs); break;
-    default: break;
-    }
+    if(rhs_vec.size() == 1) handleSingleSetting(index,rhs);
+    else if(rhs_vec.size() > 1) handleSettingList(index,rhs_vec);
   }
 }
 
@@ -217,3 +189,104 @@ void PlasmaDomain::printUpdate(double min_dt, int subcycles_thermal, int subcycl
   if(radiative_losses) printf("|Rad. Subcyc: %i",subcycles_rad);
   printf("\n");
 }
+
+void PlasmaDomain::handleSingleSetting(int setting_index, std::string rhs)
+{
+  switch (static_cast<int>(setting_index)) {
+  case static_cast<int>(Setting::x_bound_1): x_bound_1 = stringToBoundaryCondition(rhs); break;
+  case static_cast<int>(Setting::x_bound_2): x_bound_2 = stringToBoundaryCondition(rhs); break;
+  case static_cast<int>(Setting::y_bound_1): y_bound_1 = stringToBoundaryCondition(rhs); break;
+  case static_cast<int>(Setting::y_bound_2): y_bound_2 = stringToBoundaryCondition(rhs); break;
+  case static_cast<int>(Setting::radiative_losses): radiative_losses = (rhs == "true"); break;
+  case static_cast<int>(Setting::ambient_heating): ambient_heating = (rhs == "true"); break;
+  case static_cast<int>(Setting::thermal_conduction): thermal_conduction = (rhs == "true"); break;
+  case static_cast<int>(Setting::flux_saturation): flux_saturation = (rhs == "true"); break;
+  case static_cast<int>(Setting::temp_chromosphere): temp_chromosphere = std::stod(rhs); break;
+  case static_cast<int>(Setting::radiation_ramp): radiation_ramp = std::stod(rhs); break;
+  case static_cast<int>(Setting::heating_rate): heating_rate = std::stod(rhs); break;
+  case static_cast<int>(Setting::b_0): b_0 = std::stod(rhs); break;
+  case static_cast<int>(Setting::epsilon): epsilon = std::stod(rhs); break;
+  case static_cast<int>(Setting::epsilon_thermal): epsilon_thermal = std::stod(rhs); break;
+  case static_cast<int>(Setting::epsilon_rad): epsilon_rad = std::stod(rhs); break;
+  case static_cast<int>(Setting::epsilon_viscous): epsilon_viscous = std::stod(rhs); break;
+  case static_cast<int>(Setting::dt_thermal_min): dt_thermal_min = std::stod(rhs); break;
+  case static_cast<int>(Setting::rho_min): rho_min = std::stod(rhs); break;
+  case static_cast<int>(Setting::temp_min): temp_min = std::stod(rhs); break;
+  case static_cast<int>(Setting::thermal_energy_min): thermal_energy_min = std::stod(rhs); break;
+  case static_cast<int>(Setting::max_iterations): max_iterations = std::stoi(rhs); break;
+  case static_cast<int>(Setting::max_time): max_time = std::stod(rhs); break;
+  case static_cast<int>(Setting::iter_output_interval): iter_output_interval = std::stoi(rhs); break;
+  case static_cast<int>(Setting::time_output_interval): time_output_interval = std::stod(rhs); break;
+  case static_cast<int>(Setting::output_flags): setOutputFlag(rhs,true); break;
+  case static_cast<int>(Setting::state_flags): setStateFlag(rhs,true); break;
+  case static_cast<int>(Setting::xdim): m_xdim = std::stoi(rhs); break;
+  case static_cast<int>(Setting::ydim): m_ydim = std::stoi(rhs); break;
+  case static_cast<int>(Setting::dx): m_dx = std::stod(rhs); break;
+  case static_cast<int>(Setting::dy): m_dy = std::stod(rhs); break;
+  default: break;
+  }
+}
+
+void PlasmaDomain::handleSettingList(int setting_index, std::vector<std::string> rhs_vec)
+{
+  switch (static_cast<int>(setting_index)) {
+  // case static_cast<int>(Setting::x_bound_1): x_bound_1 = stringToBoundaryCondition(rhs); break;
+  // case static_cast<int>(Setting::x_bound_2): x_bound_2 = stringToBoundaryCondition(rhs); break;
+  // case static_cast<int>(Setting::y_bound_1): y_bound_1 = stringToBoundaryCondition(rhs); break;
+  // case static_cast<int>(Setting::y_bound_2): y_bound_2 = stringToBoundaryCondition(rhs); break;
+  // case static_cast<int>(Setting::radiative_losses): radiative_losses = (rhs == "true"); break;
+  // case static_cast<int>(Setting::ambient_heating): ambient_heating = (rhs == "true"); break;
+  // case static_cast<int>(Setting::thermal_conduction): thermal_conduction = (rhs == "true"); break;
+  // case static_cast<int>(Setting::flux_saturation): flux_saturation = (rhs == "true"); break;
+  // case static_cast<int>(Setting::temp_chromosphere): temp_chromosphere = std::stod(rhs); break;
+  // case static_cast<int>(Setting::radiation_ramp): radiation_ramp = std::stod(rhs); break;
+  // case static_cast<int>(Setting::heating_rate): heating_rate = std::stod(rhs); break;
+  // case static_cast<int>(Setting::b_0): b_0 = std::stod(rhs); break;
+  // case static_cast<int>(Setting::epsilon): epsilon = std::stod(rhs); break;
+  // case static_cast<int>(Setting::epsilon_thermal): epsilon_thermal = std::stod(rhs); break;
+  // case static_cast<int>(Setting::epsilon_rad): epsilon_rad = std::stod(rhs); break;
+  // case static_cast<int>(Setting::epsilon_viscous): epsilon_viscous = std::stod(rhs); break;
+  // case static_cast<int>(Setting::dt_thermal_min): dt_thermal_min = std::stod(rhs); break;
+  // case static_cast<int>(Setting::rho_min): rho_min = std::stod(rhs); break;
+  // case static_cast<int>(Setting::temp_min): temp_min = std::stod(rhs); break;
+  // case static_cast<int>(Setting::thermal_energy_min): thermal_energy_min = std::stod(rhs); break;
+  // case static_cast<int>(Setting::max_iterations): max_iterations = std::stoi(rhs); break;
+  // case static_cast<int>(Setting::max_time): max_time = std::stod(rhs); break;
+  // case static_cast<int>(Setting::iter_output_interval): iter_output_interval = std::stoi(rhs); break;
+  // case static_cast<int>(Setting::time_output_interval): time_output_interval = std::stod(rhs); break;
+  case static_cast<int>(Setting::output_flags): setOutputFlags(rhs_vec,true); break;
+  case static_cast<int>(Setting::state_flags): setStateFlags(rhs_vec,true); break;
+  // case static_cast<int>(Setting::xdim): m_xdim = std::stoi(rhs); break;
+  // case static_cast<int>(Setting::ydim): m_ydim = std::stoi(rhs); break;
+  // case static_cast<int>(Setting::dx): m_dx = std::stod(rhs); break;
+  // case static_cast<int>(Setting::dy): m_dy = std::stod(rhs); break;
+  default: break;
+  }
+}
+
+void PlasmaDomain::setOutputFlag(std::string var_name, bool new_flag)
+{
+  auto it = std::find(m_var_names.begin(),m_var_names.end(),var_name);
+  assert(it != m_var_names.end());
+  auto index = std::distance(m_var_names.begin(),it);
+  m_output_flags[index] = new_flag;
+}
+
+void PlasmaDomain::setOutputFlags(const std::vector<std::string> var_names, bool new_flag)
+{
+  for(std::string var_name : var_names) setOutputFlag(var_name,new_flag);
+}
+
+void PlasmaDomain::setStateFlag(std::string var_name, bool new_flag)
+{
+  auto it = std::find(m_var_names.begin(),m_var_names.end(),var_name);
+  assert(it != m_var_names.end());
+  auto index = std::distance(m_var_names.begin(),it);
+  m_state_flags[index] = new_flag;
+}
+
+void PlasmaDomain::setStateFlags(const std::vector<std::string> var_names, bool new_flag)
+{
+  for(std::string var_name : var_names) setStateFlag(var_name,new_flag);
+}
+

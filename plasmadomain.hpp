@@ -105,12 +105,53 @@ private:
   void cleanUpStateFiles() const;
   void printUpdate(double min_dt, int subcycles_thermal, int subcycles_rad) const;
 
-  void setOutputFlag(int var, bool new_flag = true);
-  void setOutputFlags(const std::vector<int> vars, bool new_flag = true);
-  void setStateFlag(int var, bool new_flag = true);
-  void setStateFlags(const std::vector<int> vars, bool new_flag = true);
+  void setOutputFlag(std::string var_name, bool new_flag);
+  void setOutputFlags(const std::vector<std::string> var_names, bool new_flag);
+  void setStateFlag(std::string var_name, bool new_flag);
+  void setStateFlags(const std::vector<std::string> var_names, bool new_flag);
 
   BoundaryCondition stringToBoundaryCondition(const std::string str) const;
+  void handleSingleSetting(int setting_index, std::string rhs);
+  void handleSettingList(int setting_index, std::vector<std::string> rhs_vec);
+
+  //Compute surface values from cell-centered values using Barton's method
+  //Meant to be used for transport terms only
+  //Result indexed s.t. element i,j indicates surface between i,j and i-1,j
+  //if "index"==0, or i,j and i,j-1 if "index"==1
+  Grid upwindSurface(const Grid &cell_center, const Grid &vel, const int index);
+
+  Grid transportDerivative1D(const Grid &quantity, const Grid &vel, const int index);
+
+  //Compute single-direction divergence term for non-transport term (central differencing)
+  Grid derivative1D(const Grid &quantity, const int index);
+
+  //Compute divergence term for simulation parameter "quantity"
+  //"quantity","vx","vy" used for transport term
+  //Non-transport terms contained in "nontransp_x", "nontransp_y"
+  Grid divergence(const Grid &quantity, const Grid &nontransp_x, const Grid &nontransp_y, const Grid &vx, const Grid &vy);
+
+  //Compute single-direction second derivative
+  Grid secondDerivative1D(const Grid &quantity, const int index);
+
+  //Computes Laplacian (del squared) of "quantity"
+  Grid laplacian(const Grid &quantity);
+
+  //Computes 1D cell-centered conductive flux from temperature "temp"
+  //Flux computed in direction indicated by "index": 0 for x, 1 for y
+  //k0 is conductive coefficient
+  Grid oneDimConductiveFlux(const Grid &temp, const Grid &rho, double k0, int index);
+
+  //Computes cell-centered, field-aligned conductive flux from temperature "temp"
+  //temp is temperature Grid
+  //b_hat_x, b_hat_y are the components of the *unit* vector b_hat
+  //k0 is conductive coefficient
+  //Output is written to flux_out_x and flux_out_y
+  void fieldAlignedConductiveFlux(Grid &flux_out_x, Grid &flux_out_y, const Grid &temp, const Grid &rho,
+                                      const Grid &b_hat_x, const Grid &b_hat_y, const double k0);
+
+  //Computes saturated conductive flux at each point in grid,
+  //then ensures that provided fluxes do not exceed the saturation point
+  void saturateConductiveFlux(Grid &flux_out_x, Grid &flux_out_y, const Grid &rho, const Grid &temp);
 };
 
 #endif

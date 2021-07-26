@@ -1,11 +1,13 @@
 #include "constants.hpp"
 #include "utils.hpp"
-#include "derivs.hpp"
 #include "grid.hpp"
 #include <omp.h>
 #include <cmath>
 #include <vector>
 #include <limits>
+#include <string>
+#include <algorithm>
+#include <sstream>
 
 #if BENCHMARKING_ON
 #include "instrumentor.hpp"
@@ -56,8 +58,9 @@ Grid BipolarField(int xdim, int ydim, double b0, double h, double dx, double dy,
   return result;
 }
 
-//Generates grid with exponential falloff in the y-direction, with the quantity
+//Generates grid with hydrostatic falloff in the y-direction, with the quantity
 //"base_value" at y=0. Assumes isothermal atmosphere with temperature "iso_temp".
+//Assumes that gravity is set to vary with distance.
 Grid HydrostaticFalloff(double base_value, double scale_height, int xdim, int ydim, double dy){
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
@@ -74,67 +77,25 @@ Grid HydrostaticFalloff(double base_value, double scale_height, int xdim, int yd
   return result;
 }
 
-//Computes 1D cell-centered conductive flux from temperature "temp"
-//Flux computed in direction indicated by "index": 0 for x, 1 for y
-//k0 is conductive coefficient
-Grid onedim_conductive_flux(const Grid &temp, const Grid &rho, double k0, int index){
-  #if BENCHMARKING_ON
-  InstrumentationTimer timer(__PRETTY_FUNCTION__);
-  #endif
-  Grid kappa_max = DX*DY*K_B*(rho/M_I)/DT_THERMAL_MIN;
-  int xdim = temp.rows();
-  int ydim = temp.cols();
-  Grid flux = Grid::Zero(xdim,ydim);
-  flux = temp.pow(7.0/2.0);
-  #pragma omp parallel for collapse(2)
-  for(int i=0; i<xdim; i++){
-    for(int j=0; j<ydim; j++){
-      flux(i,j) = std::pow(temp(i,j),7.0/2.0);
-    }
-  }
-  return -(k0*temp.pow(5.0/2.0)).min(kappa_max)*derivative1D(temp,index);
-  // return -2.0/7.0*k0*derivative1D(flux,index);
+//Erase all occurences of ' ', '\t', and '\n' in str.
+//Modifies in-place.
+void clearWhitespace(std::string &str)
+{
+  if(str.empty()) return;
+  auto new_end = std::remove(str.begin(),str.end(),' ');
+  new_end = std::remove(str.begin(),new_end,'\t');
+  new_end = std::remove(str.begin(),new_end,'\n');
+  str.erase(new_end, str.end());
 }
 
-//Computes cell-centered, field-aligned conductive flux from temperature "temp"
-//temp is temperature Grid
-//b_hat_x, b_hat_y are the components of the *unit* vector b_hat
-//k0 is conductive coefficient
-//Output is written to flux_out_x and flux_out_y
-void field_aligned_conductive_flux(Grid &flux_out_x, Grid &flux_out_y, const Grid &temp, const Grid &rho,
-                                    const Grid &b_hat_x, const Grid &b_hat_y, double k0){
-  #if BENCHMARKING_ON
-  InstrumentationTimer timer(__PRETTY_FUNCTION__);
-  #endif
-  int xdim = temp.rows();
-  int ydim = temp.cols();
-  Grid con_flux_x = onedim_conductive_flux(temp, rho, k0, 0);
-  Grid con_flux_y = onedim_conductive_flux(temp, rho, k0, 1);
-  #pragma omp parallel
-  {
-    #if BENCHMARKING_ON
-    InstrumentationTimer timer("loop thread");
-    #endif
-    #pragma omp for collapse(2)
-    for(int i=0; i<xdim; i++){
-      for(int j=0; j<ydim; j++){
-        double flux_magnitude = con_flux_x(i,j)*b_hat_x(i,j) + con_flux_y(i,j)*b_hat_y(i,j);
-        flux_out_x(i,j) = flux_magnitude*b_hat_x(i,j);
-        flux_out_y(i,j) = flux_magnitude*b_hat_y(i,j);
-      }
-    }
+//Splits string into vector of substrings, delimited by delim
+std::vector<std::string> splitString(const std::string &str, const char delim)
+{
+  std::vector<std::string> result;
+  std::istringstream ss(str);
+  std::string element;
+  while(std::getline(ss,element,delim)){
+    if(!element.empty()) result.push_back(element);
   }
-}
-
-//Computes saturated conductive flux at each point in grid,
-//then ensures that provided fluxes do not exceed the saturation point
-void saturate_conductive_flux(Grid &flux_out_x, Grid &flux_out_y, const Grid &rho, const Grid &temp){
-  #if BENCHMARKING_ON
-  InstrumentationTimer timer(__PRETTY_FUNCTION__);
-  #endif
-  Grid sat_flux_mag = (1.0/6.0)*(3.0/2.0)*(rho/M_I)*(K_B*temp).pow(1.5)/std::sqrt(M_ELECTRON);
-  Grid flux_mag = (flux_out_x.square() + flux_out_y.square()).sqrt();
-  Grid scale_factor = sat_flux_mag /((sat_flux_mag.square() + flux_mag.square()).sqrt());
-  flux_out_x *= scale_factor;
-  flux_out_y *= scale_factor;
+  return result;
 }

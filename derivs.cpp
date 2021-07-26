@@ -1,5 +1,8 @@
+//derivs.cpp
+//Defines differentiation functions for PlasmaDomain
+
 #include "constants.hpp"
-#include "derivs.hpp"
+#include "plasmadomain.hpp"
 #include "grid.hpp"
 #include <string>
 #include <cmath>
@@ -13,12 +16,12 @@
 //Meant to be used for transport terms only
 //Result indexed s.t. element i,j indicates surface between i,j and i-1,j
 //if "index"==0, or i,j and i,j-1 if "index"==1
-Grid upwind_surface(const Grid &cell_center, const Grid &vel, const int index){
+Grid PlasmaDomain::upwindSurface(const Grid &cell_center, const Grid &vel, const int index){
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
-  int xdim = XDIM+1-index;
-  int ydim = YDIM+index;
+  int xdim = m_xdim+1-index;
+  int ydim = m_ydim+index;
   Grid cell_surface = Grid::Zero(xdim,ydim);
   #pragma omp parallel
   {
@@ -36,21 +39,21 @@ Grid upwind_surface(const Grid &cell_center, const Grid &vel, const int index){
           j0 = j2; j1 = j2; j3 = j2;
           i0 = i2-2; i1 = i2-1; i3 = i2+1;
           //ENFORCES PERIODIC X-BOUNDARIES
-          if(XBOUND1 == PERIODIC && XBOUND2 == PERIODIC){
-            if(i2 == XDIM) continue;
-            //Here, explicitly need macro XDIM instead of xdim
-            i0 = (i0+XDIM)%XDIM;
-            i1 = (i1+XDIM)%XDIM;
-            i3 = (i3+XDIM)%XDIM;
+          if(x_bound_1 == BoundaryCondition::Periodic && x_bound_2 == BoundaryCondition::Periodic){
+            if(i2 == m_xdim) continue;
+            //Here, explicitly need macro m_xdim instead of xdim
+            i0 = (i0+m_xdim)%m_xdim;
+            i1 = (i1+m_xdim)%m_xdim;
+            i3 = (i3+m_xdim)%m_xdim;
           }
-          if(XBOUND1 == WALL){
+          if(x_bound_1 == BoundaryCondition::Wall){
             if(i2 == 0){
               cell_surface(i2,j2) = 0.0;
               continue;
             } else if(i2 == 1){
               i0 = i1;
             }
-          } else if(XBOUND1 == OPEN){
+          } else if(x_bound_1 == BoundaryCondition::Open){
             if(i2 == 0){
               cell_surface(i2,j2) = 1.5*cell_center(i2,j2) - 0.5*cell_center(i3,j3); //lerp
               continue;
@@ -58,18 +61,18 @@ Grid upwind_surface(const Grid &cell_center, const Grid &vel, const int index){
               i0 = i1;
             }
           }
-          if(XBOUND2 == WALL){
-            if(i2 == XDIM){
+          if(x_bound_2 == BoundaryCondition::Wall){
+            if(i2 == m_xdim){
               cell_surface(i2,j2) = 0.0;
               continue;
-            } else if(i2 == XDIM - 1){
+            } else if(i2 == m_xdim - 1){
               i3 = i2;
             }
-          } else if(XBOUND2 == OPEN){
-            if(i2 == XDIM){
+          } else if(x_bound_2 == BoundaryCondition::Open){
+            if(i2 == m_xdim){
               cell_surface(i2,j2) = 1.5*cell_center(i1,j1) - 0.5*cell_center(i0,j0); //lerp
               continue;
-            } else if(i2 == XDIM - 1){
+            } else if(i2 == m_xdim - 1){
               i3 = i2;
             }
           }
@@ -78,21 +81,21 @@ Grid upwind_surface(const Grid &cell_center, const Grid &vel, const int index){
           //Handle Y boundary conditions
           i0 = i2; i1 = i2; i3 = i2;
           j0 = j2-2; j1 = j2-1; j3 = j2+1;
-          if(YBOUND1 == PERIODIC && YBOUND2 == PERIODIC){
-            if(j2 == YDIM) continue;
-            //Here, explicitly need macro YDIM instead of ydim
-            j0 = (j0+YDIM)%YDIM;
-            j1 = (j1+YDIM)%YDIM;
-            j3 = (j3+YDIM)%YDIM;
+          if(y_bound_1 == BoundaryCondition::Periodic && y_bound_2 == BoundaryCondition::Periodic){
+            if(j2 == m_ydim) continue;
+            //Here, explicitly need macro m_ydim instead of ydim
+            j0 = (j0+m_ydim)%m_ydim;
+            j1 = (j1+m_ydim)%m_ydim;
+            j3 = (j3+m_ydim)%m_ydim;
           }
-          if(YBOUND1 == WALL){
+          if(y_bound_1 == BoundaryCondition::Wall){
             if(j2 == 0){
               cell_surface(i2,j2) = 0.0;
               continue;
             } else if(j2 == 1){
               j0 = j1;
             }
-          } else if(YBOUND1 == OPEN){
+          } else if(y_bound_1 == BoundaryCondition::Open){
             if(j2 == 0){
               cell_surface(i2,j2) = 1.5*cell_center(i2,j2) - 0.5*cell_center(i3,j3); //lerp
               continue;
@@ -100,18 +103,18 @@ Grid upwind_surface(const Grid &cell_center, const Grid &vel, const int index){
               j0 = j1;
             }
           }
-          if(YBOUND2 == WALL){
-            if(j2 == YDIM){
+          if(y_bound_2 == BoundaryCondition::Wall){
+            if(j2 == m_ydim){
               cell_surface(i2,j2) = 0.0;
               continue;
-            } else if(j2 == YDIM - 1){
+            } else if(j2 == m_ydim - 1){
               j3 = j2;
             }
-          } else if(YBOUND2 == OPEN){
-            if(j2 == YDIM){
+          } else if(y_bound_2 == BoundaryCondition::Open){
+            if(j2 == m_ydim){
               cell_surface(i2,j2) = 1.5*cell_center(i1,j1) - 0.5*cell_center(i0,j0); //lerp
               continue;
-            } else if(j2 == YDIM - 1){
+            } else if(j2 == m_ydim - 1){
               j3 = j2;
             }
           }
@@ -142,14 +145,14 @@ Grid upwind_surface(const Grid &cell_center, const Grid &vel, const int index){
   return cell_surface;
 }
 
-Grid transport_derivative1D(const Grid &quantity, const Grid &vel, const int index){
+Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, const int index){
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
-  Grid surf_quantity = upwind_surface(quantity, vel, index);
+  Grid surf_quantity = upwindSurface(quantity, vel, index);
   int xdim = quantity.rows();
   int ydim = quantity.cols();
-  double denom = DX*(1-index) + DY*(index);
+  double denom = m_dx*(1-index) + m_dy*(index);
   Grid div = Grid::Ones(xdim,ydim);
   #pragma omp parallel
   {
@@ -165,12 +168,12 @@ Grid transport_derivative1D(const Grid &quantity, const Grid &vel, const int ind
           //Handle X boundary conditions
           j0 = j1; j2 = j1; j2surf = j1;
           i0 = i1-1; i2 = i1+1; i2surf = i1+1;
-          if(XBOUND1 == PERIODIC && XBOUND2 == PERIODIC){
-            i0 = (i0+XDIM)%XDIM;
-            i2 = (i2+XDIM)%XDIM;
-            i2surf = (i2surf+XDIM)%XDIM;
+          if(x_bound_1 == BoundaryCondition::Periodic && x_bound_2 == BoundaryCondition::Periodic){
+            i0 = (i0+m_xdim)%m_xdim;
+            i2 = (i2+m_xdim)%m_xdim;
+            i2surf = (i2surf+m_xdim)%m_xdim;
           }
-          if(XBOUND1 == WALL){
+          if(x_bound_1 == BoundaryCondition::Wall){
             // if(i1 == 0 || i1 == 1){
             //   div(i1,j1) = 0.0;
             //   continue;
@@ -180,39 +183,39 @@ Grid transport_derivative1D(const Grid &quantity, const Grid &vel, const int ind
               continue;
             }
           }
-          if(XBOUND1 == OPEN){
+          if(x_bound_1 == BoundaryCondition::Open){
             if(i1 == 0) i0 = i1;
           }
-          if(XBOUND2 == WALL){
-            // if(i1 == XDIM-1 || i1 == XDIM-2){
+          if(x_bound_2 == BoundaryCondition::Wall){
+            // if(i1 == m_xdim-1 || i1 == m_xdim-2){
             //   div(i1,j1) = 0.0;
             //   continue;
             // }
-            if(i1 == XDIM-1){
+            if(i1 == m_xdim-1){
               div(i1,j1) = 0.0;
               continue;
             }
           }
-          if(XBOUND2 == OPEN){
-            if(i1 == XDIM-1) i2 = i1;
+          if(x_bound_2 == BoundaryCondition::Open){
+            if(i1 == m_xdim-1) i2 = i1;
           }
-          // if(XBOUND1 == WALL || XBOUND1 == OPEN){
+          // if(x_bound_1 == BoundaryCondition::Wall || x_bound_1 == BoundaryCondition::Open){
           //   if(i1 == 0) i0 = i1;
           // }
-          // if(XBOUND2 == WALL || XBOUND2 == OPEN){
-          //   if(i1 == XDIM-1) i2 = i1;
+          // if(x_bound_2 == BoundaryCondition::Wall || x_bound_2 == BoundaryCondition::Open){
+          //   if(i1 == m_xdim-1) i2 = i1;
           // }
         }
         else{
           //Handle Y boundary conditions
           i0 = i1; i2 = i1; i2surf = i1;
           j0 = j1-1; j2 = j1+1; j2surf = j1+1;
-          if(YBOUND1 == PERIODIC && YBOUND2 == PERIODIC){
-            j0 = (j0+YDIM)%YDIM;
-            j2 = (j2+YDIM)%YDIM;
-            j2surf = (j2surf+YDIM)%YDIM;
+          if(y_bound_1 == BoundaryCondition::Periodic && y_bound_2 == BoundaryCondition::Periodic){
+            j0 = (j0+m_ydim)%m_ydim;
+            j2 = (j2+m_ydim)%m_ydim;
+            j2surf = (j2surf+m_ydim)%m_ydim;
           }
-          if(YBOUND1 == WALL){
+          if(y_bound_1 == BoundaryCondition::Wall){
             // if(j1 == 0 || j1 == 1){
             //   div(i1,j1) = 0.0;
             //   continue;
@@ -222,27 +225,27 @@ Grid transport_derivative1D(const Grid &quantity, const Grid &vel, const int ind
               continue;
             }
           }
-          if(YBOUND1 == OPEN){
+          if(y_bound_1 == BoundaryCondition::Open){
             if(j1 == 0) j0 = j1;
           }
-          if(YBOUND2 == WALL){
-            // if(j1 == YDIM-1 || j1 == YDIM-2){
+          if(y_bound_2 == BoundaryCondition::Wall){
+            // if(j1 == m_ydim-1 || j1 == m_ydim-2){
             //   div(i1,j1) = 0.0;
             //   continue;
             // }
-            if(j1 == YDIM-1){
+            if(j1 == m_ydim-1){
               div(i1,j1) = 0.0;
               continue;
             }
           }
-          if(YBOUND2 == OPEN){
-            if(j1 == YDIM-1) j2 = j1;
+          if(y_bound_2 == BoundaryCondition::Open){
+            if(j1 == m_ydim-1) j2 = j1;
           }
-          // if(YBOUND1 == WALL || YBOUND1 == OPEN){
+          // if(y_bound_1 == BoundaryCondition::Wall || y_bound_1 == BoundaryCondition::Open){
           //   if(j1 == 0) j0 = j1;
           // }
-          // if(YBOUND2 == WALL || YBOUND2 == OPEN){
-          //   if(j1 == YDIM-1) j2 = j1;
+          // if(y_bound_2 == BoundaryCondition::Wall || y_bound_2 == BoundaryCondition::Open){
+          //   if(j1 == m_ydim-1) j2 = j1;
           // }
         }
         div(i1,j1) = (surf_quantity(i2surf,j2surf)*0.5*(vel(i1,j1)+vel(i2,j2))
@@ -254,14 +257,14 @@ Grid transport_derivative1D(const Grid &quantity, const Grid &vel, const int ind
 }
 
 //Compute single-direction divergence term for non-transport term (central differencing)
-Grid derivative1D(const Grid &quantity, const int index){
+Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
-  double denom = 2.0*(DX*(1-index) + DY*(index));
+  double denom = 2.0*(m_dx*(1-index) + m_dy*(index));
   #pragma omp parallel
   {
     #if BENCHMARKING_ON
@@ -277,11 +280,11 @@ Grid derivative1D(const Grid &quantity, const int index){
           j0 = j1; j2 = j1;
           i0 = i1-1; i2 = i1+1;
           //ENFORCES PERIODIC X-BOUNDARIES
-          if(XBOUND1 == PERIODIC && XBOUND2 == PERIODIC){
+          if(x_bound_1 == BoundaryCondition::Periodic && x_bound_2 == BoundaryCondition::Periodic){
             i0 = (i0+xdim)%xdim;
             i2 = (i2+xdim)%xdim;
           }
-          if(XBOUND1 == WALL){
+          if(x_bound_1 == BoundaryCondition::Wall){
             // if(i1 == 0 || i1 == 1){
             //   div(i1,j1) = 0.0;
             //   continue;
@@ -291,11 +294,11 @@ Grid derivative1D(const Grid &quantity, const int index){
               continue;
             }
           }
-          if(XBOUND1 == OPEN){
+          if(x_bound_1 == BoundaryCondition::Open){
             if(i1 == 0) i0 = i1;
           }
-          if(XBOUND2 == WALL){
-            // if(i1 == XDIM-1 || i1 == XDIM-2){
+          if(x_bound_2 == BoundaryCondition::Wall){
+            // if(i1 == m_xdim-1 || i1 == m_xdim-2){
             //   div(i1,j1) = 0.0;
             //   continue;
             // }
@@ -304,7 +307,7 @@ Grid derivative1D(const Grid &quantity, const int index){
               continue;
             }
           }
-          if(XBOUND2 == OPEN){
+          if(x_bound_2 == BoundaryCondition::Open){
             if(i1 == xdim-1) i2 = i1;
           }
         }
@@ -312,11 +315,11 @@ Grid derivative1D(const Grid &quantity, const int index){
           //Handle Y boundary conditions
           i0 = i1; i2 = i1;
           j0 = j1-1; j2 = j1+1;
-          if(YBOUND1 == PERIODIC && YBOUND2 == PERIODIC){
+          if(y_bound_1 == BoundaryCondition::Periodic && y_bound_2 == BoundaryCondition::Periodic){
             j0 = (j0+ydim)%ydim;
             j2 = (j2+ydim)%ydim;
           }
-          if(YBOUND1 == WALL){
+          if(y_bound_1 == BoundaryCondition::Wall){
             // if(j1 == 0 || j1 == 1){
             //   div(i1,j1) = 0.0;
             //   continue;
@@ -326,11 +329,11 @@ Grid derivative1D(const Grid &quantity, const int index){
               continue;
             }
           }
-          if(YBOUND1 == OPEN){
+          if(y_bound_1 == BoundaryCondition::Open){
             if(j1 == 0) j0 = j1;
           }
-          if(YBOUND2 == WALL){
-            // if(j1 == YDIM-1 || j1 == YDIM-2){
+          if(y_bound_2 == BoundaryCondition::Wall){
+            // if(j1 == m_ydim-1 || j1 == m_ydim-2){
             //   div(i1,j1) = 0.0;
             //   continue;
             // }
@@ -339,7 +342,7 @@ Grid derivative1D(const Grid &quantity, const int index){
               continue;
             }
           }
-          if(YBOUND2 == OPEN){
+          if(y_bound_2 == BoundaryCondition::Open){
             if(j1 == ydim-1) j2 = j1;
           }
         }
@@ -353,11 +356,11 @@ Grid derivative1D(const Grid &quantity, const int index){
 //Compute divergence term for simulation parameter "quantity"
 //"quantity","vx","vy" used for transport term
 //Non-transport terms contained in "nontransp_x", "nontransp_y"
-Grid divergence(const Grid &quantity, const Grid &nontransp_x, const Grid &nontransp_y, const Grid &vx, const Grid &vy){
+Grid PlasmaDomain::divergence(const Grid &quantity, const Grid &nontransp_x, const Grid &nontransp_y, const Grid &vx, const Grid &vy){
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
-  Grid result = transport_derivative1D(quantity, vx, 0) + transport_derivative1D(quantity, vy, 1);
+  Grid result = transportDerivative1D(quantity, vx, 0) + transportDerivative1D(quantity, vy, 1);
   if(nontransp_x.size() > 1) result += derivative1D(nontransp_x, 0);
   if(nontransp_y.size() > 1) result += derivative1D(nontransp_y, 1);
   return result;
@@ -365,14 +368,14 @@ Grid divergence(const Grid &quantity, const Grid &nontransp_x, const Grid &nontr
 
 
 //Compute single-direction second derivative
-Grid second_derivative1D(const Grid &quantity, const int index){
+Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index){
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
-  double denom = std::pow((DX*(1-index) + DY*(index)),2.0);
+  double denom = std::pow((m_dx*(1-index) + m_dy*(index)),2.0);
   #pragma omp parallel
   {
     #if BENCHMARKING_ON
@@ -388,11 +391,11 @@ Grid second_derivative1D(const Grid &quantity, const int index){
           j0 = j1; j2 = j1;
           i0 = i1-1; i2 = i1+1;
           //ENFORCES PERIODIC X-BOUNDARIES
-          if(XBOUND1 == PERIODIC && XBOUND2 == PERIODIC){
+          if(x_bound_1 == BoundaryCondition::Periodic && x_bound_2 == BoundaryCondition::Periodic){
             i0 = (i0+xdim)%xdim;
             i2 = (i2+xdim)%xdim;
           }
-          if(XBOUND1 == WALL){
+          if(x_bound_1 == BoundaryCondition::Wall){
             // if(i1 == 0 || i1 == 1){
             //   div(i1,j1) = 0.0;
             //   continue;
@@ -402,32 +405,32 @@ Grid second_derivative1D(const Grid &quantity, const int index){
               continue;
             }
           }
-          if(XBOUND1 == OPEN){
+          if(x_bound_1 == BoundaryCondition::Open){
             if(i1 == 0) i0 = i1;
           }
-          if(XBOUND2 == WALL){
-            // if(i1 == XDIM-1 || i1 == XDIM-2){
+          if(x_bound_2 == BoundaryCondition::Wall){
+            // if(i1 == m_xdim-1 || i1 == m_xdim-2){
             //   div(i1,j1) = 0.0;
             //   continue;
             // }
-            if(i1 == XDIM-1){
+            if(i1 == m_xdim-1){
               div(i1,j1) = 0.0;
               continue;
             }
           }
-          if(XBOUND2 == OPEN){
-            if(i1 == XDIM-1) i2 = i1;
+          if(x_bound_2 == BoundaryCondition::Open){
+            if(i1 == m_xdim-1) i2 = i1;
           }
         }
         else{
           //Handle Y boundary conditions
           i0 = i1; i2 = i1;
           j0 = j1-1; j2 = j1+1;
-          if(YBOUND1 == PERIODIC && YBOUND2 == PERIODIC){
+          if(y_bound_1 == BoundaryCondition::Periodic && y_bound_2 == BoundaryCondition::Periodic){
             j0 = (j0+ydim)%ydim;
             j2 = (j2+ydim)%ydim;
           }
-          if(YBOUND1 == WALL){
+          if(y_bound_1 == BoundaryCondition::Wall){
             // if(j1 == 0 || j1 == 1){
             //   div(i1,j1) = 0.0;
             //   continue;
@@ -437,21 +440,21 @@ Grid second_derivative1D(const Grid &quantity, const int index){
               continue;
             }
           }
-          if(YBOUND1 == OPEN){
+          if(y_bound_1 == BoundaryCondition::Open){
             if(j1 == 0) j0 = j1;
           }
-          if(YBOUND2 == WALL){
-            // if(j1 == YDIM-1 || j1 == YDIM-2){
+          if(y_bound_2 == BoundaryCondition::Wall){
+            // if(j1 == m_ydim-1 || j1 == m_ydim-2){
             //   div(i1,j1) = 0.0;
             //   continue;
             // }
-            if(j1 == YDIM-1){
+            if(j1 == m_ydim-1){
               div(i1,j1) = 0.0;
               continue;
             }
           }
-          if(YBOUND2 == OPEN){
-            if(j1 == YDIM-1) j2 = j1;
+          if(y_bound_2 == BoundaryCondition::Open){
+            if(j1 == m_ydim-1) j2 = j1;
           }
         }
         div(i1,j1) = (quantity(i2,j2) - 2.0*quantity(i1,j1) + quantity(i0,j0))/denom;
@@ -462,12 +465,12 @@ Grid second_derivative1D(const Grid &quantity, const int index){
 }
 
 //Computes Laplacian (del squared) of "quantity"
-Grid laplacian(const Grid &quantity){
+Grid PlasmaDomain::laplacian(const Grid &quantity){
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
-  Grid result_x = second_derivative1D(quantity,0);
-  Grid result_y = second_derivative1D(quantity,1);
+  Grid result_x = secondDerivative1D(quantity,0);
+  Grid result_y = secondDerivative1D(quantity,1);
   return result_x+result_y;
 }
 
