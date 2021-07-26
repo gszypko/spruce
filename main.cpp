@@ -23,27 +23,27 @@
 
 int main(int argc,char* argv[]){
 
-  std::string out_filename;
-  if(argc == 1) out_filename = "output";
-  else out_filename = std::string(argv[1]);
+  auto start_time = std::chrono::steady_clock::now();
 
   #if BENCHMARKING_ON
   Instrumentor::Get().BeginSession(out_filename);
   #endif
 
-  auto start_time = std::chrono::steady_clock::now();
+  std::vector<std::string> arguments = parseCommandLineArgs(argc, argv);
+  std::string out_filename = arguments[0];
+  std::string settings_filename = arguments[1];
+  std::string in_filename = arguments[2];
+  int jobarray_index = std::stoi(arguments[3]); //currently unused
 
-  //Initialize PlasmaDomain with settings from .settings file (under construction)
-  PlasmaDomain simulation(out_filename.c_str(),"default.settings");
+  PlasmaDomain simulation(out_filename.c_str(),settings_filename.c_str());
 
-  if(argc == 3){ //Initial condition from .state file
-    const char* in_filename = argv[2];
-    simulation.readStateFile(in_filename);
-  }
-  else{ //Default, hard coded initial condition
+  if(in_filename.empty()){ //Default, hard coded initial condition
     simulation.hydrostaticInitialize();
     simulation.setSolarGravity(BASE_GRAV,R_SUN);
     // simulation.gaussianInitialize(1.0e-15,1.0e-12,1.0e4,3.0e4,0.05*XDIM,0.05*YDIM);
+  }
+  else{ //Initial condition from .state file
+    simulation.readStateFile(in_filename.c_str());
   }
 
   simulation.run();

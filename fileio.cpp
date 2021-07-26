@@ -5,6 +5,8 @@
 #include <fstream>
 #include <sstream>
 #include <cstdio>
+#include <cassert>
+#include <cstdlib>
 #include "plasmadomain.hpp"
 #include "utils.hpp"
 

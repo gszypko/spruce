@@ -5,11 +5,12 @@ A two-dimensional quasi-MHD simulation for static magnetic field
 The Makefile is very dumb and doesn't keep track of any dependencies. It only has phony targets clang, intel, and gnu corresponding to full compilation commands using clang++, icc, and g++ compilers respectively. For instance, execute `make intel` to compile using icc.
 
 # Running
-Executing the resulting executable (`mhdtoy` or `mhdtoy.exe`) with zero command line arguments will initialize the system with an initial hydrostatic solar atmosphere. The resulting simulation will be output as a time series to the file `output.out` and as a state file to `output.state` (which can be used to initialize a future simulation from the end point of that simulation; see below).
+Usage: `./mhdtoy [-o run_name] [-s settings_file] [-S state_file]`
+- `-o` or `--output` allows you to specify the name of the run, which is used as the prefix for the resulting `.out` and `.state` files. Default is `output`.
+- `-s` or `--settings` allows you to specify the settings file to be used for configuring the simulation. Default is `default.settings`.
+- `-S` or `--state` allows you to specify a .state file from a previous run to be used for initialization. If none specified, a default initialization is used.
 
-Executing with a single command line argument will do the same as above, but with the given argument being used for the resulting file names. For instance, `./mhdtoy testing` will give files `testing.out` and `testing.state`.
-
-Executing with two command line arguments allows you to specify a `.state` file to initialize the simulation. The first argument specifies the resulting `.out` and `.state` file name (as above) and the second argument is the filename of the `.state` file to be used to initialize the system.
+The resulting simulation will be output as a time series to the file `[run_name].out` and as a state file to `[run_name].state` (which can be used to initialize a future simulation from the end point of that simulation).
 
 # Simulation Settings
-Currently, all of the settings for the simulation are specified in the `constants.hpp` file and are therefore specified at compile time. (Currently working toward specifying settings at execution time, to avoid the need for multiple executables.)
+All settings are set at run time by the contents of the specified `.settings` file. See `default.settings` for the syntax needed for that file.
