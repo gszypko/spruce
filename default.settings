@@ -1,42 +1,54 @@
-#Default settings file
-#One setting assignment per line
-#Anything after a '#' is considered a comment
+# Settings file
+# One setting assignment per line
+# Anything after a '#' is considered a comment
+# Integer and double settings must be formatted s.t. std::stoi and std::stod can convert them
+# Boolean settings must be given as "true" or "false"
+# Boundary condition settings must be set as one of {"periodic","wall","open"}
+# See README.md for instructions on job array functionality
 
+# Domain dimensions
 xdim = 100
 ydim = 100
 dx = 2.2649e7
 dy = 2.2649e7
 
+# Iteration settings
 max_iterations = 5
 max_time = -1.0
 iter_output_interval = 1
 time_output_interval = -1.0
 
+# Boundary conditions
 x_bound_1 = periodic
 x_bound_2 = periodic
 y_bound_1 = wall
 y_bound_2 = open
 
-radiative_losses = true
-ambient_heating = true
-thermal_conduction = true
-flux_saturation = true
-
 temp_chromosphere = 3.0e4
 radiation_ramp = 1.0e3
 heating_rate = 1.0e-4
-
 b_0 = 100
 
+# Safety factors
 epsilon = 0.1
 epsilon_thermal = 0.1
 epsilon_rad = 0.1
 epsilon_viscous = 1.0
 
+# Variable lower bounds
 dt_thermal_min = 1.0e-4
 rho_min = 1.0e-30
 temp_min = 1.0e4
 thermal_energy_min = 1.0e-6
 
+# Physics settings
+radiative_losses = true
+ambient_heating = true
+thermal_conduction = true
+flux_saturation = true
+
+# All of the (comma-separated) variables given here will be given "true" flags and therefore
+# be written out in .out and .state files, respectively.
+# See fileio.cpp for a full list of variable names.
 output_flags = rho, temp, press, rad, energy, v_x, v_y, dt_thermal
 state_flags = rho, mom_x, mom_y, temp, b_x, b_y, b_z
