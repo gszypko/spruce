@@ -28,7 +28,7 @@ public:
 
   //Constructors and Initialization
   PlasmaDomain(size_t xdim, size_t ydim, double dx, double dy, const char* run_name);
-  PlasmaDomain(const char* run_name, const char* settings_file_name);
+  PlasmaDomain(const char* run_name, const char* settings_file_name, int job_index = 0);
   PlasmaDomain(const char* run_name);
   PlasmaDomain();
   void setDefaultSettings();
@@ -37,7 +37,7 @@ public:
   void setSolarGravity(double base_gravity, double r_solar);
 
   void readStateFile(const char* in_filename);
-  void readSettingsFile(const char* settings_filename);
+  void readSettingsFile(const char* settings_filename, int job_index);
 
   //Time Evolution
   void run();
@@ -112,7 +112,9 @@ private:
 
   BoundaryCondition stringToBoundaryCondition(const std::string str) const;
   void handleSingleSetting(int setting_index, std::string rhs);
-  void handleSettingList(int setting_index, std::vector<std::string> rhs_vec);
+  void handleSettingList(int setting_index, std::vector<std::string> rhs_vec,
+                        std::vector<std::vector<std::string> > &rhs_lists,
+                        std::vector<int> &list_vars, int &num_combinations);
 
   //Compute surface values from cell-centered values using Barton's method
   //Meant to be used for transport terms only
@@ -128,7 +130,7 @@ private:
   //Compute divergence term for simulation parameter "quantity"
   //"quantity","vx","vy" used for transport term
   //Non-transport terms contained in "nontransp_x", "nontransp_y"
-  Grid divergence(const Grid &quantity, const Grid &nontransp_x, const Grid &nontransp_y, const Grid &vx, const Grid &vy);
+  Grid divergence(const Grid &quantity, const Grid &nontransp_x, const Grid &nontransp_y);
 
   //Compute single-direction second derivative
   Grid secondDerivative1D(const Grid &quantity, const int index);

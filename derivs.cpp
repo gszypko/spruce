@@ -41,7 +41,7 @@ Grid PlasmaDomain::upwindSurface(const Grid &cell_center, const Grid &vel, const
           //ENFORCES PERIODIC X-BOUNDARIES
           if(x_bound_1 == BoundaryCondition::Periodic && x_bound_2 == BoundaryCondition::Periodic){
             if(i2 == m_xdim) continue;
-            //Here, explicitly need macro m_xdim instead of xdim
+            //Here, explicitly need m_xdim instead of xdim
             i0 = (i0+m_xdim)%m_xdim;
             i1 = (i1+m_xdim)%m_xdim;
             i3 = (i3+m_xdim)%m_xdim;
@@ -354,13 +354,14 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
 }
 
 //Compute divergence term for simulation parameter "quantity"
-//"quantity","vx","vy" used for transport term
+//"quantity" used for transport term
 //Non-transport terms contained in "nontransp_x", "nontransp_y"
-Grid PlasmaDomain::divergence(const Grid &quantity, const Grid &nontransp_x, const Grid &nontransp_y, const Grid &vx, const Grid &vy){
+//Grids of size() 1 can be passed in for non-transport terms if none apply
+Grid PlasmaDomain::divergence(const Grid &quantity, const Grid &nontransp_x, const Grid &nontransp_y){
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
-  Grid result = transportDerivative1D(quantity, vx, 0) + transportDerivative1D(quantity, vy, 1);
+  Grid result = transportDerivative1D(quantity, m_grids[v_x], 0) + transportDerivative1D(quantity, m_grids[v_y], 1);
   if(nontransp_x.size() > 1) result += derivative1D(nontransp_x, 0);
   if(nontransp_y.size() > 1) result += derivative1D(nontransp_y, 1);
   return result;

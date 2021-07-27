@@ -17,16 +17,16 @@
 PlasmaDomain::PlasmaDomain() : PlasmaDomain::PlasmaDomain(1,1,1.0,1.0,"run") {}
 PlasmaDomain::PlasmaDomain(const char* run_name) : PlasmaDomain::PlasmaDomain(1,1,1.0,1.0,run_name) {}
 
-PlasmaDomain::PlasmaDomain(const char* run_name, const char* settings_file_name)
+PlasmaDomain::PlasmaDomain(const char* run_name, const char* settings_file_name, int job_index)
 {
   m_run_name = std::string(run_name);
-  m_out_file.open(m_run_name+".out");
-  m_time = 0.0; m_iter = 0;
   for(int i=0; i<num_variables; i++){
     m_output_flags.push_back(false);
     m_state_flags.push_back(false);
   }
-  readSettingsFile(settings_file_name);
+  readSettingsFile(settings_file_name, job_index);
+  m_out_file.open(m_run_name+".out");
+  m_time = 0.0; m_iter = 0;
   for(int i=0; i<num_variables; i++) m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
 }
 

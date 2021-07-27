@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cassert>
 #include <cstdlib>
+#include <algorithm>
 #include "plasmadomain.hpp"
 #include "utils.hpp"
 
@@ -106,10 +107,14 @@ void PlasmaDomain::readStateFile(const char* in_filename)
 //Read in simulation settings from .settings file
 //Allows to change settings without recompiling
 //constants.hpp still used for default settings
-void PlasmaDomain::readSettingsFile(const char* settings_filename)
+void PlasmaDomain::readSettingsFile(const char* settings_filename, int job_index)
 {
   std::ifstream in_file(settings_filename);
   std::string line;
+  std::vector<std::vector<std::string> > rhs_lists;
+  std::vector<int> list_vars;
+  int num_combinations = 1;
+  //Read through settings file
   while(std::getline(in_file, line)){
     clearWhitespace(line);
     if(line.empty() || line[0] == '#') continue; //skip comment and empty lines
@@ -122,7 +127,27 @@ void PlasmaDomain::readSettingsFile(const char* settings_filename)
     assert(it != m_setting_names.end());
     auto index = std::distance(m_setting_names.begin(),it);
     if(rhs_vec.size() == 1) handleSingleSetting(index,rhs);
-    else if(rhs_vec.size() > 1) handleSettingList(index,rhs_vec);
+    else if(rhs_vec.size() > 1) handleSettingList(index,rhs_vec,rhs_lists,list_vars,num_combinations);
+  }
+  if(list_vars.empty()) return;
+  //Handle job array indexing
+  assert(job_index < num_combinations && "Index must fall within range of combinations provided");
+  std::vector<int> this_combination_indices(list_vars.size());
+  for(int i=0; i<job_index; i++){
+    this_combination_indices[0] += 1;
+    if(this_combination_indices[0] == rhs_lists[0].size()){
+      this_combination_indices[0] = 0;
+      for(int j=1; j<job_index; j++){
+        this_combination_indices[j] += 1;
+        if(this_combination_indices[j] == rhs_lists[j].size()) this_combination_indices[j] = 0;
+        else break;
+      }
+    }
+  }
+  for(int i=0; i<list_vars.size(); i++){
+    handleSingleSetting(list_vars[i],rhs_lists[i][this_combination_indices[i]]);
+    std::cout << m_setting_names[list_vars[i]] << "_" << rhs_lists[i][this_combination_indices[i]] << std::endl;
+    m_run_name = m_run_name + "-" + m_setting_names[list_vars[i]] + ":" + rhs_lists[i][this_combination_indices[i]];
   }
 }
 
@@ -229,40 +254,17 @@ void PlasmaDomain::handleSingleSetting(int setting_index, std::string rhs)
   }
 }
 
-void PlasmaDomain::handleSettingList(int setting_index, std::vector<std::string> rhs_vec)
+void PlasmaDomain::handleSettingList(int setting_index, std::vector<std::string> rhs_vec,
+                                     std::vector<std::vector<std::string> > &rhs_lists,
+                                     std::vector<int> &list_vars, int &num_combinations)
 {
-  switch (static_cast<int>(setting_index)) {
-  // case static_cast<int>(Setting::x_bound_1): x_bound_1 = stringToBoundaryCondition(rhs); break;
-  // case static_cast<int>(Setting::x_bound_2): x_bound_2 = stringToBoundaryCondition(rhs); break;
-  // case static_cast<int>(Setting::y_bound_1): y_bound_1 = stringToBoundaryCondition(rhs); break;
-  // case static_cast<int>(Setting::y_bound_2): y_bound_2 = stringToBoundaryCondition(rhs); break;
-  // case static_cast<int>(Setting::radiative_losses): radiative_losses = (rhs == "true"); break;
-  // case static_cast<int>(Setting::ambient_heating): ambient_heating = (rhs == "true"); break;
-  // case static_cast<int>(Setting::thermal_conduction): thermal_conduction = (rhs == "true"); break;
-  // case static_cast<int>(Setting::flux_saturation): flux_saturation = (rhs == "true"); break;
-  // case static_cast<int>(Setting::temp_chromosphere): temp_chromosphere = std::stod(rhs); break;
-  // case static_cast<int>(Setting::radiation_ramp): radiation_ramp = std::stod(rhs); break;
-  // case static_cast<int>(Setting::heating_rate): heating_rate = std::stod(rhs); break;
-  // case static_cast<int>(Setting::b_0): b_0 = std::stod(rhs); break;
-  // case static_cast<int>(Setting::epsilon): epsilon = std::stod(rhs); break;
-  // case static_cast<int>(Setting::epsilon_thermal): epsilon_thermal = std::stod(rhs); break;
-  // case static_cast<int>(Setting::epsilon_rad): epsilon_rad = std::stod(rhs); break;
-  // case static_cast<int>(Setting::epsilon_viscous): epsilon_viscous = std::stod(rhs); break;
-  // case static_cast<int>(Setting::dt_thermal_min): dt_thermal_min = std::stod(rhs); break;
-  // case static_cast<int>(Setting::rho_min): rho_min = std::stod(rhs); break;
-  // case static_cast<int>(Setting::temp_min): temp_min = std::stod(rhs); break;
-  // case static_cast<int>(Setting::thermal_energy_min): thermal_energy_min = std::stod(rhs); break;
-  // case static_cast<int>(Setting::max_iterations): max_iterations = std::stoi(rhs); break;
-  // case static_cast<int>(Setting::max_time): max_time = std::stod(rhs); break;
-  // case static_cast<int>(Setting::iter_output_interval): iter_output_interval = std::stoi(rhs); break;
-  // case static_cast<int>(Setting::time_output_interval): time_output_interval = std::stod(rhs); break;
-  case static_cast<int>(Setting::output_flags): setOutputFlags(rhs_vec,true); break;
-  case static_cast<int>(Setting::state_flags): setStateFlags(rhs_vec,true); break;
-  // case static_cast<int>(Setting::xdim): m_xdim = std::stoi(rhs); break;
-  // case static_cast<int>(Setting::ydim): m_ydim = std::stoi(rhs); break;
-  // case static_cast<int>(Setting::dx): m_dx = std::stod(rhs); break;
-  // case static_cast<int>(Setting::dy): m_dy = std::stod(rhs); break;
-  default: break;
+  if(setting_index == static_cast<int>(Setting::output_flags)) setOutputFlags(rhs_vec,true);
+  else if(setting_index == static_cast<int>(Setting::state_flags)) setStateFlags(rhs_vec,true);
+  else {
+    assert(std::find(list_vars.begin(),list_vars.end(),setting_index) == list_vars.end() && "Each variable should only have one line");
+    list_vars.push_back(setting_index);
+    rhs_lists.push_back(rhs_vec);
+    num_combinations *= rhs_vec.size();
   }
 }
 
