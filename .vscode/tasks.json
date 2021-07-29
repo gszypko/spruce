@@ -6,22 +6,14 @@
             "command": "/usr/bin/g++-8",
             "args": [
                 "-I", 
-                "${workspaceFolder}",
-                "${fileDirname}/source/",
+                "${fileDirname}/source/mhd",
 
                 "-std=c++17",
                 "-fopenmp",
                 "-g",
 
                 "${file}",
-                "${workspaceFolder}/grid.cpp",
-                "${workspaceFolder}/utils.cpp",
-                "${workspaceFolder}/derivs.cpp",
-                "${workspaceFolder}/plasmadomain.cpp",
-                "${workspaceFolder}/fileio.cpp",
-                "${workspaceFolder}/evolution.cpp",
-                "${workspaceFolder}/main.cpp",
-                "${fileDirname}/source/*",
+                "${fileDirname}/source/mhd/*",
                 
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}",
