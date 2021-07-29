@@ -24,7 +24,8 @@ x_bound_2 = periodic
 y_bound_1 = wall
 y_bound_2 = open
 
-temp_chromosphere = 3.0e4
+# Heuristic parameters
+temp_chromosphere = 3.0e4 
 radiation_ramp = 1.0e3
 heating_rate = 1.0e-4
 b_0 = 100

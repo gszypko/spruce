@@ -25,6 +25,7 @@ PlasmaDomain::PlasmaDomain(const char* run_name, const char* settings_file_name,
     m_state_flags.push_back(false);
   }
   readSettingsFile(settings_file_name, job_index);
+  computeIterationBounds();
   m_out_file.open(m_run_name+".out");
   m_time = 0.0; m_iter = 0;
   for(int i=0; i<num_variables; i++) m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
@@ -42,6 +43,7 @@ PlasmaDomain::PlasmaDomain(size_t xdim, size_t ydim, double dx, double dy, const
     m_output_flags.push_back(false);
     m_state_flags.push_back(false);
   }
+  computeIterationBounds();
 }
 
 void PlasmaDomain::hydrostaticInitialize()
@@ -89,4 +91,18 @@ void PlasmaDomain::setSolarGravity(double base_gravity, double r_solar)
       m_grav_y(i,j) = -base_gravity*std::pow(r_solar/(r_solar+y),2.0);
     }
   }
+}
+
+//Compute lower and upper x- and y- indicies for differential operations
+//from boundary conditions, to exclude ghost zones. Results stored in m_xl, m_xu, m_yl, m_yu
+void PlasmaDomain::computeIterationBounds()
+{
+  if(x_bound_1 == BoundaryCondition::Open || x_bound_1 == BoundaryCondition::Wall) m_xl = N_GHOST;
+  else{ assert(x_bound_1 == BoundaryCondition::Periodic && "Boundary cond'n must be defined"); m_xl = 0; }
+  if(x_bound_2 == BoundaryCondition::Open || x_bound_2 == BoundaryCondition::Wall) m_xu = m_xdim - N_GHOST - 1;
+  else{ assert(x_bound_2 == BoundaryCondition::Periodic && "Boundary cond'n must be defined"); m_xu = m_xdim - 1; }
+  if(y_bound_1 == BoundaryCondition::Open || y_bound_1 == BoundaryCondition::Wall) m_yl = N_GHOST;
+  else{ assert(y_bound_1 == BoundaryCondition::Periodic && "Boundary cond'n must be defined"); m_yl = 0; }
+  if(y_bound_2 == BoundaryCondition::Open || y_bound_2 == BoundaryCondition::Wall) m_yu = m_ydim - N_GHOST - 1;
+  else{ assert(y_bound_2 == BoundaryCondition::Periodic && "Boundary cond'n must be defined"); m_yu = m_ydim - 1; }
 }

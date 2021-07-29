@@ -47,6 +47,7 @@ private:
   static const std::vector<std::string> m_var_names;
   static const std::vector<std::string> m_setting_names;
   static const std::vector<std::string> m_boundary_condition_names;
+  int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)
 
   std::vector<Grid> m_grids;
   std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
@@ -90,9 +91,13 @@ private:
   void recomputeDerivedVariables();
   void recomputeTemperature();
   void computeMagneticTerms();
+  void computeIterationBounds();
 
   void catchUnderdensity();
-  void clampWallBoundaries(Grid& mom_x_next, Grid& mom_y_next, Grid& rho_next, Grid& energy_next);
+  void clampWallBoundaries(Grid& mom_x_next, Grid& mom_y_next, Grid& rho_next, Grid& energy_next); //need to deprecate
+  void updateGhostZones();
+  void openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
+  void wallBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
 
   void recomputeRadiativeLosses();
   void recomputeDT();
