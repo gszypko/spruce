@@ -32,6 +32,20 @@ double Grid::min() const
   return curr_min;
 }
 
+//Finds the min within the rectangular range defined by the bounds (il,jl) and (iu,ju)
+double Grid::min(int il, int jl, int iu, int ju) const
+{
+  double curr_min = std::numeric_limits<double>::max();
+  #pragma omp parallel for collapse(2) reduction(min: curr_min)
+  for(int i=il; i<=iu; i++){
+    for(int j=jl; j<=ju; j++){
+      curr_min = std::min(curr_min,(*this)(i,j));
+    }
+  }
+  return curr_min;
+}
+
+
 Grid Grid::min(double b) const { return ScalarOperation( b, SCALAR_LAMBDA(std::min(this_comp,scalar)) ); }
 
 Grid Grid::min(const Grid& b) const { return ComponentWiseOperation( b, COMPONENTWISE_LAMBDA(std::min(this_comp,that_comp)) ); }
@@ -43,6 +57,20 @@ double Grid::max() const
   for(int i=0; i<m_size; i++) curr_max = std::max(curr_max,m_data[i]);
   return curr_max;
 }
+
+//Finds the min within the rectangular range defined by the bounds (il,jl) and (iu,ju)
+double Grid::max(int il, int jl, int iu, int ju) const
+{
+  double curr_max = -std::numeric_limits<double>::max();
+  #pragma omp parallel for collapse(2) reduction(max: curr_max)
+  for(int i=il; i<=iu; i++){
+    for(int j=jl; j<=ju; j++){
+      curr_max = std::max(curr_max,(*this)(i,j));
+    }
+  }
+  return curr_max;
+}
+
 
 Grid Grid::max(double b) const { return ScalarOperation( b, SCALAR_LAMBDA(std::max(this_comp,scalar)) ); }
 

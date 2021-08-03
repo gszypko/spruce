@@ -4,13 +4,13 @@ unspec:
 	@echo 'Please specify which compiler to use, from {clang, intel, gnu}.'
 
 clang:
-	clang++ -Xpreprocessor -fopenmp -lomp -std=c++11 grid.cpp utils.cpp derivs.cpp plasmadomain.cpp fileio.cpp evolution.cpp main.cpp -o mhdtoy
+	clang++ -I ./source/mhd ./main.cpp ./source/mhd/*.cpp -Xpreprocessor -fopenmp -lomp -std=c++17 -o ./main
 
 intel:
-	icc grid.cpp utils.cpp derivs.cpp plasmadomain.cpp fileio.cpp evolution.cpp main.cpp -std=c++11 -fopenmp -o mhdtoy
+	icc -I ./source/mhd ./main.cpp ./source/mhd/*.cpp -fopenmp -std=c++17 -o ./main
 
 gnu:
-	g++ -fopenmp -std=c++11 grid.cpp utils.cpp derivs.cpp plasmadomain.cpp fileio.cpp evolution.cpp main.cpp -o mhdtoy
+	g++ -I ./source/mhd ./main.cpp ./source/mhd/*.cpp -fopenmp -std=c++17 -o mhdtoy
 
 clean:
 	rm mhdtoy

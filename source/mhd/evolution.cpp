@@ -30,15 +30,15 @@ void PlasmaDomain::advanceTime(bool verbose)
   double min_dt, min_dt_thermal, min_dt_rad;
   int subcycles_thermal, subcycles_rad;
 
-  double dt_raw = m_grids[dt].min();
+  double dt_raw = m_grids[dt].min(m_xl,m_yl,m_xu,m_yu);
   min_dt = epsilon*dt_raw;
 
   if(thermal_conduction){
-    min_dt_thermal = std::max(epsilon_thermal*m_grids[dt_thermal].min(),dt_thermal_min);
+    min_dt_thermal = std::max(epsilon_thermal*m_grids[dt_thermal].min(m_xl,m_yl,m_xu,m_yu),dt_thermal_min);
     subcycles_thermal = (int)(min_dt/min_dt_thermal)+1;
   }
   if(radiative_losses){
-    min_dt_rad = epsilon_rad*m_grids[dt_rad].min();
+    min_dt_rad = epsilon_rad*m_grids[dt_rad].min(m_xl,m_yl,m_xu,m_yu);
     subcycles_rad = (int)(min_dt/min_dt_rad)+1;
   }
 
@@ -63,7 +63,7 @@ void PlasmaDomain::advanceTime(bool verbose)
                     + min_dt*m_rho*(m_v_x*m_grids[grav_x] + m_v_y*m_grids[grav_y]) + min_dt*(m_v_x*viscous_force_x + m_v_y*viscous_force_y);
   if(ambient_heating) energy_next += min_dt*heating_rate;
 
-  clampWallBoundaries(mom_x_next, mom_y_next, rho_next, energy_next);
+  // clampWallBoundaries(mom_x_next, mom_y_next, rho_next, energy_next);
 
   m_rho = rho_next;
   m_mom_x = mom_x_next;
@@ -73,6 +73,7 @@ void PlasmaDomain::advanceTime(bool verbose)
   m_time += min_dt;
   m_iter++;
 
+  updateGhostZones();
   catchUnderdensity();
   recomputeTemperature();
   recomputeDerivedVariables();
@@ -93,8 +94,10 @@ void PlasmaDomain::subcycleConduction(int subcycles_thermal, double dt_total)
     fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_temp, m_grids[rho], m_grids[b_hat_x], m_grids[b_hat_y], KAPPA_0);
     if(flux_saturation) saturateConductiveFlux(con_flux_x, con_flux_y, m_grids[rho], m_temp);
     energy_next = m_energy - (dt_total/(double)subcycles_thermal)*(derivative1D(con_flux_x,0)+derivative1D(con_flux_y,1));
-    clampWallBoundaries(dummy_grid, dummy_grid, dummy_grid, energy_next);
+    // clampWallBoundaries(dummy_grid, dummy_grid, dummy_grid, energy_next);
     m_energy = energy_next.max(energy_floor);
+    updateGhostZones();
+    m_energy = m_energy.max(energy_floor); //double floor to cover ghost zone extrapolations
     m_press = (GAMMA - 1.0)*(m_energy - nonthermal_energy);
     m_temp = M_I*m_press/(2.0*K_B*m_grids[rho]);
     // Enforce temp floor everywhere
@@ -116,8 +119,10 @@ void PlasmaDomain::subcycleRadiation(int subcycles_rad, double dt_total)
   for(int subcycle = 0; subcycle < subcycles_rad; subcycle++){
     recomputeRadiativeLosses();
     energy_next = m_energy - (dt_total/(double)subcycles_rad)*m_grids[rad];
-    clampWallBoundaries(dummy_grid,dummy_grid,dummy_grid,energy_next);
+    // clampWallBoundaries(dummy_grid,dummy_grid,dummy_grid,energy_next);
     m_energy = energy_next.max(energy_floor);
+    updateGhostZones();
+    m_energy = m_energy.max(energy_floor); //double floor to cover ghost zone extrapolations
     m_press = (GAMMA - 1.0)*(m_energy - nonthermal_energy);
     m_temp = M_I*m_press/(2.0*K_B*m_grids[rho]);
     // Enforce temp floor everywhere
@@ -176,7 +181,9 @@ void PlasmaDomain::catchUnderdensity()
   for(int i=0; i<m_xdim; i++){
     for(int j=0; j<m_ydim; j++){
       if(m_grids[rho](i,j) < rho_min){
-        std::cout << "Density too low at (" << i << "," << j << ")" << "\n";
+        //Only notify if not within ghost zones
+        if(i >= m_xl && i <= m_xu && j >= m_yl && j <= m_yu)
+          std::cout << "Density too low at (" << i << "," << j << ")" << "\n";
         m_grids[rho](i,j) = rho_min;
       }
     }
@@ -184,37 +191,37 @@ void PlasmaDomain::catchUnderdensity()
 }
 
 //Enforces zero motion and unchanging rho and energy at Wall boundaries
-void PlasmaDomain::clampWallBoundaries(Grid& mom_x_next, Grid& mom_y_next, Grid& rho_next, Grid& energy_next)
-{
-  if(y_bound_1 == BoundaryCondition::Wall || y_bound_2 == BoundaryCondition::Wall){
-    if(y_bound_1 == BoundaryCondition::Wall) for(int i=0; i<m_xdim; i++){
-      mom_x_next(i,0) = 0.0;
-      mom_y_next(i,0) = 0.0;
-      rho_next(i,0) = m_grids[rho](i,0);
-      energy_next(i,0) = m_grids[energy](i,0);
-    }
-    if(y_bound_2 == BoundaryCondition::Wall) for(int i=0; i<m_xdim; i++){
-      mom_x_next(i,m_ydim-1) = 0.0;
-      mom_y_next(i,m_ydim-1) = 0.0;
-      rho_next(i,m_ydim-1) = m_grids[rho](i,m_ydim-1);
-      energy_next(i,m_ydim-1) = m_grids[energy](i,m_ydim-1);
-    }
-  }
-  if(x_bound_1 == BoundaryCondition::Wall || x_bound_2 == BoundaryCondition::Wall){
-    if(x_bound_1 == BoundaryCondition::Wall) for(int j=0; j<m_ydim; j++){
-      mom_x_next(0,j) = 0.0;
-      mom_y_next(0,j) = 0.0;
-      rho_next(0,j) = m_grids[rho](0,j);
-      energy_next(0,j) = m_grids[energy](0,j);
-    }
-    if(x_bound_2 == BoundaryCondition::Wall) for(int j=0; j<m_ydim; j++){
-      mom_x_next(m_xdim-1,j) = 0.0;
-      mom_y_next(m_xdim-1,j) = 0.0;
-      rho_next(m_xdim-1,j) = m_grids[rho](m_xdim-1,j);
-      energy_next(m_xdim-1,j) = m_grids[energy](m_xdim-1,j);
-    }
-  }
-}
+// void PlasmaDomain::clampWallBoundaries(Grid& mom_x_next, Grid& mom_y_next, Grid& rho_next, Grid& energy_next)
+// {
+//   if(y_bound_1 == BoundaryCondition::Wall || y_bound_2 == BoundaryCondition::Wall){
+//     if(y_bound_1 == BoundaryCondition::Wall) for(int i=0; i<m_xdim; i++){
+//       mom_x_next(i,0) = 0.0;
+//       mom_y_next(i,0) = 0.0;
+//       rho_next(i,0) = m_grids[rho](i,0);
+//       energy_next(i,0) = m_grids[energy](i,0);
+//     }
+//     if(y_bound_2 == BoundaryCondition::Wall) for(int i=0; i<m_xdim; i++){
+//       mom_x_next(i,m_ydim-1) = 0.0;
+//       mom_y_next(i,m_ydim-1) = 0.0;
+//       rho_next(i,m_ydim-1) = m_grids[rho](i,m_ydim-1);
+//       energy_next(i,m_ydim-1) = m_grids[energy](i,m_ydim-1);
+//     }
+//   }
+//   if(x_bound_1 == BoundaryCondition::Wall || x_bound_2 == BoundaryCondition::Wall){
+//     if(x_bound_1 == BoundaryCondition::Wall) for(int j=0; j<m_ydim; j++){
+//       mom_x_next(0,j) = 0.0;
+//       mom_y_next(0,j) = 0.0;
+//       rho_next(0,j) = m_grids[rho](0,j);
+//       energy_next(0,j) = m_grids[energy](0,j);
+//     }
+//     if(x_bound_2 == BoundaryCondition::Wall) for(int j=0; j<m_ydim; j++){
+//       mom_x_next(m_xdim-1,j) = 0.0;
+//       mom_y_next(m_xdim-1,j) = 0.0;
+//       rho_next(m_xdim-1,j) = m_grids[rho](m_xdim-1,j);
+//       energy_next(m_xdim-1,j) = m_grids[energy](m_xdim-1,j);
+//     }
+//   }
+// }
 
 void PlasmaDomain::recomputeDT()
 {
@@ -272,8 +279,8 @@ void PlasmaDomain::recomputeRadiativeLosses()
     InstrumentationTimer timer("loop thread");
     #endif
     #pragma omp for collapse(2)
-    for(int i=0; i<m_xdim; i++){
-      for(int j=0; j<m_ydim; j++){
+    for (int i = m_xl; i <= m_xu; i++){
+      for(int j = m_yl; j <= m_yu; j++){
         if(m_grids[temp](i,j) < temp_chromosphere){
           m_grids[rad](i,j) = 0.0;
         }
@@ -329,8 +336,8 @@ Grid PlasmaDomain::oneDimConductiveFlux(const Grid &temp, const Grid &rho, doubl
   Grid flux = Grid::Zero(xdim,ydim);
   flux = temp.pow(7.0/2.0);
   #pragma omp parallel for collapse(2)
-  for(int i=0; i<xdim; i++){
-    for(int j=0; j<ydim; j++){
+  for (int i = m_xl; i <= m_xu; i++){
+    for(int j = m_yl; j <= m_yu; j++){
       flux(i,j) = std::pow(temp(i,j),7.0/2.0);
     }
   }
@@ -358,8 +365,8 @@ void PlasmaDomain::fieldAlignedConductiveFlux(Grid &flux_out_x, Grid &flux_out_y
     InstrumentationTimer timer("loop thread");
     #endif
     #pragma omp for collapse(2)
-    for(int i=0; i<xdim; i++){
-      for(int j=0; j<ydim; j++){
+    for (int i = m_xl; i <= m_xu; i++){
+      for(int j = m_yl; j <= m_yu; j++){
         double flux_magnitude = con_flux_x(i,j)*b_hat_x(i,j) + con_flux_y(i,j)*b_hat_y(i,j);
         flux_out_x(i,j) = flux_magnitude*b_hat_x(i,j);
         flux_out_y(i,j) = flux_magnitude*b_hat_y(i,j);
@@ -403,8 +410,8 @@ void PlasmaDomain::updateGhostZones()
   }
   if(y_bound_2 != BoundaryCondition::Periodic){
     for(int i=m_xl; i<=m_xu; i++){
-      if(y_bound_1 == BoundaryCondition::Open) openBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
-      else if(y_bound_1 == BoundaryCondition::Wall) wallBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
+      if(y_bound_2 == BoundaryCondition::Open) openBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
+      else if(y_bound_2 == BoundaryCondition::Wall) wallBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
     }
   }
 }
@@ -416,16 +423,12 @@ void PlasmaDomain::updateGhostZones()
 void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
 {
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
-  Grid &m_rho = m_grids[rho], &m_energy = m_grids[energy], &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y];
-  double rho_slope = (m_rho(i3,j3) - m_rho(i4,j4))/m_dx;
-  double energy_slope = (m_energy(i3,j3) - m_energy(i4,j4))/m_dx;
-  double mom_x_slope = (m_mom_x(i3,j3) - m_mom_x(i4,j4))/m_dx;
-  double mom_y_slope = (m_mom_y(i3,j3) - m_mom_y(i4,j4))/m_dx;
-
-  m_rho(i1,j1) = m_rho(i3,j3); m_rho(i2,j2) = m_rho(i3,j3); //Match density of nearest interior cell
-  m_energy(i1,j1) = m_energy(i3,j3); m_energy(i2,j2) = m_energy(i3,j3); //Match temperature of nearest interior cell
-  m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0; //Halt all advection at the wall boundary
-  m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
+  for(int var : {rho, energy, mom_x, mom_y}){
+    Grid &this_grid = m_grids[var];
+    double slope = (this_grid(i3,j3) - this_grid(i4,j4))/m_dx; /*TODO: UPDATE THIS W POSITION GRID*/
+    this_grid(i2,j2) = this_grid(i3,j3) + slope*m_dx;
+    this_grid(i1,j1) = this_grid(i3,j3) + slope*2.0*m_dx;
+  }
 }
 
 //Applies the wall boundary condition to the cells indexed by the given indices

@@ -23,9 +23,11 @@ public:
   double cols() const;
   double size() const;
   double min() const;
+  double min(int il, int jl, int iu, int ju) const;
   Grid min(double b) const;
   Grid min(const Grid& b) const;
   double max() const;
+  double max(int il, int jl, int iu, int ju) const;
   Grid max(double b) const;
   Grid max(const Grid& b) const;
   Grid square() const;

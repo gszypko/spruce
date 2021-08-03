@@ -158,8 +158,8 @@ Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, 
     InstrumentationTimer timer("loop thread");
     #endif
     #pragma omp for collapse(2)
-    for(int i=0; i<xdim; i++){
-      for(int j=0; j<ydim; j++){
+    for (int i = m_xl; i <= m_xu; i++){
+      for(int j = m_yl; j <= m_yu; j++){
         int i0, i1, i2, i2surf, j0, j1, j2, j2surf; //Need separate indices for surface and vel
         i1 = i; j1 = j;
         if(index == 0){
@@ -241,8 +241,8 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
     InstrumentationTimer timer("loop thread");
     #endif
     #pragma omp for collapse(2)
-    for(int i=0; i<xdim; i++){
-      for(int j=0; j<ydim; j++){
+    for (int i = m_xl; i <= m_xu; i++){
+      for(int j = m_yl; j <= m_yu; j++){
         int i0, i1, i2, j0, j1, j2;
         i1 = i; j1 = j;
         if(index == 0){
@@ -337,8 +337,8 @@ Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index){
     InstrumentationTimer timer("loop thread");
     #endif
     #pragma omp for collapse(2)
-    for(int i=0; i<xdim; i++){
-      for(int j=0; j<ydim; j++){
+    for (int i = m_xl; i <= m_xu; i++){
+      for(int j = m_yl; j <= m_yu; j++){
         int i0, i1, i2, j0, j1, j2;
         i1 = i; j1 = j;
         if(index == 0){
