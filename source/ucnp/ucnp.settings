@@ -1,0 +1,15 @@
+% Any text after '%' will be ignored
+% Any text before '=' will be ignored
+
+n = 1e14,1e15 % 10^14 m^-3
+sig_x = 1 % mm
+sig_y = 1 % mm
+Ti = 1e-2 % K
+Te = 20 % K
+dBdx = 150 % G/cm
+tmax = 2 % tau_exp
+x_lim = 10 % mm
+y_lim = 10 % mm
+dx = .1 % grid spacing (mm)
+dy = .1 % grid spacing (mm)
+m_i = 1.455e-25 % Sr ion mass (kg)
