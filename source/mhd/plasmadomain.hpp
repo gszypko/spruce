@@ -28,16 +28,15 @@ public:
 
   //Constructors and Initialization
   PlasmaDomain(size_t xdim, size_t ydim, double dx, double dy, const char* run_name);
-  PlasmaDomain(const char* run_name, const char* settings_file_name, int job_index = 0);
+  PlasmaDomain(const char* run_name, const char* settings_file_name);
   PlasmaDomain(const char* run_name);
   PlasmaDomain();
-  void setDefaultSettings();
   void hydrostaticInitialize();
   void gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp, double std_dev_x, double std_dev_y);
   void setSolarGravity(double base_gravity, double r_solar);
 
   void readStateFile(const char* in_filename);
-  void readConfigFile(const char* settings_filename, int job_index);
+  void readConfigFile(const char* settings_filename);
 
   //Time Evolution
   void run();

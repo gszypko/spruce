@@ -26,7 +26,7 @@ const std::vector<std::string> PlasmaDomain::m_var_names = {
 };
 
 //For purposes of reading in .config files
-//Must match ordering of Settings enum below
+//Must match ordering of Config enum below
 const std::vector<std::string> PlasmaDomain::m_config_names = {
   "x_bound_1","x_bound_2","y_bound_1","y_bound_2","radiative_losses","ambient_heating",
   "thermal_conduction","flux_saturation","temp_chromosphere","radiation_ramp","heating_rate",
@@ -104,17 +104,16 @@ void PlasmaDomain::readStateFile(const char* in_filename)
   recomputeDerivedVariables();
 }
 
-//Read in simulation settings from .config file
-//Allows to change settings without recompiling
-//constants.hpp still used for default settings
-void PlasmaDomain::readConfigFile(const char* config_filename, int job_index)
+//Read in simulation configuration from .config file
+//Allows to change configuration without recompiling
+void PlasmaDomain::readConfigFile(const char* config_filename)
 {
   std::ifstream in_file(config_filename);
   std::string line;
   std::vector<std::vector<std::string> > rhs_lists;
   std::vector<int> list_vars;
   int num_combinations = 1;
-  //Read through settings file
+  //Read through config file
   while(std::getline(in_file, line)){
     clearWhitespace(line);
     if(line.empty() || line[0] == '#') continue; //skip comment and empty lines
