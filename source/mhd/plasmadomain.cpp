@@ -17,14 +17,14 @@
 PlasmaDomain::PlasmaDomain() : PlasmaDomain::PlasmaDomain(1,1,1.0,1.0,"run") {}
 PlasmaDomain::PlasmaDomain(const char* run_name) : PlasmaDomain::PlasmaDomain(1,1,1.0,1.0,run_name) {}
 
-PlasmaDomain::PlasmaDomain(const char* run_name, const char* settings_file_name, int job_index)
+PlasmaDomain::PlasmaDomain(const char* run_name, const char* config_filename, int job_index)
 {
   m_run_name = std::string(run_name);
   for(int i=0; i<num_variables; i++){
     m_output_flags.push_back(false);
     m_state_flags.push_back(false);
   }
-  readConfigFile(settings_file_name, job_index);
+  readConfigFile(config_filename, job_index);
   computeIterationBounds();
   m_out_file.open(m_run_name+".out");
   m_time = 0.0; m_iter = 0;

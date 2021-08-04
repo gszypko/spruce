@@ -45,7 +45,7 @@ public:
 private:
   //Strings corresponding to variables, settings, boundary conditions for file I/O
   static const std::vector<std::string> m_var_names;
-  static const std::vector<std::string> m_setting_names;
+  static const std::vector<std::string> m_config_names;
   static const std::vector<std::string> m_boundary_condition_names;
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)
 
@@ -68,7 +68,7 @@ private:
   BoundaryCondition x_bound_1, x_bound_2, y_bound_1, y_bound_2;
   //Physics settings
   bool radiative_losses, ambient_heating, thermal_conduction;
-  bool flux_saturation; //Setting for thermal conduction
+  bool flux_saturation; //Config for thermal conduction
   //Physical parameters
   double temp_chromosphere; //Minimum allowed temperature
   double radiation_ramp;  //Width of cutoff ramp, in units of temperature, for low-temp radiation
@@ -116,8 +116,8 @@ private:
   void setStateFlags(const std::vector<std::string> var_names, bool new_flag);
 
   BoundaryCondition stringToBoundaryCondition(const std::string str) const;
-  void handleSingleSetting(int setting_index, std::string rhs);
-  void handleSettingList(int setting_index, std::vector<std::string> rhs_vec,
+  void handleSingleConfig(int setting_index, std::string rhs);
+  void handleConfigList(int setting_index, std::vector<std::string> rhs_vec,
                         std::vector<std::vector<std::string> > &rhs_lists,
                         std::vector<int> &list_vars, int &num_combinations);
 
