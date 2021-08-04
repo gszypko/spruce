@@ -24,7 +24,7 @@ PlasmaDomain::PlasmaDomain(const char* run_name, const char* settings_file_name,
     m_output_flags.push_back(false);
     m_state_flags.push_back(false);
   }
-  readSettingsFile(settings_file_name, job_index);
+  readConfigFile(settings_file_name, job_index);
   computeIterationBounds();
   m_out_file.open(m_run_name+".out");
   m_time = 0.0; m_iter = 0;

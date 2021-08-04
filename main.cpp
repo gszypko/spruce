@@ -31,11 +31,11 @@ int main(int argc,char* argv[]){
 
   std::vector<std::string> arguments = parseCommandLineArgs(argc, argv);
   std::string out_filename = arguments[0];
-  std::string settings_filename = arguments[1];
+  std::string config_filename = arguments[1];
   std::string in_filename = arguments[2];
   int job_index = std::stoi(arguments[3]);
 
-  PlasmaDomain simulation(out_filename.c_str(),settings_filename.c_str(),job_index);
+  PlasmaDomain simulation(out_filename.c_str(),config_filename.c_str(),job_index);
 
   if(in_filename.empty()){ //Default, hard coded initial condition
     simulation.hydrostaticInitialize();

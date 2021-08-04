@@ -37,7 +37,7 @@ public:
   void setSolarGravity(double base_gravity, double r_solar);
 
   void readStateFile(const char* in_filename);
-  void readSettingsFile(const char* settings_filename, int job_index);
+  void readConfigFile(const char* settings_filename, int job_index);
 
   //Time Evolution
   void run();

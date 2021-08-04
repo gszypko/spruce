@@ -25,7 +25,7 @@ const std::vector<std::string> PlasmaDomain::m_var_names = {
   "mag_press","mag_pxx","mag_pyy","mag_pzz","mag_pxy","mag_pxz","mag_pyz"
 };
 
-//For purposes of reading in .settings files
+//For purposes of reading in .config files
 //Must match ordering of Settings enum below
 const std::vector<std::string> PlasmaDomain::m_setting_names = {
   "x_bound_1","x_bound_2","y_bound_1","y_bound_2","radiative_losses","ambient_heating",
@@ -104,12 +104,12 @@ void PlasmaDomain::readStateFile(const char* in_filename)
   recomputeDerivedVariables();
 }
 
-//Read in simulation settings from .settings file
+//Read in simulation settings from .config file
 //Allows to change settings without recompiling
 //constants.hpp still used for default settings
-void PlasmaDomain::readSettingsFile(const char* settings_filename, int job_index)
+void PlasmaDomain::readConfigFile(const char* config_filename, int job_index)
 {
-  std::ifstream in_file(settings_filename);
+  std::ifstream in_file(config_filename);
   std::string line;
   std::vector<std::vector<std::string> > rhs_lists;
   std::vector<int> list_vars;

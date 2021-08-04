@@ -109,13 +109,13 @@ std::vector<std::string> parseCommandLineArgs(int argc, char* argv[])
   for(int i=0; i<num_args; i++){
     assert(arguments[i][0] == '-' && i+1<num_args && "Arguments must be given as flag followed by non-flag");
     if(arguments[i] == "-o" || arguments[i] == "--output") result[0] = arguments[i+1];
-    else if(arguments[i] == "-s" || arguments[i] == "--settings") result[1] = arguments[i+1];
+    else if(arguments[i] == "-c" || arguments[i] == "--config") result[1] = arguments[i+1];
     else if(arguments[i] == "-S" || arguments[i] == "--state") result[2] = arguments[i+1];
     else if(arguments[i] == "-i" || arguments[i] == "--index") result[3] = arguments[i+1];
     i++;
   }
   if(result[0].empty()) result[0] = "output";
-  if(result[1].empty()) result[1] = "default.settings";
+  if(result[1].empty()) result[1] = "default.config";
   if(result[3].empty()) result[3] = "0";
   return result;
 }
