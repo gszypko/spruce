@@ -46,24 +46,43 @@ PlasmaDomain::PlasmaDomain(size_t xdim, size_t ydim, double dx, double dy, const
   computeIterationBounds();
 }
 
-void PlasmaDomain::hydrostaticInitialize()
+void PlasmaDomain::initialize(const Grid& rho, const Grid& temp, const Grid& mom_x, const Grid& mom_y,
+                              const Grid& b_x, const Grid& b_y, const Grid& b_z,
+                              const Grid& pos_x, const Grid& pos_y, const Grid& grav_x, const Grid& grav_y)
 {
-  double base_rho = M_I*1.0e12; //initial mass density at base, g cm^-3
-  double scale_height = 2.0*K_B*temp_chromosphere/(M_I*BASE_GRAV);
-  Grid &m_pos_x = m_grids[pos_x], &m_pos_y = m_grids[pos_y];
-  for(int i=0; i<m_xdim; i++){
-    for(int j=0; j<m_ydim; j++){
-      m_pos_x(i,j) = (i - (double)(m_xdim-1)*0.5)*m_dx;
-      m_pos_y(i,j) = j*m_dy;
-    }
-  }
-  m_grids[rho] = HydrostaticFalloff(base_rho,scale_height,m_pos_y);
-  m_grids[temp] = Grid(m_xdim,m_ydim,temp_chromosphere);
-  m_grids[b_x] = BipolarField(m_pos_x, m_pos_y, b_0, scale_height, 0);
-  m_grids[b_y] = BipolarField(m_pos_x, m_pos_y, b_0, scale_height, 1);
+  m_grids[Variable::rho] = rho;
+  m_grids[Variable::temp] = temp;
+  m_grids[Variable::mom_x] = mom_x;
+  m_grids[Variable::mom_y] = mom_y;
+  m_grids[Variable::b_x] = b_x;
+  m_grids[Variable::b_y] = b_y;
+  m_grids[Variable::b_z] = b_z;
+  m_grids[Variable::pos_x] = pos_x;
+  m_grids[Variable::pos_y] = pos_y;
+  m_grids[Variable::grav_x] = grav_x;
+  m_grids[Variable::grav_y] = grav_y;
   computeConstantTerms();
   recomputeDerivedVariables();
 }
+
+// void PlasmaDomain::hydrostaticInitialize()
+// {
+//   double base_rho = M_I*1.0e12; //initial mass density at base, g cm^-3
+//   double scale_height = 2.0*K_B*temp_chromosphere/(M_I*BASE_GRAV);
+//   Grid &m_pos_x = m_grids[pos_x], &m_pos_y = m_grids[pos_y];
+//   for(int i=0; i<m_xdim; i++){
+//     for(int j=0; j<m_ydim; j++){
+//       m_pos_x(i,j) = (i - (double)(m_xdim-1)*0.5)*m_dx;
+//       m_pos_y(i,j) = j*m_dy;
+//     }
+//   }
+//   m_grids[rho] = HydrostaticFalloff(base_rho,scale_height,m_pos_y);
+//   m_grids[temp] = Grid(m_xdim,m_ydim,temp_chromosphere);
+//   m_grids[b_x] = BipolarField(m_pos_x, m_pos_y, b_0, scale_height, 0);
+//   m_grids[b_y] = BipolarField(m_pos_x, m_pos_y, b_0, scale_height, 1);
+//   computeConstantTerms();
+//   recomputeDerivedVariables();
+// }
 
 //Generates gaussian distribution in density and temperature, with given min
 //and max density and temperature, distributed with the given standard deviations
@@ -82,21 +101,6 @@ void PlasmaDomain::gaussianInitialize(double min_rho, double max_rho, double min
   // b_x = BipolarField(m_xdim, m_ydim, b0, h, 0);
   // b_y = BipolarField(m_xdim, m_ydim, b0, h, 1);
   // b_z = Grid::Zero(m_xdim,m_ydim);
-}
-
-//Sets gravity to fall off from base_gravity at bottom of the domain,
-//as though from the surface of a planet with radius r_solar
-void PlasmaDomain::setSolarGravity(double base_gravity, double r_solar)
-{
-  #if BENCHMARKING_ON
-  InstrumentationTimer timer(__PRETTY_FUNCTION__);
-  #endif
-  Grid &m_grav_y = m_grids[grav_y], &m_pos_y = m_grids[pos_y];
-  for(int j=0; j<m_ydim; j++){
-    for(int i=0; i<m_xdim; i++){
-      m_grav_y(i,j) = -base_gravity*std::pow(r_solar/(r_solar+m_pos_y(i,j)),2.0);
-    }
-  }
 }
 
 //Compute lower and upper x- and y- indicies for differential operations

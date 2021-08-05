@@ -31,9 +31,11 @@ public:
   PlasmaDomain(const char* run_name, const char* settings_file_name);
   PlasmaDomain(const char* run_name);
   PlasmaDomain();
+  void initialize(const Grid& rho, const Grid& temp, const Grid& mom_x, const Grid& mom_y,
+                  const Grid& b_x, const Grid& b_y, const Grid& b_z,
+                  const Grid& pos_x, const Grid& pos_y, const Grid& grav_x, const Grid& grav_y);
   void hydrostaticInitialize();
   void gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp, double std_dev_x, double std_dev_y);
-  void setSolarGravity(double base_gravity, double r_solar);
 
   void readStateFile(const char* in_filename);
   void readConfigFile(const char* settings_filename);
@@ -93,7 +95,7 @@ private:
   void computeIterationBounds();
 
   void catchUnderdensity();
-  void clampWallBoundaries(Grid& mom_x_next, Grid& mom_y_next, Grid& rho_next, Grid& energy_next); //need to deprecate
+  // void clampWallBoundaries(Grid& mom_x_next, Grid& mom_y_next, Grid& rho_next, Grid& energy_next); //need to deprecate
   void updateGhostZones();
   void openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
   void wallBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);

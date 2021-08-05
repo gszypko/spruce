@@ -16,6 +16,8 @@
 #include "utils.hpp"
 #include "constants.hpp"
 #include "plasmadomain.hpp"
+#include "mhd.hpp"
+#include "solarutils.hpp"
 
 #if BENCHMARKING_ON
 #include "instrumentor.hpp"
@@ -34,18 +36,14 @@ int main(int argc,char* argv[]){
   std::string config_filename = arguments[1];
   std::string in_filename = arguments[2];
 
-  PlasmaDomain simulation(out_filename.c_str(),config_filename.c_str());
-
   if(in_filename.empty()){ //Default, hard coded initial condition
-    simulation.hydrostaticInitialize();
-    simulation.setSolarGravity(BASE_GRAV,R_SUN);
-    // simulation.gaussianInitialize(1.0e-15,1.0e-12,1.0e4,3.0e4,0.05*XDIM,0.05*YDIM);
+    Grid rho, temp, mom_x, mom_y, b_x, b_y, b_z, pos_x, pos_y, grav_x, grav_y;
+    SolarUtils::SolarInitialize(rho, temp, mom_x, mom_y, b_x, b_y, b_z, pos_x, pos_y, grav_x, grav_y);
+    mhd(rho, temp, mom_x, mom_y, b_x, b_y, b_z, pos_x, pos_y, grav_x, grav_y, out_filename.c_str(), config_filename.c_str());
   }
   else{ //Initial condition from .state file
-    simulation.readStateFile(in_filename.c_str());
+    mhd(in_filename.c_str(),out_filename.c_str(),config_filename.c_str());
   }
-
-  simulation.run();
 
   //Information about run time
   auto stop_time = std::chrono::steady_clock::now();

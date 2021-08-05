@@ -21,8 +21,6 @@ Grid GaussianGrid(int xdim, int ydim, double min, double max, double std_dev_x, 
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
   std::vector<double> gauss_x(xdim), gauss_y(ydim);
-  // double sigmax = 0.05*xdim;
-  // double sigmay = 0.05*ydim;
   for(int i=0; i<xdim; i++){
     gauss_x[i] = std::exp(-0.5*std::pow(((double)i-0.5*(double)(xdim-1))/std_dev_x,2.0));
   }
@@ -33,46 +31,6 @@ Grid GaussianGrid(int xdim, int ydim, double min, double max, double std_dev_x, 
   for(int i=0; i<xdim; i++){
     for(int j=0; j<ydim; j++){
       result(i,j) = gauss_x[i]*gauss_y[j];
-    }
-  }
-  return result;
-}
-
-//Generates potential bipolar field for component corresponding to index "index"
-//Centered s.t. origin lies at bottom middle of domain
-//Pressure scale height h, field poles at +/- l, field strength at poles b0
-Grid BipolarField(const Grid& m_pos_x, const Grid& m_pos_y, double b0, double h, int index){
-  #if BENCHMARKING_ON
-  InstrumentationTimer timer(__PRETTY_FUNCTION__);
-  #endif
-  int xdim = m_pos_x.rows(); int ydim = m_pos_y.cols();
-  assert(xdim == ydim && "pos_x and pos_y must have same dimensions");
-  Grid result = Grid::Zero(xdim, ydim);
-  #pragma omp parallel for collapse(2)
-  for(int i=0; i<xdim; i++){
-    for(int j=0; j<ydim; j++){
-      // double x = (i - (double)(xdim-1)*0.5)*dx;
-      // double y = j*dy;
-      if(index == 0) result(i,j) = b0*std::exp(-0.5*m_pos_y(i,j)/h)*std::cos(0.5*m_pos_x(i,j)/h);
-      else result(i,j) = -b0*std::exp(-0.5*m_pos_y(i,j)/h)*std::sin(0.5*m_pos_x(i,j)/h);
-    }
-  }
-  return result;
-}
-
-//Generates grid with hydrostatic falloff in the y-direction, with the quantity
-//"base_value" at y=0. Assumes isothermal atmosphere with temperature "iso_temp".
-//Assumes that gravity is set to vary with distance.
-Grid HydrostaticFalloff(double base_value, double scale_height, const Grid& m_pos_y){
-  #if BENCHMARKING_ON
-  InstrumentationTimer timer(__PRETTY_FUNCTION__);
-  #endif
-  Grid result = Grid::Zero(m_pos_y.rows(), m_pos_y.cols());
-  #pragma omp parallel for collapse(2)
-  for(int i=0; i<m_pos_y.rows(); i++){
-    for(int j=0; j<m_pos_y.cols(); j++){
-      //result(i,j) = base_value*std::exp(-y/scale_height);
-      result(i,j) = base_value*std::exp(M_SUN*GRAV_CONST/BASE_GRAV/scale_height*(1.0/(m_pos_y(i,j)+R_SUN) - 1.0/R_SUN));
     }
   }
   return result;
