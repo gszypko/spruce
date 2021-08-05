@@ -150,7 +150,7 @@ Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, 
   Grid surf_quantity = upwindSurface(quantity, vel, index);
   int xdim = quantity.rows();
   int ydim = quantity.cols();
-  double denom = m_dx*(1-index) + m_dy*(index);
+  Grid denom = m_grids[d_x]*(double)(1-index) + m_grids[d_y]*(double)(index);
   Grid div = Grid::Ones(xdim,ydim);
   #pragma omp parallel
   {
@@ -171,24 +171,6 @@ Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, 
             i2 = (i2+m_xdim)%m_xdim;
             i2surf = (i2surf+m_xdim)%m_xdim;
           }
-          // if(x_bound_1 == BoundaryCondition::Wall){
-          //   if(i1 == 0){
-          //     div(i1,j1) = 0.0;
-          //     continue;
-          //   }
-          // }
-          // if(x_bound_1 == BoundaryCondition::Open){
-          //   if(i1 == 0) i0 = i1;
-          // }
-          // if(x_bound_2 == BoundaryCondition::Wall){
-          //   if(i1 == m_xdim-1){
-          //     div(i1,j1) = 0.0;
-          //     continue;
-          //   }
-          // }
-          // if(x_bound_2 == BoundaryCondition::Open){
-          //   if(i1 == m_xdim-1) i2 = i1;
-          // }
         }
         else{
           //Handle Y boundary conditions
@@ -199,27 +181,9 @@ Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, 
             j2 = (j2+m_ydim)%m_ydim;
             j2surf = (j2surf+m_ydim)%m_ydim;
           }
-          // if(y_bound_1 == BoundaryCondition::Wall){
-          //   if(j1 == 0){
-          //     div(i1,j1) = 0.0;
-          //     continue;
-          //   }
-          // }
-          // if(y_bound_1 == BoundaryCondition::Open){
-          //   if(j1 == 0) j0 = j1;
-          // }
-          // if(y_bound_2 == BoundaryCondition::Wall){
-          //   if(j1 == m_ydim-1){
-          //     div(i1,j1) = 0.0;
-          //     continue;
-          //   }
-          // }
-          // if(y_bound_2 == BoundaryCondition::Open){
-          //   if(j1 == m_ydim-1) j2 = j1;
-          // }
         }
         div(i1,j1) = (surf_quantity(i2surf,j2surf)*0.5*(vel(i1,j1)+vel(i2,j2))
-                  - surf_quantity(i1,j1)*0.5*(vel(i1,j1)+vel(i0,j0)))/denom;
+                  - surf_quantity(i1,j1)*0.5*(vel(i1,j1)+vel(i0,j0)))/denom(i1,j1);
       }
     }
   }
@@ -234,7 +198,7 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
-  double denom = 2.0*(m_dx*(1-index) + m_dy*(index));
+  Grid &m_pos_x = m_grids[pos_x], &m_pos_y = m_grids[pos_y];
   #pragma omp parallel
   {
     #if BENCHMARKING_ON
@@ -254,24 +218,6 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
             i0 = (i0+xdim)%xdim;
             i2 = (i2+xdim)%xdim;
           }
-          // if(x_bound_1 == BoundaryCondition::Wall){
-          //   if(i1 == 0){
-          //     div(i1,j1) = 0.0;
-          //     continue;
-          //   }
-          // }
-          // if(x_bound_1 == BoundaryCondition::Open){
-          //   if(i1 == 0) i0 = i1;
-          // }
-          // if(x_bound_2 == BoundaryCondition::Wall){
-          //   if(i1 == xdim-1){
-          //     div(i1,j1) = 0.0;
-          //     continue;
-          //   }
-          // }
-          // if(x_bound_2 == BoundaryCondition::Open){
-          //   if(i1 == xdim-1) i2 = i1;
-          // }
         }
         else{
           //Handle Y boundary conditions
@@ -281,26 +227,10 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
             j0 = (j0+ydim)%ydim;
             j2 = (j2+ydim)%ydim;
           }
-          // if(y_bound_1 == BoundaryCondition::Wall){
-          //   if(j1 == 0){
-          //     div(i1,j1) = 0.0;
-          //     continue;
-          //   }
-          // }
-          // if(y_bound_1 == BoundaryCondition::Open){
-          //   if(j1 == 0) j0 = j1;
-          // }
-          // if(y_bound_2 == BoundaryCondition::Wall){
-          //   if(j1 == ydim-1){
-          //     div(i1,j1) = 0.0;
-          //     continue;
-          //   }
-          // }
-          // if(y_bound_2 == BoundaryCondition::Open){
-          //   if(j1 == ydim-1) j2 = j1;
-          // }
         }
-        div(i1,j1) = (quantity(i2,j2) - quantity(i0,j0))/denom;
+        div(i1,j1) = (quantity(i2,j2) - quantity(i0,j0))
+                    /((m_pos_x(i2,j2) - m_pos_x(i0,j0))*(double)(1-index)
+                      + (m_pos_y(i2,j2) - m_pos_y(i0,j0))*(double)(index));
       }
     }
   }
@@ -330,7 +260,7 @@ Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index){
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
-  double denom = std::pow((m_dx*(1-index) + m_dy*(index)),2.0);
+  Grid denom = (m_grids[d_x]*(double)(1-index) + m_grids[d_y]*(double)(index)).square();
   #pragma omp parallel
   {
     #if BENCHMARKING_ON
@@ -350,24 +280,6 @@ Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index){
             i0 = (i0+xdim)%xdim;
             i2 = (i2+xdim)%xdim;
           }
-          // if(x_bound_1 == BoundaryCondition::Wall){
-          //   if(i1 == 0){
-          //     div(i1,j1) = 0.0;
-          //     continue;
-          //   }
-          // }
-          // if(x_bound_1 == BoundaryCondition::Open){
-          //   if(i1 == 0) i0 = i1;
-          // }
-          // if(x_bound_2 == BoundaryCondition::Wall){
-          //   if(i1 == m_xdim-1){
-          //     div(i1,j1) = 0.0;
-          //     continue;
-          //   }
-          // }
-          // if(x_bound_2 == BoundaryCondition::Open){
-          //   if(i1 == m_xdim-1) i2 = i1;
-          // }
         }
         else{
           //Handle Y boundary conditions
@@ -377,26 +289,8 @@ Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index){
             j0 = (j0+ydim)%ydim;
             j2 = (j2+ydim)%ydim;
           }
-          // if(y_bound_1 == BoundaryCondition::Wall){
-          //   if(j1 == 0){
-          //     div(i1,j1) = 0.0;
-          //     continue;
-          //   }
-          // }
-          // if(y_bound_1 == BoundaryCondition::Open){
-          //   if(j1 == 0) j0 = j1;
-          // }
-          // if(y_bound_2 == BoundaryCondition::Wall){
-          //   if(j1 == m_ydim-1){
-          //     div(i1,j1) = 0.0;
-          //     continue;
-          //   }
-          // }
-          // if(y_bound_2 == BoundaryCondition::Open){
-          //   if(j1 == m_ydim-1) j2 = j1;
-          // }
         }
-        div(i1,j1) = (quantity(i2,j2) - 2.0*quantity(i1,j1) + quantity(i0,j0))/denom;
+        div(i1,j1) = (quantity(i2,j2) - 2.0*quantity(i1,j1) + quantity(i0,j0))/denom(i1,j1);
       }
     }
   }

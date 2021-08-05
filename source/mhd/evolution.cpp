@@ -51,8 +51,8 @@ void PlasmaDomain::advanceTime(bool verbose)
   Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y],
         &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y],
         &m_rho = m_grids[rho], &m_energy = m_grids[energy], &m_press = m_grids[press];
-  Grid viscous_force_x = epsilon_viscous*(0.5*m_dx*m_dx/dt_raw)*laplacian(m_mom_x);
-  Grid viscous_force_y = epsilon_viscous*(0.5*m_dy*m_dy/dt_raw)*laplacian(m_mom_y);
+  Grid viscous_force_x = epsilon_viscous*(0.5*m_grids[d_x].square()/dt_raw)*laplacian(m_mom_x);
+  Grid viscous_force_y = epsilon_viscous*(0.5*m_grids[d_y].square()/dt_raw)*laplacian(m_mom_y);
   Grid zero(1,1,0.0);
   Grid rho_next = m_rho - min_dt*divergence(m_rho,zero,zero);
   Grid mom_x_next = m_mom_x - min_dt*divergence(m_mom_x, m_press + m_grids[mag_pxx], m_grids[mag_pxy])
@@ -135,7 +135,9 @@ void PlasmaDomain::subcycleRadiation(int subcycles_rad, double dt_total)
 
 //Computes the magnetic magnitude, direction, and pressure terms
 //based on the current values of b_x, b_y, and b_z
-void PlasmaDomain::computeMagneticTerms()
+//Also computes grid spacing d_x and d_y from pos_x and pos_y
+//For terms that are computed once, at initialization, and unchanged thereafter
+void PlasmaDomain::computeConstantTerms()
 {
   Grid &m_b_x = m_grids[b_x], &m_b_y = m_grids[b_y], &m_b_z = m_grids[b_z];
   m_grids[b_magnitude] = (m_b_x.square() + m_b_y.square() + m_b_z.square()).sqrt();
@@ -149,6 +151,19 @@ void PlasmaDomain::computeMagneticTerms()
   m_grids[mag_pxy] = -m_b_x*m_b_y/(4.0*PI);
   m_grids[mag_pxz] = -m_b_x*m_b_z/(4.0*PI);
   m_grids[mag_pyz] = -m_b_y*m_b_z/(4.0*PI);
+
+  Grid &m_d_x = m_grids[d_x], &m_d_y = m_grids[d_y];
+  Grid &m_pos_x = m_grids[pos_x], &m_pos_y = m_grids[pos_y];
+  //DO NOT PARALLELIZE; ordering matters here, spacing information propagates
+  //from i=0 and j=0 borders outward (to support potential for non-uniform grids)
+  for(int i=0; i<m_xdim; i++){
+    for(int j=0; j<m_ydim; j++){
+      if(i==0) m_d_x(0,j) = m_pos_x(1,j) - m_pos_x(0,j);
+      else m_d_x(i,j) = 2.0*(m_pos_x(i,j) - m_pos_x(i-1,j)) - m_d_x(i-1,j);
+      if(j==0) m_d_y(i,0) = m_pos_y(i,1) - m_pos_y(i,0);
+      else m_d_y(i,j) = 2.0*(m_pos_y(i,j) - m_pos_y(i,j-1)) - m_d_y(i,j-1);
+    }
+  }
 }
 
 //Recompute pressure, energy, velocity, radiative loss rate, dt, dt_thermal, dt_rad
@@ -229,8 +244,8 @@ void PlasmaDomain::recomputeDT()
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
   Grid c_s = (GAMMA*m_grids[press]/m_grids[rho]).sqrt();
-  Grid abs_vx = m_dx/(c_s+m_grids[v_x].abs());
-  Grid abs_vy = m_dy/(c_s+m_grids[v_y].abs());
+  Grid abs_vx = m_grids[d_x]/(c_s+m_grids[v_x].abs());
+  Grid abs_vy = m_grids[d_y]/(c_s+m_grids[v_y].abs());
   m_grids[dt] = abs_vx.min(abs_vy);
 }
 
@@ -240,7 +255,7 @@ void PlasmaDomain::recomputeDTThermal()
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
   if(!flux_saturation){
-    m_grids[dt_thermal] = K_B/KAPPA_0*(m_grids[rho]/M_I)*m_dx*m_dy/m_grids[temp].pow(2.5);
+    m_grids[dt_thermal] = K_B/KAPPA_0*(m_grids[rho]/M_I)*m_grids[d_x]*m_grids[d_y]/m_grids[temp].pow(2.5);
   } else {
     Grid kappa_modified(m_xdim,m_ydim,0.0);
     Grid con_flux_x(m_xdim,m_ydim,0.0);
@@ -253,7 +268,7 @@ void PlasmaDomain::recomputeDTThermal()
     saturateConductiveFlux(con_flux_x, con_flux_y, m_grids[rho], m_grids[temp]);
     Grid flux_sat = (con_flux_x.square() + con_flux_y.square()).sqrt();
     kappa_modified = (flux_sat/field_temp_gradient).abs();
-    m_grids[dt_thermal] = K_B/kappa_modified*(m_grids[rho]/M_I)*m_dx*m_dy;
+    m_grids[dt_thermal] = K_B/kappa_modified*(m_grids[rho]/M_I)*m_grids[d_x]*m_grids[d_y];
   }
 }
 
@@ -330,7 +345,7 @@ Grid PlasmaDomain::oneDimConductiveFlux(const Grid &temp, const Grid &rho, doubl
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
-  Grid kappa_max = m_dx*m_dy*K_B*(rho/M_I)/dt_thermal_min;
+  Grid kappa_max = m_grids[d_x]*m_grids[d_y]*K_B*(rho/M_I)/dt_thermal_min;
   int xdim = temp.rows();
   int ydim = temp.cols();
   Grid flux = Grid::Zero(xdim,ydim);
@@ -423,11 +438,16 @@ void PlasmaDomain::updateGhostZones()
 void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
 {
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
+  assert((i1 == i2 || j1 == j2) && "Points to extrapolate must be x-aligned or y-aligned");
+  Grid &m_pos_x = m_grids[pos_x], &m_pos_y = m_grids[pos_y];
+  double dist4_3 = m_pos_x(i3,j3) - m_pos_x(i4,j4) + m_pos_y(i3,j3) - m_pos_y(i4,j4);
+  double dist3_2 = m_pos_x(i2,j2) - m_pos_x(i3,j3) + m_pos_y(i2,j2) - m_pos_y(i3,j3);
+  double dist3_1 = m_pos_x(i1,j1) - m_pos_x(i3,j3) + m_pos_y(i1,j1) - m_pos_y(i3,j3);
   for(int var : {rho, energy, mom_x, mom_y}){
     Grid &this_grid = m_grids[var];
-    double slope = (this_grid(i3,j3) - this_grid(i4,j4))/m_dx; /*TODO: UPDATE THIS W POSITION GRID*/
-    this_grid(i2,j2) = this_grid(i3,j3) + slope*m_dx;
-    this_grid(i1,j1) = this_grid(i3,j3) + slope*2.0*m_dx;
+    double slope = (this_grid(i3,j3) - this_grid(i4,j4))/dist4_3;
+    this_grid(i2,j2) = this_grid(i3,j3) + slope*dist3_2;
+    this_grid(i1,j1) = this_grid(i3,j3) + slope*dist3_1;
   }
 }
 

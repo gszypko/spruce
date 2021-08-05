@@ -9,11 +9,11 @@ Grid GaussianGrid(int xdim, int ydim, double min, double max, double std_dev_x, 
 //Generates potential bipolar field for component corresponding to index "index"
 //Centered s.t. origin lies at bottom middle of domain
 //Pressure scale height h, field poles at +/- l, field strength at poles b0
-Grid BipolarField(int xdim, int ydim, double b0, double h, double dx, double dy, int index);
+Grid BipolarField(const Grid& m_pos_x, const Grid& m_pos_y, double b0, double h, int index);
 
 //Generates grid with exponential falloff in the y-direction, with the quantity
 //"base_value" at y=0. Assumes isothermal atmosphere with temperature "iso_temp".
-Grid HydrostaticFalloff(double base_value, double scale_height, int xdim, int ydim, double dy);
+Grid HydrostaticFalloff(double base_value, double scale_height, const Grid& m_pos_y);
 
 //Erase all occurences of ' ', '\t', and '\n' in str.
 //Modifies in-place.

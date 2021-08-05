@@ -19,9 +19,9 @@ const std::vector<std::string> PlasmaDomain::m_boundary_condition_names = {
 //Corresponding variable names for file I/O
 //Must match the ordering of the Variable enum defined in plasmadomain.hpp
 const std::vector<std::string> PlasmaDomain::m_var_names = {
-  "rho","temp","mom_x","mom_y","b_x","b_y","b_z",
+  "rho","temp","mom_x","mom_y","b_x","b_y","b_z","pos_x","pos_y",
   "press","energy","rad","dt","dt_thermal","dt_rad","v_x","v_y",
-  "grav_x","grav_y","b_magnitude","b_hat_x","b_hat_y",
+  "grav_x","grav_y","b_magnitude","b_hat_x","b_hat_y","d_x","d_y",
   "mag_press","mag_pxx","mag_pyy","mag_pzz","mag_pxy","mag_pxz","mag_pyz"
 };
 
@@ -60,13 +60,13 @@ void PlasmaDomain::readStateFile(const char* in_filename)
   std::getline(ss_dim,element,',');
   m_ydim = std::stoi(element);
 
-  //Read in physical dimensions
-  std::getline(in_file,line);
-  std::istringstream ss_dxdy(line);
-  std::getline(ss_dxdy,element,',');
-  m_dx = std::stod(element);
-  std::getline(ss_dxdy,element,',');
-  m_dy = std::stod(element);
+  //Read in physical dimensions (deprecated by pos_x and pos_y)
+  // std::getline(in_file,line);
+  // std::istringstream ss_dxdy(line);
+  // std::getline(ss_dxdy,element,',');
+  // m_dx = std::stod(element);
+  // std::getline(ss_dxdy,element,',');
+  // m_dy = std::stod(element);
 
   //Read in time of state file
   std::getline(in_file,line);
@@ -100,7 +100,7 @@ void PlasmaDomain::readStateFile(const char* in_filename)
     m_grids[index] = curr_grid;
   }
   in_file.close();
-  computeMagneticTerms();
+  computeConstantTerms();
   recomputeDerivedVariables();
 }
 
@@ -153,7 +153,7 @@ void PlasmaDomain::readConfigFile(const char* config_filename)
 void PlasmaDomain::outputPreamble()
 {
   m_out_file << m_xdim << "," << m_ydim << std::endl;
-  m_out_file << m_dx << "," << m_dy << std::endl;
+  // m_out_file << m_dx << "," << m_dy << std::endl;
   m_out_file << m_grids[b_x].format(',',';');
   m_out_file << m_grids[b_y].format(',',';');
 }
@@ -177,7 +177,7 @@ void PlasmaDomain::writeStateFile(int precision) const
   std::ofstream state_file;
   state_file.open(m_run_name+std::to_string(m_iter%2)+".state");
   state_file << m_xdim << "," << m_ydim << std::endl;
-  state_file << m_dx << "," << m_dy << std::endl;
+  // state_file << m_dx << "," << m_dy << std::endl;
   state_file << "t=" << m_time << std::endl;
   for(int i=0; i<num_variables; i++){
     if(m_state_flags[i]){

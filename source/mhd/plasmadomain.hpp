@@ -19,9 +19,9 @@ class PlasmaDomain
 public:
   enum class BoundaryCondition { Periodic, Wall, Open };
   enum Variable {
-    rho,temp,mom_x,mom_y,b_x,b_y,b_z, //base variables (carried over between iterations)
+    rho,temp,mom_x,mom_y,b_x,b_y,b_z,pos_x,pos_y, //base variables (taken as input, carried over between iterations)
     press,energy,rad,dt,dt_thermal,dt_rad,v_x,v_y, //derived variables (derived from base variables)
-    grav_x,grav_y,b_magnitude,b_hat_x,b_hat_y, //constant variables (unchanging bw iterations)
+    grav_x,grav_y,b_magnitude,b_hat_x,b_hat_y,d_x,d_y, //constant variables (unchanging bw iterations)
     mag_press,mag_pxx,mag_pyy,mag_pzz,mag_pxy,mag_pxz,mag_pyz, //constant variables
     num_variables //never add new variable after this in the enum!
   };
@@ -89,7 +89,7 @@ private:
 
   void recomputeDerivedVariables();
   void recomputeTemperature();
-  void computeMagneticTerms();
+  void computeConstantTerms();
   void computeIterationBounds();
 
   void catchUnderdensity();
