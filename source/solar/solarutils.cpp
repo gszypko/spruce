@@ -15,12 +15,12 @@ namespace SolarUtils {
                        Grid& b_x, Grid& b_y, Grid& b_z,
                        Grid& pos_x, Grid& pos_y, Grid& grav_x, Grid& grav_y)
   {
-    rho = Grid(xdim,ydim);
-    temp = Grid(xdim,ydim);
-    mom_x = Grid(xdim,ydim); mom_y = Grid(xdim,ydim);
-    b_x = Grid(xdim,ydim); b_y = Grid(xdim,ydim); b_z = Grid(xdim,ydim);
-    pos_x = Grid(xdim,ydim); pos_y = Grid(xdim,ydim);
-    grav_x = Grid(xdim,ydim); grav_y = Grid(xdim,ydim);
+    rho = Grid(xdim,ydim,0.0);
+    temp = Grid(xdim,ydim,0.0);
+    mom_x = Grid(xdim,ydim,0.0); mom_y = Grid(xdim,ydim,0.0);
+    b_x = Grid(xdim,ydim,0.0); b_y = Grid(xdim,ydim,0.0); b_z = Grid(xdim,ydim,0.0);
+    pos_x = Grid(xdim,ydim,0.0); pos_y = Grid(xdim,ydim,0.0);
+    grav_x = Grid(xdim,ydim,0.0); grav_y = Grid(xdim,ydim,0.0);
     double base_rho = M_I*1.0e12; //initial mass density at base, g cm^-3
     double scale_height = 2.0*K_B*temp_chromosphere/(M_I*BASE_GRAV);
     for(int i=0; i<xdim; i++){
@@ -33,6 +33,7 @@ namespace SolarUtils {
     temp = Grid(xdim,ydim,temp_chromosphere);
     b_x = BipolarField(pos_x, pos_y, b_0, scale_height, 0);
     b_y = BipolarField(pos_x, pos_y, b_0, scale_height, 1);
+    grav_y = SolarGravity(BASE_GRAV,R_SUN,pos_y);
   }
 
   //Sets gravity to fall off from base_gravity at bottom of the domain,
@@ -42,10 +43,10 @@ namespace SolarUtils {
     #if BENCHMARKING_ON
     InstrumentationTimer timer(__PRETTY_FUNCTION__);
     #endif
-    int xdim = m_pos_y.rows(), ydim = m_pos_y.cols();
-    Grid result(xdim,ydim);
-    for(int j=0; j<ydim; j++){
-      for(int i=0; i<xdim; i++){
+    int m_xdim = m_pos_y.rows(), m_ydim = m_pos_y.cols();
+    Grid result(m_xdim,m_ydim);
+    for(int j=0; j<m_ydim; j++){
+      for(int i=0; i<m_xdim; i++){
         result(i,j) = -base_gravity*std::pow(r_solar/(r_solar+m_pos_y(i,j)),2.0);
       }
     }
@@ -59,12 +60,12 @@ namespace SolarUtils {
     #if BENCHMARKING_ON
     InstrumentationTimer timer(__PRETTY_FUNCTION__);
     #endif
-    int xdim = m_pos_x.rows(); int ydim = m_pos_y.cols();
-    assert(xdim == ydim && "pos_x and pos_y must have same dimensions");
-    Grid result = Grid::Zero(xdim, ydim);
+    int m_xdim = m_pos_x.rows(); int m_ydim = m_pos_y.cols();
+    assert(m_xdim == m_ydim && "pos_x and pos_y must have same dimensions");
+    Grid result = Grid::Zero(m_xdim, m_ydim);
     #pragma omp parallel for collapse(2)
-    for(int i=0; i<xdim; i++){
-      for(int j=0; j<ydim; j++){
+    for(int i=0; i<m_xdim; i++){
+      for(int j=0; j<m_ydim; j++){
         if(index == 0) result(i,j) = b0*std::exp(-0.5*m_pos_y(i,j)/h)*std::cos(0.5*m_pos_x(i,j)/h);
         else result(i,j) = -b0*std::exp(-0.5*m_pos_y(i,j)/h)*std::sin(0.5*m_pos_x(i,j)/h);
       }

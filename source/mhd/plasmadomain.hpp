@@ -19,18 +19,15 @@ class PlasmaDomain
 public:
   enum class BoundaryCondition { Periodic, Wall, Open };
   enum Variable {
-    rho,temp,mom_x,mom_y,b_x,b_y,b_z,pos_x,pos_y, //base variables (taken as input, carried over between iterations)
+    pos_x,pos_y,rho,temp,mom_x,mom_y,b_x,b_y,b_z,grav_x,grav_y, //base variables (taken as input, carried over between iterations)
     press,energy,rad,dt,dt_thermal,dt_rad,v_x,v_y, //derived variables (derived from base variables)
-    grav_x,grav_y,b_magnitude,b_hat_x,b_hat_y,d_x,d_y, //constant variables (unchanging bw iterations)
+    b_magnitude,b_hat_x,b_hat_y,d_x,d_y, //constant variables (unchanging bw iterations)
     mag_press,mag_pxx,mag_pyy,mag_pzz,mag_pxy,mag_pxz,mag_pyz, //constant variables
     num_variables //never add new variable after this in the enum!
   };
 
   //Constructors and Initialization
-  PlasmaDomain(size_t xdim, size_t ydim, double dx, double dy, const char* run_name);
   PlasmaDomain(const char* run_name, const char* settings_file_name);
-  PlasmaDomain(const char* run_name);
-  PlasmaDomain();
   void initialize(const Grid& rho, const Grid& temp, const Grid& mom_x, const Grid& mom_y,
                   const Grid& b_x, const Grid& b_y, const Grid& b_z,
                   const Grid& pos_x, const Grid& pos_y, const Grid& grav_x, const Grid& grav_y);
@@ -95,7 +92,6 @@ private:
   void computeIterationBounds();
 
   void catchUnderdensity();
-  // void clampWallBoundaries(Grid& mom_x_next, Grid& mom_y_next, Grid& rho_next, Grid& energy_next); //need to deprecate
   void updateGhostZones();
   void openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
   void wallBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);

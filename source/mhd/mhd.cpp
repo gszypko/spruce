@@ -7,7 +7,7 @@ void mhd(const Grid& rho, const Grid& temp, const Grid& mom_x, const Grid& mom_y
 {
   PlasmaDomain simulation(output_pathname,config_filename);
   simulation.initialize(rho, temp, mom_x, mom_y, b_x, b_y, b_z, pos_x, pos_y, grav_x, grav_y);
-  simulation.run();
+ simulation.run();
 }
 
 void mhd(const char* state_filename, const char* output_pathname, const char* config_filename)

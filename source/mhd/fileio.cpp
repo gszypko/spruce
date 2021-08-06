@@ -19,9 +19,9 @@ const std::vector<std::string> PlasmaDomain::m_boundary_condition_names = {
 //Corresponding variable names for file I/O
 //Must match the ordering of the Variable enum defined in plasmadomain.hpp
 const std::vector<std::string> PlasmaDomain::m_var_names = {
-  "rho","temp","mom_x","mom_y","b_x","b_y","b_z","pos_x","pos_y",
+  "pos_x","pos_y","rho","temp","mom_x","mom_y","b_x","b_y","b_z","grav_x","grav_y",
   "press","energy","rad","dt","dt_thermal","dt_rad","v_x","v_y",
-  "grav_x","grav_y","b_magnitude","b_hat_x","b_hat_y","d_x","d_y",
+  "b_magnitude","b_hat_x","b_hat_y","d_x","d_y",
   "mag_press","mag_pxx","mag_pyy","mag_pzz","mag_pxy","mag_pxz","mag_pyz"
 };
 
@@ -48,7 +48,7 @@ enum class Config {
 //Does not check that the variables read from the file are a complete
 //description of the plasma, nor that none of them are contradictory
 void PlasmaDomain::readStateFile(const char* in_filename)
-{
+{  
   std::ifstream in_file(in_filename);
 
   //Read in grid dimensions
@@ -59,14 +59,7 @@ void PlasmaDomain::readStateFile(const char* in_filename)
   m_xdim = std::stoi(element);
   std::getline(ss_dim,element,',');
   m_ydim = std::stoi(element);
-
-  //Read in physical dimensions (deprecated by pos_x and pos_y)
-  // std::getline(in_file,line);
-  // std::istringstream ss_dxdy(line);
-  // std::getline(ss_dxdy,element,',');
-  // m_dx = std::stod(element);
-  // std::getline(ss_dxdy,element,',');
-  // m_dy = std::stod(element);
+  for(int var=0; var<num_variables; var++) m_grids[var] = Grid(m_xdim,m_ydim,0.0);
 
   //Read in time of state file
   std::getline(in_file,line);
@@ -100,6 +93,7 @@ void PlasmaDomain::readStateFile(const char* in_filename)
     m_grids[index] = curr_grid;
   }
   in_file.close();
+  computeIterationBounds();
   computeConstantTerms();
   recomputeDerivedVariables();
 }
@@ -128,32 +122,11 @@ void PlasmaDomain::readConfigFile(const char* config_filename)
     if(rhs_vec.size() == 1) handleSingleConfig(index,rhs);
     else if(rhs_vec.size() > 1) handleConfigList(index,rhs_vec,rhs_lists,list_vars,num_combinations);
   }
-  // if(list_vars.empty()) return;
-  // //Handle job array indexing
-  // assert(job_index < num_combinations && "Index must fall within range of combinations provided");
-  // std::vector<int> this_combination_indices(list_vars.size());
-  // for(int i=0; i<job_index; i++){
-  //   this_combination_indices[0] += 1;
-  //   if(this_combination_indices[0] == rhs_lists[0].size()){
-  //     this_combination_indices[0] = 0;
-  //     for(int j=1; j<job_index; j++){
-  //       this_combination_indices[j] += 1;
-  //       if(this_combination_indices[j] == rhs_lists[j].size()) this_combination_indices[j] = 0;
-  //       else break;
-  //     }
-  //   }
-  // }
-  // for(int i=0; i<list_vars.size(); i++){
-  //   handleSingleConfig(list_vars[i],rhs_lists[i][this_combination_indices[i]]);
-  //   std::cout << m_config_names[list_vars[i]] << "_" << rhs_lists[i][this_combination_indices[i]] << std::endl;
-  //   m_run_name = m_run_name + "-" + m_config_names[list_vars[i]] + ":" + rhs_lists[i][this_combination_indices[i]];
-  // }
 }
 
 void PlasmaDomain::outputPreamble()
 {
   m_out_file << m_xdim << "," << m_ydim << std::endl;
-  // m_out_file << m_dx << "," << m_dy << std::endl;
   m_out_file << m_grids[b_x].format(',',';');
   m_out_file << m_grids[b_y].format(',',';');
 }
@@ -177,7 +150,6 @@ void PlasmaDomain::writeStateFile(int precision) const
   std::ofstream state_file;
   state_file.open(m_run_name+std::to_string(m_iter%2)+".state");
   state_file << m_xdim << "," << m_ydim << std::endl;
-  // state_file << m_dx << "," << m_dy << std::endl;
   state_file << "t=" << m_time << std::endl;
   for(int i=0; i<num_variables; i++){
     if(m_state_flags[i]){
@@ -258,14 +230,8 @@ void PlasmaDomain::handleConfigList(int setting_index, std::vector<std::string> 
                                      std::vector<int> &list_vars, int &num_combinations)
 {
   if(setting_index == static_cast<int>(Config::output_flags)) setOutputFlags(rhs_vec,true);
-  else if(setting_index == static_cast<int>(Config::state_flags)) setStateFlags(rhs_vec,true);
-  else assert(false && "Only state_flags and output_flags support list specifiers");
-  // else {
-  //   assert(std::find(list_vars.begin(),list_vars.end(),setting_index) == list_vars.end() && "Each variable should only have one line");
-  //   list_vars.push_back(setting_index);
-  //   rhs_lists.push_back(rhs_vec);
-  //   num_combinations *= rhs_vec.size();
-  // }
+  // else if(setting_index == static_cast<int>(Config::state_flags)) setStateFlags(rhs_vec,true);
+  else assert(false && "Only output_flags support list specifier");
 }
 
 void PlasmaDomain::setOutputFlag(std::string var_name, bool new_flag)

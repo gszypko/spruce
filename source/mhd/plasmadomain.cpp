@@ -14,42 +14,29 @@
 #include "plasmadomain.hpp"
 #include "constants.hpp"
 
-PlasmaDomain::PlasmaDomain() : PlasmaDomain::PlasmaDomain(1,1,1.0,1.0,"run") {}
-PlasmaDomain::PlasmaDomain(const char* run_name) : PlasmaDomain::PlasmaDomain(1,1,1.0,1.0,run_name) {}
-
 PlasmaDomain::PlasmaDomain(const char* run_name, const char* config_filename)
 {
+  m_xdim = 1; m_ydim = 1; //default values, overwritten by initialize()
   m_run_name = std::string(run_name);
   for(int i=0; i<num_variables; i++){
     m_output_flags.push_back(false);
     m_state_flags.push_back(false);
   }
   readConfigFile(config_filename);
-  computeIterationBounds();
   m_out_file.open(m_run_name+".out");
   m_time = 0.0; m_iter = 0;
   for(int i=0; i<num_variables; i++) m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
-}
-
-PlasmaDomain::PlasmaDomain(size_t xdim, size_t ydim, double dx, double dy, const char* run_name)
-{
-  m_xdim = xdim; m_ydim = ydim;
-  m_dx = dx; m_dy = dy;
-  m_time = 0.0; m_iter = 0;
-  m_run_name = std::string(run_name);
-  m_out_file.open(m_run_name+".out");
-  for(int i=0; i<num_variables; i++){
-    m_grids.push_back(Grid(xdim,ydim,0.0));
-    m_output_flags.push_back(false);
-    m_state_flags.push_back(false);
-  }
-  computeIterationBounds();
+  setStateFlags({"rho","mom_x","mom_y","temp","b_x","b_y","b_z","pos_x","pos_y","grav_x","grav_y"},true);
 }
 
 void PlasmaDomain::initialize(const Grid& rho, const Grid& temp, const Grid& mom_x, const Grid& mom_y,
                               const Grid& b_x, const Grid& b_y, const Grid& b_z,
                               const Grid& pos_x, const Grid& pos_y, const Grid& grav_x, const Grid& grav_y)
 {
+  m_xdim = rho.rows(); m_ydim = rho.cols();
+  for(int var=0; var<num_variables; var++){
+    m_grids[var] = Grid(m_xdim,m_ydim,0.0);
+  }
   m_grids[Variable::rho] = rho;
   m_grids[Variable::temp] = temp;
   m_grids[Variable::mom_x] = mom_x;
@@ -61,28 +48,10 @@ void PlasmaDomain::initialize(const Grid& rho, const Grid& temp, const Grid& mom
   m_grids[Variable::pos_y] = pos_y;
   m_grids[Variable::grav_x] = grav_x;
   m_grids[Variable::grav_y] = grav_y;
+  computeIterationBounds();
   computeConstantTerms();
   recomputeDerivedVariables();
 }
-
-// void PlasmaDomain::hydrostaticInitialize()
-// {
-//   double base_rho = M_I*1.0e12; //initial mass density at base, g cm^-3
-//   double scale_height = 2.0*K_B*temp_chromosphere/(M_I*BASE_GRAV);
-//   Grid &m_pos_x = m_grids[pos_x], &m_pos_y = m_grids[pos_y];
-//   for(int i=0; i<m_xdim; i++){
-//     for(int j=0; j<m_ydim; j++){
-//       m_pos_x(i,j) = (i - (double)(m_xdim-1)*0.5)*m_dx;
-//       m_pos_y(i,j) = j*m_dy;
-//     }
-//   }
-//   m_grids[rho] = HydrostaticFalloff(base_rho,scale_height,m_pos_y);
-//   m_grids[temp] = Grid(m_xdim,m_ydim,temp_chromosphere);
-//   m_grids[b_x] = BipolarField(m_pos_x, m_pos_y, b_0, scale_height, 0);
-//   m_grids[b_y] = BipolarField(m_pos_x, m_pos_y, b_0, scale_height, 1);
-//   computeConstantTerms();
-//   recomputeDerivedVariables();
-// }
 
 //Generates gaussian distribution in density and temperature, with given min
 //and max density and temperature, distributed with the given standard deviations
@@ -96,17 +65,13 @@ void PlasmaDomain::gaussianInitialize(double min_rho, double max_rho, double min
   m_grids[temp] = GaussianGrid(m_xdim, m_ydim, min_temp, max_temp, std_dev_x, std_dev_y);
   computeConstantTerms();
   recomputeDerivedVariables();
-  // double b0 = 0.1;
-  // double h = (m_xdim*DX)/(4.0*PI);
-  // b_x = BipolarField(m_xdim, m_ydim, b0, h, 0);
-  // b_y = BipolarField(m_xdim, m_ydim, b0, h, 1);
-  // b_z = Grid::Zero(m_xdim,m_ydim);
 }
 
 //Compute lower and upper x- and y- indicies for differential operations
 //from boundary conditions, to exclude ghost zones. Results stored in m_xl, m_xu, m_yl, m_yu
 void PlasmaDomain::computeIterationBounds()
 {
+  assert(m_xdim > 2*N_GHOST && m_ydim > 2*N_GHOST && "Grid too small for ghost zones");
   if(x_bound_1 == BoundaryCondition::Open || x_bound_1 == BoundaryCondition::Wall) m_xl = N_GHOST;
   else{ assert(x_bound_1 == BoundaryCondition::Periodic && "Boundary cond'n must be defined"); m_xl = 0; }
   if(x_bound_2 == BoundaryCondition::Open || x_bound_2 == BoundaryCondition::Wall) m_xu = m_xdim - N_GHOST - 1;
