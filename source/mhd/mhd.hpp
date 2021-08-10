@@ -11,4 +11,7 @@ void mhd(const Grid& rho, const Grid& temp, const Grid& mom_x, const Grid& mom_y
 //Variable specification from .state file
 void mhd(const char* state_filename, const char* output_pathname, const char* config_filename);
 
+//Specification from complete directory of past run (incl. .state file)
+void mhd(const char* output_pathname, const char* run_directory);
+
 #endif

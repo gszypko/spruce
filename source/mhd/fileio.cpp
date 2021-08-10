@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <algorithm>
+#include <filesystem>
 #include "plasmadomain.hpp"
 #include "utils.hpp"
 
@@ -148,7 +149,7 @@ void PlasmaDomain::outputCurrentState()
 void PlasmaDomain::writeStateFile(int precision) const
 {
   std::ofstream state_file;
-  state_file.open(m_run_name+std::to_string(m_iter%2)+".state");
+  state_file.open(m_out_directory/(m_run_name+std::to_string(m_iter%2)+".state"));
   state_file << m_xdim << "," << m_ydim << std::endl;
   state_file << "t=" << m_time << std::endl;
   for(int i=0; i<num_variables; i++){
@@ -163,9 +164,9 @@ void PlasmaDomain::writeStateFile(int precision) const
 //Gets rid of the older of the two state files at the end of the sim run
 void PlasmaDomain::cleanUpStateFiles() const
 {
-  rename((m_run_name+std::to_string((m_iter-1)%2)+".state").c_str(),
-          (m_run_name+".state").c_str());
-  remove((m_run_name+std::to_string((m_iter-2)%2)+".state").c_str());
+  std::filesystem::rename(m_out_directory/(m_run_name+std::to_string((m_iter-1)%2)+".state"),
+          m_out_directory/(m_run_name+".state"));
+  std::filesystem::remove(m_out_directory/(m_run_name+std::to_string((m_iter-2)%2)+".state"));
 }
 
 PlasmaDomain::BoundaryCondition PlasmaDomain::stringToBoundaryCondition(const std::string str) const

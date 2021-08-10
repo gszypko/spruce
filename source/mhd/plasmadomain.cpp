@@ -9,6 +9,7 @@
 #include <iterator>
 #include <cmath>
 #include <limits>
+#include <filesystem>
 #include "utils.hpp"
 #include "grid.hpp"
 #include "plasmadomain.hpp"
@@ -23,7 +24,14 @@ PlasmaDomain::PlasmaDomain(const char* run_name, const char* config_filename)
     m_state_flags.push_back(false);
   }
   readConfigFile(config_filename);
-  m_out_file.open(m_run_name+".out");
+  std::filesystem::path run_path = std::filesystem::path(".") / run_name;
+  std::filesystem::directory_entry path_dir(run_path);
+  int dir_suffix = 1;
+  while(path_dir.exists()) path_dir = std::filesystem::directory_entry(std::filesystem::path(run_path.string()+std::to_string(dir_suffix++)));
+  m_out_directory = path_dir.path();
+  std::filesystem::create_directories(m_out_directory);
+  std::filesystem::copy(config_filename, m_out_directory/config_filename);
+  m_out_file.open(m_out_directory/(m_run_name+".out"));
   m_time = 0.0; m_iter = 0;
   for(int i=0; i<num_variables; i++) m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
   setStateFlags({"rho","mom_x","mom_y","temp","b_x","b_y","b_z","pos_x","pos_y","grav_x","grav_y"},true);

@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <map>
 #include <iostream>
+#include <filesystem>
 #include "grid.hpp"
 
 class PlasmaDomain
@@ -51,6 +52,7 @@ private:
   std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
   std::vector<bool> m_state_flags; //Variables that are printed in .state files (should be a minimal complete description of the plasma)
 
+  std::filesystem::path m_out_directory;
   std::string m_run_name;
   std::ofstream m_out_file;
 

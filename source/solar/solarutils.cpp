@@ -4,17 +4,17 @@
 #include "constants.hpp"
 
 namespace SolarUtils {
-  static const double temp_chromosphere = 3.0e4;
-  static const int xdim = 100;
-  static const int ydim = 100;
-  static const double dx = 2.2649e7;
-  static const double dy = 2.2649e7;
-  static const double b_0 = 100.0;
-
+  
   void SolarInitialize(Grid& rho, Grid& temp, Grid& mom_x, Grid& mom_y,
                        Grid& b_x, Grid& b_y, Grid& b_z,
                        Grid& pos_x, Grid& pos_y, Grid& grav_x, Grid& grav_y)
   {
+    const double temp_chromosphere = 3.0e4;
+    const int xdim = 100;
+    const int ydim = 100;
+    const double dx = 2.2649e7;
+    const double dy = 2.2649e7;
+    const double b_0 = 100.0;
     rho = Grid(xdim,ydim,0.0);
     temp = Grid(xdim,ydim,0.0);
     mom_x = Grid(xdim,ydim,0.0); mom_y = Grid(xdim,ydim,0.0);
