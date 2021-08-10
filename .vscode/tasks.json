@@ -6,17 +6,22 @@
             "command": "/usr/bin/g++-8",
             "args": [
                 "-I", 
-                "${fileDirname}/source/mhd",
+                "${workspaceFolder}/source/",
+                "-I", 
+                "${workspaceFolder}/source/mhd/",
+                "-I",
+                "${workspaceFolder}/source/user-interface/",
 
                 "-std=c++17",
                 "-fopenmp",
                 "-g",
 
                 "${file}",
-                "${fileDirname}/source/mhd/*",
+                "${workspaceFolder}/source/mhd/*",
+                "${workspaceFolder}/source/user-interface/*",
                 
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}",
+                "${workspaceFolder}/run",
                 
                 "-lm",
                 "-lstdc++fs", // <filesystem> library

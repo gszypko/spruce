@@ -1,0 +1,24 @@
+% Formatting:
+%   Commenting: Any text after '%' will be ignored
+%   Delimiter: Values are comma-separated: using ',' or '=' (equals sign will function as a comma, used for readability)
+%   All spaces are ignored
+
+% Variable specification:
+%   One quantity specified per line: [<varname> = <unit> = #,#,#,...]
+%   Units must be specified: 
+%       If numeric, use either <cgs> units or in terms of another variable name
+%       If not numeric, use <opt>, which will be treated as std::string for comparison
+
+n = cgs = 1e16 % peak plasma density
+n_dist = opt = gaussian % plasma density distribution
+sig_x = cgs = 0.1 % rms radius of plasma along x axis
+sig_y = cgs = 0.1 % rms radius of plasma along y axis
+Ti = cgs = 1e-2 % initial ion temperature
+Te = cgs = 20 % initial electron temperature
+dBdx = cgs = 150 % gradient of quadrupole magnetic field along symmetry (x) axis
+tmax = cgs = 2 % end time for simulation
+x_lim = sig_x = 1 % simulation box size on x axis: from -x_lim to x_lim
+y_lim = sig_y = 1 % simulation box size on y axis: from -y_lim to y_lim
+dx = cgs = .01 % grid spacing
+dy = cgs = .01 % grid spacing
+m_i = cgs = 1.455e-28 % Sr ion mass
