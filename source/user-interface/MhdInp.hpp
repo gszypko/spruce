@@ -15,6 +15,7 @@ public:
     MhdInp(size_t Nx,size_t Ny);
     void set_var(const int& var,const Grid& grid);
     void all_initialized() const;
+    std::vector<Grid> grids();
 private:
     size_t m_Nx; // number of elements along x-axis contained in <m_grids>
     size_t m_Ny; // number of elements along y-axis contained in <m_grids>

@@ -39,10 +39,10 @@ int main(int argc,char* argv[]){
   if(in_filename.empty()){ //Default, hard coded initial condition
     Grid rho, temp, mom_x, mom_y, b_x, b_y, b_z, pos_x, pos_y, grav_x, grav_y;
     SolarUtils::SolarInitialize(rho, temp, mom_x, mom_y, b_x, b_y, b_z, pos_x, pos_y, grav_x, grav_y);
-    mhd(rho, temp, mom_x, mom_y, b_x, b_y, b_z, pos_x, pos_y, grav_x, grav_y, out_filename.c_str(), config_filename.c_str());
+    mhdSolve({pos_x, pos_y, rho, temp, mom_x, mom_y, b_x, b_y, b_z, grav_x, grav_y}, out_filename.c_str(), config_filename.c_str());
   }
   else{ //Initial condition from .state file
-    mhd(in_filename.c_str(),out_filename.c_str(),config_filename.c_str());
+    mhdSolve(in_filename.c_str(),out_filename.c_str(),config_filename.c_str());
   }
 
   //Information about run time

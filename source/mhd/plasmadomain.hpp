@@ -28,10 +28,8 @@ public:
   };
 
   //Constructors and Initialization
-  PlasmaDomain(const char* run_name, const char* settings_file_name);
-  void initialize(const Grid& rho, const Grid& temp, const Grid& mom_x, const Grid& mom_y,
-                  const Grid& b_x, const Grid& b_y, const Grid& b_z,
-                  const Grid& pos_x, const Grid& pos_y, const Grid& grav_x, const Grid& grav_y);
+  PlasmaDomain(const char* out_path, const char* config_path);
+  void initialize(const std::vector<Grid>& input_vars);
   void hydrostaticInitialize();
   void gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp, double std_dev_x, double std_dev_y);
 
@@ -53,7 +51,7 @@ private:
   std::vector<bool> m_state_flags; //Variables that are printed in .state files (should be a minimal complete description of the plasma)
 
   std::filesystem::path m_out_directory;
-  std::string m_run_name;
+  // std::string m_run_name;
   std::ofstream m_out_file;
 
   double m_time;

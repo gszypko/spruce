@@ -23,3 +23,10 @@ void MhdInp::all_initialized() const
         if (!m_initialized[i]) std::cerr << "The grid for <" << m_varnames[i] << "> was not initialized." << std::endl;
     } 
 }
+
+// return all of the input grids, but first check that they were all initialized
+std::vector<Grid> MhdInp::grids()
+{
+    all_initialized();
+    return m_grids;
+}

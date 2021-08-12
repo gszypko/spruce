@@ -9,6 +9,7 @@
 #include "ui_utility.hpp"
 #include <filesystem>
 #include "PlasmaSettings.hpp"
+#include "mhd.hpp"
 
 MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
 {
@@ -58,7 +59,14 @@ int main(int argc, char *argv[])
     std::string plasma_type = argv[1]; // .settings option - "ucnp" or "solar"
     std::filesystem::path out_path = argv[2]; // relative save directory path
     int task_array{atoi(argv[3])};  // array number from slurm file input
-    std::filesystem::create_directory(out_path);
+    std::string config_path = argv[4]; // path of .config file to use
+
+    //refactor mhd function to take MhdInp, out_path, config_path
+    //command line flag parsing? so that you can either specify all of the above or specify a previous run directory
+
+    // create subdirectory for array index
+    out_path /= ("array"+std::to_string(task_array));
+    std::filesystem::create_directories(out_path);
 
     // choose which plasma settings file to use
     std::filesystem::path settings_path{}; // relative path to .settings file
@@ -72,9 +80,10 @@ int main(int argc, char *argv[])
     
     // generate input grids for MHD code - if statement to select plasma type
     MhdInp grids_inp = gen_inp_grids_ucnp(pms);
-    grids_inp.all_initialized();
+    // grids_inp.all_initialized();
 
     // run MHD
+    mhdSolve(grids_inp.grids(),out_path.c_str(),config_path.c_str());
 
     return 0;
 }

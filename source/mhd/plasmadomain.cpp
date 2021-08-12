@@ -15,47 +15,45 @@
 #include "plasmadomain.hpp"
 #include "constants.hpp"
 
-PlasmaDomain::PlasmaDomain(const char* run_name, const char* config_filename)
+PlasmaDomain::PlasmaDomain(const char* out_path, const char* config_path)
 {
   m_xdim = 1; m_ydim = 1; //default values, overwritten by initialize()
-  m_run_name = std::string(run_name);
+  // m_run_name = std::string(out_path);
   for(int i=0; i<num_variables; i++){
     m_output_flags.push_back(false);
     m_state_flags.push_back(false);
   }
-  readConfigFile(config_filename);
-  std::filesystem::path run_path = std::filesystem::path(".") / run_name;
-  std::filesystem::directory_entry path_dir(run_path);
-  int dir_suffix = 1;
-  while(path_dir.exists()) path_dir = std::filesystem::directory_entry(std::filesystem::path(run_path.string()+std::to_string(dir_suffix++)));
-  m_out_directory = path_dir.path();
-  std::filesystem::create_directories(m_out_directory);
-  std::filesystem::copy(config_filename, m_out_directory/config_filename);
-  m_out_file.open(m_out_directory/(m_run_name+".out"));
+  readConfigFile(config_path);
+  // std::filesystem::path run_path = std::filesystem::path(".") / run_name;
+  // std::filesystem::directory_entry path_dir(run_path);
+  // int dir_suffix = 1;
+  // while(path_dir.exists()) path_dir = std::filesystem::directory_entry(std::filesystem::path(run_path.string()+std::to_string(dir_suffix++)));
+  m_out_directory = std::filesystem::path(out_path);
+  // std::filesystem::create_directories(m_out_directory);
+  std::filesystem::copy(config_path, m_out_directory/config_path);
+  m_out_file.open(m_out_directory/"mhd.out");
   m_time = 0.0; m_iter = 0;
   for(int i=0; i<num_variables; i++) m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
   setStateFlags({"rho","mom_x","mom_y","temp","b_x","b_y","b_z","pos_x","pos_y","grav_x","grav_y"},true);
 }
 
-void PlasmaDomain::initialize(const Grid& rho, const Grid& temp, const Grid& mom_x, const Grid& mom_y,
-                              const Grid& b_x, const Grid& b_y, const Grid& b_z,
-                              const Grid& pos_x, const Grid& pos_y, const Grid& grav_x, const Grid& grav_y)
+void PlasmaDomain::initialize(const std::vector<Grid>& input_vars)
 {
-  m_xdim = rho.rows(); m_ydim = rho.cols();
+  m_xdim = input_vars[0].rows(); m_ydim = input_vars[0].cols();
   for(int var=0; var<num_variables; var++){
     m_grids[var] = Grid(m_xdim,m_ydim,0.0);
   }
-  m_grids[Variable::rho] = rho;
-  m_grids[Variable::temp] = temp;
-  m_grids[Variable::mom_x] = mom_x;
-  m_grids[Variable::mom_y] = mom_y;
-  m_grids[Variable::b_x] = b_x;
-  m_grids[Variable::b_y] = b_y;
-  m_grids[Variable::b_z] = b_z;
-  m_grids[Variable::pos_x] = pos_x;
-  m_grids[Variable::pos_y] = pos_y;
-  m_grids[Variable::grav_x] = grav_x;
-  m_grids[Variable::grav_y] = grav_y;
+  m_grids[pos_x] = input_vars[pos_x];
+  m_grids[pos_y] = input_vars[pos_y];
+  m_grids[rho] = input_vars[rho];
+  m_grids[temp] = input_vars[temp];
+  m_grids[mom_x] = input_vars[mom_x];
+  m_grids[mom_y] = input_vars[mom_y];
+  m_grids[b_x] = input_vars[b_x];
+  m_grids[b_y] = input_vars[b_y];
+  m_grids[b_z] = input_vars[b_z];
+  m_grids[grav_x] = input_vars[grav_x];
+  m_grids[grav_y] = input_vars[grav_y];
   computeIterationBounds();
   computeConstantTerms();
   recomputeDerivedVariables();
