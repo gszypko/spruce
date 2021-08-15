@@ -1,19 +1,18 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
+#include <omp.h>
+#include <cmath>
+#include <vector>
+#include <limits>
+#include <string>
+#include <algorithm>
+#include <sstream>
 #include "grid.hpp"
+#include "constants.hpp"
 
 //Generates gaussian initial condition for a variable, centered at middle of grid
 Grid GaussianGrid(int xdim, int ydim, double min, double max, double std_dev_x, double std_dev_y);
-
-// //Generates potential bipolar field for component corresponding to index "index"
-// //Centered s.t. origin lies at bottom middle of domain
-// //Pressure scale height h, field poles at +/- l, field strength at poles b0
-// Grid BipolarField(const Grid& m_pos_x, const Grid& m_pos_y, double b0, double h, int index);
-
-// //Generates grid with exponential falloff in the y-direction, with the quantity
-// //"base_value" at y=0. Assumes isothermal atmosphere with temperature "iso_temp".
-// Grid HydrostaticFalloff(double base_value, double scale_height, const Grid& m_pos_y);
 
 //Erase all occurences of ' ', '\t', and '\n' in str.
 //Modifies in-place.
@@ -29,5 +28,8 @@ std::vector<std::string> splitString(const std::string &str, const char delim);
 //Default run name is "output" and default config file is "default.config".
 //If no state file provided, that entry is left as an empty string.
 std::vector<std::string> parseCommandLineArgs(int argc, char* argv[]);
+
+//Retrieve comand line argument preceded by either short_flag or long_flag (both must, at a minimum, start with '-')
+std::string getCommandLineArg(int argc, char* argv[], std::string short_flag, std::string long_flag);
 
 #endif

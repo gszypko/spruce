@@ -2,8 +2,7 @@
 
 // class constructor
 PlasmaSettings::PlasmaSettings(std::filesystem::path settings_path, int array):
-    m_array{array},
-    m_array_path{"array_"+num2str(m_array)}
+    m_array{array}
 {
     load_settings(settings_path);
     check_units();
@@ -128,8 +127,8 @@ std::string PlasmaSettings::getopt(const std::string& name) const
 // write plasma settings for specified m_array value (i.e., the corresponding row of m_mat)
 void PlasmaSettings::write_array_params(const std::filesystem::path& path) const
 {
-    std::filesystem::create_directory(path/m_array_path);
-    std::filesystem::path file_path{path/m_array_path/"plasma.settings"};
+    std::filesystem::create_directory(path);
+    std::filesystem::path file_path{path/"plasma.settings"};
     if (std::filesystem::exists(file_path)) std::ofstream out_file(file_path);
     append_row_to_csv(file_path,m_names);
     append_row_to_csv(file_path,m_units);

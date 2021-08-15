@@ -1,16 +1,7 @@
 //fileio.cpp
 //PlasmaDomain functionality relating to file I/O
 
-#include <string>
-#include <fstream>
-#include <sstream>
-#include <cstdio>
-#include <cassert>
-#include <cstdlib>
-#include <algorithm>
-#include <filesystem>
 #include "plasmadomain.hpp"
-#include "utils.hpp"
 
 //Must match ordering of BoundaryCondition enum in plasmadomain.hpp
 const std::vector<std::string> PlasmaDomain::m_boundary_condition_names = {
@@ -32,16 +23,16 @@ const std::vector<std::string> PlasmaDomain::m_config_names = {
   "x_bound_1","x_bound_2","y_bound_1","y_bound_2","radiative_losses","ambient_heating",
   "thermal_conduction","flux_saturation","temp_chromosphere","radiation_ramp","heating_rate",
   "b_0","epsilon","epsilon_thermal","epsilon_rad","epsilon_viscous","dt_thermal_min","rho_min",
-  "temp_min","thermal_energy_min","max_iterations","max_time","iter_output_interval","time_output_interval",
-  "output_flags","state_flags","xdim","ydim","dx","dy"
+  "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
+  "output_flags","xdim","ydim","ion_mass","adiabatic_index"
 };
 
 enum class Config {
   x_bound_1, x_bound_2, y_bound_1, y_bound_2, radiative_losses, ambient_heating,
   thermal_conduction, flux_saturation, temp_chromosphere, radiation_ramp, heating_rate,
   b_0, epsilon, epsilon_thermal, epsilon_rad, epsilon_viscous, dt_thermal_min, rho_min,
-  temp_min, thermal_energy_min, max_iterations, max_time, iter_output_interval, time_output_interval,
-  output_flags, state_flags, xdim, ydim, dx, dy
+  temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
+  output_flags, xdim, ydim, ion_mass, adiabatic_index
 };
 
 //Read in variables from .state file
@@ -127,9 +118,18 @@ void PlasmaDomain::readConfigFile(const char* config_filename)
 
 void PlasmaDomain::outputPreamble()
 {
+  m_out_file << "xdim,ydim" << std::endl;
   m_out_file << m_xdim << "," << m_ydim << std::endl;
+  m_out_file << "pos_x" << std::endl;
+  m_out_file << m_grids[pos_x].format(',',';');
+  m_out_file << "pos_y" << std::endl;
+  m_out_file << m_grids[pos_y].format(',',';');
+  m_out_file << "b_x" << std::endl;
   m_out_file << m_grids[b_x].format(',',';');
+  m_out_file << "b_y" << std::endl;
   m_out_file << m_grids[b_y].format(',',';');
+  m_out_file << "b_z" << std::endl;
+  m_out_file << m_grids[b_z].format(',',';');
 }
 
 void PlasmaDomain::outputCurrentState()
@@ -145,18 +145,16 @@ void PlasmaDomain::outputCurrentState()
 
 //Output current state into state file (toggles between overwriting two different files
 //so that the most recent state is still written in event of a crash)
-//All variables marked in m_state_flags are output here
+//All variables included in PlasmaDomain::StateVars are written out here
 void PlasmaDomain::writeStateFile(int precision) const
 {
   std::ofstream state_file;
   state_file.open(m_out_directory/("mhd"+std::to_string(m_iter%2)+".state"));
   state_file << m_xdim << "," << m_ydim << std::endl;
   state_file << "t=" << m_time << std::endl;
-  for(int i=0; i<num_variables; i++){
-    if(m_state_flags[i]){
-      state_file << m_var_names[i] << std::endl;
-      state_file << m_grids[i].format(',',';',precision);
-    }
+  for(int i=state_var_start; i<state_var_end; i++){
+    state_file << m_var_names[i] << std::endl;
+    state_file << m_grids[i].format(',',';',precision);
   }
   state_file.close();
 }
@@ -164,9 +162,9 @@ void PlasmaDomain::writeStateFile(int precision) const
 //Gets rid of the older of the two state files at the end of the sim run
 void PlasmaDomain::cleanUpStateFiles() const
 {
-  std::filesystem::rename(m_out_directory/("mhd"+std::to_string((m_iter-1)%2)+".state"),
+  std::filesystem::rename(m_out_directory/("mhd"+std::to_string((m_iter)%2)+".state"),
           m_out_directory/("mhd.state"));
-  std::filesystem::remove(m_out_directory/("mhd"+std::to_string((m_iter-2)%2)+".state"));
+  std::filesystem::remove(m_out_directory/("mhd"+std::to_string((m_iter-1)%2)+".state"));
 }
 
 PlasmaDomain::BoundaryCondition PlasmaDomain::stringToBoundaryCondition(const std::string str) const
@@ -213,15 +211,13 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::temp_min): temp_min = std::stod(rhs); break;
   case static_cast<int>(Config::thermal_energy_min): thermal_energy_min = std::stod(rhs); break;
   case static_cast<int>(Config::max_iterations): max_iterations = std::stoi(rhs); break;
-  case static_cast<int>(Config::max_time): max_time = std::stod(rhs); break;
   case static_cast<int>(Config::iter_output_interval): iter_output_interval = std::stoi(rhs); break;
   case static_cast<int>(Config::time_output_interval): time_output_interval = std::stod(rhs); break;
   case static_cast<int>(Config::output_flags): setOutputFlag(rhs,true); break;
-  case static_cast<int>(Config::state_flags): setStateFlag(rhs,true); break;
   case static_cast<int>(Config::xdim): m_xdim = std::stoi(rhs); break;
   case static_cast<int>(Config::ydim): m_ydim = std::stoi(rhs); break;
-  case static_cast<int>(Config::dx): m_dx = std::stod(rhs); break;
-  case static_cast<int>(Config::dy): m_dy = std::stod(rhs); break;
+  case static_cast<int>(Config::ion_mass): ion_mass = std::stod(rhs); break;
+  case static_cast<int>(Config::adiabatic_index): adiabatic_index = std::stod(rhs); break;
   default: break;
   }
 }
@@ -247,17 +243,3 @@ void PlasmaDomain::setOutputFlags(const std::vector<std::string> var_names, bool
 {
   for(std::string var_name : var_names) setOutputFlag(var_name,new_flag);
 }
-
-void PlasmaDomain::setStateFlag(std::string var_name, bool new_flag)
-{
-  auto it = std::find(m_var_names.begin(),m_var_names.end(),var_name);
-  assert(it != m_var_names.end());
-  auto index = std::distance(m_var_names.begin(),it);
-  m_state_flags[index] = new_flag;
-}
-
-void PlasmaDomain::setStateFlags(const std::vector<std::string> var_names, bool new_flag)
-{
-  for(std::string var_name : var_names) setStateFlag(var_name,new_flag);
-}
-

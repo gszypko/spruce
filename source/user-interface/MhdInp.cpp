@@ -1,11 +1,27 @@
 #include "MhdInp.hpp"
+#include "plasmadomain.hpp"
 
 // class constructor
 MhdInp::MhdInp(size_t Nx,size_t Ny)  
 {
     m_Nx = Nx; m_Ny = Ny;
-    m_grids.resize(num_inp,Grid(m_Nx,m_Ny,0.));
-    m_initialized.resize(num_inp,false);
+    m_grids.resize(PlasmaDomain::state_var_end - PlasmaDomain::state_var_start,Grid(m_Nx,m_Ny,0.));
+    m_initialized.resize(PlasmaDomain::state_var_end - PlasmaDomain::state_var_start,false);
+}
+
+// Copy assignment operator
+MhdInp& MhdInp::operator=(const MhdInp& other)
+{
+    m_Nx = other.m_Nx; m_Ny = other.m_Ny;
+    m_grids.resize(PlasmaDomain::state_var_end - PlasmaDomain::state_var_start,Grid(m_Nx,m_Ny,0.));
+    m_initialized.resize(PlasmaDomain::state_var_end - PlasmaDomain::state_var_start,false);
+
+    for(int i=PlasmaDomain::state_var_start; i<PlasmaDomain::state_var_end; i++){
+        m_grids[i] = other.m_grids[i];
+        m_initialized[i] = other.m_initialized[i];
+    }
+
+    return *this;
 }
 
 // set an element of <m_grids> corresponding to integer input
@@ -19,7 +35,7 @@ void MhdInp::set_var(const int& var,const Grid& grid)
 // check if all elements of <m_grids> were initialized
 void MhdInp::all_initialized() const
 {
-    for (int i = 0; i < num_inp; i++){
+    for (int i = PlasmaDomain::state_var_start; i < PlasmaDomain::state_var_end; i++){
         if (!m_initialized[i]) std::cerr << "The grid for <" << m_varnames[i] << "> was not initialized." << std::endl;
     } 
 }

@@ -1,10 +1,7 @@
-#include <cmath>
-#include "grid.hpp"
 #include "solarutils.hpp"
-#include "constants.hpp"
 
 namespace SolarUtils {
-  
+  const double ion_mass = 1.6726e-24;
   void SolarInitialize(Grid& rho, Grid& temp, Grid& mom_x, Grid& mom_y,
                        Grid& b_x, Grid& b_y, Grid& b_z,
                        Grid& pos_x, Grid& pos_y, Grid& grav_x, Grid& grav_y)
@@ -21,8 +18,8 @@ namespace SolarUtils {
     b_x = Grid(xdim,ydim,0.0); b_y = Grid(xdim,ydim,0.0); b_z = Grid(xdim,ydim,0.0);
     pos_x = Grid(xdim,ydim,0.0); pos_y = Grid(xdim,ydim,0.0);
     grav_x = Grid(xdim,ydim,0.0); grav_y = Grid(xdim,ydim,0.0);
-    double base_rho = M_I*1.0e12; //initial mass density at base, g cm^-3
-    double scale_height = 2.0*K_B*temp_chromosphere/(M_I*BASE_GRAV);
+    double base_rho = ion_mass*1.0e12; //initial mass density at base, g cm^-3
+    double scale_height = 2.0*K_B*temp_chromosphere/(ion_mass*BASE_GRAV);
     for(int i=0; i<xdim; i++){
       for(int j=0; j<ydim; j++){
         pos_x(i,j) = (i - (double)(xdim-1)*0.5)*dx;
@@ -35,6 +32,43 @@ namespace SolarUtils {
     b_y = BipolarField(pos_x, pos_y, b_0, scale_height, 1);
     grav_y = SolarGravity(BASE_GRAV,R_SUN,pos_y);
   }
+
+  MhdInp SolarMHDInput(const PlasmaSettings& pms)
+  {
+    const int xdim = (int)(pms.getvar("xdim")+0.01);
+    const int ydim = (int)(pms.getvar("ydim")+0.01);
+    const double init_temp = pms.getvar("init_temp");
+    const double x_size = pms.getvar("x_size");
+    const double y_size = pms.getvar("y_size");
+    const double b_0 = pms.getvar("b_0");
+    const double n_base = pms.getvar("n_base");
+
+    double base_rho = ion_mass*n_base; //initial mass density at base, g cm^-3
+    double scale_height = 2.0*K_B*init_temp/(ion_mass*BASE_GRAV);
+    Grid pos_x(xdim,ydim); Grid pos_y(xdim,ydim);
+    double dx = x_size/xdim, dy = y_size/ydim;
+    for(int i=0; i<xdim; i++){
+      for(int j=0; j<ydim; j++){
+        pos_x(i,j) = (i - (double)(xdim-1)*0.5)*dx;
+        pos_y(i,j) = j*dy;
+      }
+    }
+
+    MhdInp mi(xdim,ydim);
+    mi.set_var(PlasmaDomain::pos_x,pos_x);
+    mi.set_var(PlasmaDomain::pos_y,pos_y);
+    mi.set_var(PlasmaDomain::rho, HydrostaticFalloff(base_rho,scale_height,pos_y));
+    mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
+    mi.set_var(PlasmaDomain::mom_x, Grid(xdim,ydim,0.0));
+    mi.set_var(PlasmaDomain::mom_y, Grid(xdim,ydim,0.0));
+    mi.set_var(PlasmaDomain::b_x, BipolarField(pos_x, pos_y, b_0, scale_height, 0));
+    mi.set_var(PlasmaDomain::b_y, BipolarField(pos_x, pos_y, b_0, scale_height, 1));
+    mi.set_var(PlasmaDomain::b_z, Grid(xdim,ydim,0.0));
+    mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
+    mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
+    return mi;
+  }
+
 
   //Sets gravity to fall off from base_gravity at bottom of the domain,
   //as though from the surface of a planet with radius r_solar

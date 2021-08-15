@@ -57,18 +57,40 @@ output_var = args.contourvar #must be one of rho, temp, press, energy, rad
 vec_var = args.vector
 
 #determine grid size
+assert input_file.readline() == "xdim,ydim\n"
 dim = input_file.readline().split(',')
 xdim = int(dim[0])
 ydim = int(dim[1])
-deltas = input_file.readline().split(',')
-dx = float(deltas[0])
-dy = float(deltas[1])
+
+#read in grid cell positions
+assert input_file.readline() == "pos_x\n"
+X = np.zeros([xdim,ydim], dtype=float)
+rows = input_file.readline().split(';')
+for i in range(xdim):
+  X[i] = np.asarray(rows[i].split(','))
+  assert len(X[i]) == ydim
+assert input_file.readline() == "pos_y\n"
+Y = np.zeros([xdim,ydim], dtype=float)
+rows = input_file.readline().split(';')
+for i in range(xdim):
+  Y[i] = np.asarray(rows[i].split(','))
+  assert len(Y[i]) == ydim
+
+x_min = X[0][0]
+x_max = X[-1][0]
+y_min = Y[0][0]
+y_max = Y[0][-1]
 
 #read in static magnetic field
 bx = np.zeros([xdim,ydim], dtype=float)
 by = np.zeros([xdim,ydim], dtype=float)
+assert input_file.readline() == "b_x\n"
 rows_x = input_file.readline().split(';')
+assert input_file.readline() == "b_y\n"
 rows_y = input_file.readline().split(';')
+assert input_file.readline() == "b_z\n"
+input_file.readline()
+
 for i in range(xdim):
   bx[i] = np.asarray(rows_x[i].split(','))
   by[i] = np.asarray(rows_y[i].split(','))
@@ -146,22 +168,21 @@ if vec_var != None and len(var) > len(vec_x):
   print("pop!")
   var.pop()
 
-# fig = plt.figure()
 fig, ax = plt.subplots()
 
-frame = 0
+frame = -2
 # im = plt.imshow(np.transpose(var[frame]), animated=True, origin='lower', interpolation='bilinear')
 # fig.colorbar(im)
 # im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', interpolation='nearest', vmin=0.0, vmax=(np.max(var[0])+1.0))
 if output_var == "rad":
-  im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(0.0,dx*xdim,0.0,dy*ydim),\
+  im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-5, base=10))
   ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
   im.set_clim(vmin=1e-4)
   var_colorbar = fig.colorbar(im)
   var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
 elif output_var == "dt" or output_var == "dt_thermal" or output_var == "dt_rad":
-  im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(0.0,dx*xdim,0.0,dy*ydim),\
+  im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-10, base=10))
   ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
   if(np.isnan(np.nanmax(var))): im.set_clim(vmin=1e-4,vmax=1.0)
@@ -169,13 +190,13 @@ elif output_var == "dt" or output_var == "dt_thermal" or output_var == "dt_rad":
   var_colorbar = fig.colorbar(im)
   var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
 elif output_var == "vel_x" or output_var == "vel_y":
-  im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(0.0,dx*xdim,0.0,dy*ydim),\
+  im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest')
   ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
   var_colorbar = fig.colorbar(im)
   var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
 else:
-  im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(0.0,dx*xdim,0.0,dy*ydim),\
+  im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.LogNorm())
   ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
   var_colorbar = fig.colorbar(im)
@@ -183,10 +204,6 @@ else:
 
 contour_color_axes = fig.axes[-1]
 
-X, Y = np.mgrid[0:xdim, 0:ydim]
-X = dx*X
-Y = dy*Y
-# ax.streamplot(np.transpose(X),np.transpose(Y),np.transpose(bx),np.transpose(by),color='k',density=2.0/3.0)
 if vec_var == "b":
   this_vec_x = bx
   this_vec_y = by
@@ -255,7 +272,7 @@ def updatefig(*args):
       quiv.autoscale()
     return im, ax
 
-ani = animation.FuncAnimation(fig, updatefig, frames=(len(var)-2), repeat=False, interval=100, blit=False)
+ani = animation.FuncAnimation(fig, updatefig, frames=(len(var)-2), repeat=args.realtime, interval=100, blit=False)
 
 if args.realtime:
   plt.show()
@@ -263,4 +280,4 @@ else:
   FFwriter = animation.FFMpegWriter(bitrate=2000)
   filename_suffix = "_"+output_var
   if vec_var != None: filename_suffix = filename_suffix + "_" + vec_var
-  ani.save(args.filename.split('.')[0]+filename_suffix+'.mp4', writer = FFwriter, dpi=100)
+  ani.save(args.filename.split('/')[-2]+filename_suffix+'.mp4', writer = FFwriter, dpi=100)

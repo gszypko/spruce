@@ -1,12 +1,6 @@
 //Class definition for 2D grid of double precision data
 //Supports component-wise arithmetic, among other functions
 //Built in usage of OpenMP parallelization
-#include <vector>
-#include <assert.h>
-#include <string>
-#include <sstream>
-#include <limits>
-#include <cmath>
 #include "grid.hpp"
 #define SCALAR_LAMBDA(expr) [](double this_comp, double scalar){return expr;}
 #define COMPONENTWISE_LAMBDA(expr) [](double this_comp, double that_comp){return expr;}

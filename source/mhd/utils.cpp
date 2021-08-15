@@ -1,13 +1,4 @@
-#include "constants.hpp"
 #include "utils.hpp"
-#include "grid.hpp"
-#include <omp.h>
-#include <cmath>
-#include <vector>
-#include <limits>
-#include <string>
-#include <algorithm>
-#include <sstream>
 
 #if BENCHMARKING_ON
 #include "instrumentor.hpp"
@@ -74,5 +65,21 @@ std::vector<std::string> parseCommandLineArgs(int argc, char* argv[])
   }
   if(result[0].empty()) result[0] = "output";
   if(result[1].empty()) result[1] = "default.config";
+  return result;
+}
+
+std::string getCommandLineArg(int argc, char* argv[], std::string short_flag, std::string long_flag)
+{
+  std::vector<std::string> arguments(argv+1, argv+argc);
+  std::string result;
+  int num_args = argc - 1;
+  for(int i=0; i<num_args; i++){
+    assert(arguments[i][0] == '-' && i+1<num_args && "Arguments must be given as flag followed by non-flag");
+    if(arguments[i] == short_flag || arguments[i] == long_flag){
+      assert(result.empty() && "Command line flags cannot be used more than once");
+      result = arguments[i+1];
+    }
+    i++;
+  }
   return result;
 }

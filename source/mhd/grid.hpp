@@ -4,12 +4,15 @@
 #ifndef GRID_HPP
 #define GRID_HPP
 
+#include "instrumentor.hpp"
 #include <vector>
 #include <string>
 #include <functional>
-#include <assert.h>
+#include <cassert>
 #include <omp.h>
-#include "instrumentor.hpp"
+#include <sstream>
+#include <limits>
+#include <cmath>
 
 class Grid
 {

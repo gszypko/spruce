@@ -5,30 +5,44 @@
 #ifndef PLASMADOMAIN_HPP
 #define PLASMADOMAIN_HPP
 
+#include "utils.hpp"
+#include "grid.hpp"
+#include "constants.hpp"
 #include <vector>
 #include <string>
 #include <fstream>
 #include <sstream>
-#include <assert.h>
-#include <map>
+#include <cassert>
 #include <iostream>
 #include <filesystem>
-#include "grid.hpp"
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cmath>
+#include <omp.h>
 
 class PlasmaDomain
 {
 public:
   enum class BoundaryCondition { Periodic, Wall, Open };
-  enum Variable {
-    pos_x,pos_y,rho,temp,mom_x,mom_y,b_x,b_y,b_z,grav_x,grav_y, //base variables (taken as input, carried over between iterations)
-    press,energy,rad,dt,dt_thermal,dt_rad,v_x,v_y, //derived variables (derived from base variables)
-    b_magnitude,b_hat_x,b_hat_y,d_x,d_y, //constant variables (unchanging bw iterations)
-    mag_press,mag_pxx,mag_pyy,mag_pzz,mag_pxy,mag_pxz,mag_pyz, //constant variables
-    num_variables //never add new variable after this in the enum!
-  };
+
+  //state variables (taken as input, carried over between iterations)
+  enum StateVars { state_var_start=0,
+                        pos_x=state_var_start,pos_y,rho,temp,mom_x,mom_y,b_x,b_y,b_z,grav_x,grav_y,
+                        state_var_end };
+  
+  //derived variables (derived from state variables)
+  enum DerivedVars { derived_var_start=state_var_end,
+                          press=derived_var_start,energy,rad,dt,dt_thermal,dt_rad,v_x,v_y,
+                          derived_var_end };
+
+  //constant variables (unchanging bw iterations, derived from state variables)
+  enum ConstantVars { constant_var_start=derived_var_end,
+                           b_magnitude=constant_var_start,b_hat_x,b_hat_y,d_x,d_y,mag_press,mag_pxx,mag_pyy,mag_pzz,mag_pxy,mag_pxz,mag_pyz,
+                           constant_var_end, num_variables=constant_var_end };
 
   //Constructors and Initialization
-  PlasmaDomain(const char* out_path, const char* config_path);
+  PlasmaDomain(const char* out_path, const char* config_path, bool continue_mode = false);
   void initialize(const std::vector<Grid>& input_vars);
   void hydrostaticInitialize();
   void gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp, double std_dev_x, double std_dev_y);
@@ -37,7 +51,7 @@ public:
   void readConfigFile(const char* settings_filename);
 
   //Time Evolution
-  void run();
+  void run(double time_duration);
 
 private:
   //Strings corresponding to variables, settings, boundary conditions for file I/O
@@ -48,7 +62,7 @@ private:
 
   std::vector<Grid> m_grids;
   std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
-  std::vector<bool> m_state_flags; //Variables that are printed in .state files (should be a minimal complete description of the plasma)
+  // std::vector<bool> m_state_flags; //Variables that are printed in .state files (should be a minimal complete description of the plasma)
 
   std::filesystem::path m_out_directory;
   // std::string m_run_name;
@@ -56,19 +70,20 @@ private:
 
   double m_time;
   int m_iter;
+  double max_time; //Upper bound on simulation time
 
   /**************************** SETTINGS ******************************/
   size_t m_xdim, m_ydim;
-  double m_dx, m_dy;
   int max_iterations; //Upper bound on simulation iterations; unbounded if negative
-  double max_time; //Upper bound on simulation time; unbounded if negative
   //Boundary condition settings
   BoundaryCondition x_bound_1, x_bound_2, y_bound_1, y_bound_2;
   //Physics settings
   bool radiative_losses, ambient_heating, thermal_conduction;
   bool flux_saturation; //Config for thermal conduction
   //Physical parameters
-  double temp_chromosphere; //Minimum allowed temperature
+  double ion_mass; //in g
+  double adiabatic_index; //aka gamma, unitless
+  double temp_chromosphere; //Cutoff temperature for radiative losses
   double radiation_ramp;  //Width of cutoff ramp, in units of temperature, for low-temp radiation
   double heating_rate;  //Constant ambient heating rate
   double b_0;  //Base value of magnetic field
@@ -80,6 +95,7 @@ private:
   //Output settings
   int iter_output_interval;
   double time_output_interval;
+  bool continue_mode; //true when continuing previous run; appends results to mhd.out and replaces mhd.state
   /*********************************************************************/ 
 
   void advanceTime(bool verbose = true);
@@ -109,8 +125,6 @@ private:
 
   void setOutputFlag(std::string var_name, bool new_flag);
   void setOutputFlags(const std::vector<std::string> var_names, bool new_flag);
-  void setStateFlag(std::string var_name, bool new_flag);
-  void setStateFlags(const std::vector<std::string> var_names, bool new_flag);
 
   BoundaryCondition stringToBoundaryCondition(const std::string str) const;
   void handleSingleConfig(int setting_index, std::string rhs);

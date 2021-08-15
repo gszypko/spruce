@@ -10,9 +10,10 @@
 class MhdInp
 {
 public:
-    enum Vars {x,y,rho,temp,mom_x,mom_y,b_x,b_y,b_z,num_inp}; // enum for <m_grids> and <m_initialized>
+    // enum Vars {x,y,rho,temp,mom_x,mom_y,b_x,b_y,b_z,num_inp}; // enum for <m_grids> and <m_initialized>
     MhdInp& operator=(const MhdInp& other);
     MhdInp(size_t Nx,size_t Ny);
+    MhdInp() : MhdInp(1,1) {}
     void set_var(const int& var,const Grid& grid);
     void all_initialized() const;
     std::vector<Grid> grids();

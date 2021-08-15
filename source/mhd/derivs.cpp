@@ -1,12 +1,7 @@
 //derivs.cpp
 //Defines differentiation functions for PlasmaDomain
 
-#include "constants.hpp"
 #include "plasmadomain.hpp"
-#include "grid.hpp"
-#include <string>
-#include <cmath>
-#include <omp.h>
 
 #if BENCHMARKING_ON
 #include "instrumentor.hpp"

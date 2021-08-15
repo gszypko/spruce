@@ -1,25 +1,23 @@
 //evolution.cpp
 //PlasmaDomain functionality relating to time-evolution of the plasma
 
-#include <cmath>
-#include <omp.h>
-#include "utils.hpp"
-#include "grid.hpp"
 #include "plasmadomain.hpp"
-#include "constants.hpp"
 
-void PlasmaDomain::run()
+void PlasmaDomain::run(double time_duration)
 {
-  outputPreamble();
-  outputCurrentState();
-  while( (max_iterations < 0 || m_iter < max_iterations) && (max_time < 0.0 || m_time < max_time) ){
+  max_time = m_time + time_duration;
+  if(!continue_mode){
+    outputPreamble();
+    outputCurrentState();
+  }
+  while( m_time < max_time && (max_iterations < 0 || m_iter < max_iterations)){
     #if BENCHMARKING_ON
     InstrumentationTimer timer((std::string("iteration ") + std::to_string(m_iter)).c_str());
     #endif
     double old_time = m_time;
     advanceTime();
-    if((iter_output_interval > 0 && m_iter%iter_output_interval == 0) || (time_output_interval > 0.0 &&
-       (int)(m_time/time_output_interval) > (int)(old_time/time_output_interval))) outputCurrentState();
+    if((iter_output_interval > 0 && m_iter%iter_output_interval == 0) || (time_output_interval > 0.0
+        && (int)(m_time/time_output_interval) > (int)(old_time/time_output_interval))) outputCurrentState();
     writeStateFile();
   }
   cleanUpStateFiles();
@@ -98,13 +96,13 @@ void PlasmaDomain::subcycleConduction(int subcycles_thermal, double dt_total)
     m_energy = energy_next.max(energy_floor);
     updateGhostZones();
     m_energy = m_energy.max(energy_floor); //double floor to cover ghost zone extrapolations
-    m_press = (GAMMA - 1.0)*(m_energy - nonthermal_energy);
-    m_temp = M_I*m_press/(2.0*K_B*m_grids[rho]);
+    m_press = (adiabatic_index - 1.0)*(m_energy - nonthermal_energy);
+    m_temp = ion_mass*m_press/(2.0*K_B*m_grids[rho]);
     // Enforce temp floor everywhere
     m_temp = m_temp.max(temp_min);
     // Recompute energy after flooring temperature
-    m_press = 2.0*K_B*m_grids[rho]*m_temp/M_I;
-    m_energy = m_press/(GAMMA - 1.0) + nonthermal_energy;
+    m_press = 2.0*K_B*m_grids[rho]*m_temp/ion_mass;
+    m_energy = m_press/(adiabatic_index - 1.0) + nonthermal_energy;
   }
 }
 
@@ -123,13 +121,13 @@ void PlasmaDomain::subcycleRadiation(int subcycles_rad, double dt_total)
     m_energy = energy_next.max(energy_floor);
     updateGhostZones();
     m_energy = m_energy.max(energy_floor); //double floor to cover ghost zone extrapolations
-    m_press = (GAMMA - 1.0)*(m_energy - nonthermal_energy);
-    m_temp = M_I*m_press/(2.0*K_B*m_grids[rho]);
+    m_press = (adiabatic_index - 1.0)*(m_energy - nonthermal_energy);
+    m_temp = ion_mass*m_press/(2.0*K_B*m_grids[rho]);
     // Enforce temp floor everywhere
     m_temp = m_temp.max(temp_min);
     // Recompute energy after flooring temperature
-    m_grids[press] = 2.0*K_B*m_grids[rho]*m_temp/M_I;
-    m_energy = m_press/(GAMMA - 1.0) + nonthermal_energy;
+    m_grids[press] = 2.0*K_B*m_grids[rho]*m_temp/ion_mass;
+    m_energy = m_press/(adiabatic_index - 1.0) + nonthermal_energy;
   }
 }
 
@@ -171,8 +169,8 @@ void PlasmaDomain::computeConstantTerms()
 //by the member physics settings.
 void PlasmaDomain::recomputeDerivedVariables()
 {
-  m_grids[press] = 2.0*K_B*m_grids[rho]*m_grids[temp]/M_I;
-  m_grids[energy] = m_grids[press]/(GAMMA - 1.0)
+  m_grids[press] = 2.0*K_B*m_grids[rho]*m_grids[temp]/ion_mass;
+  m_grids[energy] = m_grids[press]/(adiabatic_index - 1.0)
                   + 0.5*(m_grids[mom_x].square() + m_grids[mom_y].square())/m_grids[rho]
                   + m_grids[mag_press];
   m_grids[v_x] = m_grids[mom_x]/m_grids[rho];
@@ -186,9 +184,9 @@ void PlasmaDomain::recomputeDerivedVariables()
 void PlasmaDomain::recomputeTemperature()
 {
   Grid &m_press = m_grids[press];
-  m_press = (GAMMA - 1.0)*(m_grids[energy] - 0.5*(m_grids[mom_x].square() + m_grids[mom_y].square())/m_grids[rho] - m_grids[mag_press]);
-  m_press = m_press.max((GAMMA - 1.0)*thermal_energy_min);
-  m_grids[temp] = (M_I*m_press/(2.0*K_B*m_grids[rho])).max(temp_min);
+  m_press = (adiabatic_index - 1.0)*(m_grids[energy] - 0.5*(m_grids[mom_x].square() + m_grids[mom_y].square())/m_grids[rho] - m_grids[mag_press]);
+  m_press = m_press.max((adiabatic_index - 1.0)*thermal_energy_min);
+  m_grids[temp] = (ion_mass*m_press/(2.0*K_B*m_grids[rho])).max(temp_min);
 }
 
 void PlasmaDomain::catchUnderdensity()
@@ -205,45 +203,12 @@ void PlasmaDomain::catchUnderdensity()
   }
 }
 
-//Enforces zero motion and unchanging rho and energy at Wall boundaries
-// void PlasmaDomain::clampWallBoundaries(Grid& mom_x_next, Grid& mom_y_next, Grid& rho_next, Grid& energy_next)
-// {
-//   if(y_bound_1 == BoundaryCondition::Wall || y_bound_2 == BoundaryCondition::Wall){
-//     if(y_bound_1 == BoundaryCondition::Wall) for(int i=0; i<m_xdim; i++){
-//       mom_x_next(i,0) = 0.0;
-//       mom_y_next(i,0) = 0.0;
-//       rho_next(i,0) = m_grids[rho](i,0);
-//       energy_next(i,0) = m_grids[energy](i,0);
-//     }
-//     if(y_bound_2 == BoundaryCondition::Wall) for(int i=0; i<m_xdim; i++){
-//       mom_x_next(i,m_ydim-1) = 0.0;
-//       mom_y_next(i,m_ydim-1) = 0.0;
-//       rho_next(i,m_ydim-1) = m_grids[rho](i,m_ydim-1);
-//       energy_next(i,m_ydim-1) = m_grids[energy](i,m_ydim-1);
-//     }
-//   }
-//   if(x_bound_1 == BoundaryCondition::Wall || x_bound_2 == BoundaryCondition::Wall){
-//     if(x_bound_1 == BoundaryCondition::Wall) for(int j=0; j<m_ydim; j++){
-//       mom_x_next(0,j) = 0.0;
-//       mom_y_next(0,j) = 0.0;
-//       rho_next(0,j) = m_grids[rho](0,j);
-//       energy_next(0,j) = m_grids[energy](0,j);
-//     }
-//     if(x_bound_2 == BoundaryCondition::Wall) for(int j=0; j<m_ydim; j++){
-//       mom_x_next(m_xdim-1,j) = 0.0;
-//       mom_y_next(m_xdim-1,j) = 0.0;
-//       rho_next(m_xdim-1,j) = m_grids[rho](m_xdim-1,j);
-//       energy_next(m_xdim-1,j) = m_grids[energy](m_xdim-1,j);
-//     }
-//   }
-// }
-
 void PlasmaDomain::recomputeDT()
 {
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
-  Grid c_s = (GAMMA*m_grids[press]/m_grids[rho]).sqrt();
+  Grid c_s = (adiabatic_index*m_grids[press]/m_grids[rho]).sqrt();
   Grid abs_vx = m_grids[d_x]/(c_s+m_grids[v_x].abs());
   Grid abs_vy = m_grids[d_y]/(c_s+m_grids[v_y].abs());
   m_grids[dt] = abs_vx.min(abs_vy);
@@ -255,7 +220,7 @@ void PlasmaDomain::recomputeDTThermal()
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
   if(!flux_saturation){
-    m_grids[dt_thermal] = K_B/KAPPA_0*(m_grids[rho]/M_I)*m_grids[d_x]*m_grids[d_y]/m_grids[temp].pow(2.5);
+    m_grids[dt_thermal] = K_B/KAPPA_0*(m_grids[rho]/ion_mass)*m_grids[d_x]*m_grids[d_y]/m_grids[temp].pow(2.5);
   } else {
     Grid kappa_modified(m_xdim,m_ydim,0.0);
     Grid con_flux_x(m_xdim,m_ydim,0.0);
@@ -268,7 +233,7 @@ void PlasmaDomain::recomputeDTThermal()
     saturateConductiveFlux(con_flux_x, con_flux_y, m_grids[rho], m_grids[temp]);
     Grid flux_sat = (con_flux_x.square() + con_flux_y.square()).sqrt();
     kappa_modified = (flux_sat/field_temp_gradient).abs();
-    m_grids[dt_thermal] = K_B/kappa_modified*(m_grids[rho]/M_I)*m_grids[d_x]*m_grids[d_y];
+    m_grids[dt_thermal] = K_B/kappa_modified*(m_grids[rho]/ion_mass)*m_grids[d_x]*m_grids[d_y];
   }
 }
 
@@ -301,7 +266,7 @@ void PlasmaDomain::recomputeRadiativeLosses()
         }
         else {
           double logtemp = std::log10(m_grids[temp](i,j));
-          double n = m_grids[rho](i,j)/M_I;
+          double n = m_grids[rho](i,j)/ion_mass;
           double chi, alpha;
           if(logtemp <= 4.97){
             chi = 1.09e-31; //also adjust chi to ensure continuity
@@ -345,7 +310,7 @@ Grid PlasmaDomain::oneDimConductiveFlux(const Grid &temp, const Grid &rho, doubl
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
-  Grid kappa_max = m_grids[d_x]*m_grids[d_y]*K_B*(rho/M_I)/dt_thermal_min;
+  Grid kappa_max = m_grids[d_x]*m_grids[d_y]*K_B*(rho/ion_mass)/dt_thermal_min;
   int xdim = temp.rows();
   int ydim = temp.cols();
   Grid flux = Grid::Zero(xdim,ydim);
@@ -396,7 +361,7 @@ void PlasmaDomain::saturateConductiveFlux(Grid &flux_out_x, Grid &flux_out_y, co
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
-  Grid sat_flux_mag = (1.0/6.0)*(3.0/2.0)*(rho/M_I)*(K_B*temp).pow(1.5)/std::sqrt(M_ELECTRON);
+  Grid sat_flux_mag = (1.0/6.0)*(3.0/2.0)*(rho/ion_mass)*(K_B*temp).pow(1.5)/std::sqrt(M_ELECTRON);
   Grid flux_mag = (flux_out_x.square() + flux_out_y.square()).sqrt();
   Grid scale_factor = sat_flux_mag /((sat_flux_mag.square() + flux_mag.square()).sqrt());
   flux_out_x *= scale_factor;
@@ -443,7 +408,7 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
   double dist4_3 = m_pos_x(i3,j3) - m_pos_x(i4,j4) + m_pos_y(i3,j3) - m_pos_y(i4,j4);
   double dist3_2 = m_pos_x(i2,j2) - m_pos_x(i3,j3) + m_pos_y(i2,j2) - m_pos_y(i3,j3);
   double dist3_1 = m_pos_x(i1,j1) - m_pos_x(i3,j3) + m_pos_y(i1,j1) - m_pos_y(i3,j3);
-  for(int var : {rho, energy, mom_x, mom_y}){
+  for(int var : {static_cast<int>(rho), static_cast<int>(energy), static_cast<int>(mom_x), static_cast<int>(mom_y)}){
     Grid &this_grid = m_grids[var];
     double slope = (this_grid(i3,j3) - this_grid(i4,j4))/dist4_3;
     this_grid(i2,j2) = this_grid(i3,j3) + slope*dist3_2;

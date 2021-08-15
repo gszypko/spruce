@@ -15,13 +15,15 @@
 #include "plasmadomain.hpp"
 #include "constants.hpp"
 
-PlasmaDomain::PlasmaDomain(const char* out_path, const char* config_path)
+PlasmaDomain::PlasmaDomain(const char* out_path, const char* config_path, bool continue_mode)
 {
   m_xdim = 1; m_ydim = 1; //default values, overwritten by initialize()
+  m_time = 0.0; m_iter = 0;
+  this->continue_mode = continue_mode;
   // m_run_name = std::string(out_path);
   for(int i=0; i<num_variables; i++){
     m_output_flags.push_back(false);
-    m_state_flags.push_back(false);
+    // m_state_flags.push_back(false);
   }
   readConfigFile(config_path);
   // std::filesystem::path run_path = std::filesystem::path(".") / run_name;
@@ -30,11 +32,15 @@ PlasmaDomain::PlasmaDomain(const char* out_path, const char* config_path)
   // while(path_dir.exists()) path_dir = std::filesystem::directory_entry(std::filesystem::path(run_path.string()+std::to_string(dir_suffix++)));
   m_out_directory = std::filesystem::path(out_path);
   // std::filesystem::create_directories(m_out_directory);
-  std::filesystem::copy(config_path, m_out_directory/config_path);
-  m_out_file.open(m_out_directory/"mhd.out");
-  m_time = 0.0; m_iter = 0;
+  if(!continue_mode){
+    const auto copy_opts = std::filesystem::copy_options::overwrite_existing;
+    std::filesystem::copy(config_path, m_out_directory/config_path, copy_opts);
+    m_out_file.open(m_out_directory/"mhd.out");
+  } else {
+    m_out_file.open(m_out_directory/"mhd.out",std::ofstream::app);
+  }
   for(int i=0; i<num_variables; i++) m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
-  setStateFlags({"rho","mom_x","mom_y","temp","b_x","b_y","b_z","pos_x","pos_y","grav_x","grav_y"},true);
+  // setStateFlags({"rho","mom_x","mom_y","temp","b_x","b_y","b_z","pos_x","pos_y","grav_x","grav_y"},true);
 }
 
 void PlasmaDomain::initialize(const std::vector<Grid>& input_vars)
