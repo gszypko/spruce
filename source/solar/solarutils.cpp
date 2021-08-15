@@ -43,7 +43,7 @@ namespace SolarUtils {
     const double b_0 = pms.getvar("b_0");
     const double n_base = pms.getvar("n_base");
 
-    double base_rho = ion_mass*n_base; //initial mass density at base, g cm^-3
+    double base_rho = ion_mass*n_base; //initial mass density at base in g cm ^-3
     double scale_height = 2.0*K_B*init_temp/(ion_mass*BASE_GRAV);
     Grid pos_x(xdim,ydim); Grid pos_y(xdim,ydim);
     double dx = x_size/xdim, dy = y_size/ydim;
