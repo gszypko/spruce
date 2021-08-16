@@ -120,9 +120,10 @@ namespace SolarUtils {
     InstrumentationTimer timer(__PRETTY_FUNCTION__);
     #endif
     Grid result = Grid::Zero(m_pos_y.rows(), m_pos_y.cols());
+    int xdim = m_pos_y.rows(), ydim = m_pos_y.cols();
     #pragma omp parallel for collapse(2)
-    for(int i=0; i<m_pos_y.rows(); i++){
-      for(int j=0; j<m_pos_y.cols(); j++){
+    for(int i=0; i<xdim; i++){
+      for(int j=0; j<ydim; j++){
         //result(i,j) = base_value*std::exp(-y/scale_height);
         result(i,j) = base_value*std::exp(M_SUN*GRAV_CONST/BASE_GRAV/scale_height*(1.0/(m_pos_y(i,j)+R_SUN) - 1.0/R_SUN));
       }
