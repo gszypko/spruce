@@ -272,7 +272,7 @@ def updatefig(*args):
       quiv.autoscale()
     return im, ax
 
-ani = animation.FuncAnimation(fig, updatefig, frames=(len(var)-2), repeat=args.realtime, interval=100, blit=False)
+ani = animation.FuncAnimation(fig, updatefig, frames=(len(var)), repeat=args.realtime, interval=100, blit=False)
 
 if args.realtime:
   plt.show()

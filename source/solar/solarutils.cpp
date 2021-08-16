@@ -1,37 +1,36 @@
 #include "solarutils.hpp"
 
 namespace SolarUtils {
-  const double ion_mass = 1.6726e-24;
-  void SolarInitialize(Grid& rho, Grid& temp, Grid& mom_x, Grid& mom_y,
-                       Grid& b_x, Grid& b_y, Grid& b_z,
-                       Grid& pos_x, Grid& pos_y, Grid& grav_x, Grid& grav_y)
-  {
-    const double temp_chromosphere = 3.0e4;
-    const int xdim = 100;
-    const int ydim = 100;
-    const double dx = 2.2649e7;
-    const double dy = 2.2649e7;
-    const double b_0 = 100.0;
-    rho = Grid(xdim,ydim,0.0);
-    temp = Grid(xdim,ydim,0.0);
-    mom_x = Grid(xdim,ydim,0.0); mom_y = Grid(xdim,ydim,0.0);
-    b_x = Grid(xdim,ydim,0.0); b_y = Grid(xdim,ydim,0.0); b_z = Grid(xdim,ydim,0.0);
-    pos_x = Grid(xdim,ydim,0.0); pos_y = Grid(xdim,ydim,0.0);
-    grav_x = Grid(xdim,ydim,0.0); grav_y = Grid(xdim,ydim,0.0);
-    double base_rho = ion_mass*1.0e12; //initial mass density at base, g cm^-3
-    double scale_height = 2.0*K_B*temp_chromosphere/(ion_mass*BASE_GRAV);
-    for(int i=0; i<xdim; i++){
-      for(int j=0; j<ydim; j++){
-        pos_x(i,j) = (i - (double)(xdim-1)*0.5)*dx;
-        pos_y(i,j) = j*dy;
-      }
-    }
-    rho = HydrostaticFalloff(base_rho,scale_height,pos_y);
-    temp = Grid(xdim,ydim,temp_chromosphere);
-    b_x = BipolarField(pos_x, pos_y, b_0, scale_height, 0);
-    b_y = BipolarField(pos_x, pos_y, b_0, scale_height, 1);
-    grav_y = SolarGravity(BASE_GRAV,R_SUN,pos_y);
-  }
+  // void SolarInitialize(Grid& rho, Grid& temp, Grid& mom_x, Grid& mom_y,
+  //                      Grid& b_x, Grid& b_y, Grid& b_z,
+  //                      Grid& pos_x, Grid& pos_y, Grid& grav_x, Grid& grav_y)
+  // {
+  //   const double temp_chromosphere = 3.0e4;
+  //   const int xdim = 100;
+  //   const int ydim = 100;
+  //   const double dx = 2.2649e7;
+  //   const double dy = 2.2649e7;
+  //   const double b_0 = 100.0;
+  //   rho = Grid(xdim,ydim,0.0);
+  //   temp = Grid(xdim,ydim,0.0);
+  //   mom_x = Grid(xdim,ydim,0.0); mom_y = Grid(xdim,ydim,0.0);
+  //   b_x = Grid(xdim,ydim,0.0); b_y = Grid(xdim,ydim,0.0); b_z = Grid(xdim,ydim,0.0);
+  //   pos_x = Grid(xdim,ydim,0.0); pos_y = Grid(xdim,ydim,0.0);
+  //   grav_x = Grid(xdim,ydim,0.0); grav_y = Grid(xdim,ydim,0.0);
+  //   double base_rho = ion_mass*1.0e12; //initial mass density at base, g cm^-3
+  //   double scale_height = 2.0*K_B*temp_chromosphere/(ion_mass*BASE_GRAV);
+  //   for(int i=0; i<xdim; i++){
+  //     for(int j=0; j<ydim; j++){
+  //       pos_x(i,j) = (i - (double)(xdim-1)*0.5)*dx;
+  //       pos_y(i,j) = j*dy;
+  //     }
+  //   }
+  //   rho = HydrostaticFalloff(base_rho,scale_height,pos_y);
+  //   temp = Grid(xdim,ydim,temp_chromosphere);
+  //   b_x = BipolarField(pos_x, pos_y, b_0, scale_height, 0);
+  //   b_y = BipolarField(pos_x, pos_y, b_0, scale_height, 1);
+  //   grav_y = SolarGravity(BASE_GRAV,R_SUN,pos_y);
+  // }
 
   MhdInp SolarMHDInput(const PlasmaSettings& pms)
   {
@@ -42,6 +41,9 @@ namespace SolarUtils {
     const double y_size = pms.getvar("y_size");
     const double b_0 = pms.getvar("b_0");
     const double n_base = pms.getvar("n_base");
+    double ion_mass = pms.getvar("ion_mass");
+    double adiabatic_index = pms.getvar("adiabatic_index");
+    std::cout << ion_mass << std::endl;
 
     double base_rho = ion_mass*n_base; //initial mass density at base in g cm ^-3
     double scale_height = 2.0*K_B*init_temp/(ion_mass*BASE_GRAV);
@@ -66,6 +68,9 @@ namespace SolarUtils {
     mi.set_var(PlasmaDomain::b_z, Grid(xdim,ydim,0.0));
     mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
     mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
+    mi.set_ion_mass(ion_mass);
+    mi.set_adiabatic_index(adiabatic_index);
+
     return mi;
   }
 

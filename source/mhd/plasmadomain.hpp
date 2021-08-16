@@ -43,7 +43,7 @@ public:
 
   //Constructors and Initialization
   PlasmaDomain(const char* out_path, const char* config_path, bool continue_mode = false);
-  void initialize(const std::vector<Grid>& input_vars);
+  void initialize(const std::vector<Grid>& input_vars, double ion_mass, double adiabatic_index);
   void hydrostaticInitialize();
   void gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp, double std_dev_x, double std_dev_y);
 
@@ -62,10 +62,10 @@ private:
 
   std::vector<Grid> m_grids;
   std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
-  // std::vector<bool> m_state_flags; //Variables that are printed in .state files (should be a minimal complete description of the plasma)
+  double m_ion_mass; //in g
+  double m_adiabatic_index; //aka gamma, unitless
 
   std::filesystem::path m_out_directory;
-  // std::string m_run_name;
   std::ofstream m_out_file;
 
   double m_time;
@@ -81,8 +81,6 @@ private:
   bool radiative_losses, ambient_heating, thermal_conduction;
   bool flux_saturation; //Config for thermal conduction
   //Physical parameters
-  double ion_mass; //in g
-  double adiabatic_index; //aka gamma, unitless
   double temp_chromosphere; //Cutoff temperature for radiative losses
   double radiation_ramp;  //Width of cutoff ramp, in units of temperature, for low-temp radiation
   double heating_rate;  //Constant ambient heating rate

@@ -108,8 +108,7 @@ int main(int argc, char *argv[])
         else std::cerr << "Plasma type not specified ('ucnp' or 'solar')";
 
         // run MHD
-        // need to also pass: ion mass, adiabatic index (just put it in the config file???)
-        mhdSolve(grids_inp.grids(),out_path.c_str(),config_path.c_str(), time_duration);
+        mhdSolve(grids_inp.grids(), grids_inp.ion_mass(), grids_inp.adiabatic_index(), time_duration, out_path.c_str(), config_path.c_str());
         return 0;
     }
     

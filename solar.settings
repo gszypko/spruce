@@ -16,3 +16,5 @@ x_size = cgs = 2.2649e9
 y_size = cgs = 2.2649e9
 b_0 = cgs = 100
 n_base = cgs = 1.0e12
+ion_mass = cgs = 1.6726e-24
+adiabatic_index = cgs = 1.666667

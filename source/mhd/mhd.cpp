@@ -1,18 +1,11 @@
 #include "mhd.hpp"
 
-void mhdSolve(std::vector<Grid> input_vars, const char* output_pathname, const char* config_filename, double time_duration)
+void mhdSolve(std::vector<Grid> input_vars, double ion_mass, double adiabatic_index, double time_duration, const char* output_pathname, const char* config_filename)
 {
   PlasmaDomain simulation(output_pathname,config_filename);
-  simulation.initialize(input_vars);
+  simulation.initialize(input_vars,ion_mass,adiabatic_index);
   simulation.run(time_duration);
 }
-
-// void mhdSolve(const char* state_filename, const char* output_pathname, const char* config_filename, double time_duration)
-// {
-//   PlasmaDomain simulation(output_pathname,config_filename);
-//   simulation.readStateFile(state_filename);
-//   simulation.run(time_duration);
-// }
 
 void mhdSolve(const char* prev_run_directory, double time_duration)
 {
@@ -32,7 +25,6 @@ void mhdSolve(const char* prev_run_directory, double time_duration)
 
   assert(!config_filename.empty() && !state_filename.empty() && "There must be a .state and a .config file in the specified directory");
 
-  // mhdSolve(state_filename.c_str(), prev_run_directory, config_filename.c_str(), time_duration);
   PlasmaDomain simulation(prev_run_directory,config_filename.c_str(), true); // run in continue mode
   simulation.readStateFile(state_filename.c_str());
   simulation.run(time_duration);

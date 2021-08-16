@@ -43,8 +43,10 @@ PlasmaDomain::PlasmaDomain(const char* out_path, const char* config_path, bool c
   // setStateFlags({"rho","mom_x","mom_y","temp","b_x","b_y","b_z","pos_x","pos_y","grav_x","grav_y"},true);
 }
 
-void PlasmaDomain::initialize(const std::vector<Grid>& input_vars)
+void PlasmaDomain::initialize(const std::vector<Grid>& input_vars, double ion_mass, double adiabatic_index)
 {
+  m_ion_mass = ion_mass;
+  m_adiabatic_index = adiabatic_index;
   m_xdim = input_vars[0].rows(); m_ydim = input_vars[0].cols();
   for(int var=0; var<num_variables; var++){
     m_grids[var] = Grid(m_xdim,m_ydim,0.0);

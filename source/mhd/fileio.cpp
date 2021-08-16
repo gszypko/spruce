@@ -24,7 +24,7 @@ const std::vector<std::string> PlasmaDomain::m_config_names = {
   "thermal_conduction","flux_saturation","temp_chromosphere","radiation_ramp","heating_rate",
   "b_0","epsilon","epsilon_thermal","epsilon_rad","epsilon_viscous","dt_thermal_min","rho_min",
   "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
-  "output_flags","xdim","ydim","ion_mass","adiabatic_index"
+  "output_flags","xdim","ydim"
 };
 
 enum class Config {
@@ -32,7 +32,7 @@ enum class Config {
   thermal_conduction, flux_saturation, temp_chromosphere, radiation_ramp, heating_rate,
   b_0, epsilon, epsilon_thermal, epsilon_rad, epsilon_viscous, dt_thermal_min, rho_min,
   temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
-  output_flags, xdim, ydim, ion_mass, adiabatic_index
+  output_flags, xdim, ydim
 };
 
 //Read in variables from .state file
@@ -46,12 +46,24 @@ void PlasmaDomain::readStateFile(const char* in_filename)
   //Read in grid dimensions
   std::string line, element;
   std::getline(in_file, line);
+  assert(line == "xdim,ydim");
+  std::getline(in_file, line);
   std::istringstream ss_dim(line);
   std::getline(ss_dim,element,',');
   m_xdim = std::stoi(element);
   std::getline(ss_dim,element,',');
   m_ydim = std::stoi(element);
   for(int var=0; var<num_variables; var++) m_grids[var] = Grid(m_xdim,m_ydim,0.0);
+
+  std::getline(in_file, line);
+  assert(line == "ion_mass");
+  std::getline(in_file, line);
+  m_ion_mass = std::stod(line);
+
+  std::getline(in_file, line);
+  assert(line == "adiabatic_index");
+  std::getline(in_file, line);
+  m_adiabatic_index = std::stod(line);
 
   //Read in time of state file
   std::getline(in_file,line);
@@ -150,7 +162,12 @@ void PlasmaDomain::writeStateFile(int precision) const
 {
   std::ofstream state_file;
   state_file.open(m_out_directory/("mhd"+std::to_string(m_iter%2)+".state"));
+  state_file << "xdim,ydim\n";
   state_file << m_xdim << "," << m_ydim << std::endl;
+  state_file << "ion_mass\n";
+  state_file << m_ion_mass << std::endl;
+  state_file << "adiabatic_index\n";
+  state_file << m_adiabatic_index << std::endl;
   state_file << "t=" << m_time << std::endl;
   for(int i=state_var_start; i<state_var_end; i++){
     state_file << m_var_names[i] << std::endl;
@@ -216,8 +233,6 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::output_flags): setOutputFlag(rhs,true); break;
   case static_cast<int>(Config::xdim): m_xdim = std::stoi(rhs); break;
   case static_cast<int>(Config::ydim): m_ydim = std::stoi(rhs); break;
-  case static_cast<int>(Config::ion_mass): ion_mass = std::stod(rhs); break;
-  case static_cast<int>(Config::adiabatic_index): adiabatic_index = std::stod(rhs); break;
   default: break;
   }
 }

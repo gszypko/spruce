@@ -10,9 +10,9 @@
 
 
 namespace SolarUtils {
-  void SolarInitialize(Grid& rho, Grid& temp, Grid& mom_x, Grid& mom_y,
-                       Grid& b_x, Grid& b_y, Grid& b_z,
-                       Grid& pos_x, Grid& pos_y, Grid& grav_x, Grid& grav_y);
+  // void SolarInitialize(Grid& rho, Grid& temp, Grid& mom_x, Grid& mom_y,
+  //                      Grid& b_x, Grid& b_y, Grid& b_z,
+  //                      Grid& pos_x, Grid& pos_y, Grid& grav_x, Grid& grav_y);
   
   MhdInp SolarMHDInput(const PlasmaSettings& pms);
 
