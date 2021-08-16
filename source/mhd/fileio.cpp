@@ -22,7 +22,7 @@ const std::vector<std::string> PlasmaDomain::m_var_names = {
 const std::vector<std::string> PlasmaDomain::m_config_names = {
   "x_bound_1","x_bound_2","y_bound_1","y_bound_2","radiative_losses","ambient_heating",
   "thermal_conduction","flux_saturation","temp_chromosphere","radiation_ramp","heating_rate",
-  "b_0","epsilon","epsilon_thermal","epsilon_rad","epsilon_viscous","dt_thermal_min","rho_min",
+  "epsilon","epsilon_thermal","epsilon_rad","epsilon_viscous","dt_thermal_min","rho_min",
   "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
   "output_flags","xdim","ydim"
 };
@@ -30,7 +30,7 @@ const std::vector<std::string> PlasmaDomain::m_config_names = {
 enum class Config {
   x_bound_1, x_bound_2, y_bound_1, y_bound_2, radiative_losses, ambient_heating,
   thermal_conduction, flux_saturation, temp_chromosphere, radiation_ramp, heating_rate,
-  b_0, epsilon, epsilon_thermal, epsilon_rad, epsilon_viscous, dt_thermal_min, rho_min,
+  epsilon, epsilon_thermal, epsilon_rad, epsilon_viscous, dt_thermal_min, rho_min,
   temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
   output_flags, xdim, ydim
 };
@@ -218,7 +218,6 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::temp_chromosphere): temp_chromosphere = std::stod(rhs); break;
   case static_cast<int>(Config::radiation_ramp): radiation_ramp = std::stod(rhs); break;
   case static_cast<int>(Config::heating_rate): heating_rate = std::stod(rhs); break;
-  case static_cast<int>(Config::b_0): b_0 = std::stod(rhs); break;
   case static_cast<int>(Config::epsilon): epsilon = std::stod(rhs); break;
   case static_cast<int>(Config::epsilon_thermal): epsilon_thermal = std::stod(rhs); break;
   case static_cast<int>(Config::epsilon_rad): epsilon_rad = std::stod(rhs); break;

@@ -55,6 +55,7 @@ public:
 
 private:
   //Strings corresponding to variables, settings, boundary conditions for file I/O
+  //TODO: Move initialization here, now that no longer static!
   static const std::vector<std::string> m_var_names;
   static const std::vector<std::string> m_config_names;
   static const std::vector<std::string> m_boundary_condition_names;
@@ -84,7 +85,6 @@ private:
   double temp_chromosphere; //Cutoff temperature for radiative losses
   double radiation_ramp;  //Width of cutoff ramp, in units of temperature, for low-temp radiation
   double heating_rate;  //Constant ambient heating rate
-  double b_0;  //Base value of magnetic field
   //Safety factors
   double epsilon, epsilon_thermal, epsilon_rad; //Time step calculation
   double epsilon_viscous; //Prefactor for artificial viscosity

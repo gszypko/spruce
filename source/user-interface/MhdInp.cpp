@@ -47,14 +47,12 @@ void MhdInp::set_adiabatic_index(double index)
 double MhdInp::ion_mass()
 {
     if(m_ion_mass == 0.0) std::cerr << "Ion mass was not initialized.\n";
-    std::cout << m_ion_mass << std::endl;
     return m_ion_mass;
 }
 
 double MhdInp::adiabatic_index()
 {
     if(m_adiabatic_index == 0.0) std::cerr << "Adiabatic index was not initialized.\n";
-    std::cout << m_adiabatic_index << std::endl;
     return m_adiabatic_index;
 }
 

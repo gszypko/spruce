@@ -59,6 +59,7 @@ MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
 int main(int argc, char *argv[])
 {
     // unfold executable input parameters
+    // TODO: encapsulate command line arg parsing into class (make checking for correct specification easier)
     std::filesystem::path prev_run_path = getCommandLineArg(argc, argv, "-p", "--prev");
 
     std::string plasma_type = getCommandLineArg(argc, argv, "-t", "--type");
@@ -66,6 +67,7 @@ int main(int argc, char *argv[])
     std::filesystem::path out_path = getCommandLineArg(argc, argv, "-o", "--output");
  
     std::string config_path = getCommandLineArg(argc, argv, "-c", "--config");
+    if(config_path.empty()) config_path = "default.config";
 
     int task_array;
     std::string task_array_str = getCommandLineArg(argc, argv, "-i", "--index");
