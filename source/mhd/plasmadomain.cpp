@@ -26,21 +26,15 @@ PlasmaDomain::PlasmaDomain(const char* out_path, const char* config_path, bool c
     // m_state_flags.push_back(false);
   }
   readConfigFile(config_path);
-  // std::filesystem::path run_path = std::filesystem::path(".") / run_name;
-  // std::filesystem::directory_entry path_dir(run_path);
-  // int dir_suffix = 1;
-  // while(path_dir.exists()) path_dir = std::filesystem::directory_entry(std::filesystem::path(run_path.string()+std::to_string(dir_suffix++)));
   m_out_directory = std::filesystem::path(out_path);
-  // std::filesystem::create_directories(m_out_directory);
+  std::filesystem::path config_filename = std::filesystem::path(config_path).filename();
   if(!continue_mode){
-    const auto copy_opts = std::filesystem::copy_options::overwrite_existing;
-    std::filesystem::copy(config_path, m_out_directory/config_path, copy_opts);
+    std::filesystem::copy(config_path, m_out_directory/config_filename, std::filesystem::copy_options::overwrite_existing);
     m_out_file.open(m_out_directory/"mhd.out");
   } else {
     m_out_file.open(m_out_directory/"mhd.out",std::ofstream::app);
   }
   for(int i=0; i<num_variables; i++) m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
-  // setStateFlags({"rho","mom_x","mom_y","temp","b_x","b_y","b_z","pos_x","pos_y","grav_x","grav_y"},true);
 }
 
 void PlasmaDomain::initialize(const std::vector<Grid>& input_vars, double ion_mass, double adiabatic_index)
