@@ -69,6 +69,8 @@ int main(int argc, char *argv[])
     std::string config_path = getCommandLineArg(argc, argv, "-c", "--config");
     if(config_path.empty()) config_path = "default.config";
 
+    std::filesystem::path settings_path = getCommandLineArg(argc, argv, "-s", "--settings");
+
     int task_array;
     std::string task_array_str = getCommandLineArg(argc, argv, "-i", "--index");
     if(task_array_str.empty()) task_array = 0; //default array index is zero
@@ -93,11 +95,18 @@ int main(int argc, char *argv[])
         if(!task_array_str.empty()) out_path /= ("array"+std::to_string(task_array));
         std::filesystem::create_directories(out_path);
 
-        // choose which plasma settings file to use
-        std::filesystem::path settings_path{}; // relative path to .settings file
-        if (plasma_type.compare("ucnp") == 0) settings_path = "ucnp.settings";
-        else if (plasma_type.compare("solar") == 0) settings_path = "solar.settings";
-        else std::cerr << "Plasma type not specified ('ucnp' or 'solar')";
+        // choose which plasma settings file to use as a default, if none specified
+        if (plasma_type.compare("ucnp") == 0){
+            if(settings_path.string().empty()){
+                settings_path = "ucnp.settings";
+            }
+        }
+        else if (plasma_type.compare("solar") == 0){
+            if(settings_path.string().empty()){
+                settings_path = "solar.settings";
+            }
+        }  
+        else std::cerr << "Plasma type not specified ('ucnp' or 'solar')\n";
 
         // load .settings file
         PlasmaSettings pms(settings_path,task_array);

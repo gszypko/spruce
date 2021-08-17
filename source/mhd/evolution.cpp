@@ -49,8 +49,10 @@ void PlasmaDomain::advanceTime(bool verbose)
   Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y],
         &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y],
         &m_rho = m_grids[rho], &m_energy = m_grids[energy], &m_press = m_grids[press];
-  Grid viscous_force_x = epsilon_viscous*(0.5*m_grids[d_x].square()/dt_raw)*laplacian(m_mom_x);
-  Grid viscous_force_y = epsilon_viscous*(0.5*m_grids[d_y].square()/dt_raw)*laplacian(m_mom_y);
+  Grid viscous_force_x = epsilon_viscous*(0.5*m_grids[d_x].square()/m_grids[dt])*laplacian(m_mom_x);
+  Grid viscous_force_y = epsilon_viscous*(0.5*m_grids[d_y].square()/m_grids[dt])*laplacian(m_mom_y);
+  // Grid viscous_force_x = epsilon_viscous*(0.5*m_grids[d_x].square()/m_grids[dt])*m_rho*laplacian(m_v_x);
+  // Grid viscous_force_y = epsilon_viscous*(0.5*m_grids[d_y].square()/m_grids[dt])*m_rho*laplacian(m_v_y);
   Grid zero(1,1,0.0);
   Grid rho_next = m_rho - min_dt*divergence(m_rho,zero,zero);
   Grid mom_x_next = m_mom_x - min_dt*divergence(m_mom_x, m_press + m_grids[mag_pxx], m_grids[mag_pxy])
