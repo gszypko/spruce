@@ -208,13 +208,13 @@ Grid exponential2D(Grid x,Grid y,double amp,double sig_x,double sig_y,double x_c
 }
 
 // get quadrupole magnetic field, cgs units, symmetry axis = x
-std::vector<double> quadrupole_field(double x,double y,double z,double Bx)
+std::vector<double> quadrupole_field(double x,double y,double z,double dBdx)
 {
     enum Ax { ax_x, ax_y, ax_z , ax_num};
     std::vector<double> B(ax_num);
-    B[ax_x] = -Bx*x;
-    B[ax_y] = Bx*y/2.;
-    B[ax_z] = Bx*z/2.;
+    B[ax_x] = -dBdx*x;
+    B[ax_y] = dBdx*y/2.;
+    B[ax_z] = dBdx*z/2.;
     return B;
 }
 

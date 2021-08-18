@@ -9,16 +9,17 @@
 %       If numeric, use either <cgs> units or in terms of another variable name
 %       If not numeric, use <opt>, which will be treated as std::string for comparison
 
-n = cgs = 1e16 % peak plasma density
+n = cgs = 1e8 % peak plasma number density
 n_dist = opt = gaussian % plasma density distribution
 sig_x = cgs = 0.1 % rms radius of plasma along x axis
 sig_y = cgs = 0.1 % rms radius of plasma along y axis
 Ti = cgs = 1e-2 % initial ion temperature
 Te = cgs = 20 % initial electron temperature
-dBdx = cgs = 150 % gradient of quadrupole magnetic field along symmetry (x) axis
-tmax = cgs = 2 % end time for simulation
-x_lim = sig_x = 1 % simulation box size on x axis: from -x_lim to x_lim
-y_lim = sig_y = 1 % simulation box size on y axis: from -y_lim to y_lim
-dx = cgs = .01 % grid spacing
-dy = cgs = .01 % grid spacing
+dBdx = cgs = 0 % gradient of quadrupole magnetic field along symmetry (x) axis
+tmax/tau_exp = cgs = 2 % end time for simulation
+x_lim = sig_x = 10 % simulation box size on x axis: from -x_lim to x_lim
+y_lim = sig_y = 10 % simulation box size on y axis: from -y_lim to y_lim
+dx = sig_x = .1 % grid spacing
+dy = sig_y = .1 % grid spacing
 m_i = cgs = 1.455e-28 % Sr ion mass
+gam = cgs = 1.6666667 % adiabatic index for Sr+

@@ -24,6 +24,8 @@ MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
     meshgrid(x_vec,y_vec,x,y);
 
     MhdInp grids(Nx,Ny);
+    grids.set_ion_mass(pms.getvar("m_i"));
+    grids.set_adiabatic_index(pms.getvar("gam"));
     grids.set_var(PlasmaDomain::pos_x,x);
     grids.set_var(PlasmaDomain::pos_y,y);
     if (strcmp(pms.getopt("n_dist"),"gaussian")){
@@ -51,7 +53,7 @@ MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
 
     grids.set_var(PlasmaDomain::b_x,B[0]);
     grids.set_var(PlasmaDomain::b_y,B[1]);
-    grids.set_var(PlasmaDomain::b_z,Grid(Nx,Ny,0));
+    grids.set_var(PlasmaDomain::b_z,B[2]);
 
     return grids;
 }
@@ -75,6 +77,7 @@ int main(int argc, char *argv[])
     std::string task_array_str = getCommandLineArg(argc, argv, "-i", "--index");
     if(task_array_str.empty()) task_array = 0; //default array index is zero
     else task_array = std::stoi(task_array_str);
+    std::string array_path = "array" + std::to_string(task_array);
 
     double time_duration;
     std::string time_duration_str = getCommandLineArg(argc, argv, "-d", "--duration");
@@ -92,7 +95,7 @@ int main(int argc, char *argv[])
     // initialize using settings file and pertinent initializer fxn
     else {
         // create subdirectory for array index, if one was explicitly given
-        if(!task_array_str.empty()) out_path /= ("array"+std::to_string(task_array));
+        if(!task_array_str.empty()) out_path/=array_path;
         std::filesystem::create_directories(out_path);
 
         // choose which plasma settings file to use as a default, if none specified

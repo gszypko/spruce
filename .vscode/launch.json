@@ -5,11 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "g++-8 - Build and debug active file",
+            "name": "g++-10 - Build and debug active file",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/run",
-            "args": ["ucnp","output","0"],
+            "args": ["-t","ucnp","-o","output","-c","ucnp.config","-i","0"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
@@ -22,7 +22,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "C/C++: g++-8 build active file",
+            "preLaunchTask": "C/C++: g++-10 build active file",
             "miDebuggerPath": "/usr/bin/gdb"
         }
     ]
