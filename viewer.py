@@ -170,10 +170,7 @@ if vec_var != None and len(var) > len(vec_x):
 
 fig, ax = plt.subplots()
 
-frame = -2
-# im = plt.imshow(np.transpose(var[frame]), animated=True, origin='lower', interpolation='bilinear')
-# fig.colorbar(im)
-# im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', interpolation='nearest', vmin=0.0, vmax=(np.max(var[0])+1.0))
+frame = 0
 if output_var == "rad":
   im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-5, base=10))
@@ -244,6 +241,7 @@ elif vec_var != None:
   # ax.quiverkey(quiv, X=0.3, Y=1.1, U=10,
   #   label='Quiver key, length = 10', labelpos='E')
 plt.tight_layout()
+frame = -2
 
 def updatefig(*args):
     global frame

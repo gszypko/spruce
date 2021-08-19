@@ -59,6 +59,7 @@ void PlasmaDomain::initialize(const std::vector<Grid>& input_vars, double ion_ma
   computeIterationBounds();
   computeConstantTerms();
   recomputeDerivedVariables();
+  std::cout << m_xl << "," << m_xu << "," << m_yl << "," << m_yu << std::endl;
 }
 
 //Generates gaussian distribution in density and temperature, with given min

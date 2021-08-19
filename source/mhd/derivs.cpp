@@ -40,36 +40,6 @@ Grid PlasmaDomain::upwindSurface(const Grid &cell_center, const Grid &vel, const
             i1 = (i1+m_xdim)%m_xdim;
             i3 = (i3+m_xdim)%m_xdim;
           }
-          // if(x_bound_1 == BoundaryCondition::Wall){
-          //   if(i2 == 0){
-          //     cell_surface(i2,j2) = 0.0;
-          //     continue;
-          //   } else if(i2 == 1){
-          //     i0 = i1;
-          //   }
-          // } else if(x_bound_1 == BoundaryCondition::Open){
-          //   if(i2 == 0){
-          //     cell_surface(i2,j2) = 1.5*cell_center(i2,j2) - 0.5*cell_center(i3,j3); //lerp
-          //     continue;
-          //   } else if(i2 == 1){
-          //     i0 = i1;
-          //   }
-          // }
-          // if(x_bound_2 == BoundaryCondition::Wall){
-          //   if(i2 == m_xdim){
-          //     cell_surface(i2,j2) = 0.0;
-          //     continue;
-          //   } else if(i2 == m_xdim - 1){
-          //     i3 = i2;
-          //   }
-          // } else if(x_bound_2 == BoundaryCondition::Open){
-          //   if(i2 == m_xdim){
-          //     cell_surface(i2,j2) = 1.5*cell_center(i1,j1) - 0.5*cell_center(i0,j0); //lerp
-          //     continue;
-          //   } else if(i2 == m_xdim - 1){
-          //     i3 = i2;
-          //   }
-          // }
         }
         else{
           //Handle Y boundary conditions
@@ -81,36 +51,6 @@ Grid PlasmaDomain::upwindSurface(const Grid &cell_center, const Grid &vel, const
             j1 = (j1+m_ydim)%m_ydim;
             j3 = (j3+m_ydim)%m_ydim;
           }
-          // if(y_bound_1 == BoundaryCondition::Wall){
-          //   if(j2 == 0){
-          //     cell_surface(i2,j2) = 0.0;
-          //     continue;
-          //   } else if(j2 == 1){
-          //     j0 = j1;
-          //   }
-          // } else if(y_bound_1 == BoundaryCondition::Open){
-          //   if(j2 == 0){
-          //     cell_surface(i2,j2) = 1.5*cell_center(i2,j2) - 0.5*cell_center(i3,j3); //lerp
-          //     continue;
-          //   } else if(j2 == 1){
-          //     j0 = j1;
-          //   }
-          // }
-          // if(y_bound_2 == BoundaryCondition::Wall){
-          //   if(j2 == m_ydim){
-          //     cell_surface(i2,j2) = 0.0;
-          //     continue;
-          //   } else if(j2 == m_ydim - 1){
-          //     j3 = j2;
-          //   }
-          // } else if(y_bound_2 == BoundaryCondition::Open){
-          //   if(j2 == m_ydim){
-          //     cell_surface(i2,j2) = 1.5*cell_center(i1,j1) - 0.5*cell_center(i0,j0); //lerp
-          //     continue;
-          //   } else if(j2 == m_ydim - 1){
-          //     j3 = j2;
-          //   }
-          // }
         }
         //Apply Barton's method
         double d1, d2, d3;
@@ -193,7 +133,7 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
-  Grid &m_pos_x = m_grids[pos_x], &m_pos_y = m_grids[pos_y];
+  Grid &m_d_x = m_grids[d_x], &m_d_y = m_grids[d_y];
   #pragma omp parallel
   {
     #if BENCHMARKING_ON
@@ -204,6 +144,7 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
       for(int j = m_yl; j <= m_yu; j++){
         int i0, i1, i2, j0, j1, j2;
         i1 = i; j1 = j;
+        double denom;
         if(index == 0){
           //Handle X boundary conditions
           j0 = j1; j2 = j1;
@@ -213,6 +154,7 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
             i0 = (i0+xdim)%xdim;
             i2 = (i2+xdim)%xdim;
           }
+          denom = m_d_x(i1,j1) + 0.5*(m_d_x(i2,j2) + m_d_x(i0,j0));
         }
         else{
           //Handle Y boundary conditions
@@ -222,10 +164,12 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
             j0 = (j0+ydim)%ydim;
             j2 = (j2+ydim)%ydim;
           }
+          denom = m_d_y(i1,j1) + 0.5*(m_d_y(i2,j2) + m_d_y(i0,j0));
         }
-        div(i1,j1) = (quantity(i2,j2) - quantity(i0,j0))
-                    /((m_pos_x(i2,j2) - m_pos_x(i0,j0))*(double)(1-index)
-                      + (m_pos_y(i2,j2) - m_pos_y(i0,j0))*(double)(index));
+        // div(i1,j1) = (quantity(i2,j2) - quantity(i0,j0))
+        //             /((m_pos_x(i2,j2) - m_pos_x(i0,j0))*(double)(1-index)
+        div(i1,j1) = (quantity(i2,j2) - quantity(i0,j0)) / denom;
+                    
       }
     }
   }
