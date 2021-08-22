@@ -44,16 +44,27 @@ void MhdInp::set_adiabatic_index(double index)
     m_adiabatic_index = index;
 }
 
+void MhdInp::set_duration(double duration)
+{
+    m_duration = duration;
+}
+
 double MhdInp::ion_mass()
 {
-    if(m_ion_mass == 0.0) std::cerr << "Ion mass was not initialized.\n";
+    if(m_ion_mass == 0.0) std::cerr << "Ion mass was not initialized." << std::endl;
     return m_ion_mass;
 }
 
 double MhdInp::adiabatic_index()
 {
-    if(m_adiabatic_index == 0.0) std::cerr << "Adiabatic index was not initialized.\n";
+    if(m_adiabatic_index == 0.0) std::cerr << "Adiabatic index was not initialized." << std::endl;
     return m_adiabatic_index;
+}
+
+double MhdInp::duration()
+{
+    if(m_duration == 0.0) std::cerr << "Duration was not initialized." << std::endl;
+    return m_duration;
 }
 
 // check if all elements of <m_grids> were initialized

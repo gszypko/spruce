@@ -12,7 +12,7 @@
 #define GRAV_CONST 6.674e-8 //gravitational constant, dyn cm^2 g^-2
 #define KAPPA_0 1.0e-6 //thermal conductivity coefficient
 #define PI 3.14159265358979323846
-#define M_SR 1.455e-28 // mass of sr ion, g
+#define M_SR 1.455e-22 // mass of sr ion, g
 #define C 29979245800 // speed of light, cm/s
 #define E 4.80320425e-10 // electric charge, CGS: statcoulombs
 /****************************************************************************/
