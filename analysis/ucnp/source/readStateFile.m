@@ -50,5 +50,11 @@ for i = 1:length(grid_names)
 end
 out.x_vec = out.pos_x(1,:);
 out.y_vec = out.pos_y(:,1)';
+
+% trime off ghost cells - first two and last two rows and columns are removed
+out.xdim = out.xdim - 2;
+out.ydim = out.ydim - 2;
+for i = 1:length(grid_names)
+    out.(grid_names{i}) = out.(grid_names{i})(3:end-2,3:end-2);
 end
 

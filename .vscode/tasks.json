@@ -18,7 +18,7 @@
                 "-fopenmp",
                 "-g",
 
-                "${file}",
+                "${workspaceFolder}/main.cpp",
                 "${workspaceFolder}/source/mhd/*",
                 "${workspaceFolder}/source/user-interface/*",
                 "${workspaceFolder}/source/solar/*",
