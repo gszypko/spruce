@@ -158,10 +158,10 @@ void PlasmaDomain::outputCurrentState()
 //Output current state into state file (toggles between overwriting two different files
 //so that the most recent state is still written in event of a crash)
 //All variables included in PlasmaDomain::StateVars are written out here
-void PlasmaDomain::writeStateFile(int precision) const
+void PlasmaDomain::writeStateFile(std::string filename,int precision) const
 {
   std::ofstream state_file;
-  state_file.open(m_out_directory/("mhd"+std::to_string(m_iter%2)+".state"));
+  state_file.open(m_out_directory/(filename+std::to_string(m_iter%2)+".state"));
   state_file << "xdim,ydim\n";
   state_file << m_xdim << "," << m_ydim << std::endl;
   state_file << "ion_mass\n";

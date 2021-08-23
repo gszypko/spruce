@@ -117,7 +117,7 @@ private:
   
   void outputPreamble();
   void outputCurrentState();
-  void writeStateFile(int precision = -1) const;
+  void writeStateFile(std::string filename = "mhd",int precision = -1) const;
   void cleanUpStateFiles() const;
   void printUpdate(double min_dt, int subcycles_thermal, int subcycles_rad) const;
 
