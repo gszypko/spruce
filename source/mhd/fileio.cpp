@@ -12,7 +12,7 @@ const std::vector<std::string> PlasmaDomain::m_boundary_condition_names = {
 //Must match the ordering of the Variable enum defined in plasmadomain.hpp
 const std::vector<std::string> PlasmaDomain::m_var_names = {
   "pos_x","pos_y","rho","temp","mom_x","mom_y","b_x","b_y","b_z","grav_x","grav_y",
-  "press","energy","rad","dt","dt_thermal","dt_rad","v_x","v_y",
+  "press","thermal_energy","kinetic_energy","rad","dt","dt_thermal","dt_rad","v_x","v_y",
   "b_magnitude","b_hat_x","b_hat_y","d_x","d_y",
   "mag_press","mag_pxx","mag_pyy","mag_pzz","mag_pxy","mag_pxz","mag_pyz"
 };
@@ -194,14 +194,22 @@ PlasmaDomain::BoundaryCondition PlasmaDomain::stringToBoundaryCondition(const st
 
 void PlasmaDomain::printUpdate(double min_dt, int subcycles_thermal, int subcycles_rad) const
 {
-  printf("Iter: %i",m_iter);
-  if(max_iterations > 0) printf("/%i",max_iterations);
-  printf("|t: %f",m_time);
-  if(max_time > 0.0) printf("/%f",max_time);
-  printf("|dt: %f",min_dt);
-  if(thermal_conduction) printf("|Cond. Subcyc: %i",subcycles_thermal);
-  if(radiative_losses) printf("|Rad. Subcyc: %i",subcycles_rad);
-  printf("\n");
+  // printf("Iter: %i",m_iter);
+  // if(max_iterations > 0) printf("/%i",max_iterations);
+  // printf("|t: %f",m_time);
+  // if(max_time > 0.0) printf("/%f",max_time);
+  // printf("|dt: %f",min_dt);
+  // if(thermal_conduction) printf("|Cond. Subcyc: %i",subcycles_thermal);
+  // if(radiative_losses) printf("|Rad. Subcyc: %i",subcycles_rad);
+  // printf("\n");
+  std::cout << "Iter: " << m_iter;
+  if(max_iterations > 0) std::cout << "/" << max_iterations;
+  std::cout << "|t: " << m_time;
+  if(max_time > 0.0) std::cout << "/" << max_time;
+  std::cout << "|dt: " << min_dt;
+  if(thermal_conduction) std::cout << "|Cond. Subcyc: " << subcycles_thermal;
+  if(radiative_losses) std::cout << "|Rad. Subcyc: " << subcycles_rad;
+  std::cout << std::endl;
 }
 
 void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
