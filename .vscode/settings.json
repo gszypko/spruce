@@ -67,7 +67,6 @@
         "bit": "cpp",
         "compare": "cpp",
         "concepts": "cpp",
-        "ranges": "cpp",
-        "stop_token": "cpp"
+        "ranges": "cpp"
     }
 }

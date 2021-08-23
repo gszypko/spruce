@@ -8,6 +8,7 @@
 !README.md
 !Makefile
 !default.config
+!ucnp.config
 !.gitignore
 !analysis/
 !analysis/*/
