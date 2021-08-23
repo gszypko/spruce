@@ -48,7 +48,7 @@ void PlasmaDomain::advanceTime(bool verbose)
   //Advance time by min_dt
   Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y],
         &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y],
-        &m_rho = m_grids[rho], &m_energy = m_grids[energy], &m_press = m_grids[press];
+        &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_press = m_grids[press];
   Grid viscous_force_x = epsilon_viscous*(0.5*m_grids[d_x].square()/dt_raw)*laplacian(m_mom_x);
   Grid viscous_force_y = epsilon_viscous*(0.5*m_grids[d_y].square()/dt_raw)*laplacian(m_mom_y);
   // Grid viscous_force_x = epsilon_viscous*(0.5*m_grids[d_x].square()/m_grids[dt])*laplacian(m_mom_x);
@@ -61,16 +61,17 @@ void PlasmaDomain::advanceTime(bool verbose)
                     + min_dt*m_rho*m_grids[grav_x] + min_dt*viscous_force_x;
   Grid mom_y_next = m_mom_y - min_dt*divergence(m_mom_y, m_grids[mag_pxy], m_press + m_grids[mag_pyy])
                     + min_dt*m_rho*m_grids[grav_y] + min_dt*viscous_force_y;
-  Grid energy_next = m_energy - min_dt*divergence(m_energy+m_press, m_grids[mag_pxx]*m_v_x + m_grids[mag_pxy]*m_v_y, m_grids[mag_pxy]*m_v_x + m_grids[mag_pyy]*m_v_y) 
-                    + min_dt*m_rho*(m_v_x*m_grids[grav_x] + m_v_y*m_grids[grav_y]) + min_dt*(m_v_x*viscous_force_x + m_v_y*viscous_force_y);
-  if(ambient_heating) energy_next += min_dt*heating_rate;
-
-  // clampWallBoundaries(mom_x_next, mom_y_next, rho_next, energy_next);
+  // Grid energy_next = m_energy - min_dt*divergence(m_energy+m_press, m_grids[mag_pxx]*m_v_x + m_grids[mag_pxy]*m_v_y, m_grids[mag_pxy]*m_v_x + m_grids[mag_pyy]*m_v_y) 
+  //                   + min_dt*m_rho*(m_v_x*m_grids[grav_x] + m_v_y*m_grids[grav_y]) + min_dt*(m_v_x*viscous_force_x + m_v_y*viscous_force_y);
+  Grid thermal_energy_next = m_thermal_energy - min_dt*divergence(m_thermal_energy + m_grids[kinetic_energy] + m_grids[mag_press],
+                                                                  (m_press + m_grids[mag_pxx])*m_v_x + (m_press + m_grids[mag_pxy])*m_v_y,
+                                                                  (m_press + m_grids[mag_pxy])*m_v_x + (m_press + m_grids[mag_pyy])*m_v_y);
+  if(ambient_heating) thermal_energy_next += min_dt*heating_rate;
 
   m_rho = rho_next;
   m_mom_x = mom_x_next;
   m_mom_y = mom_y_next;
-  m_energy = energy_next;
+  m_thermal_energy = thermal_energy_next;
   
   m_time += min_dt;
   m_iter++;
@@ -84,54 +85,51 @@ void PlasmaDomain::advanceTime(bool verbose)
 void PlasmaDomain::subcycleConduction(int subcycles_thermal, double dt_total)
 {
   //Subcycle to simulate field-aligned thermal conduction
-  // Grid energy_relaxed = energy;
-  Grid &m_energy = m_grids[energy], &m_temp = m_grids[temp], &m_press = m_grids[press];
-  Grid nonthermal_energy = 0.5*(m_grids[mom_x]*m_grids[v_x] + m_grids[mom_y]*m_grids[v_y]) + m_grids[mag_press];
-  Grid energy_floor = nonthermal_energy + thermal_energy_min; //To ensure non-negative thermal pressure
-  Grid energy_next;
+  Grid &m_thermal_energy = m_grids[thermal_energy], &m_temp = m_grids[temp], &m_press = m_grids[press];
+  // Grid nonthermal_energy = 0.5*(m_grids[mom_x]*m_grids[v_x] + m_grids[mom_y]*m_grids[v_y]) + m_grids[mag_press];
+  // Grid energy_floor = nonthermal_energy + thermal_energy_min; //To ensure non-negative thermal pressure
+  Grid thermal_energy_next;
   Grid dummy_grid(m_xdim,m_ydim,0.0); //to feed into clampWallBoundaries, since rho and mom are unchanged here
   for(int subcycle = 0; subcycle < subcycles_thermal; subcycle++){
     Grid con_flux_x(m_xdim,m_ydim,0.0);
     Grid con_flux_y(m_xdim,m_ydim,0.0);
     fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_temp, m_grids[rho], m_grids[b_hat_x], m_grids[b_hat_y], KAPPA_0);
     if(flux_saturation) saturateConductiveFlux(con_flux_x, con_flux_y, m_grids[rho], m_temp);
-    energy_next = m_energy - (dt_total/(double)subcycles_thermal)*(derivative1D(con_flux_x,0)+derivative1D(con_flux_y,1));
-    // clampWallBoundaries(dummy_grid, dummy_grid, dummy_grid, energy_next);
-    m_energy = energy_next.max(energy_floor);
+    thermal_energy_next = m_thermal_energy - (dt_total/(double)subcycles_thermal)*(derivative1D(con_flux_x,0)+derivative1D(con_flux_y,1));
+    m_thermal_energy = thermal_energy_next.max(thermal_energy_min);
     updateGhostZones();
-    m_energy = m_energy.max(energy_floor); //double floor to cover ghost zone extrapolations
-    m_press = (m_adiabatic_index - 1.0)*(m_energy - nonthermal_energy);
+    m_thermal_energy = m_thermal_energy.max(thermal_energy_min); //double floor to cover ghost zone extrapolations
+    m_press = (m_adiabatic_index - 1.0)*m_thermal_energy;
     m_temp = m_ion_mass*m_press/(2.0*K_B*m_grids[rho]);
     // Enforce temp floor everywhere
     m_temp = m_temp.max(temp_min);
     // Recompute energy after flooring temperature
     m_press = 2.0*K_B*m_grids[rho]*m_temp/m_ion_mass;
-    m_energy = m_press/(m_adiabatic_index - 1.0) + nonthermal_energy;
+    m_thermal_energy = m_press/(m_adiabatic_index - 1.0);
   }
 }
 
 void PlasmaDomain::subcycleRadiation(int subcycles_rad, double dt_total)
 {
-  Grid &m_energy = m_grids[energy], &m_temp = m_grids[temp], &m_press = m_grids[press];
+  Grid &m_thermal_energy = m_grids[thermal_energy], &m_temp = m_grids[temp], &m_press = m_grids[press];
   //Subcycle to simulate radiative losses
-  Grid nonthermal_energy = 0.5*(m_grids[mom_x]*m_grids[v_x] + m_grids[mom_y]*m_grids[v_y]) + m_grids[mag_press];
-  Grid energy_floor = nonthermal_energy + thermal_energy_min; //To ensure non-negative thermal pressure
-  Grid energy_next;
+  // Grid nonthermal_energy = 0.5*(m_grids[mom_x]*m_grids[v_x] + m_grids[mom_y]*m_grids[v_y]) + m_grids[mag_press];
+  // Grid energy_floor = nonthermal_energy + thermal_energy_min; //To ensure non-negative thermal pressure
+  Grid thermal_energy_next;
   Grid dummy_grid(m_xdim,m_ydim,0.0); //to feed into clampWallBoundaries, since rho and mom are unchanged here
   for(int subcycle = 0; subcycle < subcycles_rad; subcycle++){
     recomputeRadiativeLosses();
-    energy_next = m_energy - (dt_total/(double)subcycles_rad)*m_grids[rad];
-    // clampWallBoundaries(dummy_grid,dummy_grid,dummy_grid,energy_next);
-    m_energy = energy_next.max(energy_floor);
+    thermal_energy_next = m_thermal_energy - (dt_total/(double)subcycles_rad)*m_grids[rad];
+    m_thermal_energy = thermal_energy_next.max(thermal_energy_min);
     updateGhostZones();
-    m_energy = m_energy.max(energy_floor); //double floor to cover ghost zone extrapolations
-    m_press = (m_adiabatic_index - 1.0)*(m_energy - nonthermal_energy);
+    m_thermal_energy = m_thermal_energy.max(thermal_energy_min); //double floor to cover ghost zone extrapolations
+    m_press = (m_adiabatic_index - 1.0)*m_thermal_energy;
     m_temp = m_ion_mass*m_press/(2.0*K_B*m_grids[rho]);
     // Enforce temp floor everywhere
     m_temp = m_temp.max(temp_min);
     // Recompute energy after flooring temperature
-    m_grids[press] = 2.0*K_B*m_grids[rho]*m_temp/m_ion_mass;
-    m_energy = m_press/(m_adiabatic_index - 1.0) + nonthermal_energy;
+    m_press = 2.0*K_B*m_grids[rho]*m_temp/m_ion_mass;
+    m_thermal_energy = m_press/(m_adiabatic_index - 1.0);
   }
 }
 
@@ -174,22 +172,23 @@ void PlasmaDomain::computeConstantTerms()
 void PlasmaDomain::recomputeDerivedVariables()
 {
   m_grids[press] = 2.0*K_B*m_grids[rho]*m_grids[temp]/m_ion_mass;
-  m_grids[energy] = m_grids[press]/(m_adiabatic_index - 1.0)
-                  + 0.5*(m_grids[mom_x].square() + m_grids[mom_y].square())/m_grids[rho]
-                  + m_grids[mag_press];
+  m_grids[thermal_energy] = m_grids[press]/(m_adiabatic_index - 1.0);
+  m_grids[kinetic_energy] = 0.5*(m_grids[mom_x].square() + m_grids[mom_y].square())/m_grids[rho];
   m_grids[v_x] = m_grids[mom_x]/m_grids[rho];
   m_grids[v_y] = m_grids[mom_y]/m_grids[rho];
-  recomputeRadiativeLosses();
   recomputeDT();
   if(thermal_conduction) recomputeDTThermal();
-  if(radiative_losses) recomputeDTRadiative();
+  if(radiative_losses){
+    recomputeRadiativeLosses();
+    recomputeDTRadiative();
+  }
 }
 
 void PlasmaDomain::recomputeTemperature()
 {
-  Grid &m_press = m_grids[press];
-  m_press = (m_adiabatic_index - 1.0)*(m_grids[energy] - 0.5*(m_grids[mom_x].square() + m_grids[mom_y].square())/m_grids[rho] - m_grids[mag_press]);
-  m_press = m_press.max((m_adiabatic_index - 1.0)*thermal_energy_min);
+  Grid &m_press = m_grids[press], &m_thermal_energy = m_grids[thermal_energy];
+  m_thermal_energy = m_thermal_energy.max(thermal_energy_min);
+  m_press = (m_adiabatic_index - 1.0)*m_thermal_energy;
   m_grids[temp] = (m_ion_mass*m_press/(2.0*K_B*m_grids[rho])).max(temp_min);
 }
 
@@ -246,7 +245,7 @@ void PlasmaDomain::recomputeDTRadiative()
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
-  m_grids[dt_rad] = (m_grids[energy]/m_grids[rad]).abs();
+  m_grids[dt_rad] = (m_grids[thermal_energy]/m_grids[rad]).abs();
 }
 
 
@@ -412,7 +411,7 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
   double dist4_3 = m_pos_x(i3,j3) - m_pos_x(i4,j4) + m_pos_y(i3,j3) - m_pos_y(i4,j4);
   double dist3_2 = m_pos_x(i2,j2) - m_pos_x(i3,j3) + m_pos_y(i2,j2) - m_pos_y(i3,j3);
   double dist3_1 = m_pos_x(i1,j1) - m_pos_x(i3,j3) + m_pos_y(i1,j1) - m_pos_y(i3,j3);
-  for(int var : {static_cast<int>(rho), static_cast<int>(energy), static_cast<int>(mom_x), static_cast<int>(mom_y)}){
+  for(int var : {static_cast<int>(rho), static_cast<int>(thermal_energy), static_cast<int>(mom_x), static_cast<int>(mom_y)}){
     Grid &this_grid = m_grids[var];
     double slope = (this_grid(i3,j3) - this_grid(i4,j4))/dist4_3;
     this_grid(i2,j2) = this_grid(i3,j3) + slope*dist3_2;
@@ -427,9 +426,9 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
 void PlasmaDomain::wallBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
 {
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
-  Grid &m_rho = m_grids[rho], &m_energy = m_grids[energy], &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y];
+  Grid &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y];
   m_rho(i1,j1) = m_rho(i3,j3); m_rho(i2,j2) = m_rho(i3,j3); //Match density of nearest interior cell
-  m_energy(i1,j1) = m_energy(i3,j3); m_energy(i2,j2) = m_energy(i3,j3); //Match temperature of nearest interior cell
+  m_thermal_energy(i1,j1) = m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = m_thermal_energy(i3,j3); //Match temperature of nearest interior cell
   m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0; //Halt all advection at the wall boundary
   m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
 }

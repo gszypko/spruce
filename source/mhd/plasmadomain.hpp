@@ -33,7 +33,7 @@ public:
   
   //derived variables (derived from state variables)
   enum DerivedVars { derived_var_start=state_var_end,
-                          press=derived_var_start,energy,rad,dt,dt_thermal,dt_rad,v_x,v_y,
+                          press=derived_var_start,thermal_energy,kinetic_energy,rad,dt,dt_thermal,dt_rad,v_x,v_y,
                           derived_var_end };
 
   //constant variables (unchanging bw iterations, derived from state variables)
