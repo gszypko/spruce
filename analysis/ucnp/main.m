@@ -12,8 +12,9 @@ figdir = [andir f 'figs'];
 mkdir(figdir)
 
 %% 
-
-data = readStateFile(datadir);
+removeghostcells = false;
+data = readStateFile(datadir,removeghostcells);
+% data = readOutFile(datadir,removeghostcells);
 
 varnames = data.grid_names;
 

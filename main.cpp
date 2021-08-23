@@ -57,6 +57,8 @@ MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
     grids.set_var(PlasmaDomain::b_x,B[0]);
     grids.set_var(PlasmaDomain::b_y,B[1]);
     grids.set_var(PlasmaDomain::b_z,B[2]);
+    grids.set_var(PlasmaDomain::grav_x,Grid(Nx,Ny,0));
+    grids.set_var(PlasmaDomain::grav_y,Grid(Nx,Ny,0));
 
     return grids;
 }
@@ -87,6 +89,10 @@ int main(int argc, char *argv[])
     if(time_duration_str.empty()) time_duration = 1.0; //default duration is 1 second
     else time_duration = std::stod(time_duration_str);
 
+    double eps = 1e-14;
+    double test = 2;
+    double test2 = 2+eps;
+    double test3 = test2 - test;
 
     // continue from previous run
     if(!prev_run_path.empty()){
