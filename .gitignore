@@ -1,0 +1,17 @@
+*
+!source/
+!source/*/
+!source/*/*
+!main.cpp
+!solar.settings
+!ucnp.settings
+!README.md
+!Makefile
+!default.config
+!.gitignore
+!analysis/
+!analysis/*/
+!analysis/*/*
+!analysis/*/*/
+!analysis/*/*/*
+analysis/ucnp/figs
