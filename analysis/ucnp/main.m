@@ -12,7 +12,7 @@ figdir = [andir f 'figs'];
 mkdir(figdir)
 
 %% 
-removeghostcells = false;
+removeghostcells = true;
 data = readStateFile(datadir,removeghostcells);
 % data = readOutFile(datadir,removeghostcells);
 
