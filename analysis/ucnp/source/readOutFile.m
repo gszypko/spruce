@@ -1,9 +1,13 @@
-function [out] = readOutFile(directory,removeghostcells)
+function [out] = readOutFile(directory,removeGhostCells)
 % directory (string): full path to folder containing MHD simulation files (i.e., .state, .settings, .config)
+% removeGhostCells (boolean): (true) trim ghost cells from matrix (false) do not
 
 % Note: all units in the .state file are in cgs
 
 %% Read MHD .state File
+% define # of ghost cells
+numGhostCells = 2;
+
 % specify full path to .state file
 f = filesep;
 filename = 'mhd.out';
@@ -21,39 +25,34 @@ fclose(fileID);
 data = data(1:iter);
 
 out = struct;
-dlm1 = ','; % element delimiter
-dlm2 = ';'; % row delimiter for matrix
+dlm = ','; % element delimiter
 
 % begin parsing non-grid quantities
-temp = split(data{2},dlm1);
+temp = split(data{2},dlm);
 out.xdim = str2double(temp{1}); % number of elements in each grid col
 out.ydim = str2double(temp{2}); % number of elements in each grid row
+out.pos_x = gridvec2mat(data{4},removeGhostCells,numGhostCells);
+out.pos_y = gridvec2mat(data{6},removeGhostCells,numGhostCells);
+out.b_x = gridvec2mat(data{8},removeGhostCells,numGhostCells);
+out.b_y = gridvec2mat(data{10},removeGhostCells,numGhostCells);
+out.b_z = gridvec2mat(data{12},removeGhostCells,numGhostCells);
 
-% begin parsing grid quantities
-    % In the MHD code, a matrix M(i,j) is set up such that i == row == x axis and j == column == y axis.
-    % This means x position varies with row number and vice versa.
-    % For visualization using 'imagesc', I want x position to correspond to column number.
-    % In the following parsing, I reverse the row/column association with x/y axis that is contained within the .state file.
-grid_names = {'pos_x','pos_y','rho','temp','mom_x','mom_y','b_x','b_y','b_z','press','energy','v_x','v_y'};
-out.grid_names = grid_names;
-for i = 1:length(grid_names)
-    ind = find(strcmp(data,grid_names{i}));
-    out.(grid_names{i}) = zeros(out.xdim,out.ydim);
-    temp_row = split(data{ind+1},dlm2,2); % each element of 'temp_row' contains a row vector
-    for j = 1:length(temp_row)
-        temp = split(temp_row{j},dlm1,2);
-        out.(grid_names{i})(j,:) = str2double(temp);
+% get time values
+ind = find(startsWith(data,'t='))';
+time = zeros(size(ind));
+rowsPerT = ind(2) - ind(1);
+out.vars = struct;
+out.vars(length(time)).time = [];
+for i = 1:length(ind)
+    out.vars(i).time = str2double(extractAfter(data{ind(i)},'t='));
+    for j = (ind(i)+1):2:(ind(i)+rowsPerT-2)
+        out.vars(i).(data{j}) = gridvec2mat(data{j+1},removeGhostCells,numGhostCells);
     end
-    out.(grid_names{i}) = out.(grid_names{i})';
 end
-out.x_vec = out.pos_x(1,:);
-out.y_vec = out.pos_y(:,1)';
+out.xVec = out.pos_x(1,:);
+out.yVec = out.pos_y(:,1)';
 
-% trime off ghost cells - first two and last two rows and columns are removed
-if removeghostcells
-    out.xdim = out.xdim - 2;
-    out.ydim = out.ydim - 2;
-    for i = 1:length(grid_names)
-        out.(grid_names{i}) = out.(grid_names{i})(3:end-2,3:end-2);
-    end
+gridNames = fieldnames(out.vars);
+out.gridNames = gridNames(2:end);
+
 end

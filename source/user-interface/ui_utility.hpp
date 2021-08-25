@@ -28,8 +28,8 @@ std::vector<std::vector<std::string>> readCSV(std::filesystem::path filePath);
 //*** FUNCTIONS FOR USE WITH GRID.HPP ***//
 
 void meshgrid(const std::vector<double>& v_x,const std::vector<double>& v_y,Grid& grid_x,Grid& grid_y);
-Grid gaussian2D(Grid x,Grid y,double amp,double sig_x,double sig_y,double x_cen,double y_cen);
-Grid exponential2D(Grid x,Grid y,double amp,double sig_x,double sig_y,double x_cen,double y_cen);
+Grid gaussian2D(Grid x,Grid y,double amp,double min,double sig_x,double sig_y,double x_cen,double y_cen);
+Grid exponential2D(Grid x,Grid y,double amp,double min,double sig_x,double sig_y,double x_cen,double y_cen);
 std::vector<double> quadrupole_field(double x,double y,double z,double Bx);
 
 //*** FUNCTION TEMPLATES ***//

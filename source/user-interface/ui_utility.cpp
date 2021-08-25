@@ -158,7 +158,7 @@ void meshgrid(const std::vector<double>& v_x,const std::vector<double>& v_y,Grid
 }
 
 // define 2D gaussian distribution - spatial units must match input grid, output grid units match <amp>
-Grid gaussian2D(Grid x,Grid y,double amp,double sig_x,double sig_y,double x_cen,double y_cen)
+Grid gaussian2D(Grid x,Grid y,double amp,double min,double sig_x,double sig_y,double x_cen,double y_cen)
 // x: input meshgrid of x-positions
 // y: input meshgrid of y-positions
 // amp: amplitude of 2D Gaussian, can be +/-
@@ -176,14 +176,14 @@ Grid gaussian2D(Grid x,Grid y,double amp,double sig_x,double sig_y,double x_cen,
     Grid g2D { Grid(x.rows(),x.cols()) };
     for (int i = 0; i < g2D.rows(); i++){
         for (int j = 0; j < g2D.cols(); j++){
-            g2D(i,j) = amp*exp(-0.5*pow((x(i,j)-x_cen)/abs(sig_x),2))*exp(-0.5*pow((y(i,j)-y_cen)/abs(sig_y),2));
+            g2D(i,j) = min+amp*exp(-0.5*pow((x(i,j)-x_cen)/abs(sig_x),2))*exp(-0.5*pow((y(i,j)-y_cen)/abs(sig_y),2));
         }
     }
     return g2D;
 }
 
 // define 2D exponential distribution - spatial units must match input grid, output grid units match <amp>
-Grid exponential2D(Grid x,Grid y,double amp,double sig_x,double sig_y,double x_cen,double y_cen)
+Grid exponential2D(Grid x,Grid y,double amp,double min,double sig_x,double sig_y,double x_cen,double y_cen)
 // x: input meshgrid of x-positions
 // y: input meshgrid of y-positions
 // amp: amplitude of 2D Gaussian, can be +/-
@@ -201,7 +201,7 @@ Grid exponential2D(Grid x,Grid y,double amp,double sig_x,double sig_y,double x_c
     Grid exp2D { Grid(x.rows(),x.cols()) };
     for (int i = 0; i < exp2D.rows(); i++){
         for (int j = 0; j < exp2D.cols(); j++){
-            exp2D(i,j) = amp*exp(-abs(x(i,j)-x_cen)/abs(sig_x))*exp(-abs(y(i,j)-y_cen)/abs(sig_y));
+            exp2D(i,j) = min+amp*exp(-abs(x(i,j)-x_cen)/abs(sig_x))*exp(-abs(y(i,j)-y_cen)/abs(sig_y));
         }
     }
     return exp2D;

@@ -10,13 +10,14 @@
 %       If not numeric, use <opt>, which will be treated as std::string for comparison
 
 n = cgs = 1e8 % peak plasma number density
+n_min = cgs = 1e2 % minimum plasma density - too low of density leads to numerical errors
 n_dist = opt = gaussian % plasma density distribution
 sig_x = cgs = 0.1 % rms radius of plasma along x axis
 sig_y = cgs = 0.1 % rms radius of plasma along y axis
 Ti = cgs = 1e-2 % initial ion temperature
 Te = cgs = 20 % initial electron temperature
-dBdx = cgs = 0 % gradient of quadrupole magnetic field along symmetry (x) axis
-tmax/tau_exp = cgs = 0.1 % end time for simulation
+dBdx = cgs = 150 % gradient of quadrupole magnetic field along symmetry (x) axis
+tmax/tau_exp = cgs = 1 % end time for simulation
 x_lim = sig_x = 5 % simulation box size on x axis: from -x_lim to x_lim
 y_lim = sig_y = 5 % simulation box size on y axis: from -y_lim to y_lim
 dx = sig_x = .1 % grid spacing

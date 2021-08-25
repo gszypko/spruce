@@ -161,7 +161,8 @@ void PlasmaDomain::outputCurrentState()
 void PlasmaDomain::writeStateFile(std::string filename,int precision) const
 {
   std::ofstream state_file;
-  state_file.open(m_out_directory/(filename+std::to_string(m_iter%2)+".state"));
+  if (filename.compare("mhd") == 0) state_file.open(m_out_directory/(filename+std::to_string(m_iter%2)+".state"));
+  else state_file.open(m_out_directory/(filename+".state"));
   state_file << "xdim,ydim\n";
   state_file << m_xdim << "," << m_ydim << std::endl;
   state_file << "ion_mass\n";
