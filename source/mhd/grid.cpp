@@ -23,6 +23,7 @@ double Grid::min() const
   double curr_min = std::numeric_limits<double>::max();
   #pragma omp parallel for reduction(min: curr_min)
   for(int i=0; i<m_size; i++) curr_min = std::min(curr_min,m_data[i]);
+  assert(curr_min < std::numeric_limits<double>::max() && "Something went wrong in the min calculation");
   return curr_min;
 }
 
@@ -36,6 +37,7 @@ double Grid::min(int il, int jl, int iu, int ju) const
       curr_min = std::min(curr_min,(*this)(i,j));
     }
   }
+  assert(curr_min < std::numeric_limits<double>::max() && "Something went wrong in the min calculation");
   return curr_min;
 }
 
@@ -49,6 +51,7 @@ double Grid::max() const
   double curr_max = -std::numeric_limits<double>::max();
   #pragma omp parallel for reduction(max: curr_max)
   for(int i=0; i<m_size; i++) curr_max = std::max(curr_max,m_data[i]);
+  assert(curr_max > -std::numeric_limits<double>::max() && "Something went wrong in the max calculation");
   return curr_max;
 }
 
@@ -62,6 +65,7 @@ double Grid::max(int il, int jl, int iu, int ju) const
       curr_max = std::max(curr_max,(*this)(i,j));
     }
   }
+  assert(curr_max > -std::numeric_limits<double>::max() && "Something went wrong in the max calculation");
   return curr_max;
 }
 
