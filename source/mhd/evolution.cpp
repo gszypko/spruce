@@ -55,23 +55,36 @@ void PlasmaDomain::advanceTime(bool verbose)
   // Grid viscous_force_y = epsilon_viscous*(0.5*m_grids[d_y].square()/m_grids[dt])*laplacian(m_mom_y);
   // Grid viscous_force_x = epsilon_viscous*(0.5*m_grids[d_x].square()/m_grids[dt])*m_rho*laplacian(m_v_x);
   // Grid viscous_force_y = epsilon_viscous*(0.5*m_grids[d_y].square()/m_grids[dt])*m_rho*laplacian(m_v_y);
-  Grid zero(1,1,0.0);
-  Grid rho_next = m_rho - min_dt*divergence(m_rho,zero,zero);
-  Grid mom_x_next = m_mom_x - min_dt*divergence(m_mom_x, m_press + m_grids[mag_pxx], m_grids[mag_pxy])
-                    + min_dt*m_rho*m_grids[grav_x] + min_dt*viscous_force_x;
-  Grid mom_y_next = m_mom_y - min_dt*divergence(m_mom_y, m_grids[mag_pxy], m_press + m_grids[mag_pyy])
-                    + min_dt*m_rho*m_grids[grav_y] + min_dt*viscous_force_y;
-  // Grid energy_next = m_energy - min_dt*divergence(m_energy+m_press, m_grids[mag_pxx]*m_v_x + m_grids[mag_pxy]*m_v_y, m_grids[mag_pxy]*m_v_x + m_grids[mag_pyy]*m_v_y) 
-  //                   + min_dt*m_rho*(m_v_x*m_grids[grav_x] + m_v_y*m_grids[grav_y]) + min_dt*(m_v_x*viscous_force_x + m_v_y*viscous_force_y);
-  Grid thermal_energy_next = m_thermal_energy - min_dt*divergence(m_thermal_energy + m_grids[kinetic_energy] + m_grids[mag_press],
-                                                                  (m_press + m_grids[mag_pxx])*m_v_x + (m_press + m_grids[mag_pxy])*m_v_y,
-                                                                  (m_press + m_grids[mag_pxy])*m_v_x + (m_press + m_grids[mag_pyy])*m_v_y);
-  if(ambient_heating) thermal_energy_next += min_dt*heating_rate;
+  // Grid zero(1,1,0.0);
+  // Grid rho_next = m_rho - min_dt*divergence(m_rho,zero,zero);
+  // Grid mom_x_next = m_mom_x - min_dt*divergence(m_mom_x, m_press + m_grids[mag_pxx], m_grids[mag_pxy])
+  //                   + min_dt*m_rho*m_grids[grav_x] + min_dt*viscous_force_x;
+  // Grid mom_y_next = m_mom_y - min_dt*divergence(m_mom_y, m_grids[mag_pxy], m_press + m_grids[mag_pyy])
+  //                   + min_dt*m_rho*m_grids[grav_y] + min_dt*viscous_force_y;
+  // Grid thermal_energy_next = m_thermal_energy - min_dt*divergence(m_thermal_energy + m_grids[kinetic_energy] + m_grids[mag_press],
+  //                                                                 (m_press + m_grids[mag_pxx])*m_v_x + (m_press + m_grids[mag_pxy])*m_v_y,
+  //                                                                 (m_press + m_grids[mag_pxy])*m_v_x + (m_press + m_grids[mag_pyy])*m_v_y);
+  Grid d_rho_dt = -transportDerivative1D(m_rho, m_v_x, 0) - transportDerivative1D(m_rho, m_v_y, 1);
+  Grid d_mom_x_dt = -transportDerivative1D(m_mom_x, m_v_x, 0) - transportDerivative1D(m_mom_x, m_v_y, 1)
+                  - derivative1D(m_press + m_grids[mag_pxx], 0) - derivative1D(m_grids[mag_pxy], 1)
+                  + m_rho*m_grids[grav_x] + viscous_force_x;
+  Grid d_mom_y_dt = -transportDerivative1D(m_mom_y, m_v_x, 0) - transportDerivative1D(m_mom_y, m_v_y, 1)
+                  - derivative1D(m_grids[mag_pxy], 0) - derivative1D(m_press + m_grids[mag_pyy], 1)
+                  + m_rho*m_grids[grav_y] + viscous_force_y;
+  Grid d_thermal_energy_dt = - transportDerivative1D(m_thermal_energy + m_grids[kinetic_energy], m_v_x, 0)
+                           - transportDerivative1D(m_thermal_energy + m_grids[kinetic_energy], m_v_y, 1)
+                           - derivative1D((m_press + m_grids[mag_pxx])*m_v_x + (m_grids[mag_pxy])*m_v_y, 0)
+                           - derivative1D((m_grids[mag_pxy])*m_v_x + (m_press + m_grids[mag_pyy])*m_v_y, 1)
+                           + (m_rho*m_grids[grav_x] + viscous_force_x)*m_v_x
+                           + (m_rho*m_grids[grav_y] + viscous_force_y)*m_v_y
+                           + 0.5*(m_v_x.square() + m_v_y.square())*d_rho_dt
+                           - m_v_x*d_mom_x_dt - m_v_y*d_mom_y_dt;
+  if(ambient_heating) d_thermal_energy_dt += heating_rate;
 
-  m_rho = rho_next;
-  m_mom_x = mom_x_next;
-  m_mom_y = mom_y_next;
-  m_thermal_energy = thermal_energy_next;
+  m_rho += min_dt*d_rho_dt;
+  m_mom_x += min_dt*d_mom_x_dt;
+  m_mom_y += min_dt*d_mom_y_dt;
+  m_thermal_energy += min_dt*d_thermal_energy_dt;
   
   m_time += min_dt;
   m_iter++;
@@ -314,16 +327,16 @@ Grid PlasmaDomain::oneDimConductiveFlux(const Grid &temp, const Grid &rho, doubl
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
   Grid kappa_max = m_grids[d_x]*m_grids[d_y]*K_B*(rho/m_ion_mass)/dt_thermal_min;
-  int xdim = temp.rows();
-  int ydim = temp.cols();
-  Grid flux = Grid::Zero(xdim,ydim);
-  flux = temp.pow(7.0/2.0);
-  #pragma omp parallel for collapse(2)
-  for (int i = m_xl; i <= m_xu; i++){
-    for(int j = m_yl; j <= m_yu; j++){
-      flux(i,j) = std::pow(temp(i,j),7.0/2.0);
-    }
-  }
+  // int xdim = temp.rows();
+  // int ydim = temp.cols();
+  // Grid flux = Grid::Zero(xdim,ydim);
+  // flux = temp.pow(7.0/2.0);
+  // #pragma omp parallel for collapse(2)
+  // for (int i = m_xl; i <= m_xu; i++){
+  //   for(int j = m_yl; j <= m_yu; j++){
+  //     flux(i,j) = std::pow(temp(i,j),7.0/2.0);
+  //   }
+  // }
   return -(k0*temp.pow(5.0/2.0)).min(kappa_max)*derivative1D(temp,index);
   // return -2.0/7.0*k0*derivative1D(flux,index);
 }

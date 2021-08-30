@@ -11,6 +11,7 @@
 
 xdim = cgs = 100
 ydim = cgs = 100
+duration = cgs = 2000
 init_temp = cgs = 3.0e4
 x_size = cgs = 2.2649e9
 y_size = cgs = 2.2649e9
