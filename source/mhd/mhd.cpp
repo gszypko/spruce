@@ -17,7 +17,7 @@ void mhdSolve(const char* prev_run_directory, double time_duration)
     if(exten == ".config"){
       assert(config_filename.empty() && "There must be only one .config file in the specified directory");
       config_filename = dir_entry.path();
-    } else if(exten == ".state"){
+    } else if(dir_entry.path().filename() == "mhd.state"){
       assert(state_filename.empty() && "There must be only one .state file in the specified directory");
       state_filename = dir_entry.path();
     }

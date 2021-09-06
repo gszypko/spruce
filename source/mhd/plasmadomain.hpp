@@ -38,14 +38,15 @@ public:
 
   //constant variables (unchanging bw iterations, derived from state variables)
   enum ConstantVars { constant_var_start=derived_var_end,
-                           b_magnitude=constant_var_start,b_hat_x,b_hat_y,d_x,d_y,mag_press,mag_pxx,mag_pyy,mag_pzz,mag_pxy,mag_pxz,mag_pyz,
+                           b_magnitude=constant_var_start,b_hat_x,b_hat_y,d_x,d_y,mag_press,lorentz_force_x,lorentz_force_y,
+                           mag_pxx,mag_pyy,mag_pzz,mag_pxy,mag_pxz,mag_pyz,
                            constant_var_end, num_variables=constant_var_end };
 
   //Constructors and Initialization
   PlasmaDomain(const char* out_path, const char* config_path, bool continue_mode = false);
   void initialize(const std::vector<Grid>& input_vars, double ion_mass, double adiabatic_index);
   void hydrostaticInitialize();
-  void gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp, double std_dev_x, double std_dev_y);
+  // void gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp, double std_dev_x, double std_dev_y);
 
   void readStateFile(const char* in_filename);
   void readConfigFile(const char* settings_filename);

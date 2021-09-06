@@ -9,12 +9,11 @@
 %       If numeric, use either <cgs> units or in terms of another variable name
 %       If not numeric, use <opt>, which will be treated as std::string for comparison
 
+type = opt = corona
 xdim = cgs = 100
 ydim = cgs = 100
 duration = cgs = 2000
 init_temp = cgs = 3.0e4
-x_size = cgs = 2.2649e9
-y_size = cgs = 2.2649e9
 b_0 = cgs = 100
 n_base = cgs = 1.0e12
 ion_mass = cgs = 1.6726e-24

@@ -62,19 +62,19 @@ void PlasmaDomain::initialize(const std::vector<Grid>& input_vars, double ion_ma
   writeStateFile("init");
 }
 
-//Generates gaussian distribution in density and temperature, with given min
-//and max density and temperature, distributed with the given standard deviations
-//in x and y (in units of grid cell widths)
-void PlasmaDomain::gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp,
-                                      double std_dev_x, double std_dev_y)
-{
-  m_grids[rho] = GaussianGrid(m_xdim, m_ydim, min_rho, max_rho, std_dev_x, std_dev_y);
-  m_grids[mom_x] = Grid::Zero(m_xdim,m_ydim);
-  m_grids[mom_y] = Grid::Zero(m_xdim,m_ydim);
-  m_grids[temp] = GaussianGrid(m_xdim, m_ydim, min_temp, max_temp, std_dev_x, std_dev_y);
-  computeConstantTerms();
-  recomputeDerivedVariables();
-}
+// //Generates gaussian distribution in density and temperature, with given min
+// //and max density and temperature, distributed with the given standard deviations
+// //in x and y (in units of grid cell widths)
+// void PlasmaDomain::gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp,
+//                                       double std_dev_x, double std_dev_y)
+// {
+//   m_grids[rho] = GaussianGrid(m_xdim, m_ydim, min_rho, max_rho, std_dev_x, std_dev_y);
+//   m_grids[mom_x] = Grid::Zero(m_xdim,m_ydim);
+//   m_grids[mom_y] = Grid::Zero(m_xdim,m_ydim);
+//   m_grids[temp] = GaussianGrid(m_xdim, m_ydim, min_temp, max_temp, std_dev_x, std_dev_y);
+//   computeConstantTerms();
+//   recomputeDerivedVariables();
+// }
 
 //Compute lower and upper x- and y- indicies for differential operations
 //from boundary conditions, to exclude ghost zones. Results stored in m_xl, m_xu, m_yl, m_yu

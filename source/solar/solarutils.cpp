@@ -1,44 +1,15 @@
 #include "solarutils.hpp"
 
 namespace SolarUtils {
-  // void SolarInitialize(Grid& rho, Grid& temp, Grid& mom_x, Grid& mom_y,
-  //                      Grid& b_x, Grid& b_y, Grid& b_z,
-  //                      Grid& pos_x, Grid& pos_y, Grid& grav_x, Grid& grav_y)
-  // {
-  //   const double temp_chromosphere = 3.0e4;
-  //   const int xdim = 100;
-  //   const int ydim = 100;
-  //   const double dx = 2.2649e7;
-  //   const double dy = 2.2649e7;
-  //   const double b_0 = 100.0;
-  //   rho = Grid(xdim,ydim,0.0);
-  //   temp = Grid(xdim,ydim,0.0);
-  //   mom_x = Grid(xdim,ydim,0.0); mom_y = Grid(xdim,ydim,0.0);
-  //   b_x = Grid(xdim,ydim,0.0); b_y = Grid(xdim,ydim,0.0); b_z = Grid(xdim,ydim,0.0);
-  //   pos_x = Grid(xdim,ydim,0.0); pos_y = Grid(xdim,ydim,0.0);
-  //   grav_x = Grid(xdim,ydim,0.0); grav_y = Grid(xdim,ydim,0.0);
-  //   double base_rho = ion_mass*1.0e12; //initial mass density at base, g cm^-3
-  //   double scale_height = 2.0*K_B*temp_chromosphere/(ion_mass*BASE_GRAV);
-  //   for(int i=0; i<xdim; i++){
-  //     for(int j=0; j<ydim; j++){
-  //       pos_x(i,j) = (i - (double)(xdim-1)*0.5)*dx;
-  //       pos_y(i,j) = j*dy;
-  //     }
-  //   }
-  //   rho = HydrostaticFalloff(base_rho,scale_height,pos_y);
-  //   temp = Grid(xdim,ydim,temp_chromosphere);
-  //   b_x = BipolarField(pos_x, pos_y, b_0, scale_height, 0);
-  //   b_y = BipolarField(pos_x, pos_y, b_0, scale_height, 1);
-  //   grav_y = SolarGravity(BASE_GRAV,R_SUN,pos_y);
-  // }
 
   MhdInp SolarMHDInput(const PlasmaSettings& pms)
   {
+    std::string problem_type = pms.getopt("type");
     const int xdim = (int)(pms.getvar("xdim")+0.01);
     const int ydim = (int)(pms.getvar("ydim")+0.01);
     const double init_temp = pms.getvar("init_temp");
-    const double x_size = pms.getvar("x_size");
-    const double y_size = pms.getvar("y_size");
+    // const double x_size = pms.getvar("x_size");
+    // const double y_size = pms.getvar("y_size");
     const double b_0 = pms.getvar("b_0");
     const double n_base = pms.getvar("n_base");
     double ion_mass = pms.getvar("ion_mass");
@@ -48,7 +19,7 @@ namespace SolarUtils {
     double base_rho = ion_mass*n_base; //initial mass density at base in g cm ^-3
     double scale_height = 2.0*K_B*init_temp/(ion_mass*BASE_GRAV);
     Grid pos_x(xdim,ydim); Grid pos_y(xdim,ydim);
-    double dx = x_size/xdim, dy = y_size/ydim;
+    double dx = 4.0*PI*scale_height/xdim, dy = 4.0*PI*scale_height/ydim; //this ensures correct periodicity of bipolar field
     for(int i=0; i<xdim; i++){
       for(int j=0; j<ydim; j++){
         pos_x(i,j) = (i - (double)(xdim-1)*0.5)*dx;
@@ -59,15 +30,38 @@ namespace SolarUtils {
     MhdInp mi(xdim,ydim);
     mi.set_var(PlasmaDomain::pos_x,pos_x);
     mi.set_var(PlasmaDomain::pos_y,pos_y);
-    mi.set_var(PlasmaDomain::rho, HydrostaticFalloff(base_rho,scale_height,pos_y));
-    mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
     mi.set_var(PlasmaDomain::mom_x, Grid(xdim,ydim,0.0));
     mi.set_var(PlasmaDomain::mom_y, Grid(xdim,ydim,0.0));
-    mi.set_var(PlasmaDomain::b_x, BipolarField(pos_x, pos_y, b_0, scale_height, 0));
-    mi.set_var(PlasmaDomain::b_y, BipolarField(pos_x, pos_y, b_0, scale_height, 1));
-    mi.set_var(PlasmaDomain::b_z, Grid(xdim,ydim,0.0));
-    mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
-    mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
+
+    if(problem_type == "corona"){
+      mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
+      mi.set_var(PlasmaDomain::rho, HydrostaticFalloff(base_rho,scale_height,pos_y));
+      mi.set_var(PlasmaDomain::b_x, BipolarField(pos_x, pos_y, b_0, scale_height, 0));
+      mi.set_var(PlasmaDomain::b_y, BipolarField(pos_x, pos_y, b_0, scale_height, 1));
+      mi.set_var(PlasmaDomain::b_z, Grid(xdim,ydim,0.0));
+      mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
+      mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
+    } else if(problem_type == "uniform"){
+      mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
+      mi.set_var(PlasmaDomain::rho, Grid(xdim,ydim,base_rho*std::exp(-2.0*PI)));
+      mi.set_var(PlasmaDomain::b_x, BipolarField(pos_x, pos_y, b_0, scale_height, 0));
+      mi.set_var(PlasmaDomain::b_y, BipolarField(pos_x, pos_y, b_0, scale_height, 1));
+      mi.set_var(PlasmaDomain::b_z, Grid(xdim,ydim,0.0));
+      mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
+      mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
+    } else if(problem_type == "gaussian"){
+      double stdevx = pms.getvar("stdevx");
+      double stdevy = pms.getvar("stdevy");
+      // mi.set_var(PlasmaDomain::temp, GaussianGrid(xdim,ydim,init_temp,10.0*init_temp,xdim/stdevx,ydim/stdevy));
+      mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
+      mi.set_var(PlasmaDomain::rho, GaussianGrid(xdim,ydim,0.1*base_rho,10.0*base_rho,xdim/stdevx,ydim/stdevy));
+      mi.set_var(PlasmaDomain::b_x, Grid(xdim,ydim,0.0));
+      mi.set_var(PlasmaDomain::b_y, Grid(xdim,ydim,0.0));
+      mi.set_var(PlasmaDomain::b_z, Grid(xdim,ydim,0.0));
+      mi.set_var(PlasmaDomain::grav_y, Grid(xdim,ydim,0.0));
+      mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
+    }
+
     mi.set_ion_mass(ion_mass);
     mi.set_adiabatic_index(adiabatic_index);
     mi.set_duration(duration);
@@ -131,4 +125,28 @@ namespace SolarUtils {
     }
     return result;
   }
+
+  //Generates gaussian initial condition for a variable, centered at middle of grid
+  //std_dev_x and std_dev_y are the standard deviation of the distribution in the x
+  //and y directions, in units of grid cell widths
+  Grid GaussianGrid(int xdim, int ydim, double min, double max, double std_dev_x, double std_dev_y){
+    #if BENCHMARKING_ON
+    InstrumentationTimer timer(__PRETTY_FUNCTION__);
+    #endif
+    std::vector<double> gauss_x(xdim), gauss_y(ydim);
+    for(int i=0; i<xdim; i++){
+      gauss_x[i] = std::exp(-0.5*std::pow(((double)i-0.5*(double)(xdim-1))/std_dev_x,2.0));
+    }
+    for(int j=0; j<ydim; j++){
+      gauss_y[j] = std::exp(-0.5*std::pow(((double)j-0.5*(double)(ydim-1))/std_dev_y,2.0));
+    }
+    Grid result(xdim,ydim);
+    for(int i=0; i<xdim; i++){
+      for(int j=0; j<ydim; j++){
+        result(i,j) = (max-min)*gauss_x[i]*gauss_y[j] + min;
+      }
+    }
+    return result;
+  }
+
 }

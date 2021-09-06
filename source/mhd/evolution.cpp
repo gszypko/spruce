@@ -51,30 +51,35 @@ void PlasmaDomain::advanceTime(bool verbose)
         &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_press = m_grids[press];
   Grid viscous_force_x = epsilon_viscous*(0.5*m_grids[d_x].square()/dt_raw)*laplacian(m_mom_x);
   Grid viscous_force_y = epsilon_viscous*(0.5*m_grids[d_y].square()/dt_raw)*laplacian(m_mom_y);
-  // Grid viscous_force_x = epsilon_viscous*(0.5*m_grids[d_x].square()/m_grids[dt])*laplacian(m_mom_x);
-  // Grid viscous_force_y = epsilon_viscous*(0.5*m_grids[d_y].square()/m_grids[dt])*laplacian(m_mom_y);
-  // Grid viscous_force_x = epsilon_viscous*(0.5*m_grids[d_x].square()/m_grids[dt])*m_rho*laplacian(m_v_x);
-  // Grid viscous_force_y = epsilon_viscous*(0.5*m_grids[d_y].square()/m_grids[dt])*m_rho*laplacian(m_v_y);
-  // Grid zero(1,1,0.0);
-  // Grid rho_next = m_rho - min_dt*divergence(m_rho,zero,zero);
-  // Grid mom_x_next = m_mom_x - min_dt*divergence(m_mom_x, m_press + m_grids[mag_pxx], m_grids[mag_pxy])
-  //                   + min_dt*m_rho*m_grids[grav_x] + min_dt*viscous_force_x;
-  // Grid mom_y_next = m_mom_y - min_dt*divergence(m_mom_y, m_grids[mag_pxy], m_press + m_grids[mag_pyy])
-  //                   + min_dt*m_rho*m_grids[grav_y] + min_dt*viscous_force_y;
-  // Grid thermal_energy_next = m_thermal_energy - min_dt*divergence(m_thermal_energy + m_grids[kinetic_energy] + m_grids[mag_press],
-  //                                                                 (m_press + m_grids[mag_pxx])*m_v_x + (m_press + m_grids[mag_pxy])*m_v_y,
-  //                                                                 (m_press + m_grids[mag_pxy])*m_v_x + (m_press + m_grids[mag_pyy])*m_v_y);
+  // Grid d_rho_dt = -transportDerivative1D(m_rho, m_v_x, 0) - transportDerivative1D(m_rho, m_v_y, 1);
+  // Grid d_mom_x_dt = -transportDerivative1D(m_mom_x, m_v_x, 0) - transportDerivative1D(m_mom_x, m_v_y, 1)
+  //                 - derivative1D(m_press + m_grids[mag_pxx], 0) - derivative1D(m_grids[mag_pxy], 1)
+  //                 + m_rho*m_grids[grav_x] + viscous_force_x;
+  // Grid d_mom_y_dt = -transportDerivative1D(m_mom_y, m_v_x, 0) - transportDerivative1D(m_mom_y, m_v_y, 1)
+  //                 - derivative1D(m_grids[mag_pxy], 0) - derivative1D(m_press + m_grids[mag_pyy], 1)
+  //                 + m_rho*m_grids[grav_y] + viscous_force_y;
+  // Grid d_thermal_energy_dt = - transportDerivative1D(m_thermal_energy + m_grids[kinetic_energy], m_v_x, 0)
+  //                          - transportDerivative1D(m_thermal_energy + m_grids[kinetic_energy], m_v_y, 1)
+  //                          - derivative1D((m_press + m_grids[mag_pxx])*m_v_x + (m_grids[mag_pxy])*m_v_y, 0)
+  //                          - derivative1D((m_grids[mag_pxy])*m_v_x + (m_press + m_grids[mag_pyy])*m_v_y, 1)
+  //                          + (m_rho*m_grids[grav_x] + viscous_force_x)*m_v_x
+  //                          + (m_rho*m_grids[grav_y] + viscous_force_y)*m_v_y
+  //                          + 0.5*(m_v_x.square() + m_v_y.square())*d_rho_dt
+  //                          - m_v_x*d_mom_x_dt - m_v_y*d_mom_y_dt;
   Grid d_rho_dt = -transportDerivative1D(m_rho, m_v_x, 0) - transportDerivative1D(m_rho, m_v_y, 1);
   Grid d_mom_x_dt = -transportDerivative1D(m_mom_x, m_v_x, 0) - transportDerivative1D(m_mom_x, m_v_y, 1)
-                  - derivative1D(m_press + m_grids[mag_pxx], 0) - derivative1D(m_grids[mag_pxy], 1)
+                  - derivative1D(m_press, 0)
+                  + m_grids[lorentz_force_x]
                   + m_rho*m_grids[grav_x] + viscous_force_x;
   Grid d_mom_y_dt = -transportDerivative1D(m_mom_y, m_v_x, 0) - transportDerivative1D(m_mom_y, m_v_y, 1)
-                  - derivative1D(m_grids[mag_pxy], 0) - derivative1D(m_press + m_grids[mag_pyy], 1)
+                  - derivative1D(m_press, 1)
+                  + m_grids[lorentz_force_y]
                   + m_rho*m_grids[grav_y] + viscous_force_y;
   Grid d_thermal_energy_dt = - transportDerivative1D(m_thermal_energy + m_grids[kinetic_energy], m_v_x, 0)
                            - transportDerivative1D(m_thermal_energy + m_grids[kinetic_energy], m_v_y, 1)
-                           - derivative1D((m_press + m_grids[mag_pxx])*m_v_x + (m_grids[mag_pxy])*m_v_y, 0)
-                           - derivative1D((m_grids[mag_pxy])*m_v_x + (m_press + m_grids[mag_pyy])*m_v_y, 1)
+                           - derivative1D(m_press*m_v_x, 0) - derivative1D(m_press*m_v_y, 1)
+                           - derivative1D(m_grids[mag_pxx]*m_v_x + m_grids[mag_pxy]*m_v_y, 0)
+                           - derivative1D(m_grids[mag_pxy]*m_v_x + m_grids[mag_pyy]*m_v_y, 1)
                            + (m_rho*m_grids[grav_x] + viscous_force_x)*m_v_x
                            + (m_rho*m_grids[grav_y] + viscous_force_y)*m_v_y
                            + 0.5*(m_v_x.square() + m_v_y.square())*d_rho_dt
@@ -89,10 +94,10 @@ void PlasmaDomain::advanceTime(bool verbose)
   m_time += min_dt;
   m_iter++;
 
-  updateGhostZones();
   catchUnderdensity();
   recomputeTemperature();
   recomputeDerivedVariables();
+  updateGhostZones();
 }
 
 void PlasmaDomain::subcycleConduction(int subcycles_thermal, double dt_total)
@@ -156,8 +161,8 @@ void PlasmaDomain::computeConstantTerms()
   m_grids[b_magnitude] = (m_b_x.square() + m_b_y.square() + m_b_z.square()).sqrt();
   m_grids[b_hat_x] = m_b_x/m_grids[b_magnitude];
   m_grids[b_hat_y] = m_b_y/m_grids[b_magnitude];
-
   m_grids[mag_press] = (m_b_x*m_b_x + m_b_y*m_b_y + m_b_z*m_b_z)/(8.0*PI);
+
   m_grids[mag_pxx] = (-m_b_x*m_b_x + m_b_y*m_b_y + m_b_z*m_b_z)/(8.0*PI);
   m_grids[mag_pyy] = (m_b_x*m_b_x - m_b_y*m_b_y + m_b_z*m_b_z)/(8.0*PI);
   m_grids[mag_pzz] = (m_b_x*m_b_x + m_b_y*m_b_y - m_b_z*m_b_z)/(8.0*PI);
@@ -167,6 +172,7 @@ void PlasmaDomain::computeConstantTerms()
 
   Grid &m_d_x = m_grids[d_x], &m_d_y = m_grids[d_y];
   Grid &m_pos_x = m_grids[pos_x], &m_pos_y = m_grids[pos_y];
+
   //DO NOT PARALLELIZE; ordering matters here, spacing information propagates
   //from i=0 and j=0 borders outward (to support potential for non-uniform grids)
   for(int i=0; i<m_xdim; i++){
@@ -177,6 +183,9 @@ void PlasmaDomain::computeConstantTerms()
       else m_d_y(i,j) = 2.0*(m_pos_y(i,j) - m_pos_y(i,j-1)) - m_d_y(i,j-1);
     }
   }
+
+  m_grids[lorentz_force_x] = - derivative1D(m_grids[mag_pxx], 0) - derivative1D(m_grids[mag_pxy], 1);
+  m_grids[lorentz_force_y] = - derivative1D(m_grids[mag_pxy], 0) - derivative1D(m_grids[mag_pyy], 1);
 }
 
 //Recompute pressure, energy, velocity, radiative loss rate, dt, dt_thermal, dt_rad
@@ -211,9 +220,10 @@ void PlasmaDomain::catchUnderdensity()
     for(int j=0; j<m_ydim; j++){
       if(m_grids[rho](i,j) < rho_min){
         //Only notify if not within ghost zones
-        if(i >= m_xl && i <= m_xu && j >= m_yl && j <= m_yu)
+        if(i >= m_xl && i <= m_xu && j >= m_yl && j <= m_yu){
           std::cout << "Density too low at (" << i << "," << j << ")" << "\n";
-        m_grids[rho](i,j) = rho_min;
+          m_grids[rho](i,j) = rho_min;
+        }
       }
     }
   }
@@ -421,14 +431,30 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
   assert((i1 == i2 || j1 == j2) && "Points to extrapolate must be x-aligned or y-aligned");
   Grid &m_pos_x = m_grids[pos_x], &m_pos_y = m_grids[pos_y];
-  double dist4_3 = m_pos_x(i3,j3) - m_pos_x(i4,j4) + m_pos_y(i3,j3) - m_pos_y(i4,j4);
-  double dist3_2 = m_pos_x(i2,j2) - m_pos_x(i3,j3) + m_pos_y(i2,j2) - m_pos_y(i3,j3);
-  double dist3_1 = m_pos_x(i1,j1) - m_pos_x(i3,j3) + m_pos_y(i1,j1) - m_pos_y(i3,j3);
-  for(int var : {static_cast<int>(rho), static_cast<int>(thermal_energy), static_cast<int>(mom_x), static_cast<int>(mom_y)}){
-    Grid &this_grid = m_grids[var];
-    double slope = (this_grid(i3,j3) - this_grid(i4,j4))/dist4_3;
-    this_grid(i2,j2) = this_grid(i3,j3) + slope*dist3_2;
-    this_grid(i1,j1) = this_grid(i3,j3) + slope*dist3_1;
+
+  Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y], &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy];
+  m_rho(i1,j1) = 0.25*m_rho(i3,j3); m_rho(i2,j2) = 0.5*m_rho(i3,j3);
+  m_thermal_energy(i1,j1) = 0.25*m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = 0.5*m_thermal_energy(i3,j3);
+
+  double vel_x = m_mom_x(i3,j3)/m_rho(i3,j3);
+  double vel_y = m_mom_y(i3,j3)/m_rho(i3,j3);
+
+  if(i1 > i2) vel_x = std::abs(vel_x);
+  else if(i2 > i1) vel_x = -std::abs(vel_x);
+  else if(j1 > j2) vel_y = std::abs(vel_y);
+  else if(j2 > j1) vel_y = -std::abs(vel_y);
+  
+  if(i1 == i2){
+    m_mom_x(i1,j1) = m_rho(i1,j1)*vel_x;
+    m_mom_x(i2,j2) = m_rho(i2,j2)*vel_x;
+    m_mom_y(i1,j1) = m_rho(i1,j1)*2.0*vel_y;
+    m_mom_y(i2,j2) = m_rho(i2,j2)*2.0*vel_y;
+  } else {
+    assert(j1 == j2);
+    m_mom_x(i1,j1) = m_rho(i1,j1)*2.0*vel_x;
+    m_mom_x(i2,j2) = m_rho(i2,j2)*2.0*vel_x;
+    m_mom_y(i1,j1) = m_rho(i1,j1)*vel_y;
+    m_mom_y(i2,j2) = m_rho(i2,j2)*vel_y;
   }
 }
 

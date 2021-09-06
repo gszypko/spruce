@@ -24,8 +24,8 @@ Grid PlasmaDomain::upwindSurface(const Grid &cell_center, const Grid &vel, const
     InstrumentationTimer timer("loop thread");
     #endif
     #pragma omp for collapse(2)
-    for (int i = m_xl; i <= m_xu; i++){
-      for(int j = m_yl; j <= m_yu; j++){
+    for (int i = m_xl; i <= m_xu+1-index; i++){
+      for(int j = m_yl; j <= m_yu+index; j++){
         //Handle direction of cell_center being considered (i.e. index for differencing)
         int i2 = i, j2 = j;
         int i0, i1, i3, j0, j1, j3;
@@ -86,7 +86,7 @@ Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, 
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid denom = m_grids[d_x]*(double)(1-index) + m_grids[d_y]*(double)(index);
-  Grid div = Grid::Ones(xdim,ydim);
+  Grid div = Grid::Zero(xdim,ydim);
   #pragma omp parallel
   {
     #if BENCHMARKING_ON
