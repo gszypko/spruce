@@ -254,7 +254,8 @@ def updatefig(*args):
     global quiv
     frame = (frame + 1)%len(var)
     im.set_data(np.transpose(var[frame]))
-    if output_var != "rho": im.autoscale()
+    # if output_var != "rho": im.autoscale()
+    im.autoscale()
     contour_color_axes.cla()
     var_colorbar = fig.colorbar(im, cax=contour_color_axes)
     var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")

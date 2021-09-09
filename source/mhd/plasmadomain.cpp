@@ -17,13 +17,11 @@
 
 PlasmaDomain::PlasmaDomain(const char* out_path, const char* config_path, bool continue_mode)
 {
-  m_xdim = 1; m_ydim = 1; //default values, overwritten by initialize()
+  m_xdim = 1; m_ydim = 1; open_boundary_strength = 1.0; //default values, overwritten by initialize()
   m_time = 0.0; m_iter = 0;
   this->continue_mode = continue_mode;
-  // m_run_name = std::string(out_path);
   for(int i=0; i<num_variables; i++){
     m_output_flags.push_back(false);
-    // m_state_flags.push_back(false);
   }
   readConfigFile(config_path);
   m_out_directory = std::filesystem::path(out_path);

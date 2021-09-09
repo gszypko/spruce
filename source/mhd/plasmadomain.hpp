@@ -79,6 +79,7 @@ private:
   int max_iterations; //Upper bound on simulation iterations; unbounded if negative
   //Boundary condition settings
   BoundaryCondition x_bound_1, x_bound_2, y_bound_1, y_bound_2;
+  double open_boundary_strength;
   //Physics settings
   bool radiative_losses, ambient_heating, thermal_conduction;
   bool flux_saturation; //Config for thermal conduction

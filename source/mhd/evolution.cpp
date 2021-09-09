@@ -433,29 +433,65 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
   Grid &m_pos_x = m_grids[pos_x], &m_pos_y = m_grids[pos_y];
 
   Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y], &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy];
+
   m_rho(i1,j1) = 0.25*m_rho(i3,j3); m_rho(i2,j2) = 0.5*m_rho(i3,j3);
   m_thermal_energy(i1,j1) = 0.25*m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = 0.5*m_thermal_energy(i3,j3);
 
   double vel_x = m_mom_x(i3,j3)/m_rho(i3,j3);
   double vel_y = m_mom_y(i3,j3)/m_rho(i3,j3);
 
-  if(i1 > i2) vel_x = std::abs(vel_x);
-  else if(i2 > i1) vel_x = -std::abs(vel_x);
-  else if(j1 > j2) vel_y = std::abs(vel_y);
-  else if(j2 > j1) vel_y = -std::abs(vel_y);
+  // double boundary_strength = 1.0;
+  double c_s = std::sqrt(m_adiabatic_index*m_grids[press](i3,j3)/m_rho(i3,j3));
+  double boundary_vel = open_boundary_strength*c_s;
+  if(i2 > i1 || j2 > j1) boundary_vel *= -1.0;
+
+
+  // if(i1 > i2) vel_x = std::abs(vel_x); 
+  // else if(i2 > i1) vel_x = -std::abs(vel_x);
+  // else if(j1 > j2) vel_y = std::abs(vel_y);
+  // else if(j2 > j1) vel_y = -std::abs(vel_y);
   
+  //Determine ghost cell velocity s.t. interpolated velocity at interior cell boundary is some multiple of sound speed, outward
+  double dist = std::abs(m_pos_x(i3,j3) - m_pos_x(i2,j2) + m_pos_y(i3,j3) - m_pos_y(i2,j2));
   if(i1 == i2){
+    double ghost_vel = (dist*(boundary_vel) - 0.5*m_grids[d_y](i2,j2)*vel_y)/(0.5*m_grids[d_y](i3,j3)); //add vel_y to c_s? sound speed relative to current bulk velocity?
     m_mom_x(i1,j1) = m_rho(i1,j1)*vel_x;
     m_mom_x(i2,j2) = m_rho(i2,j2)*vel_x;
-    m_mom_y(i1,j1) = m_rho(i1,j1)*2.0*vel_y;
-    m_mom_y(i2,j2) = m_rho(i2,j2)*2.0*vel_y;
+    m_mom_y(i1,j1) = m_rho(i1,j1)*ghost_vel;
+    m_mom_y(i2,j2) = m_rho(i2,j2)*ghost_vel;
   } else {
     assert(j1 == j2);
-    m_mom_x(i1,j1) = m_rho(i1,j1)*2.0*vel_x;
-    m_mom_x(i2,j2) = m_rho(i2,j2)*2.0*vel_x;
+    double ghost_vel = (dist*(boundary_vel) - 0.5*m_grids[d_x](i2,j2)*vel_x)/(0.5*m_grids[d_x](i3,j3));
+    m_mom_x(i1,j1) = m_rho(i1,j1)*ghost_vel;
+    m_mom_x(i2,j2) = m_rho(i2,j2)*ghost_vel;
     m_mom_y(i1,j1) = m_rho(i1,j1)*vel_y;
     m_mom_y(i2,j2) = m_rho(i2,j2)*vel_y;
   }
+
+  // if(i1 == i2){
+  //   m_mom_x(i1,j1) = m_rho(i1,j1)*vel_x;
+  //   m_mom_x(i2,j2) = m_rho(i2,j2)*vel_x;
+  //   m_mom_y(i1,j1) = m_rho(i1,j1)*2.0*vel_y;
+  //   m_mom_y(i2,j2) = m_rho(i2,j2)*2.0*vel_y;
+  // } else {
+  //   assert(j1 ==  j2);
+  //   m_mom_x(i1,j1) = m_rho(i1,j1)*2.0*vel_x;
+  //   m_mom_x(i2,j2) = m_rho(i2,j2)*2.0*vel_x;
+  //   m_mom_y(i1,j1) = m_rho(i1,j1)*vel_y;
+  //   m_mom_y(i2,j2) = m_rho(i2,j2)*vel_y;
+  // }
+  // if(i1 == i2){
+  //   m_mom_x(i1,j1) = m_rho(i1,j1)*2.0*vel_x;
+  //   m_mom_x(i2,j2) = m_rho(i2,j2)*2.0*vel_x;
+  //   m_mom_y(i1,j1) = m_rho(i1,j1)*2.0*vel_y;
+  //   m_mom_y(i2,j2) = m_rho(i2,j2)*2.0*vel_y;
+  // } else {
+  //   assert(j1 == j2);
+  //   m_mom_x(i1,j1) = m_rho(i1,j1)*2.0*vel_x;
+  //   m_mom_x(i2,j2) = m_rho(i2,j2)*2.0*vel_x;
+  //   m_mom_y(i1,j1) = m_rho(i1,j1)*2.0*vel_y;
+  //   m_mom_y(i2,j2) = m_rho(i2,j2)*2.0*vel_y;
+  // }
 }
 
 //Applies the wall boundary condition to the cells indexed by the given indices
