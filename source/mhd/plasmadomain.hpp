@@ -95,6 +95,8 @@ private:
   //Output settings
   int iter_output_interval;
   double time_output_interval;
+  int std_out_interval; //number of iterations between printing an update to standard out
+  bool safe_state_mode; //when true, outputs a state file for every iteration; when false, only outputs a state when the run completes without issue
   bool continue_mode; //true when continuing previous run; appends results to mhd.out and replaces mhd.state
   /*********************************************************************/ 
 

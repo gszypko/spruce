@@ -17,7 +17,11 @@
 
 PlasmaDomain::PlasmaDomain(const char* out_path, const char* config_path, bool continue_mode)
 {
-  m_xdim = 1; m_ydim = 1; open_boundary_strength = 1.0; //default values, overwritten by initialize()
+  //DEFAULT VALUES, TO BE OVERWRITTEN BY readConfigFile
+  m_xdim = 1; m_ydim = 1; open_boundary_strength = 1.0;
+  std_out_interval = 1;
+  safe_state_mode = true;
+  //***************************************************
   m_time = 0.0; m_iter = 0;
   this->continue_mode = continue_mode;
   for(int i=0; i<num_variables; i++){

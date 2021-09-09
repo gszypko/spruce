@@ -18,9 +18,10 @@ void PlasmaDomain::run(double time_duration)
     advanceTime();
     if((iter_output_interval > 0 && m_iter%iter_output_interval == 0) || (time_output_interval > 0.0
         && (int)(m_time/time_output_interval) > (int)(old_time/time_output_interval))) outputCurrentState();
-    writeStateFile();
+    if(safe_state_mode) writeStateFile();
   }
-  cleanUpStateFiles();
+  if(safe_state_mode) cleanUpStateFiles();
+  else writeStateFile();
 }
 
 void PlasmaDomain::advanceTime(bool verbose)
@@ -40,7 +41,7 @@ void PlasmaDomain::advanceTime(bool verbose)
     subcycles_rad = (int)(min_dt/min_dt_rad)+1;
   }
 
-  if(verbose) printUpdate(min_dt,subcycles_thermal,subcycles_rad);
+  if(std_out_interval > 0 && m_iter%std_out_interval == 0) printUpdate(min_dt,subcycles_thermal,subcycles_rad);
 
   if(thermal_conduction) subcycleConduction(subcycles_thermal,min_dt);
   if(radiative_losses) subcycleRadiation(subcycles_rad,min_dt);

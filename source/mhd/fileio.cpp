@@ -24,7 +24,7 @@ const std::vector<std::string> PlasmaDomain::m_config_names = {
   "thermal_conduction","flux_saturation","temp_chromosphere","radiation_ramp","heating_rate",
   "epsilon","epsilon_thermal","epsilon_rad","epsilon_viscous","dt_thermal_min","rho_min",
   "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
-  "output_flags","xdim","ydim","open_boundary_strength"
+  "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode"
 };
 
 enum class Config {
@@ -32,7 +32,7 @@ enum class Config {
   thermal_conduction, flux_saturation, temp_chromosphere, radiation_ramp, heating_rate,
   epsilon, epsilon_thermal, epsilon_rad, epsilon_viscous, dt_thermal_min, rho_min,
   temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
-  output_flags, xdim, ydim, open_boundary_strength
+  output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode
 };
 
 //Read in variables from .state file
@@ -161,7 +161,10 @@ void PlasmaDomain::outputCurrentState()
 void PlasmaDomain::writeStateFile(std::string filename,int precision) const
 {
   std::ofstream state_file;
-  if (filename.compare("mhd") == 0) state_file.open(m_out_directory/(filename+std::to_string(m_iter%2)+".state"));
+  if (filename.compare("mhd") == 0){
+    if(safe_state_mode) state_file.open(m_out_directory/(filename+std::to_string(m_iter%2)+".state"));
+    else state_file.open(m_out_directory/(filename+".state"));
+  }
   else state_file.open(m_out_directory/(filename+".state"));
   state_file << "xdim,ydim\n";
   state_file << m_xdim << "," << m_ydim << std::endl;
@@ -242,6 +245,8 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::xdim): m_xdim = std::stoi(rhs); break;
   case static_cast<int>(Config::ydim): m_ydim = std::stoi(rhs); break;
   case static_cast<int>(Config::open_boundary_strength): open_boundary_strength = std::stod(rhs); break;
+  case static_cast<int>(Config::safe_state_mode): safe_state_mode = (rhs == "true"); break;
+  case static_cast<int>(Config::std_out_interval): std_out_interval = std::stoi(rhs); break;
   default: break;
   }
 }
