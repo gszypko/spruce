@@ -443,8 +443,8 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
 
   // double boundary_strength = 1.0;
   double c_s = std::sqrt(m_adiabatic_index*m_grids[press](i3,j3)/m_rho(i3,j3));
-  double boundary_vel = open_boundary_strength*c_s;
-  if(i2 > i1 || j2 > j1) boundary_vel *= -1.0;
+  double boost_vel = open_boundary_strength*c_s;
+  if(i2 > i1 || j2 > j1) boost_vel *= -1.0;
 
 
   // if(i1 > i2) vel_x = std::abs(vel_x); 
@@ -455,6 +455,9 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
   //Determine ghost cell velocity s.t. interpolated velocity at interior cell boundary is some multiple of sound speed, outward
   double dist = std::abs(m_pos_x(i3,j3) - m_pos_x(i2,j2) + m_pos_y(i3,j3) - m_pos_y(i2,j2));
   if(i1 == i2){
+    double boundary_vel;
+    if(j1 > j2) boundary_vel = std::max(0.0, vel_y + boost_vel);
+    else { assert(j2 > j1); boundary_vel = std::min(0.0, vel_y + boost_vel); }
     double ghost_vel = (dist*(boundary_vel) - 0.5*m_grids[d_y](i2,j2)*vel_y)/(0.5*m_grids[d_y](i3,j3)); //add vel_y to c_s? sound speed relative to current bulk velocity?
     m_mom_x(i1,j1) = m_rho(i1,j1)*vel_x;
     m_mom_x(i2,j2) = m_rho(i2,j2)*vel_x;
@@ -462,6 +465,9 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
     m_mom_y(i2,j2) = m_rho(i2,j2)*ghost_vel;
   } else {
     assert(j1 == j2);
+    double boundary_vel;
+    if(i1 > i2) boundary_vel = std::max(0.0, vel_x + boost_vel);
+    else { assert(i2 > i1); boundary_vel = std::min(0.0, vel_x + boost_vel); }
     double ghost_vel = (dist*(boundary_vel) - 0.5*m_grids[d_x](i2,j2)*vel_x)/(0.5*m_grids[d_x](i3,j3));
     m_mom_x(i1,j1) = m_rho(i1,j1)*ghost_vel;
     m_mom_x(i2,j2) = m_rho(i2,j2)*ghost_vel;
