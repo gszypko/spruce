@@ -5,6 +5,7 @@ import math
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from matplotlib.image import NonUniformImage
 import sys
 import argparse
 
@@ -175,33 +176,66 @@ if output_var == "rho":
 fig, ax = plt.subplots()
 
 frame = 0
+x = X[:,0]
+y = Y[0,:]
 if output_var == "rad":
-  im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+  # im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+  #   interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-5, base=10))
+  # ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
+  # im.set_clim(vmin=1e-4)
+  # var_colorbar = fig.colorbar(im)
+  # var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
+  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-5, base=10))
-  ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
+  im.set_data(x,y,np.transpose(var[frame]))
   im.set_clim(vmin=1e-4)
+  ax.add_image(im)
+  ax.set(xlim=(x_min,x_max), ylim=(y_min,y_max), xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
   var_colorbar = fig.colorbar(im)
   var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
 elif output_var == "dt" or output_var == "dt_thermal" or output_var == "dt_rad":
-  im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-10, base=10))
-  ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
+  im.set_data(x,y,np.transpose(var[frame]))
   if(np.isnan(np.nanmax(var))): im.set_clim(vmin=1e-4,vmax=1.0)
   else: im.set_clim(vmin=1e-4,vmax=np.nanmax(var))
+  ax.add_image(im)
+  ax.set(xlim=(x_min,x_max), ylim=(y_min,y_max), xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
   var_colorbar = fig.colorbar(im)
   var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
+  # im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+  #   interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-10, base=10))
+  # ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
+  # if(np.isnan(np.nanmax(var))): im.set_clim(vmin=1e-4,vmax=1.0)
+  # else: im.set_clim(vmin=1e-4,vmax=np.nanmax(var))
+  # var_colorbar = fig.colorbar(im)
+  # var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
 elif output_var == "vel_x" or output_var == "vel_y":
-  im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest')
-  ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
+  im.set_data(x,y,np.transpose(var[frame]))
+  ax.add_image(im)
+  ax.set(xlim=(x_min,x_max), ylim=(y_min,y_max), xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
   var_colorbar = fig.colorbar(im)
   var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
+  # im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+  #   interpolation='nearest')
+  # ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
+  # var_colorbar = fig.colorbar(im)
+  # var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
 else:
-  im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.LogNorm())
-  ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
+  im.set_data(x,y,np.transpose(var[frame]))
+  ax.add_image(im)
+  ax.set(xlim=(x_min,x_max), ylim=(y_min,y_max), xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
   var_colorbar = fig.colorbar(im)
   var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
+  # im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+  #   interpolation='nearest', norm=matplotlib.colors.LogNorm())
+  # ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
+  # var_colorbar = fig.colorbar(im)
+  # var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
 
 contour_color_axes = fig.axes[-1]
 
@@ -253,7 +287,7 @@ def updatefig(*args):
     global ax
     global quiv
     frame = (frame + 1)%len(var)
-    im.set_data(np.transpose(var[frame]))
+    im.set_data(x,y,np.transpose(var[frame]))
     # if output_var != "rho": im.autoscale()
     im.autoscale()
     contour_color_axes.cla()

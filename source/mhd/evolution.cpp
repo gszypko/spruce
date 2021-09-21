@@ -174,16 +174,33 @@ void PlasmaDomain::computeConstantTerms()
   Grid &m_d_x = m_grids[d_x], &m_d_y = m_grids[d_y];
   Grid &m_pos_x = m_grids[pos_x], &m_pos_y = m_grids[pos_y];
 
-  //DO NOT PARALLELIZE; ordering matters here, spacing information propagates
-  //from i=0 and j=0 borders outward (to support potential for non-uniform grids)
+  // //DO NOT PARALLELIZE; ordering matters here, spacing information propagates
+  // //from i=0 and j=0 borders outward (to support potential for non-uniform grids)
+  // //this method is ultimately not going to work; so long as cell center positions are arbitrary there will be
+  // //scenarios where you cannot construct cells with the appropriate center locations
+  // //need to define things using dx/dy from input
+  // for(int i=0; i<m_xdim; i++){
+  //   for(int j=0; j<m_ydim; j++){
+  //     if(i==0) m_d_x(0,j) = std::abs(m_pos_x(1,j) - m_pos_x(0,j));
+  //     else m_d_x(i,j) = 2.0*std::abs(m_pos_x(i,j) - m_pos_x(i-1,j)) - m_d_x(i-1,j);
+  //     if(j==0) m_d_y(i,0) = std::abs(m_pos_y(i,1) - m_pos_y(i,0));
+  //     else m_d_y(i,j) = 2.0*std::abs(m_pos_y(i,j) - m_pos_y(i,j-1)) - m_d_y(i,j-1);
+  //   }
+  // }
+
   for(int i=0; i<m_xdim; i++){
     for(int j=0; j<m_ydim; j++){
-      if(i==0) m_d_x(0,j) = m_pos_x(1,j) - m_pos_x(0,j);
-      else m_d_x(i,j) = 2.0*(m_pos_x(i,j) - m_pos_x(i-1,j)) - m_d_x(i-1,j);
-      if(j==0) m_d_y(i,0) = m_pos_y(i,1) - m_pos_y(i,0);
-      else m_d_y(i,j) = 2.0*(m_pos_y(i,j) - m_pos_y(i,j-1)) - m_d_y(i,j-1);
+      if(i==0) m_pos_x(i,j) = 0.5*m_d_x(i,j);
+      else m_pos_x(i,j) = m_pos_x(i-1,j) + 0.5*m_d_x(i-1,j) + 0.5*m_d_x(i,j);
+      if(j==0) m_pos_y(i,j) = 0.5*m_d_y(i,j);
+      else m_pos_y(i,j) = m_pos_y(i,j-1) + 0.5*m_d_y(i,j-1) + 0.5*m_d_y(i,j);
     }
   }
+  // std::cout << m_pos_x << std::endl;
+  // std::cout << m_pos_y << std::endl;
+  // std::cout << m_d_x << std::endl;
+  // std::cout << m_d_y << std::endl;
+  // abort();
 
   m_grids[lorentz_force_x] = - derivative1D(m_grids[mag_pxx], 0) - derivative1D(m_grids[mag_pxy], 1);
   m_grids[lorentz_force_y] = - derivative1D(m_grids[mag_pxy], 0) - derivative1D(m_grids[mag_pyy], 1);
@@ -474,6 +491,33 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
     m_mom_y(i1,j1) = m_rho(i1,j1)*vel_y;
     m_mom_y(i2,j2) = m_rho(i2,j2)*vel_y;
   }
+  // // double boundary_strength = 1.0;
+  // double c_s = std::sqrt(m_adiabatic_index*m_grids[press](i3,j3)/m_rho(i3,j3));
+  // double boundary_vel = open_boundary_strength*c_s;
+  // if(i2 > i1 || j2 > j1) boundary_vel *= -1.0;
+
+
+  // // if(i1 > i2) vel_x = std::abs(vel_x); 
+  // // else if(i2 > i1) vel_x = -std::abs(vel_x);
+  // // else if(j1 > j2) vel_y = std::abs(vel_y);
+  // // else if(j2 > j1) vel_y = -std::abs(vel_y);
+  
+  // //Determine ghost cell velocity s.t. interpolated velocity at interior cell boundary is some multiple of sound speed, outward
+  // double dist = std::abs(m_pos_x(i3,j3) - m_pos_x(i2,j2) + m_pos_y(i3,j3) - m_pos_y(i2,j2));
+  // if(i1 == i2){
+  //   double ghost_vel = (dist*(boundary_vel) - 0.5*m_grids[d_y](i2,j2)*vel_y)/(0.5*m_grids[d_y](i3,j3)); //add vel_y to c_s? sound speed relative to current bulk velocity?
+  //   m_mom_x(i1,j1) = m_rho(i1,j1)*vel_x;
+  //   m_mom_x(i2,j2) = m_rho(i2,j2)*vel_x;
+  //   m_mom_y(i1,j1) = m_rho(i1,j1)*ghost_vel;
+  //   m_mom_y(i2,j2) = m_rho(i2,j2)*ghost_vel;
+  // } else {
+  //   assert(j1 == j2);
+  //   double ghost_vel = (dist*(boundary_vel) - 0.5*m_grids[d_x](i2,j2)*vel_x)/(0.5*m_grids[d_x](i3,j3));
+  //   m_mom_x(i1,j1) = m_rho(i1,j1)*ghost_vel;
+  //   m_mom_x(i2,j2) = m_rho(i2,j2)*ghost_vel;
+  //   m_mom_y(i1,j1) = m_rho(i1,j1)*vel_y;
+  //   m_mom_y(i2,j2) = m_rho(i2,j2)*vel_y;
+  // }
 
   // if(i1 == i2){
   //   m_mom_x(i1,j1) = m_rho(i1,j1)*vel_x;

@@ -19,17 +19,77 @@ namespace SolarUtils {
     double base_rho = ion_mass*n_base; //initial mass density at base in g cm ^-3
     double scale_height = 2.0*K_B*init_temp/(ion_mass*BASE_GRAV);
     Grid pos_x(xdim,ydim); Grid pos_y(xdim,ydim);
+    Grid d_x(xdim,ydim); Grid d_y(xdim,ydim);
     double dx = 4.0*PI*scale_height/xdim, dy = 4.0*PI*scale_height/ydim; //this ensures correct periodicity of bipolar field
-    for(int i=0; i<xdim; i++){
+
+    if(problem_type == "corona" || problem_type == "uniform"){
+      // for(int i=0; i<xdim; i++){
+      //   for(int j=0; j<ydim; j++){
+      //     pos_x(i,j) = (i - (double)(xdim-1)*0.5)*dx;
+      //     pos_y(i,j) = j*dy;
+      //   }
+      // }
+      for(int i=0; i<xdim; i++){
+        for(int j=0; j<ydim; j++){
+          d_x(i,j) = dx;
+          d_y(i,j) = dy;
+        }
+      }
+    } else {
+      double growth_factor = 1.1;
+      assert(xdim%4 == 0 && ydim%4 == 0);
+      int x_core_size = xdim/2, y_core_size = ydim/2;
       for(int j=0; j<ydim; j++){
-        pos_x(i,j) = (i - (double)(xdim-1)*0.5)*dx;
-        pos_y(i,j) = j*dy;
+        for(int i=(xdim/2 - x_core_size/2); i<(xdim/2 + x_core_size/2); i++){
+          // pos_x(i,j) = (i - (double)(xdim-1)*0.5)*dx;
+          d_x(i,j) = dx;
+        }
+        double this_dx = growth_factor*dx;
+        for(int i=(xdim/2 - x_core_size/2) - 1; i>=0; i--){
+          // pos_x(i,j) = pos_x(i+1,j) - this_dx;
+          d_x(i,j) = this_dx;
+          this_dx *= growth_factor;
+        }
+        this_dx = growth_factor*dx;
+        for(int i=(xdim/2 + x_core_size/2); i<xdim; i++){
+          // pos_x(i,j) = pos_x(i-1,j) + this_dx;
+          d_x(i,j) = this_dx;
+          this_dx *= growth_factor;
+        }
+      }
+      for(int i=0; i<xdim; i++){
+        for(int j=(ydim/2 - y_core_size/2); j<(ydim/2 + y_core_size/2); j++){
+          // pos_y(i,j) = (j - (double)(ydim-1)*0.5)*dy;
+          d_y(i,j) = dy;
+        }
+        double this_dy = growth_factor*dy;
+        for(int j=(ydim/2 - y_core_size/2) - 1; j>=0; j--){
+          // pos_y(i,j) = pos_y(i,j+1) - this_dy;
+          d_y(i,j) = this_dy;
+          this_dy *= growth_factor;
+        }
+        this_dy = growth_factor*dy;
+        for(int j=(ydim/2 + y_core_size/2); j<ydim; j++){
+          // pos_y(i,j) = pos_y(i,j-1) + this_dy;
+          d_y(i,j) = this_dy;
+          this_dy *= growth_factor;
+        }
       }
     }
 
+    for(int i=0; i<xdim; i++){
+      for(int j=0; j<ydim; j++){
+        if(i==0) pos_x(i,j) = 0.5*d_x(i,j);
+        else pos_x(i,j) = pos_x(i-1,j) + 0.5*d_x(i-1,j) + 0.5*d_x(i,j);
+        if(j==0) pos_y(i,j) = 0.5*d_y(i,j);
+        else pos_y(i,j) = pos_y(i,j-1) + 0.5*d_y(i,j-1) + 0.5*d_y(i,j);
+      }
+    }
     MhdInp mi(xdim,ydim);
-    mi.set_var(PlasmaDomain::pos_x,pos_x);
-    mi.set_var(PlasmaDomain::pos_y,pos_y);
+    // mi.set_var(PlasmaDomain::pos_x,pos_x);
+    // mi.set_var(PlasmaDomain::pos_y,pos_y);
+    mi.set_var(PlasmaDomain::d_x,d_x);
+    mi.set_var(PlasmaDomain::d_y,d_y);
     mi.set_var(PlasmaDomain::mom_x, Grid(xdim,ydim,0.0));
     mi.set_var(PlasmaDomain::mom_y, Grid(xdim,ydim,0.0));
 
@@ -54,7 +114,7 @@ namespace SolarUtils {
       double stdevy = pms.getvar("stdevy");
       // mi.set_var(PlasmaDomain::temp, GaussianGrid(xdim,ydim,init_temp,10.0*init_temp,xdim/stdevx,ydim/stdevy));
       mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
-      mi.set_var(PlasmaDomain::rho, GaussianGrid(xdim,ydim,0.1*base_rho,10.0*base_rho,xdim/stdevx,ydim/stdevy));
+      mi.set_var(PlasmaDomain::rho, GaussianGrid(pos_x,pos_y,0.1*base_rho,10.0*base_rho,xdim/stdevx,ydim/stdevy));
       mi.set_var(PlasmaDomain::b_x, Grid(xdim,ydim,0.0));
       mi.set_var(PlasmaDomain::b_y, Grid(xdim,ydim,0.0));
       mi.set_var(PlasmaDomain::b_z, Grid(xdim,ydim,0.0));
@@ -128,11 +188,13 @@ namespace SolarUtils {
 
   //Generates gaussian initial condition for a variable, centered at middle of grid
   //std_dev_x and std_dev_y are the standard deviation of the distribution in the x
-  //and y directions, in units of grid cell widths
-  Grid GaussianGrid(int xdim, int ydim, double min, double max, double std_dev_x, double std_dev_y){
+  //and y directions (units of distance)
+  Grid GaussianGrid(const Grid& pos_x, const Grid& pos_y, double min, double max, double std_dev_x, double std_dev_y){
     #if BENCHMARKING_ON
     InstrumentationTimer timer(__PRETTY_FUNCTION__);
     #endif
+    assert(pos_x.rows() == pos_y.rows() && pos_x.cols() == pos_y.cols());
+    int xdim = pos_x.rows(), ydim = pos_x.cols();
     std::vector<double> gauss_x(xdim), gauss_y(ydim);
     for(int i=0; i<xdim; i++){
       gauss_x[i] = std::exp(-0.5*std::pow(((double)i-0.5*(double)(xdim-1))/std_dev_x,2.0));
@@ -146,6 +208,7 @@ namespace SolarUtils {
         result(i,j) = (max-min)*gauss_x[i]*gauss_y[j] + min;
       }
     }
+    // std::cout << result << std::endl;
     return result;
   }
 

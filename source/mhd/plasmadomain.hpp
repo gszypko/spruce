@@ -28,7 +28,7 @@ public:
 
   //state variables (taken as input, carried over between iterations)
   enum StateVars { state_var_start=0,
-                        pos_x=state_var_start,pos_y,rho,temp,mom_x,mom_y,b_x,b_y,b_z,grav_x,grav_y,
+                        d_x=state_var_start,d_y,rho,temp,mom_x,mom_y,b_x,b_y,b_z,grav_x,grav_y,
                         state_var_end };
   
   //derived variables (derived from state variables)
@@ -38,7 +38,7 @@ public:
 
   //constant variables (unchanging bw iterations, derived from state variables)
   enum ConstantVars { constant_var_start=derived_var_end,
-                           b_magnitude=constant_var_start,b_hat_x,b_hat_y,d_x,d_y,mag_press,lorentz_force_x,lorentz_force_y,
+                           b_magnitude=constant_var_start,b_hat_x,b_hat_y,pos_x,pos_y,mag_press,lorentz_force_x,lorentz_force_y,
                            mag_pxx,mag_pyy,mag_pzz,mag_pxy,mag_pxz,mag_pyz,
                            constant_var_end, num_variables=constant_var_end };
 
@@ -145,10 +145,10 @@ private:
   //Compute single-direction divergence term for non-transport term (central differencing)
   Grid derivative1D(const Grid &quantity, const int index);
 
-  //Compute divergence term for simulation parameter "quantity"
-  //"quantity","vx","vy" used for transport term
-  //Non-transport terms contained in "nontransp_x", "nontransp_y"
-  Grid divergence(const Grid &quantity, const Grid &nontransp_x, const Grid &nontransp_y);
+  // //Compute divergence term for simulation parameter "quantity"
+  // //"quantity","vx","vy" used for transport term
+  // //Non-transport terms contained in "nontransp_x", "nontransp_y"
+  // Grid divergence(const Grid &quantity, const Grid &nontransp_x, const Grid &nontransp_y);
 
   //Compute single-direction second derivative
   Grid secondDerivative1D(const Grid &quantity, const int index);
@@ -172,6 +172,9 @@ private:
   //Computes saturated conductive flux at each point in grid,
   //then ensures that provided fluxes do not exceed the saturation point
   void saturateConductiveFlux(Grid &flux_out_x, Grid &flux_out_y, const Grid &rho, const Grid &temp);
+
+  double boundaryInterpolate(const Grid &quantity, int i1, int j1, int i2, int j2);
+  double boundaryExtrapolate(const Grid &quantity, int i1, int j1, int i2, int j2);
 };
 
 #endif
