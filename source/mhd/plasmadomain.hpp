@@ -54,6 +54,14 @@ public:
   //Time Evolution
   void run(double time_duration);
 
+  //Takes not-necessarily-uniform cell sizes d_x and d_y and converts to cell center positions,
+  //returned as the first (x position) and second (y position) indicies of a vector of Grids
+  //x_origin and y_origin specify location of the origin (0,0) in the domain:
+  //"lower" is the default, "center" and "upper" are also options for each
+  //For example, x_origin = "center" and y_origin = "center" places the origin
+  //at the center of the domain.
+  static std::vector<Grid> convertCellSizesToCellPositions(const Grid& d_x, const Grid& d_y, std::string x_origin, std::string y_origin);
+
 private:
   //Strings corresponding to variables, settings, boundary conditions for file I/O
   //TODO: Move initialization here, now that no longer static!
@@ -98,6 +106,7 @@ private:
   int std_out_interval; //number of iterations between printing an update to standard out
   bool safe_state_mode; //when true, outputs a state file for every iteration; when false, only outputs a state when the run completes without issue
   bool continue_mode; //true when continuing previous run; appends results to mhd.out and replaces mhd.state
+  std::string x_origin, y_origin; //specifies where (0,0) position is located; each can be one of "lower", "center", or "upper"
   /*********************************************************************/ 
 
   void advanceTime(bool verbose = true);
@@ -175,6 +184,7 @@ private:
 
   double boundaryInterpolate(const Grid &quantity, int i1, int j1, int i2, int j2);
   double boundaryExtrapolate(const Grid &quantity, int i1, int j1, int i2, int j2);
+
 };
 
 #endif
