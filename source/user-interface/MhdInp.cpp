@@ -27,11 +27,27 @@ MhdInp& MhdInp::operator=(const MhdInp& other)
 }
 
 // set an element of <m_grids> corresponding to integer input
-void MhdInp::set_var(const int& var,const Grid& grid)
+// When setting d_x or d_y, origin_pos must be specified as "lower", "center", or "upper"
+// to define to location of the origin in the domain for the generated pos_x and pos_y
+void MhdInp::set_var(const int& var,const Grid& grid,const std::string origin_pos)
 {
     if (grid.rows() != m_Nx || grid.cols() != m_Ny) std::cerr << "Input grid dimensions for m_grid[" << var << "]." << std::endl;
+    if(var == PlasmaDomain::pos_x || var == PlasmaDomain::pos_y){
+        std::cerr << "Position grids are only to be set by way of defining d_x and d_y" << std::endl;
+        return;
+    }
     m_grids[var] = grid;
     m_initialized[var] = true;
+    if(var == PlasmaDomain::d_x){
+        if(origin_pos == "") std::cerr << "Warning: x origin position not specified; default is lower bound" << std::endl;
+        m_grids[PlasmaDomain::pos_x] = PlasmaDomain::convertCellSizesToCellPositions(grid,0,origin_pos);
+        m_initialized[PlasmaDomain::pos_x] = true;
+    }
+    else if(var == PlasmaDomain::d_y){
+        if(origin_pos == "") std::cerr << "Warning: y origin position not specified; default is lower bound" << std::endl;
+        m_grids[PlasmaDomain::pos_y] = PlasmaDomain::convertCellSizesToCellPositions(grid,1,origin_pos);
+        m_initialized[PlasmaDomain::pos_y] = true;
+    }
 }
 
 void MhdInp::set_ion_mass(double mass)
@@ -71,7 +87,7 @@ double MhdInp::duration()
 void MhdInp::all_initialized() const
 {
     for (int i = PlasmaDomain::state_var_start; i < PlasmaDomain::state_var_end; i++){
-        if (!m_initialized[i]) std::cerr << "The grid for <" << m_varnames[i] << "> was not initialized." << std::endl;
+        if (!m_initialized[i]) std::cerr << "The grid at index " << i << " was not initialized." << std::endl;
     } 
 }
 

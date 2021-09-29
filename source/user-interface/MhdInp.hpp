@@ -13,7 +13,7 @@ public:
     MhdInp& operator=(const MhdInp& other);
     MhdInp(size_t Nx,size_t Ny);
     MhdInp() : MhdInp(1,1) {}
-    void set_var(const int& var,const Grid& grid);
+    void set_var(const int& var,const Grid& grid,const std::string origin_pos="");
     void set_ion_mass(double mass);
     void set_adiabatic_index(double index);
     void set_duration(double duration);
@@ -25,7 +25,7 @@ public:
 private:
     size_t m_Nx; // number of elements along x-axis contained in <m_grids> (i.e., the rows of the grid)
     size_t m_Ny; // number of elements along y-axis contained in <m_grids> (i.e., the columns of the grid)
-    const std::vector<std::string> m_varnames { "pos_x","pos_y","rho","temp","mom_x","mom_y","b_x","b_y","b_z","grav_x","grav_y" };
+    // const std::vector<std::string> m_varnames { "pos_x","pos_y","rho","temp","mom_x","mom_y","b_x","b_y","b_z","grav_x","grav_y" };
     std::vector<Grid> m_grids; // input grids for MHD simulation - enumed by <Vars>
     std::vector<bool> m_initialized; // records whether the user has initialized each element of <m_grids>
     double m_ion_mass;

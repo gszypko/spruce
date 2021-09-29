@@ -11,9 +11,9 @@ const std::vector<std::string> PlasmaDomain::m_boundary_condition_names = {
 //Corresponding variable names for file I/O
 //Must match the ordering of the Variable enum defined in plasmadomain.hpp
 const std::vector<std::string> PlasmaDomain::m_var_names = {
-  "d_x","d_y","rho","temp","mom_x","mom_y","b_x","b_y","b_z","grav_x","grav_y",
+  "d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","b_x","b_y","b_z","grav_x","grav_y",
   "press","thermal_energy","kinetic_energy","rad","dt","dt_thermal","dt_rad","v_x","v_y",
-  "b_magnitude","b_hat_x","b_hat_y","pos_x","pos_y",
+  "b_magnitude","b_hat_x","b_hat_y",
   "mag_press","lorentz_force_x","lorentz_force_y","mag_pxx","mag_pyy","mag_pzz","mag_pxy","mag_pxz","mag_pyz"
 };
 
@@ -24,8 +24,7 @@ const std::vector<std::string> PlasmaDomain::m_config_names = {
   "thermal_conduction","flux_saturation","temp_chromosphere","radiation_ramp","heating_rate",
   "epsilon","epsilon_thermal","epsilon_rad","epsilon_viscous","dt_thermal_min","rho_min",
   "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
-  "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode",
-  "x_origin","y_origin"
+  "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode"
 };
 
 enum class Config {
@@ -33,8 +32,7 @@ enum class Config {
   thermal_conduction, flux_saturation, temp_chromosphere, radiation_ramp, heating_rate,
   epsilon, epsilon_thermal, epsilon_rad, epsilon_viscous, dt_thermal_min, rho_min,
   temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
-  output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode,
-  x_origin, y_origin
+  output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode
 };
 
 //Read in variables from .state file
@@ -249,8 +247,6 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::open_boundary_strength): open_boundary_strength = std::stod(rhs); break;
   case static_cast<int>(Config::safe_state_mode): safe_state_mode = (rhs == "true"); break;
   case static_cast<int>(Config::std_out_interval): std_out_interval = std::stoi(rhs); break;
-  case static_cast<int>(Config::x_origin): x_origin = rhs; break;
-  case static_cast<int>(Config::y_origin): y_origin = rhs; break;
   default: break;
   }
 }

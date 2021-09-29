@@ -28,7 +28,7 @@ public:
 
   //state variables (taken as input, carried over between iterations)
   enum StateVars { state_var_start=0,
-                        d_x=state_var_start,d_y,rho,temp,mom_x,mom_y,b_x,b_y,b_z,grav_x,grav_y,
+                        d_x=state_var_start,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,b_x,b_y,b_z,grav_x,grav_y,
                         state_var_end };
   
   //derived variables (derived from state variables)
@@ -38,7 +38,7 @@ public:
 
   //constant variables (unchanging bw iterations, derived from state variables)
   enum ConstantVars { constant_var_start=derived_var_end,
-                           b_magnitude=constant_var_start,b_hat_x,b_hat_y,pos_x,pos_y,mag_press,lorentz_force_x,lorentz_force_y,
+                           b_magnitude=constant_var_start,b_hat_x,b_hat_y,mag_press,lorentz_force_x,lorentz_force_y,
                            mag_pxx,mag_pyy,mag_pzz,mag_pxy,mag_pxz,mag_pyz,
                            constant_var_end, num_variables=constant_var_end };
 
@@ -60,7 +60,7 @@ public:
   //"lower" is the default, "center" and "upper" are also options for each
   //For example, x_origin = "center" and y_origin = "center" places the origin
   //at the center of the domain.
-  static std::vector<Grid> convertCellSizesToCellPositions(const Grid& d_x, const Grid& d_y, std::string x_origin, std::string y_origin);
+  static Grid convertCellSizesToCellPositions(const Grid& d, int index, std::string origin_position);
 
 private:
   //Strings corresponding to variables, settings, boundary conditions for file I/O

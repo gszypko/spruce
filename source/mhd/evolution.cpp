@@ -188,9 +188,10 @@ void PlasmaDomain::computeConstantTerms()
   //   }
   // }
 
-  std::vector<Grid> positions = PlasmaDomain::convertCellSizesToCellPositions(m_d_x,m_d_y,x_origin,y_origin);
-  m_pos_x = positions[0];
-  m_pos_y = positions[1];
+  // NOW HANDLED BEFORE INITIALIZATION BY USER
+  // std::vector<Grid> positions = PlasmaDomain::convertCellSizesToCellPositions(m_d_x,m_d_y,x_origin,y_origin);
+  // m_pos_x = positions[0];
+  // m_pos_y = positions[1];
   // for(int i=0; i<m_xdim; i++){
   //   for(int j=0; j<m_ydim; j++){
   //     if(i==0) m_pos_x(i,j) = 0.5*m_d_x(i,j);
@@ -571,38 +572,4 @@ void PlasmaDomain::wallBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
   m_thermal_energy(i1,j1) = m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = m_thermal_energy(i3,j3); //Match temperature of nearest interior cell
   m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0; //Halt all advection at the wall boundary
   m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
-}
-
-//Takes not-necessarily-uniform cell sizes d_x and d_y and converts to cell center positions,
-//returned as the first (x position) and second (y position) indicies of a vector of Grids
-//x_origin and y_origin specify location of the origin (0,0) in the domain:
-//"lower" is the default, "center" and "upper" are also options for each
-//For example, x_origin = "center" and y_origin = "center" places the origin
-//at the center of the domain.
-std::vector<Grid> PlasmaDomain::convertCellSizesToCellPositions(const Grid& d_x, const Grid& d_y, std::string x_origin, std::string y_origin)
-{
-  int xdim = d_x.rows(), ydim = d_x.cols();
-  assert(xdim == d_y.rows() && ydim == d_y.cols());
-
-  Grid pos_x(xdim,ydim), pos_y(xdim,ydim);
-  for(int i=0; i<xdim; i++){
-    for(int j=0; j<ydim; j++){
-      if(i==0) pos_x(i,j) = 0.5*d_x(i,j);
-      else pos_x(i,j) = pos_x(i-1,j) + 0.5*d_x(i-1,j) + 0.5*d_x(i,j);
-      if(j==0) pos_y(i,j) = 0.5*d_y(i,j);
-      else pos_y(i,j) = pos_y(i,j-1) + 0.5*d_y(i,j-1) + 0.5*d_y(i,j);
-    }
-  }
-  if(x_origin == "center"){
-    pos_x -= 0.5*(pos_x(xdim-1,0) + 0.5*d_x(xdim-1,0));
-  } else if(x_origin == "upper"){
-    pos_x -= (pos_x(xdim-1,0) + 0.5*d_x(xdim-1,0));
-  } //default: lower
-  if(y_origin == "center"){
-    pos_y -= 0.5*(pos_y(0,ydim-1) + 0.5*d_y(0,ydim-1));
-  } else if(y_origin == "upper"){
-    pos_y -= (pos_y(0,ydim-1) + 0.5*d_y(0,ydim-1));
-  } //default: lower
-
-  return {pos_x, pos_y};
 }

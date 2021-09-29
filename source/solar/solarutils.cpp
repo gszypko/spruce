@@ -88,8 +88,8 @@ namespace SolarUtils {
     MhdInp mi(xdim,ydim);
     // mi.set_var(PlasmaDomain::pos_x,pos_x);
     // mi.set_var(PlasmaDomain::pos_y,pos_y);
-    mi.set_var(PlasmaDomain::d_x,d_x);
-    mi.set_var(PlasmaDomain::d_y,d_y);
+    mi.set_var(PlasmaDomain::d_x,d_x,"center");
+    mi.set_var(PlasmaDomain::d_y,d_y,"center");
     mi.set_var(PlasmaDomain::mom_x, Grid(xdim,ydim,0.0));
     mi.set_var(PlasmaDomain::mom_y, Grid(xdim,ydim,0.0));
 

@@ -47,17 +47,19 @@ void PlasmaDomain::initialize(const std::vector<Grid>& input_vars, double ion_ma
   for(int var=0; var<num_variables; var++){
     m_grids[var] = Grid(m_xdim,m_ydim,0.0);
   }
-  m_grids[d_x] = input_vars[d_x];
-  m_grids[d_y] = input_vars[d_y];
-  m_grids[rho] = input_vars[rho];
-  m_grids[temp] = input_vars[temp];
-  m_grids[mom_x] = input_vars[mom_x];
-  m_grids[mom_y] = input_vars[mom_y];
-  m_grids[b_x] = input_vars[b_x];
-  m_grids[b_y] = input_vars[b_y];
-  m_grids[b_z] = input_vars[b_z];
-  m_grids[grav_x] = input_vars[grav_x];
-  m_grids[grav_y] = input_vars[grav_y];
+  for(int i=state_var_start; i < state_var_end; i++)
+    m_grids[i] = input_vars[i];
+  // m_grids[d_x] = input_vars[d_x];
+  // m_grids[d_y] = input_vars[d_y];
+  // m_grids[rho] = input_vars[rho];
+  // m_grids[temp] = input_vars[temp];
+  // m_grids[mom_x] = input_vars[mom_x];
+  // m_grids[mom_y] = input_vars[mom_y];
+  // m_grids[b_x] = input_vars[b_x];
+  // m_grids[b_y] = input_vars[b_y];
+  // m_grids[b_z] = input_vars[b_z];
+  // m_grids[grav_x] = input_vars[grav_x];
+  // m_grids[grav_y] = input_vars[grav_y];
   computeIterationBounds();
   computeConstantTerms();
   recomputeDerivedVariables();
@@ -91,4 +93,34 @@ void PlasmaDomain::computeIterationBounds()
   else{ assert(y_bound_1 == BoundaryCondition::Periodic && "Boundary cond'n must be defined"); m_yl = 0; }
   if(y_bound_2 == BoundaryCondition::Open || y_bound_2 == BoundaryCondition::Wall) m_yu = m_ydim - N_GHOST - 1;
   else{ assert(y_bound_2 == BoundaryCondition::Periodic && "Boundary cond'n must be defined"); m_yu = m_ydim - 1; }
+}
+
+//Takes not-necessarily-uniform cell sizes d and converts to cell center positions,
+//returned as a Grid
+//origin_position specifies location of the origin i.e. position=0 in the domain:
+//"lower" is the default, "center" and "upper" are also options for each
+
+Grid PlasmaDomain::convertCellSizesToCellPositions(const Grid& d, int index, std::string origin_position)
+{
+  int xdim = d.rows(), ydim = d.cols();
+  Grid pos(xdim,ydim);
+
+  // Initial computation; first assume origin at lower left
+  for(int i=0; i<xdim; i++){
+    for(int j=0; j<ydim; j++){
+      int i_prev = i-(1-index);
+      int j_prev = j-index;
+      if((i==0 && index==0) || (j==0 && index==1)) pos(i,j) = 0.5*d(i,j);
+      else pos(i,j) = pos(i_prev,j_prev) + 0.5*d(i_prev,j_prev) + 0.5*d(i,j);
+    }
+  }
+
+  // Translate origin to desired position
+  if(origin_position == "center"){
+    pos -= 0.5*(pos(xdim-1,ydim-1) + 0.5*d(xdim-1,ydim-1));
+  } else if(origin_position == "upper"){
+    pos -= (pos(xdim-1,ydim-1) + 0.5*d(xdim-1,ydim-1));
+  } else assert(origin_position == "lower" && "origin_position must be one of upper, lower, or center");
+
+  return pos;
 }
