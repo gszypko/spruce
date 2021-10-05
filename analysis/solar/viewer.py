@@ -22,7 +22,8 @@ fullnames = {
   'vel_y': "Y Velocity",
   'dt': "CFL Timestep",
   'dt_thermal': "Thermal Conduction Timestep",
-  'dt_rad': "Radiative Losses Timestep"
+  'dt_rad': "Radiative Losses Timestep",
+  'n': "Number Density"
 }
 fullunits = {
   'rho': r'g cm$^{-3}$',
@@ -37,13 +38,14 @@ fullunits = {
   'vel_y': r'cm s$^{-1}$',
   'dt': r's',
   'dt_thermal': r's',
-  'dt_rad': r's'
+  'dt_rad': r's',
+  'n': r'cm$^{-3}$'
 }
 
 parser = argparse.ArgumentParser(description='View the output from mhdtoy.')
 parser.add_argument('filename', help="the name of the file output from mhdtoy")
 parser.add_argument('timestep', type=float, help="the interval (in simulation time units) between frames of output animation")
-parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', 'energy', 'vel_x', 'vel_y', 'dt', 'dt_thermal', 'dt_rad'])
+parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', 'energy', 'vel_x', 'vel_y', 'dt', 'dt_thermal', 'dt_rad', 'n'])
 parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['b','vel','v'])
 parser.add_argument('--density', metavar="vec_display_density", type=int, help="set the interval between displayed vectors", default=4)
 parser.add_argument('-d', '--diff', metavar='diff_filename', help="filename to difference with original file")

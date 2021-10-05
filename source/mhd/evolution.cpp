@@ -231,6 +231,7 @@ void PlasmaDomain::recomputeDerivedVariables()
   m_grids[kinetic_energy] = 0.5*(m_grids[mom_x].square() + m_grids[mom_y].square())/m_grids[rho];
   m_grids[v_x] = m_grids[mom_x]/m_grids[rho];
   m_grids[v_y] = m_grids[mom_y]/m_grids[rho];
+  m_grids[n] = m_grids[rho]/m_ion_mass;
   recomputeDT();
   if(thermal_conduction) recomputeDTThermal();
   if(radiative_losses){

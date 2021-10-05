@@ -12,7 +12,7 @@ const std::vector<std::string> PlasmaDomain::m_boundary_condition_names = {
 //Must match the ordering of the Variable enum defined in plasmadomain.hpp
 const std::vector<std::string> PlasmaDomain::m_var_names = {
   "d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","b_x","b_y","b_z","grav_x","grav_y",
-  "press","thermal_energy","kinetic_energy","rad","dt","dt_thermal","dt_rad","v_x","v_y",
+  "press","thermal_energy","kinetic_energy","rad","dt","dt_thermal","dt_rad","v_x","v_y","n",
   "b_magnitude","b_hat_x","b_hat_y",
   "mag_press","lorentz_force_x","lorentz_force_y","mag_pxx","mag_pyy","mag_pzz","mag_pxy","mag_pxz","mag_pyz"
 };
