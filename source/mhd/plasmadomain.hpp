@@ -87,7 +87,8 @@ private:
   int max_iterations; //Upper bound on simulation iterations; unbounded if negative
   //Boundary condition settings
   BoundaryCondition x_bound_1, x_bound_2, y_bound_1, y_bound_2;
-  double open_boundary_strength;
+  double open_boundary_strength; // multiple of local sound speed added to velocity at boundary surface
+  double open_boundary_decay_base; // base of exponential decay of rho, thermal_energy beyond open boundary surface
   //Physics settings
   bool radiative_losses, ambient_heating, thermal_conduction;
   bool flux_saturation; //Config for thermal conduction

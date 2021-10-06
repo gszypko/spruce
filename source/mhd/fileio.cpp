@@ -24,7 +24,8 @@ const std::vector<std::string> PlasmaDomain::m_config_names = {
   "thermal_conduction","flux_saturation","temp_chromosphere","radiation_ramp","heating_rate",
   "epsilon","epsilon_thermal","epsilon_rad","epsilon_viscous","dt_thermal_min","rho_min",
   "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
-  "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode"
+  "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode",
+  "open_boundary_decay_base"
 };
 
 enum class Config {
@@ -32,7 +33,8 @@ enum class Config {
   thermal_conduction, flux_saturation, temp_chromosphere, radiation_ramp, heating_rate,
   epsilon, epsilon_thermal, epsilon_rad, epsilon_viscous, dt_thermal_min, rho_min,
   temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
-  output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode
+  output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode,
+  open_boundary_decay_base
 };
 
 //Read in variables from .state file
@@ -247,6 +249,7 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::open_boundary_strength): open_boundary_strength = std::stod(rhs); break;
   case static_cast<int>(Config::safe_state_mode): safe_state_mode = (rhs == "true"); break;
   case static_cast<int>(Config::std_out_interval): std_out_interval = std::stoi(rhs); break;
+  case static_cast<int>(Config::open_boundary_decay_base): open_boundary_decay_base = std::stod(rhs); break;
   default: break;
   }
 }

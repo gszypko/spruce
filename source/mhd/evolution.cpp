@@ -468,8 +468,13 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
 
   Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y], &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy];
 
-  m_rho(i1,j1) = 0.25*m_rho(i3,j3); m_rho(i2,j2) = 0.5*m_rho(i3,j3);
-  m_thermal_energy(i1,j1) = 0.25*m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = 0.5*m_thermal_energy(i3,j3);
+  // m_rho(i1,j1) = 0.25*m_rho(i3,j3); m_rho(i2,j2) = 0.5*m_rho(i3,j3);
+  // m_thermal_energy(i1,j1) = 0.25*m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = 0.5*m_thermal_energy(i3,j3);
+  double delta_last = std::abs(m_pos_x(i3,j3) - m_pos_x(i4,j4) + m_pos_y(i3,j3) - m_pos_y(i4,j4));
+  double scale_2 = std::pow(open_boundary_decay_base,std::abs(m_pos_x(i2,j2) - m_pos_x(i3,j3) + m_pos_y(i2,j2) - m_pos_y(i3,j3))/delta_last);
+  double scale_1 = std::pow(open_boundary_decay_base,std::abs(m_pos_x(i1,j1) - m_pos_x(i3,j3) + m_pos_y(i1,j1) - m_pos_y(i3,j3))/delta_last);
+  m_rho(i1,j1) = scale_1*m_rho(i3,j3); m_rho(i2,j2) = scale_2*m_rho(i3,j3);
+  m_thermal_energy(i1,j1) = scale_1*m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = scale_2*m_thermal_energy(i3,j3);
 
   double vel_x = m_mom_x(i3,j3)/m_rho(i3,j3);
   double vel_y = m_mom_y(i3,j3)/m_rho(i3,j3);
