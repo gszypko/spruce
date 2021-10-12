@@ -65,19 +65,32 @@ dim = input_file.readline().split(',')
 xdim = int(dim[0])
 ydim = int(dim[1])
 
+xl_ghost = 0
+xu_ghost = 0
+yl_ghost = 0
+yu_ghost = 0
+
+xdim_view = xdim - (xl_ghost + xu_ghost)
+ydim_view = ydim - (yl_ghost + yu_ghost)
+
+xl = 0 + xl_ghost
+xu = xdim - xu_ghost
+yl = 0 + yl_ghost
+yu = ydim - yu_ghost
+
 #read in grid cell positions
 assert input_file.readline() == "pos_x\n"
-X = np.zeros([xdim-4,ydim-4], dtype=float)
-rows = input_file.readline().split(';')[2:xdim-2]
-for i in range(xdim-4):
-  X[i] = np.asarray(rows[i].split(','))[2:ydim-2]
-  assert len(X[i]) == ydim-4
+X = np.zeros([xdim_view,ydim_view], dtype=float)
+rows = input_file.readline().split(';')[xl:xu]
+for i in range(xdim_view):
+  X[i] = np.asarray(rows[i].split(','))[yl:yu]
+  assert len(X[i]) == ydim_view
 assert input_file.readline() == "pos_y\n"
-Y = np.zeros([xdim-4,ydim-4], dtype=float)
-rows = input_file.readline().split(';')[2:xdim-2]
-for i in range(xdim-4):
-  Y[i] = np.asarray(rows[i].split(','))[2:ydim-2]
-  assert len(Y[i]) == ydim-4
+Y = np.zeros([xdim_view,ydim_view], dtype=float)
+rows = input_file.readline().split(';')[xl:xu]
+for i in range(xdim_view):
+  Y[i] = np.asarray(rows[i].split(','))[yl:yu]
+  assert len(Y[i]) == ydim_view
 
 x_min = X[0][0]
 x_max = X[-1][0]
@@ -85,8 +98,8 @@ y_min = Y[0][0]
 y_max = Y[0][-1]
 
 #read in static magnetic field
-bx = np.zeros([xdim,ydim], dtype=float)
-by = np.zeros([xdim,ydim], dtype=float)
+bx = np.zeros([xdim_view,ydim_view], dtype=float)
+by = np.zeros([xdim_view,ydim_view], dtype=float)
 assert input_file.readline() == "b_x\n"
 rows_x = input_file.readline().split(';')
 assert input_file.readline() == "b_y\n"
@@ -94,9 +107,9 @@ rows_y = input_file.readline().split(';')
 assert input_file.readline() == "b_z\n"
 input_file.readline()
 
-for i in range(xdim):
-  bx[i] = np.asarray(rows_x[i].split(','))
-  by[i] = np.asarray(rows_y[i].split(','))
+for i in range(xdim_view):
+  bx[i] = np.asarray(rows_x[i].split(','))[yl:yu]
+  by[i] = np.asarray(rows_y[i].split(','))[yl:yu]
 
 var = []
 vec_x = []
@@ -128,12 +141,12 @@ while True:
   if output_number == 0 or display_interval == 0 or ((time - t[0])/display_interval >= output_number and not math.isinf(t[-1])):
     output_number += 1
     t.append(time)
-    this_var = np.zeros([xdim-4,ydim-4], dtype=float)
-    rows = input_file.readline().split(';')[2:xdim-2]
-    if len(rows) != xdim-4: break
-    for i in range(xdim-4):
-      this_var[i] = np.asarray(rows[i].split(','))[2:ydim-2]
-      if len(this_var[i]) != ydim-4: break
+    this_var = np.zeros([xdim_view,ydim_view], dtype=float)
+    rows = input_file.readline().split(';')[xl:xu]
+    if len(rows) != xdim_view: break
+    for i in range(xdim_view):
+      this_var[i] = np.asarray(rows[i].split(','))[yl:yu]
+      if len(this_var[i]) != ydim_view: break
     var.append(this_var)
 
     if vec_var != None and vec_var != "b":
@@ -147,20 +160,20 @@ while True:
         break
 
       if output_number == 1 or display_interval == 0 or (time - t[0])/display_interval >= (output_number-1):
-        this_vec_x = np.zeros([xdim-4,ydim-4], dtype=float)
-        rows = input_file.readline().split(';')[2:xdim-2]
-        if len(rows) != xdim-4: break
-        for i in range(xdim-4):
-          row_list = rows[i].split(',')[2:ydim-2]
-          if len(row_list) != ydim-4: break
+        this_vec_x = np.zeros([xdim_view,ydim_view], dtype=float)
+        rows = input_file.readline().split(';')[xl:xu]
+        if len(rows) != xdim_view: break
+        for i in range(xdim_view):
+          row_list = rows[i].split(',')[yl:yu]
+          if len(row_list) != ydim_view: break
           this_vec_x[i] = np.asarray(row_list)
-        this_vec_y = np.zeros([xdim-4,ydim-4], dtype=float)
+        this_vec_y = np.zeros([xdim_view,ydim_view], dtype=float)
         input_file.readline()
-        rows = input_file.readline().split(';')[2:xdim-2]
-        if len(rows) != xdim-4: break
-        for i in range(xdim-4):
-          row_list = rows[i].split(',')[2:xdim-2]
-          if len(row_list) != ydim-4: break
+        rows = input_file.readline().split(';')[xl:xu]
+        if len(rows) != xdim_view: break
+        for i in range(xdim_view):
+          row_list = rows[i].split(',')[xl:xu]
+          if len(row_list) != ydim_view: break
           this_vec_y[i] = np.asarray(row_list)
         vec_x.append(this_vec_x)
         vec_y.append(this_vec_y)
