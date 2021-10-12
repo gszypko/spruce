@@ -293,7 +293,8 @@ void PlasmaDomain::recomputeDTThermal()
     saturateConductiveFlux(con_flux_x, con_flux_y, m_grids[rho], m_grids[temp]);
     Grid flux_sat = (con_flux_x.square() + con_flux_y.square()).sqrt();
     kappa_modified = (flux_sat/field_temp_gradient).abs();
-    m_grids[dt_thermal] = K_B/kappa_modified*(m_grids[rho]/m_ion_mass)*m_grids[d_x]*m_grids[d_y];
+    if(field_temp_gradient.abs().max() == 0.0) m_grids[dt_thermal] = m_grids[dt];
+    else m_grids[dt_thermal] = K_B/kappa_modified*(m_grids[rho]/m_ion_mass)*m_grids[d_x]*m_grids[d_y];
   }
 }
 

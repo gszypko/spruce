@@ -93,7 +93,7 @@ namespace SolarUtils {
       mi.set_var(PlasmaDomain::b_z, b_z);
       mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
       mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
-      mi.set_var(PlasmaDomain::rho, HydrostaticFalloff(base_rho,scale_height,pos_y));
+      mi.set_var(PlasmaDomain::rho, HydrostaticFalloff(base_rho,scale_height*1.0e1,pos_y));
       // Grid press_init = 2.0*HydrostaticFalloff(base_rho,scale_height,pos_y)/ion_mass*K_B*init_temp;
       // std::cout << press_init;
       // Grid press_magnetic = (b_x*b_x + b_y*b_y + b_z*b_z)/(8.0*PI);
