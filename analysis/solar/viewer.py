@@ -145,8 +145,9 @@ while True:
     rows = input_file.readline().split(';')[xl:xu]
     if len(rows) != xdim_view: break
     for i in range(xdim_view):
-      this_var[i] = np.asarray(rows[i].split(','))[yl:yu]
-      if len(this_var[i]) != ydim_view: break
+      this_var_row = np.asarray(rows[i].split(','))[yl:yu]
+      if len(this_var_row) != ydim_view: break
+      this_var[i] = this_var_row
     var.append(this_var)
 
     if vec_var != None and vec_var != "b":

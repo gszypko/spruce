@@ -24,7 +24,8 @@
 class PlasmaDomain
 {
 public:
-  enum class BoundaryCondition { Periodic, Wall, Open };
+  // enum class BoundaryCondition { Periodic, Wall, Open };
+  enum class BoundaryCondition { Periodic, Open, Fixed, Reflect };
 
   //state variables (taken as input, carried over between iterations)
   enum StateVars { state_var_start=0,
@@ -122,7 +123,8 @@ private:
   void catchUnderdensity();
   void updateGhostZones();
   void openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
-  void wallBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
+  void reflectBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
+  void fixedBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
 
   void recomputeRadiativeLosses();
   void recomputeDT();

@@ -5,7 +5,7 @@
 
 //Must match ordering of BoundaryCondition enum in plasmadomain.hpp
 const std::vector<std::string> PlasmaDomain::m_boundary_condition_names = {
-  "periodic","wall","open"
+  "periodic", "open", "fixed", "reflect"
 };
 
 //Corresponding variable names for file I/O
