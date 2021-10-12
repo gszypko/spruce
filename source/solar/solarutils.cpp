@@ -23,17 +23,14 @@ namespace SolarUtils {
     double dx = 4.0*PI*scale_height/xdim, dy = 4.0*PI*scale_height/ydim; //this ensures correct periodicity of bipolar field
 
     if(problem_type == "corona" || problem_type == "uniform"){
-      // for(int i=0; i<xdim; i++){
-      //   for(int j=0; j<ydim; j++){
-      //     pos_x(i,j) = (i - (double)(xdim-1)*0.5)*dx;
-      //     pos_y(i,j) = j*dy;
-      //   }
-      // }
-      for(int i=0; i<xdim; i++){
-        for(int j=0; j<ydim; j++){
-          d_x(i,j) = dx;
-          d_y(i,j) = dy;
-        }
+      double uniform_fraction = 0.75;
+      double growth_factor = 1.1;
+      double curr_scaling = 1.0;
+      for(int i=0; i<xdim; i++)
+        for(int j=0; j<ydim; j++) d_x(i,j) = dx;
+      for(int j=0; j<ydim; j++){
+        if(j >= uniform_fraction*ydim) curr_scaling *= growth_factor;
+        for(int i=0; i<xdim; i++) d_y(i,j) = curr_scaling*dy;
       }
     } else {
       double growth_factor = 1.1;
@@ -41,36 +38,30 @@ namespace SolarUtils {
       int x_core_size = xdim/2, y_core_size = ydim/2;
       for(int j=0; j<ydim; j++){
         for(int i=(xdim/2 - x_core_size/2); i<(xdim/2 + x_core_size/2); i++){
-          // pos_x(i,j) = (i - (double)(xdim-1)*0.5)*dx;
           d_x(i,j) = dx;
         }
         double this_dx = growth_factor*dx;
         for(int i=(xdim/2 - x_core_size/2) - 1; i>=0; i--){
-          // pos_x(i,j) = pos_x(i+1,j) - this_dx;
           d_x(i,j) = this_dx;
           this_dx *= growth_factor;
         }
         this_dx = growth_factor*dx;
         for(int i=(xdim/2 + x_core_size/2); i<xdim; i++){
-          // pos_x(i,j) = pos_x(i-1,j) + this_dx;
           d_x(i,j) = this_dx;
           this_dx *= growth_factor;
         }
       }
       for(int i=0; i<xdim; i++){
         for(int j=(ydim/2 - y_core_size/2); j<(ydim/2 + y_core_size/2); j++){
-          // pos_y(i,j) = (j - (double)(ydim-1)*0.5)*dy;
           d_y(i,j) = dy;
         }
         double this_dy = growth_factor*dy;
         for(int j=(ydim/2 - y_core_size/2) - 1; j>=0; j--){
-          // pos_y(i,j) = pos_y(i,j+1) - this_dy;
           d_y(i,j) = this_dy;
           this_dy *= growth_factor;
         }
         this_dy = growth_factor*dy;
         for(int j=(ydim/2 + y_core_size/2); j<ydim; j++){
-          // pos_y(i,j) = pos_y(i,j-1) + this_dy;
           d_y(i,j) = this_dy;
           this_dy *= growth_factor;
         }
@@ -86,30 +77,42 @@ namespace SolarUtils {
       }
     }
     MhdInp mi(xdim,ydim);
-    // mi.set_var(PlasmaDomain::pos_x,pos_x);
-    // mi.set_var(PlasmaDomain::pos_y,pos_y);
-    mi.set_var(PlasmaDomain::d_x,d_x,"center");
-    mi.set_var(PlasmaDomain::d_y,d_y,"center");
     mi.set_var(PlasmaDomain::mom_x, Grid(xdim,ydim,0.0));
     mi.set_var(PlasmaDomain::mom_y, Grid(xdim,ydim,0.0));
 
     if(problem_type == "corona"){
+      mi.set_var(PlasmaDomain::d_x,d_x,"center");
+      mi.set_var(PlasmaDomain::d_y,d_y,"lower");
       mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
+      Grid b_x, b_y, b_z;
+      b_x = BipolarField(pos_x, pos_y, b_0, scale_height, 0);
+      b_y = BipolarField(pos_x, pos_y, b_0, scale_height, 1);
+      b_z = Grid(xdim,ydim,0.0);
+      mi.set_var(PlasmaDomain::b_x, b_x);
+      mi.set_var(PlasmaDomain::b_y, b_y);
+      mi.set_var(PlasmaDomain::b_z, b_z);
+      mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
+      mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
       mi.set_var(PlasmaDomain::rho, HydrostaticFalloff(base_rho,scale_height,pos_y));
-      mi.set_var(PlasmaDomain::b_x, BipolarField(pos_x, pos_y, b_0, scale_height, 0));
-      mi.set_var(PlasmaDomain::b_y, BipolarField(pos_x, pos_y, b_0, scale_height, 1));
-      mi.set_var(PlasmaDomain::b_z, Grid(xdim,ydim,0.0));
-      mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
-      mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
-    } else if(problem_type == "uniform"){
-      mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
-      mi.set_var(PlasmaDomain::rho, Grid(xdim,ydim,base_rho*std::exp(-2.0*PI)));
-      mi.set_var(PlasmaDomain::b_x, BipolarField(pos_x, pos_y, b_0, scale_height, 0));
-      mi.set_var(PlasmaDomain::b_y, BipolarField(pos_x, pos_y, b_0, scale_height, 1));
-      mi.set_var(PlasmaDomain::b_z, Grid(xdim,ydim,0.0));
-      mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
-      mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
+      // Grid press_init = 2.0*HydrostaticFalloff(base_rho,scale_height,pos_y)/ion_mass*K_B*init_temp;
+      // std::cout << press_init;
+      // Grid press_magnetic = (b_x*b_x + b_y*b_y + b_z*b_z)/(8.0*PI);
+      // Grid press_adj = press_init - press_magnetic;
+      // Grid rho_adj = ion_mass*press_adj/(2.0*K_B*init_temp);
+      // std::cout << press_init/press_magnetic;
+      // std::cout << rho_adj/HydrostaticFalloff(base_rho,scale_height,pos_y);
+      // mi.set_var(PlasmaDomain::rho, press_init);
+    // } else if(problem_type == "uniform"){
+    //   mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
+    //   mi.set_var(PlasmaDomain::rho, Grid(xdim,ydim,base_rho*std::exp(-2.0*PI)));
+    //   mi.set_var(PlasmaDomain::b_x, BipolarField(pos_x, pos_y, b_0, scale_height, 0));
+    //   mi.set_var(PlasmaDomain::b_y, BipolarField(pos_x, pos_y, b_0, scale_height, 1));
+    //   mi.set_var(PlasmaDomain::b_z, Grid(xdim,ydim,0.0));
+    //   mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
+    //   mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
     } else if(problem_type == "gaussian"){
+      mi.set_var(PlasmaDomain::d_x,d_x,"center");
+      mi.set_var(PlasmaDomain::d_y,d_y,"center");
       double stdevx = pms.getvar("stdevx");
       double stdevy = pms.getvar("stdevy");
       // mi.set_var(PlasmaDomain::temp, GaussianGrid(xdim,ydim,init_temp,10.0*init_temp,xdim/stdevx,ydim/stdevy));
