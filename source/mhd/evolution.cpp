@@ -303,7 +303,8 @@ void PlasmaDomain::recomputeDTRadiative()
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
-  m_grids[dt_rad] = (m_grids[thermal_energy]/m_grids[rad]).abs();
+  if(m_grids[rad].max() == 0.0) m_grids[dt_rad] = m_grids[dt];
+  else m_grids[dt_rad] = (m_grids[thermal_energy]/m_grids[rad]).abs();
 }
 
 
