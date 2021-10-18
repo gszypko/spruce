@@ -303,7 +303,8 @@ void PlasmaDomain::recomputeDTRadiative()
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
-  m_grids[dt_rad] = (m_grids[thermal_energy]/m_grids[rad]).abs();
+  if(m_grids[rad].max() == 0.0) m_grids[dt_rad] = m_grids[dt];
+  else m_grids[dt_rad] = (m_grids[thermal_energy]/m_grids[rad]).abs();
 }
 
 
@@ -434,25 +435,29 @@ void PlasmaDomain::updateGhostZones()
   if(x_bound_1 != BoundaryCondition::Periodic){
     for(int j=m_yl; j<=m_yu; j++){
       if(x_bound_1 == BoundaryCondition::Open) openBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
-      else if(x_bound_1 == BoundaryCondition::Wall) wallBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
+      else if(x_bound_1 == BoundaryCondition::Reflect) reflectBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
+      else if(x_bound_1 == BoundaryCondition::Fixed) fixedBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
     }
   }
   if(x_bound_2 != BoundaryCondition::Periodic){
     for(int j=m_yl; j<=m_yu; j++){
       if(x_bound_2 == BoundaryCondition::Open) openBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
-      else if(x_bound_2 == BoundaryCondition::Wall) wallBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
+      else if(x_bound_2 == BoundaryCondition::Reflect) reflectBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
+      else if(x_bound_2 == BoundaryCondition::Fixed) fixedBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
     }
   }
   if(y_bound_1 != BoundaryCondition::Periodic){
     for(int i=m_xl; i<=m_xu; i++){
       if(y_bound_1 == BoundaryCondition::Open) openBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
-      else if(y_bound_1 == BoundaryCondition::Wall) wallBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
+      else if(y_bound_1 == BoundaryCondition::Reflect) reflectBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
+      else if(y_bound_1 == BoundaryCondition::Fixed) fixedBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
     }
   }
   if(y_bound_2 != BoundaryCondition::Periodic){
     for(int i=m_xl; i<=m_xu; i++){
       if(y_bound_2 == BoundaryCondition::Open) openBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
-      else if(y_bound_2 == BoundaryCondition::Wall) wallBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
+      else if(y_bound_2 == BoundaryCondition::Reflect) reflectBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
+      else if(y_bound_2 == BoundaryCondition::Fixed) fixedBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
     }
   }
 }
@@ -571,7 +576,7 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
 //assuming that (i1,j1) is at the edge of the domain and (i4,j4) is on the interior
 //Assumes two ghost zones (i.e. N_GHOST == 2), will abort if not
 //Meant to be called repeatedly during advanceTime; energy is handled, not temperature
-void PlasmaDomain::wallBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
+void PlasmaDomain::reflectBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
 {
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
   Grid &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y];
@@ -579,4 +584,19 @@ void PlasmaDomain::wallBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
   m_thermal_energy(i1,j1) = m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = m_thermal_energy(i3,j3); //Match temperature of nearest interior cell
   m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0; //Halt all advection at the wall boundary
   m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
+}
+
+//Applies the wall boundary condition to the cells indexed by the given indices
+//assuming that (i1,j1) is at the edge of the domain and (i4,j4) is on the interior
+//Assumes two ghost zones (i.e. N_GHOST == 2), will abort if not
+//Meant to be called repeatedly during advanceTime; energy is handled, not temperature
+void PlasmaDomain::fixedBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
+{
+  // Currently does nothing; leaves the ghost cells at their initial values
+  // assert(N_GHOST == 2 && "This function assumes two ghost zones");
+  // Grid &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y];
+  // m_rho(i1,j1) = m_rho(i3,j3); m_rho(i2,j2) = m_rho(i3,j3); //Match density of nearest interior cell
+  // m_thermal_energy(i1,j1) = m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = m_thermal_energy(i3,j3); //Match temperature of nearest interior cell
+  // m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0; //Halt all advection at the wall boundary
+  // m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
 }
