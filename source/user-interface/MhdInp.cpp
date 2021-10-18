@@ -39,12 +39,12 @@ void MhdInp::set_var(const int& var,const Grid& grid,const std::string origin_po
     m_grids[var] = grid;
     m_initialized[var] = true;
     if(var == PlasmaDomain::d_x){
-        if(origin_pos == "") std::cerr << "Warning: x origin position not specified; default is lower bound" << std::endl;
+        if(origin_pos.compare("") == 0) std::cerr << "Warning: x origin position not specified; default is lower bound" << std::endl;
         m_grids[PlasmaDomain::pos_x] = PlasmaDomain::convertCellSizesToCellPositions(grid,0,origin_pos);
         m_initialized[PlasmaDomain::pos_x] = true;
     }
     else if(var == PlasmaDomain::d_y){
-        if(origin_pos == "") std::cerr << "Warning: y origin position not specified; default is lower bound" << std::endl;
+        if(origin_pos.compare("") == 0) std::cerr << "Warning: y origin position not specified; default is lower bound" << std::endl;
         m_grids[PlasmaDomain::pos_y] = PlasmaDomain::convertCellSizesToCellPositions(grid,1,origin_pos);
         m_initialized[PlasmaDomain::pos_y] = true;
     }

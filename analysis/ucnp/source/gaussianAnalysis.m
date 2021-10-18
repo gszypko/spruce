@@ -20,6 +20,8 @@ for i = 1:length(os.grids.time)
     disp(['2D Gaussian Fits: ' num2str(i) '/' num2str(length(os.grids.time))])
     x = os.grids.xVec;
     y = os.grids.yVec;
+    X = os.grids.pos_x;
+    Y = os.grids.pos_y;
     img = os.grids.vars(i).n;
     [fit(i)] = fitImgWithGaussian(x,y,img);
     
@@ -38,18 +40,21 @@ for i = 1:length(os.grids.time)
     figiter = figiter + 1;
     fig.Position = [195         259        1027         491];
     ax = subplot(2,3,1);
-    imagesc(x,y,img./1e8)
+    pcolor(X,Y,img./1e8)
     ax.PlotBoxAspectRatio = [1 1 1];
+    shading interp
     cb = colorbar;
     
     ax = subplot(2,3,2);
-    imagesc(x,y,fit(i).imgfit./1e8);
+    pcolor(X,Y,fit(i).imgfit./1e8);
     ax.PlotBoxAspectRatio = [1 1 1];
+    shading interp
     cb = colorbar;
     
     ax = subplot(2,3,3);
-    imagesc(x,y,fit(i).imgres./1e8);
+    pcolor(X,Y,fit(i).imgres./1e8);
     ax.PlotBoxAspectRatio = [1 1 1];
+    shading interp
     cb = colorbar;
     cb.Label.String = 'n (10^8 cm^-^3)';
     

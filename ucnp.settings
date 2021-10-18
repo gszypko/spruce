@@ -17,10 +17,13 @@ sig_y = cgs = 0.1 % rms radius of plasma along y axis
 Ti = cgs = 1e-2 % initial ion temperature
 Te = cgs = 20 % initial electron temperature
 dBdx = cgs = 0 % gradient of quadrupole magnetic field along symmetry (x) axis
-tmax/tau_exp = cgs = 6 % end time for simulation
+tmax/tau_exp = cgs = 5 % end time for simulation
 x_lim = sig_x = 20 % simulation box size on x axis: from -x_lim to x_lim
-y_lim = sig_y = 20 % simulation box size on y axis: from -y_lim to y_lim                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         0 % simulation box size on y axis: from -y_lim to y_lim
+y_lim = sig_y = 20 % simulation box size on y axis: from -y_lim to y_lim   
+grid_opt = opt = uniform
+Nx = cgs = 301 % number of cells on x axis
+Ny = cgs = 301 % number of cells on y axis                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   0 % simulation box size on y axis: from -y_lim to y_lim
 dx = sig_x = .1 % grid spacing
 dy = sig_y = .1 % grid spacing
 m_i = cgs = 1.455e-22 % Sr ion mass
-gam = cgs = 1.6666667 % adiabatic index for Sr+
+gam = cgs = 1.6666667 % adiabatic index for Sr+ 
