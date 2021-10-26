@@ -23,7 +23,8 @@ fullnames = {
   'dt': "CFL Timestep",
   'dt_thermal': "Thermal Conduction Timestep",
   'dt_rad': "Radiative Losses Timestep",
-  'n': "Number Density"
+  'n': "Number Density",
+  'beta': "Plasma Beta"
 }
 fullunits = {
   'rho': r'g cm$^{-3}$',
@@ -39,13 +40,16 @@ fullunits = {
   'dt': r's',
   'dt_thermal': r's',
   'dt_rad': r's',
-  'n': r'cm$^{-3}$'
+  'n': r'cm$^{-3}$',
+  'beta': r''
 }
+for key in fullunits.keys():
+  if key != "beta": fullunits[key] = " (" + fullunits[key] + ")"
 
 parser = argparse.ArgumentParser(description='View the output from mhdtoy.')
 parser.add_argument('filename', help="the name of the file output from mhdtoy")
 parser.add_argument('timestep', type=float, help="the interval (in simulation time units) between frames of output animation")
-parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', 'energy', 'vel_x', 'vel_y', 'dt', 'dt_thermal', 'dt_rad', 'n'])
+parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', 'energy', 'vel_x', 'vel_y', 'dt', 'dt_thermal', 'dt_rad', 'n', 'beta'])
 parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['b','vel','v'])
 parser.add_argument('--density', metavar="vec_display_density", type=int, help="set the interval between displayed vectors", default=4)
 parser.add_argument('-d', '--diff', metavar='diff_filename', help="filename to difference with original file")
@@ -57,6 +61,9 @@ vec_interval = args.density #interval between B field vectors to display
 input_file = open(args.filename)
 display_interval = float(args.timestep)
 output_var = args.contourvar #must be one of rho, temp, press, energy, rad
+file_var_name = output_var
+if output_var == "beta":
+  file_var_name = "press"
 vec_var = args.vector
 
 #determine grid size
@@ -130,7 +137,7 @@ while True:
   #read through to correct variable
   #vector quantities must be last in each time step
   line = input_file.readline()
-  while line and line.rstrip() != output_var:
+  while line and line.rstrip() != file_var_name:
     if line[0:2] == "t=":
       sys.exit("Specified output variable not found in file")
     input_file.readline()
@@ -188,6 +195,11 @@ if vec_var != None and len(var) > len(vec_x):
 if output_var == "rho":
   for i in range(len(var)):
     var[i] = np.ma.masked_where(var[i]<=1.0e-30, var[i])
+
+if output_var == "beta":
+  mag_press = (bx*bx + by*by)/(8.0*np.pi)
+  for i in range(len(var)):
+    var[i] = var[i]/mag_press
 
 fig, ax = plt.subplots()
 
@@ -290,7 +302,7 @@ elif vec_var != None:
               width = 0.008, headwidth=3, headlength=3, headaxislength=2.5, \
                 pivot='mid', norm=matplotlib.colors.SymLogNorm(linthresh=1e4, base=10))
   vec_colorbar = fig.colorbar(quiv)
-  vec_colorbar.set_label(fullnames[vec_var]+ " (" + fullunits[vec_var] + ")")
+  vec_colorbar.set_label(fullnames[vec_var]+ fullunits[vec_var])
   vector_color_axes = fig.axes[-1]
   # ax.quiverkey(quiv, X=0.3, Y=1.1, U=10,
   #   label='Quiver key, length = 10', labelpos='E')
@@ -308,7 +320,7 @@ def updatefig(*args):
     im.autoscale()
     contour_color_axes.cla()
     var_colorbar = fig.colorbar(im, cax=contour_color_axes)
-    var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
+    var_colorbar.set_label(fullnames[output_var]+ fullunits[output_var])
     ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
     if vec_var != "b" and vec_var != None:
       vector_color_axes.cla()
