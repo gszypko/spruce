@@ -50,8 +50,9 @@ void PlasmaDomain::advanceTime(bool verbose)
   Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y],
         &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y],
         &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_press = m_grids[press];
-  Grid viscous_force_x = epsilon_viscous*(0.5*m_grids[d_x].square()/dt_raw)*laplacian(m_mom_x);
-  Grid viscous_force_y = epsilon_viscous*(0.5*m_grids[d_y].square()/dt_raw)*laplacian(m_mom_y);
+  double visc_coeff = epsilon_viscous*0.5*((m_grids[d_x].square() + m_grids[d_y].square())/dt_raw).min();
+  Grid viscous_force_x = visc_coeff*laplacian(m_mom_x);
+  Grid viscous_force_y = visc_coeff*laplacian(m_mom_y);
   // Grid d_rho_dt = -transportDerivative1D(m_rho, m_v_x, 0) - transportDerivative1D(m_rho, m_v_y, 1);
   // Grid d_mom_x_dt = -transportDerivative1D(m_mom_x, m_v_x, 0) - transportDerivative1D(m_mom_x, m_v_y, 1)
   //                 - derivative1D(m_press + m_grids[mag_pxx], 0) - derivative1D(m_grids[mag_pxy], 1)
@@ -263,15 +264,21 @@ void PlasmaDomain::catchUnderdensity()
   }
 }
 
+//Try taking diagonal of grid cell
+//and then magnitude of velocity
+//with safety coefficient
 void PlasmaDomain::recomputeDT()
 {
   #if BENCHMARKING_ON
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
   Grid c_s = (m_adiabatic_index*m_grids[press]/m_grids[rho]).sqrt();
-  Grid abs_vx = m_grids[d_x]/(c_s+m_grids[v_x].abs());
-  Grid abs_vy = m_grids[d_y]/(c_s+m_grids[v_y].abs());
-  m_grids[dt] = abs_vx.min(abs_vy);
+  Grid diagonals = (m_grids[d_x].square() + m_grids[d_y].square()).sqrt();
+  Grid vel_mag = (m_grids[v_x].square() + m_grids[v_y].square()).sqrt();
+  m_grids[dt] = diagonals/(c_s + vel_mag);
+  // Grid abs_vx = m_grids[d_x]/(c_s+m_grids[v_x].abs());
+  // Grid abs_vy = m_grids[d_y]/(c_s+m_grids[v_y].abs());
+  // m_grids[dt] = abs_vx.min(abs_vy);
 }
 
 void PlasmaDomain::recomputeDTThermal()
