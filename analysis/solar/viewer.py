@@ -74,8 +74,8 @@ ydim = int(dim[1])
 
 xl_ghost = 0
 xu_ghost = 0
-yl_ghost = 0
-yu_ghost = 0
+yl_ghost = 2
+yu_ghost = 2
 
 xdim_view = xdim - (xl_ghost + xu_ghost)
 ydim_view = ydim - (yl_ghost + yu_ghost)
@@ -180,7 +180,7 @@ while True:
         rows = input_file.readline().split(';')[xl:xu]
         if len(rows) != xdim_view: break
         for i in range(xdim_view):
-          row_list = rows[i].split(',')[xl:xu]
+          row_list = rows[i].split(',')[yl:yu]
           if len(row_list) != ydim_view: break
           this_vec_y[i] = np.asarray(row_list)
         vec_x.append(this_vec_x)
