@@ -28,11 +28,12 @@ for k = 1:length([os.grids.time])
             iter = iter + 1;
             ax{i,j} = subplot(row,col,iter);
 
-            xdata = [os.grids.xVec];
-            ydata = [os.grids.yVec];
-            zdata = [os.grids.vars(k).(gridNames{iter})];
-            imagesc(xdata,ydata,zdata)
-
+            xdata = os.grids.pos_x;
+            ydata = os.grids.pos_y;
+            zdata = os.grids.vars(k).(gridNames{iter});
+            pcolor(xdata,ydata,zdata)
+            shading interp
+            
             cb = colorbar;
             cb.FontSize = 12;
             cb.Label.String = gridNames{iter};

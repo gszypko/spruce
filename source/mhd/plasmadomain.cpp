@@ -116,9 +116,9 @@ Grid PlasmaDomain::convertCellSizesToCellPositions(const Grid& d, int index, std
   }
 
   // Translate origin to desired position
-  if(origin_position == "center"){
+  if(origin_position.compare("center") == 0){
     pos -= 0.5*(pos(xdim-1,ydim-1) + 0.5*d(xdim-1,ydim-1));
-  } else if(origin_position == "upper"){
+  } else if(origin_position.compare("upper") == 0){
     pos -= (pos(xdim-1,ydim-1) + 0.5*d(xdim-1,ydim-1));
   } else assert(origin_position == "lower" && "origin_position must be one of upper, lower, or center");
 

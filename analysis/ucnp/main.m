@@ -13,7 +13,7 @@ if ~exist('inp','var')
     inp = {};
     openvar('inp')
 end
-fields = {'date','phase','folder','fields','Te','n_dist','n_max','n_min','sigx','sigy','xlim','ylim','tmax','bound_strength','visc_strength'};
+fields = {'date','phase','folder','fields','Te','n_dist','n_max','n_min','sigx','sigy','grid_opt','xlim','ylim','tmax','bound_strength','visc_strength'};
 if size(inp,2) ~= length(fields), error('The number of columns in ''inp'' must match the length of ''fields''.'); end
 s = cell2struct(inp,fields,2);
 
@@ -38,7 +38,7 @@ for i = 1:length(s)
     files = dir(s(i).folder);
     found = max(strcmp({files.name},filename));
     
-    % if processed data is not found or optio
+    % if processed data is not found or option
     if loadFromBaseFiles || ~found
         os = loadData(s(i).folder,removeGhostCells);
         save(filepath,'os')
