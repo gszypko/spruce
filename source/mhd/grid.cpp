@@ -101,6 +101,15 @@ std::string Grid::format(char element_delim, char row_delim, int precision, char
   return out.str();
 }
 
+std::vector<Grid> Grid::CrossProduct(const Grid& a_x, const Grid& a_y, const Grid& a_z, const Grid& b_x, const Grid& b_y, const Grid& b_z)
+{
+  Grid result_x, result_y, result_z;
+  result_x = a_y*b_z - a_z*b_y;
+  result_y = a_z*b_x - a_x*b_z;
+  result_z = a_x*b_y - a_y*b_x;
+  return {result_x, result_y, result_z};
+}
+
 double& Grid::operator()(size_t i, size_t j)
 {
   assert(i >= 0 && i < m_rows && j >= 0 && j < m_cols);
