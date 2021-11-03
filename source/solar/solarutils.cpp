@@ -79,7 +79,6 @@ namespace SolarUtils {
     MhdInp mi(xdim,ydim);
     mi.set_var(PlasmaDomain::mom_x, Grid(xdim,ydim,0.0));
     mi.set_var(PlasmaDomain::mom_y, Grid(xdim,ydim,0.0));
-    mi.set_var(PlasmaDomain::mom_z, Grid(xdim,ydim,0.0));
 
     if(problem_type == "corona"){
       mi.set_var(PlasmaDomain::d_x,d_x,"center");

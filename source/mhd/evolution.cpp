@@ -47,59 +47,60 @@ void PlasmaDomain::advanceTime(bool verbose)
   if(radiative_losses) subcycleRadiation(subcycles_rad,min_dt);
 
   //Advance time by min_dt
-  // Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y],
-  //       &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y],
-  //       &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_press = m_grids[press];
-  // double visc_coeff = epsilon_viscous*0.5*((m_grids[d_x].square() + m_grids[d_y].square())/dt_raw).min();
-  // Grid viscous_force_x = visc_coeff*laplacian(m_mom_x);
-  // Grid viscous_force_y = visc_coeff*laplacian(m_mom_y);
-  // Grid d_rho_dt = -transportDerivative1D(m_rho, m_v_x, 0) - transportDerivative1D(m_rho, m_v_y, 1);
-  // Grid d_mom_x_dt = -transportDerivative1D(m_mom_x, m_v_x, 0) - transportDerivative1D(m_mom_x, m_v_y, 1)
-  //                 - derivative1D(m_press, 0)
-  //                 + m_grids[lorentz_force_x]
-  //                 + m_rho*m_grids[grav_x] + viscous_force_x;
-  // Grid d_mom_y_dt = -transportDerivative1D(m_mom_y, m_v_x, 0) - transportDerivative1D(m_mom_y, m_v_y, 1)
-  //                 - derivative1D(m_press, 1)
-  //                 + m_grids[lorentz_force_y]
-  //                 + m_rho*m_grids[grav_y] + viscous_force_y;
-  // Grid d_thermal_energy_dt = - transportDerivative1D(m_thermal_energy + m_grids[kinetic_energy], m_v_x, 0)
-  //                          - transportDerivative1D(m_thermal_energy + m_grids[kinetic_energy], m_v_y, 1)
-  //                          - derivative1D(m_press*m_v_x, 0) - derivative1D(m_press*m_v_y, 1)
-  //                          - derivative1D(m_grids[mag_pxx]*m_v_x + m_grids[mag_pxy]*m_v_y, 0)
-  //                          - derivative1D(m_grids[mag_pxy]*m_v_x + m_grids[mag_pyy]*m_v_y, 1)
-  //                          + (m_rho*m_grids[grav_x] + viscous_force_x)*m_v_x
-  //                          + (m_rho*m_grids[grav_y] + viscous_force_y)*m_v_y
-  //                          + 0.5*(m_v_x.square() + m_v_y.square())*d_rho_dt
-  //                          - m_v_x*d_mom_x_dt - m_v_y*d_mom_y_dt;
-
-  Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y], &m_mom_z = m_grids[mom_z],
-        &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y], &m_v_z = m_grids[v_z],
+  Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y],
+        &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y],
         &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_press = m_grids[press];
   double visc_coeff = epsilon_viscous*0.5*((m_grids[d_x].square() + m_grids[d_y].square())/dt_raw).min();
-
-  std::vector<Grid> lorentz_force = Grid::CrossProduct(m_v_x,m_v_y,m_v_z,m_grids[b_x],m_grids[b_y],m_grids[b_z]);
-  for(int i=0; i<3; i++) lorentz_force[i] *= -E_CHARGE*m_grids[n];
-
   Grid viscous_force_x = visc_coeff*laplacian(m_mom_x);
   Grid viscous_force_y = visc_coeff*laplacian(m_mom_y);
   Grid d_rho_dt = -transportDerivative1D(m_rho, m_v_x, 0) - transportDerivative1D(m_rho, m_v_y, 1);
   Grid d_mom_x_dt = -transportDerivative1D(m_mom_x, m_v_x, 0) - transportDerivative1D(m_mom_x, m_v_y, 1)
                   - derivative1D(m_press, 0)
-                  + m_rho*m_grids[grav_x] + viscous_force_x
-                  + lorentz_force[0];
+                  + m_grids[lorentz_force_x]
+                  + m_rho*m_grids[grav_x] + viscous_force_x;
   Grid d_mom_y_dt = -transportDerivative1D(m_mom_y, m_v_x, 0) - transportDerivative1D(m_mom_y, m_v_y, 1)
                   - derivative1D(m_press, 1)
-                  + m_rho*m_grids[grav_y] + viscous_force_y
-                  + lorentz_force[1];
-  Grid d_mom_z_dt = -transportDerivative1D(m_mom_z, m_v_x, 0) - transportDerivative1D(m_mom_z, m_v_y, 1)
-                  + lorentz_force[2];
+                  + m_grids[lorentz_force_y]
+                  + m_rho*m_grids[grav_y] + viscous_force_y;
   Grid d_thermal_energy_dt = - transportDerivative1D(m_thermal_energy + m_grids[kinetic_energy], m_v_x, 0)
                            - transportDerivative1D(m_thermal_energy + m_grids[kinetic_energy], m_v_y, 1)
                            - derivative1D(m_press*m_v_x, 0) - derivative1D(m_press*m_v_y, 1)
+                           - derivative1D(m_grids[mag_pxx]*m_v_x + m_grids[mag_pxy]*m_v_y, 0)
+                           - derivative1D(m_grids[mag_pxy]*m_v_x + m_grids[mag_pyy]*m_v_y, 1)
                            + (m_rho*m_grids[grav_x] + viscous_force_x)*m_v_x
                            + (m_rho*m_grids[grav_y] + viscous_force_y)*m_v_y
                            + 0.5*(m_v_x.square() + m_v_y.square())*d_rho_dt
                            - m_v_x*d_mom_x_dt - m_v_y*d_mom_y_dt;
+
+  // v cross B version
+  // Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y], &m_mom_z = m_grids[mom_z],
+  //       &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y], &m_v_z = m_grids[v_z],
+  //       &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_press = m_grids[press];
+  // double visc_coeff = epsilon_viscous*0.5*((m_grids[d_x].square() + m_grids[d_y].square())/dt_raw).min();
+
+  // std::vector<Grid> lorentz_force = Grid::CrossProduct(m_v_x,m_v_y,m_v_z,m_grids[b_x],m_grids[b_y],m_grids[b_z]);
+  // for(int i=0; i<3; i++) lorentz_force[i] *= -E_CHARGE*m_grids[n];
+
+  // Grid viscous_force_x = visc_coeff*laplacian(m_mom_x);
+  // Grid viscous_force_y = visc_coeff*laplacian(m_mom_y);
+  // Grid d_rho_dt = -transportDerivative1D(m_rho, m_v_x, 0) - transportDerivative1D(m_rho, m_v_y, 1);
+  // Grid d_mom_x_dt = -transportDerivative1D(m_mom_x, m_v_x, 0) - transportDerivative1D(m_mom_x, m_v_y, 1)
+  //                 - derivative1D(m_press, 0)
+  //                 + m_rho*m_grids[grav_x] + viscous_force_x
+  //                 + lorentz_force[0];
+  // Grid d_mom_y_dt = -transportDerivative1D(m_mom_y, m_v_x, 0) - transportDerivative1D(m_mom_y, m_v_y, 1)
+  //                 - derivative1D(m_press, 1)
+  //                 + m_rho*m_grids[grav_y] + viscous_force_y
+  //                 + lorentz_force[1];
+  // Grid d_mom_z_dt = -transportDerivative1D(m_mom_z, m_v_x, 0) - transportDerivative1D(m_mom_z, m_v_y, 1)
+  //                 + lorentz_force[2];
+  // Grid d_thermal_energy_dt = - transportDerivative1D(m_thermal_energy + m_grids[kinetic_energy], m_v_x, 0)
+  //                          - transportDerivative1D(m_thermal_energy + m_grids[kinetic_energy], m_v_y, 1)
+  //                          - derivative1D(m_press*m_v_x, 0) - derivative1D(m_press*m_v_y, 1)
+  //                          + (m_rho*m_grids[grav_x] + viscous_force_x)*m_v_x
+  //                          + (m_rho*m_grids[grav_y] + viscous_force_y)*m_v_y
+  //                          + 0.5*(m_v_x.square() + m_v_y.square())*d_rho_dt
+  //                          - m_v_x*d_mom_x_dt - m_v_y*d_mom_y_dt;
 
 
   // std::cerr << "lorentz_force_x\n" << m_grids[lorentz_force_x];
@@ -290,7 +291,6 @@ void PlasmaDomain::recomputeDerivedVariables()
   m_grids[kinetic_energy] = 0.5*(m_grids[mom_x].square() + m_grids[mom_y].square())/m_grids[rho];
   m_grids[v_x] = m_grids[mom_x]/m_grids[rho];
   m_grids[v_y] = m_grids[mom_y]/m_grids[rho];
-  m_grids[v_z] = m_grids[mom_z]/m_grids[rho];
   m_grids[n] = m_grids[rho]/m_ion_mass;
   recomputeDT();
   if(thermal_conduction) recomputeDTThermal();

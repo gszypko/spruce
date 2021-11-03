@@ -29,12 +29,12 @@ public:
 
   //state variables (taken as input, carried over between iterations)
   enum StateVars { state_var_start=0,
-                        d_x=state_var_start,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,mom_z,b_x,b_y,b_z,grav_x,grav_y,
+                        d_x=state_var_start,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,b_x,b_y,b_z,grav_x,grav_y,
                         state_var_end };
   
   //derived variables (derived from state variables)
   enum DerivedVars { derived_var_start=state_var_end,
-                          press=derived_var_start,thermal_energy,kinetic_energy,rad,dt,dt_thermal,dt_rad,v_x,v_y,v_z,n,
+                          press=derived_var_start,thermal_energy,kinetic_energy,rad,dt,dt_thermal,dt_rad,v_x,v_y,n,
                           derived_var_end };
 
   //constant variables (unchanging bw iterations, derived from state variables)
