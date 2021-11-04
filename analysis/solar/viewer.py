@@ -111,8 +111,8 @@ assert input_file.readline() == "b_x\n"
 rows_x = input_file.readline().split(';')
 assert input_file.readline() == "b_y\n"
 rows_y = input_file.readline().split(';')
-assert input_file.readline() == "b_z\n"
-input_file.readline()
+# assert input_file.readline() == "b_z\n"
+# input_file.readline()
 
 for i in range(xdim_view):
   bx[i] = np.asarray(rows_x[i].split(','))[yl:yu]

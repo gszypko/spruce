@@ -84,43 +84,23 @@ namespace SolarUtils {
       mi.set_var(PlasmaDomain::d_x,d_x,"center");
       mi.set_var(PlasmaDomain::d_y,d_y,"lower");
       mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
-      Grid b_x, b_y, b_z;
+      Grid b_x, b_y;
       b_x = BipolarField(pos_x, pos_y, b_0, scale_height, 0);
       b_y = BipolarField(pos_x, pos_y, b_0, scale_height, 1);
-      b_z = Grid(xdim,ydim,0.0);
       mi.set_var(PlasmaDomain::b_x, b_x);
       mi.set_var(PlasmaDomain::b_y, b_y);
-      mi.set_var(PlasmaDomain::b_z, b_z);
       mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
       mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
       mi.set_var(PlasmaDomain::rho, HydrostaticFalloff(base_rho,scale_height*1.0e1,pos_y));
-      // Grid press_init = 2.0*HydrostaticFalloff(base_rho,scale_height,pos_y)/ion_mass*K_B*init_temp;
-      // std::cout << press_init;
-      // Grid press_magnetic = (b_x*b_x + b_y*b_y + b_z*b_z)/(8.0*PI);
-      // Grid press_adj = press_init - press_magnetic;
-      // Grid rho_adj = ion_mass*press_adj/(2.0*K_B*init_temp);
-      // std::cout << press_init/press_magnetic;
-      // std::cout << rho_adj/HydrostaticFalloff(base_rho,scale_height,pos_y);
-      // mi.set_var(PlasmaDomain::rho, press_init);
-    // } else if(problem_type == "uniform"){
-    //   mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
-    //   mi.set_var(PlasmaDomain::rho, Grid(xdim,ydim,base_rho*std::exp(-2.0*PI)));
-    //   mi.set_var(PlasmaDomain::b_x, BipolarField(pos_x, pos_y, b_0, scale_height, 0));
-    //   mi.set_var(PlasmaDomain::b_y, BipolarField(pos_x, pos_y, b_0, scale_height, 1));
-    //   mi.set_var(PlasmaDomain::b_z, Grid(xdim,ydim,0.0));
-    //   mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
-    //   mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
     } else if(problem_type == "gaussian"){
       mi.set_var(PlasmaDomain::d_x,d_x,"center");
       mi.set_var(PlasmaDomain::d_y,d_y,"center");
       double stdevx = pms.getvar("stdevx");
       double stdevy = pms.getvar("stdevy");
-      // mi.set_var(PlasmaDomain::temp, GaussianGrid(xdim,ydim,init_temp,10.0*init_temp,xdim/stdevx,ydim/stdevy));
       mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
       mi.set_var(PlasmaDomain::rho, GaussianGrid(pos_x,pos_y,0.1*base_rho,10.0*base_rho,xdim/stdevx,ydim/stdevy));
       mi.set_var(PlasmaDomain::b_x, Grid(xdim,ydim,0.0));
       mi.set_var(PlasmaDomain::b_y, Grid(xdim,ydim,0.0));
-      mi.set_var(PlasmaDomain::b_z, Grid(xdim,ydim,0.0));
       mi.set_var(PlasmaDomain::grav_y, Grid(xdim,ydim,0.0));
       mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
     }

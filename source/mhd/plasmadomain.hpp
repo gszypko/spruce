@@ -29,7 +29,7 @@ public:
 
   //state variables (taken as input, carried over between iterations)
   enum StateVars { state_var_start=0,
-                        d_x=state_var_start,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,b_x,b_y,b_z,grav_x,grav_y,
+                        d_x=state_var_start,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,b_x,b_y,grav_x,grav_y,
                         state_var_end };
   
   //derived variables (derived from state variables)
@@ -40,7 +40,7 @@ public:
   //constant variables (unchanging bw iterations, derived from state variables)
   enum ConstantVars { constant_var_start=derived_var_end,
                            b_magnitude=constant_var_start,b_hat_x,b_hat_y,mag_press,lorentz_force_x,lorentz_force_y,
-                           mag_pxx,mag_pyy,mag_pzz,mag_pxy,mag_pxz,mag_pyz,
+                           mag_pxx,mag_pyy,mag_pxy,
                            constant_var_end, num_variables=constant_var_end };
 
   //Constructors and Initialization
@@ -169,7 +169,7 @@ private:
   Grid laplacian(const Grid &quantity);
 
   //Computes curl of z-directed vector in 2D plane
-  std::vector<Grid> PlasmaDomain::curl2D(const Grid& z);
+  std::vector<Grid> curl2D(const Grid& z);
   
   //Computes 1D cell-centered conductive flux from temperature "temp"
   //Flux computed in direction indicated by "index": 0 for x, 1 for y

@@ -72,6 +72,11 @@ void PlasmaDomain::advanceTime(bool verbose)
                            + 0.5*(m_v_x.square() + m_v_y.square())*d_rho_dt
                            - m_v_x*d_mom_x_dt - m_v_y*d_mom_y_dt;
 
+  // std::vector<Grid> induction_rhs_b0 = curl2D(Grid::CrossProduct2D(m_v_x,m_v_y,m_grids[b_x],m_grids[b_y]));
+  // std::vector<Grid> induction_rhs_db = curl2D(Grid::CrossProduct2D(m_v_x,m_v_y,m_grids[db_x],m_grids[db_y]));
+  // Grid d_db_x_dt = induction_rhs_b0[0] + induction_rhs_db[0];
+  // Grid d_db_y_dt = induction_rhs_b0[1] + induction_rhs_db[1];
+
   // v cross B version
   // Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y], &m_mom_z = m_grids[mom_z],
   //       &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y], &m_v_z = m_grids[v_z],
@@ -209,76 +214,27 @@ void PlasmaDomain::subcycleRadiation(int subcycles_rad, double dt_total)
 }
 
 //Computes the magnetic magnitude, direction, and pressure terms
-//based on the current values of b_x, b_y, and b_z
+//based on the current values of b_x, b_y
 //Also computes grid spacing d_x and d_y from pos_x and pos_y
 //For terms that are computed once, at initialization, and unchanged thereafter
 void PlasmaDomain::computeConstantTerms()
 {
-  Grid &m_b_x = m_grids[b_x], &m_b_y = m_grids[b_y], &m_b_z = m_grids[b_z];
-  m_grids[b_magnitude] = (m_b_x.square() + m_b_y.square() + m_b_z.square()).sqrt();
+  Grid &m_b_x = m_grids[b_x], &m_b_y = m_grids[b_y];
+  m_grids[b_magnitude] = (m_b_x.square() + m_b_y.square()).sqrt();
   m_grids[b_hat_x] = m_b_x/m_grids[b_magnitude];
   m_grids[b_hat_y] = m_b_y/m_grids[b_magnitude];
-  m_grids[mag_press] = (m_b_x*m_b_x + m_b_y*m_b_y + m_b_z*m_b_z)/(8.0*PI);
+  m_grids[mag_press] = (m_b_x*m_b_x + m_b_y*m_b_y)/(8.0*PI);
 
-  m_grids[mag_pxx] = (-m_b_x*m_b_x + m_b_y*m_b_y + m_b_z*m_b_z)/(8.0*PI);
-  m_grids[mag_pyy] = (m_b_x*m_b_x - m_b_y*m_b_y + m_b_z*m_b_z)/(8.0*PI);
-  m_grids[mag_pzz] = (m_b_x*m_b_x + m_b_y*m_b_y - m_b_z*m_b_z)/(8.0*PI);
+  m_grids[mag_pxx] = (-m_b_x*m_b_x + m_b_y*m_b_y)/(8.0*PI);
+  m_grids[mag_pyy] = (m_b_x*m_b_x - m_b_y*m_b_y)/(8.0*PI);
   m_grids[mag_pxy] = -m_b_x*m_b_y/(4.0*PI);
-  m_grids[mag_pxz] = -m_b_x*m_b_z/(4.0*PI);
-  m_grids[mag_pyz] = -m_b_y*m_b_z/(4.0*PI);
 
   Grid &m_d_x = m_grids[d_x], &m_d_y = m_grids[d_y];
   Grid &m_pos_x = m_grids[pos_x], &m_pos_y = m_grids[pos_y];
 
-  // //DO NOT PARALLELIZE; ordering matters here, spacing information propagates
-  // //from i=0 and j=0 borders outward (to support potential for non-uniform grids)
-  // //this method is ultimately not going to work; so long as cell center positions are arbitrary there will be
-  // //scenarios where you cannot construct cells with the appropriate center locations
-  // //need to define things using dx/dy from input
-  // for(int i=0; i<m_xdim; i++){
-  //   for(int j=0; j<m_ydim; j++){
-  //     if(i==0) m_d_x(0,j) = std::abs(m_pos_x(1,j) - m_pos_x(0,j));
-  //     else m_d_x(i,j) = 2.0*std::abs(m_pos_x(i,j) - m_pos_x(i-1,j)) - m_d_x(i-1,j);
-  //     if(j==0) m_d_y(i,0) = std::abs(m_pos_y(i,1) - m_pos_y(i,0));
-  //     else m_d_y(i,j) = 2.0*std::abs(m_pos_y(i,j) - m_pos_y(i,j-1)) - m_d_y(i,j-1);
-  //   }
-  // }
-
-  // NOW HANDLED BEFORE INITIALIZATION BY USER
-  // std::vector<Grid> positions = PlasmaDomain::convertCellSizesToCellPositions(m_d_x,m_d_y,x_origin,y_origin);
-  // m_pos_x = positions[0];
-  // m_pos_y = positions[1];
-  // for(int i=0; i<m_xdim; i++){
-  //   for(int j=0; j<m_ydim; j++){
-  //     if(i==0) m_pos_x(i,j) = 0.5*m_d_x(i,j);
-  //     else m_pos_x(i,j) = m_pos_x(i-1,j) + 0.5*m_d_x(i-1,j) + 0.5*m_d_x(i,j);
-  //     if(j==0) m_pos_y(i,j) = 0.5*m_d_y(i,j);
-  //     else m_pos_y(i,j) = m_pos_y(i,j-1) + 0.5*m_d_y(i,j-1) + 0.5*m_d_y(i,j);
-  //   }
-  // }
-  // if(x_origin == "center"){
-  //   m_pos_x -= 0.5*(m_pos_x(m_xdim-1,0) + 0.5*m_d_x(m_xdim-1,0));
-  // } else if(x_origin == "upper"){
-  //   m_pos_x -= (m_pos_x(m_xdim-1,0) + 0.5*m_d_x(m_xdim-1,0));
-  // }
-  // if(y_origin == "center"){
-  //   m_pos_y -= 0.5*(m_pos_y(0,m_ydim-1) + 0.5*m_d_y(0,m_ydim-1));
-  // } else if(y_origin == "upper"){
-  //   m_pos_y -= (m_pos_y(0,m_ydim-1) + 0.5*m_d_y(0,m_ydim-1));
-  // }
-
-  // std::cout << m_pos_x << std::endl;
-  // std::cout << m_pos_y << std::endl;
-  // std::cout << m_d_x << std::endl;
-  // std::cout << m_d_y << std::endl;
-  // abort();
-
   m_grids[lorentz_force_x] = - derivative1D(m_grids[mag_pxx], 0) - derivative1D(m_grids[mag_pxy], 1);
   m_grids[lorentz_force_y] = - derivative1D(m_grids[mag_pxy], 0) - derivative1D(m_grids[mag_pyy], 1);
   
-  // std::cerr << "b_x\n" << m_grids[b_x] << "b_y\n" << m_grids[b_y];
-  // std::cerr << "lorentz_force_x\n" << m_grids[lorentz_force_x] << "lorentz_force_y\n" << m_grids[lorentz_force_y];
-  // abort();
 }
 
 //Recompute pressure, energy, velocity, radiative loss rate, dt, dt_thermal, dt_rad
