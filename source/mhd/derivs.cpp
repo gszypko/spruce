@@ -257,6 +257,12 @@ Grid PlasmaDomain::laplacian(const Grid &quantity){
   return result_x+result_y;
 }
 
+std::vector<Grid> PlasmaDomain::curl2D(const Grid& z){
+  Grid result_x = derivative1D(z, 1);
+  Grid result_y = -derivative1D(z, 0);
+  return {result_x, result_y};
+}
+
 //Linearly interpolate value of quantity for boundary between (i1,j1) and (i2,j2)
 double PlasmaDomain::boundaryInterpolate(const Grid &quantity, int i1, int j1, int i2, int j2){
   assert(i1 == i2 || j1 == j2 && "boundary interpolation only meant to operate along one axis");

@@ -168,6 +168,9 @@ private:
   //Computes Laplacian (del squared) of "quantity"
   Grid laplacian(const Grid &quantity);
 
+  //Computes curl of z-directed vector in 2D plane
+  std::vector<Grid> PlasmaDomain::curl2D(const Grid& z);
+  
   //Computes 1D cell-centered conductive flux from temperature "temp"
   //Flux computed in direction indicated by "index": 0 for x, 1 for y
   //k0 is conductive coefficient

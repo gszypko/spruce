@@ -101,6 +101,11 @@ std::string Grid::format(char element_delim, char row_delim, int precision, char
   return out.str();
 }
 
+Grid Grid::CrossProduct2D(const Grid& a_x, const Grid& a_y, const Grid& b_x, const Grid& b_y)
+{
+  return a_x*b_y - a_y*b_x;
+}
+
 std::vector<Grid> Grid::CrossProduct(const Grid& a_x, const Grid& a_y, const Grid& a_z, const Grid& b_x, const Grid& b_y, const Grid& b_z)
 {
   Grid result_x, result_y, result_z;

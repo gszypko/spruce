@@ -38,6 +38,7 @@ public:
   Grid sqrt() const;
   Grid pow(double power) const;
   std::string format(char element_delim = ',', char row_delim = '\n', int precision = 4, char end_delim = '\n') const;
+  static Grid CrossProduct2D(const Grid& a_x, const Grid& a_y, const Grid& b_x, const Grid& b_y);
   static std::vector<Grid> CrossProduct(const Grid& a_x, const Grid& a_y, const Grid& a_z, const Grid& b_x, const Grid& b_y, const Grid& b_z);
   // OPERATOR OVERRIDES
   double& operator()(size_t i, size_t j);
