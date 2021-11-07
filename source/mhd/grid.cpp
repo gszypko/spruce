@@ -101,13 +101,41 @@ std::string Grid::format(char element_delim, char row_delim, int precision, char
   return out.str();
 }
 
-Grid Grid::CrossProduct2D(const Grid& a_x, const Grid& a_y, const Grid& b_x, const Grid& b_y)
+Grid Grid::DotProduct2D(const std::vector<Grid>& a, const std::vector<Grid>& b)
 {
-  return a_x*b_y - a_y*b_x;
+  assert(a.size() == 2 && b.size() == 2 && "this operator requires 2D vectors");
+  return a[0]*b[0] + a[1]*b[1];
 }
 
-std::vector<Grid> Grid::CrossProduct(const Grid& a_x, const Grid& a_y, const Grid& a_z, const Grid& b_x, const Grid& b_y, const Grid& b_z)
+//Cross product of two vectors in xy-plane (result in z-direction)
+Grid Grid::CrossProduct2D(const std::vector<Grid>& a, const std::vector<Grid>& b)
 {
+  assert(a.size() == 2 && b.size() == 2 && "this operator requires 2D vectors");
+  return a[0]*b[1] - a[1]*b[0];
+}
+
+//Cross product of vector in z-direction with vector in xy-plane (result in xy-plane)
+std::vector<Grid> Grid::CrossProductZ2D(const Grid& a_z, const std::vector<Grid>& b)
+{
+  assert(b.size() == 2 && "this operator requires 2D vector as second argument");
+  Grid b_x = b[0], b_y = b[1];
+  return { -a_z*b_y, a_z*b_x };
+}
+
+//Cross product of vector in xy-plane with vector in z-direction (result in xy-plane)
+std::vector<Grid> Grid::CrossProduct2DZ(const std::vector<Grid>& a, const Grid& b_z)
+{
+  assert(a.size() == 2 && "this operator requires 2D vector as first argument");
+  Grid a_x = a[0], a_y = a[1];
+  return Grid::CrossProductZ2D(-1.0*b_z,{a_x,a_y});
+}
+
+//General cross product between two vector quantities
+std::vector<Grid> Grid::CrossProduct(const std::vector<Grid>& a, const std::vector<Grid>& b)
+{
+  assert(a.size() == 3 && b.size() == 3 && "this operator requires 3D vectors of Grids");
+  Grid a_x = a[0], a_y = a[1], a_z = a[2],
+       b_x = b[0], b_y = b[1], b_z = b[2];
   Grid result_x, result_y, result_z;
   result_x = a_y*b_z - a_z*b_y;
   result_y = a_z*b_x - a_x*b_z;
