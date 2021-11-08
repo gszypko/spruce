@@ -38,6 +38,17 @@ public:
   Grid sqrt() const;
   Grid pow(double power) const;
   std::string format(char element_delim = ',', char row_delim = '\n', int precision = 4, char end_delim = '\n') const;
+  //Dot product of two 2D vectors
+  static Grid DotProduct2D(const std::vector<Grid>& a, const std::vector<Grid>& b);
+  //Cross product of two vectors in xy-plane (result in z-direction)
+  static Grid CrossProduct2D(const std::vector<Grid>& a, const std::vector<Grid>& b);
+  //Cross product of vector in z-direction with vector in xy-plane (result in xy-plane)
+  static std::vector<Grid> CrossProductZ2D(const Grid& a_z, const std::vector<Grid>& b);
+  //Cross product of vector in xy-plane with vector in z-direction (result in xy-plane)
+  static std::vector<Grid> CrossProduct2DZ(const std::vector<Grid>& a, const Grid& b_z);
+  //General cross product between two 3D vector quantities
+  static std::vector<Grid> CrossProduct(const std::vector<Grid>& a, const std::vector<Grid>& b);
+
   // OPERATOR OVERRIDES
   double& operator()(size_t i, size_t j);
   double operator()(size_t i, size_t j) const;

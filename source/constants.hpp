@@ -6,6 +6,7 @@
 /**************************** PHYSICAL CONSTANTS ****************************/
 #define K_B 1.3807e-16 //boltzmann constant, erg K^-1
 #define M_ELECTRON 9.1094e-28 //electron mass, g
+#define E_CHARGE 4.8032e-10 //elementary charge, statC
 #define BASE_GRAV 2.748e4 //acceleration due to gravity at surface, cm sec^-2
 #define R_SUN 6.957e10 //radius of sun, cm
 #define M_SUN 1.989e33 //mass of sun, g

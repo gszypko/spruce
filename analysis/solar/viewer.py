@@ -51,12 +51,12 @@ parser.add_argument('filename', help="the name of the file output from mhdtoy")
 parser.add_argument('timestep', type=float, help="the interval (in simulation time units) between frames of output animation")
 parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', 'energy', 'vel_x', 'vel_y', 'dt', 'dt_thermal', 'dt_rad', 'n', 'beta'])
 parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['b','vel','v'])
-parser.add_argument('--density', metavar="vec_display_density", type=int, help="set the interval between displayed vectors", default=4)
+parser.add_argument('--density', metavar="vec_display_density", type=int, help="set the interval between displayed vectors", default=25)
 parser.add_argument('-d', '--diff', metavar='diff_filename', help="filename to difference with original file")
 parser.add_argument('-r', '--realtime', action='store_true')
 args = parser.parse_args()
 
-vec_interval = args.density #interval between B field vectors to display
+vec_interval = args.density #number of vectors in each direction to display(?)
 
 input_file = open(args.filename)
 display_interval = float(args.timestep)
@@ -111,8 +111,8 @@ assert input_file.readline() == "b_x\n"
 rows_x = input_file.readline().split(';')
 assert input_file.readline() == "b_y\n"
 rows_y = input_file.readline().split(';')
-assert input_file.readline() == "b_z\n"
-input_file.readline()
+# assert input_file.readline() == "b_z\n"
+# input_file.readline()
 
 for i in range(xdim_view):
   bx[i] = np.asarray(rows_x[i].split(','))[yl:yu]
@@ -267,6 +267,36 @@ else:
 
 contour_color_axes = fig.axes[-1]
 
+# pull out correctly spaced vectors
+x_interval = (x_max - x_min)/(vec_interval + 1)
+y_interval = (y_max - y_min)/(vec_interval + 1)
+x_indices = []
+y_indices = []
+curr_index_num = 1
+for i in range(xdim_view):
+  if (X[i,0] - x_min)>curr_index_num*x_interval and (X[i-1,0] - x_min)<curr_index_num*x_interval:
+    if abs((X[i,0] - x_min)-curr_index_num*x_interval) < abs((X[i-1,0] - x_min)-curr_index_num*x_interval):
+      x_indices.append(i)
+    else:
+      x_indices.append(i-1)
+    curr_index_num+=1
+curr_index_num = 1
+for j in range(ydim_view):
+  if (Y[0,j] - y_min)>curr_index_num*y_interval and (Y[0,j-1] - y_min)<curr_index_num*y_interval:
+    if abs((Y[0,j] - y_min)-curr_index_num*y_interval) < abs((Y[0,j-1] - y_min)-curr_index_num*y_interval):
+      y_indices.append(j)
+    else:
+      y_indices.append(j-1)
+    curr_index_num+=1
+x_vec_indices = []
+y_vec_indices = []
+for i in range(len(x_indices)):
+  for j in range(len(y_indices)):
+    x_vec_indices.append(x_indices[i])
+    y_vec_indices.append(y_indices[j])
+x_vec_indices = np.array(x_vec_indices)
+y_vec_indices = np.array(y_vec_indices)
+
 if vec_var == "b":
   this_vec_x = bx
   this_vec_y = by
@@ -293,13 +323,21 @@ elif vec_var != None:
   norm = np.sqrt(this_vec_x**2 + this_vec_y**2)
   np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
   np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
-  quiv = ax.quiver(X[vec_interval::vec_interval, vec_interval::vec_interval], \
-    Y[vec_interval::vec_interval, vec_interval::vec_interval], \
-      this_vec_x[vec_interval::vec_interval, vec_interval::vec_interval], \
-        this_vec_y[vec_interval::vec_interval, vec_interval::vec_interval], \
-          norm[vec_interval::vec_interval, vec_interval::vec_interval], \
-            cmap=plt.cm.plasma, ec='k', lw=0.2, scale_units='inches', angles='xy', scale=6, \
-              width = 0.008, headwidth=3, headlength=3, headaxislength=2.5, \
+  # quiv = ax.quiver(X[vec_interval::vec_interval, vec_interval::vec_interval], \
+  #   Y[vec_interval::vec_interval, vec_interval::vec_interval], \
+  #     this_vec_x[vec_interval::vec_interval, vec_interval::vec_interval], \
+  #       this_vec_y[vec_interval::vec_interval, vec_interval::vec_interval], \
+  #         norm[vec_interval::vec_interval, vec_interval::vec_interval], \
+  #           cmap=plt.cm.plasma, ec='k', lw=0.2, scale_units='inches', angles='xy', scale=10, \
+  #             width = 0.005, headwidth=3, headlength=3, headaxislength=2.5, \
+  #               pivot='mid', norm=matplotlib.colors.SymLogNorm(linthresh=1e4, base=10))
+  quiv = ax.quiver(X[x_vec_indices, y_vec_indices], \
+    Y[x_vec_indices, y_vec_indices], \
+      this_vec_x[x_vec_indices, y_vec_indices], \
+        this_vec_y[x_vec_indices, y_vec_indices], \
+          norm[x_vec_indices, y_vec_indices], \
+            cmap=plt.cm.plasma, ec='k', lw=0.2, scale_units='inches', angles='xy', scale=10, \
+              width = 0.005, headwidth=3, headlength=3, headaxislength=2.5, \
                 pivot='mid', norm=matplotlib.colors.SymLogNorm(linthresh=1e4, base=10))
   vec_colorbar = fig.colorbar(quiv)
   vec_colorbar.set_label(fullnames[vec_var]+ fullunits[vec_var])
@@ -331,9 +369,9 @@ def updatefig(*args):
       norm = np.sqrt(this_vec_x**2 + this_vec_y**2)
       np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
       np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
-      quiv.set_UVC(this_vec_x[vec_interval::vec_interval, vec_interval::vec_interval], \
-          this_vec_y[vec_interval::vec_interval, vec_interval::vec_interval], \
-            norm[vec_interval::vec_interval, vec_interval::vec_interval])
+      quiv.set_UVC(this_vec_x[x_vec_indices, y_vec_indices], \
+          this_vec_y[x_vec_indices, y_vec_indices], \
+            norm[x_vec_indices, y_vec_indices])
       quiv.autoscale()
     return im, ax
 

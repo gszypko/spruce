@@ -29,18 +29,19 @@ public:
 
   //state variables (taken as input, carried over between iterations)
   enum StateVars { state_var_start=0,
-                        d_x=state_var_start,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,b_x,b_y,b_z,grav_x,grav_y,
+                        d_x=state_var_start,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,b_x,b_y,grav_x,grav_y,
                         state_var_end };
   
   //derived variables (derived from state variables)
   enum DerivedVars { derived_var_start=state_var_end,
-                          press=derived_var_start,thermal_energy,kinetic_energy,rad,dt,dt_thermal,dt_rad,v_x,v_y,n,
+                          press=derived_var_start,thermal_energy,kinetic_energy,div_db,db_x,db_y,
+                          rad,dt,dt_thermal,dt_rad,v_x,v_y,n,
                           derived_var_end };
 
   //constant variables (unchanging bw iterations, derived from state variables)
   enum ConstantVars { constant_var_start=derived_var_end,
-                           b_magnitude=constant_var_start,b_hat_x,b_hat_y,mag_press,lorentz_force_x,lorentz_force_y,
-                           mag_pxx,mag_pyy,mag_pzz,mag_pxy,mag_pxz,mag_pyz,
+                           b_magnitude=constant_var_start,div_b,b_hat_x,b_hat_y,mag_energy,mag_press,lorentz_force_x,lorentz_force_y,
+                           mag_pxx,mag_pyy,mag_pxy,
                            constant_var_end, num_variables=constant_var_end };
 
   //Constructors and Initialization
@@ -152,21 +153,34 @@ private:
   //if "index"==0, or i,j and i,j-1 if "index"==1
   Grid upwindSurface(const Grid &cell_center, const Grid &vel, const int index);
 
+  //Compute divergence of scalar quantity times velocity using Barton's method
+  //Meant for advection terms
+  Grid transportDivergence2D(const Grid &quantity, const std::vector<Grid> &vel);
+  //Compute 1D derivative using Barton's method, for transport terms
   Grid transportDerivative1D(const Grid &quantity, const Grid &vel, const int index);
 
+  //Compute divergence of vector quantity a_x,a_y
+  Grid divergence2D(const Grid& a_x, const Grid& a_y);
   //Compute single-direction divergence term for non-transport term (central differencing)
   Grid derivative1D(const Grid &quantity, const int index);
 
-  // //Compute divergence term for simulation parameter "quantity"
-  // //"quantity","vx","vy" used for transport term
-  // //Non-transport terms contained in "nontransp_x", "nontransp_y"
-  // Grid divergence(const Grid &quantity, const Grid &nontransp_x, const Grid &nontransp_y);
+  //Compute divergence of vector quantity a[0],a[1]
+  Grid divergence2D(const std::vector<Grid>& a);
 
   //Compute single-direction second derivative
   Grid secondDerivative1D(const Grid &quantity, const int index);
 
   //Computes Laplacian (del squared) of "quantity"
   Grid laplacian(const Grid &quantity);
+
+  //Computes curl of vector in z-direction (result in xy-plane)
+  std::vector<Grid> curlZ(const Grid& z);
+
+  //Computes curl of vector in xy-plane (result in z-direction)
+  Grid curl2D(const Grid& x, const Grid& y);
+  
+  //Compute (perturbation) magnetic field term on RHS of energy equation
+  Grid computeMagneticEnergyTerm();
 
   //Computes 1D cell-centered conductive flux from temperature "temp"
   //Flux computed in direction indicated by "index": 0 for x, 1 for y

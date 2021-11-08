@@ -99,8 +99,7 @@ Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, 
     #pragma omp for collapse(2)
     for (int i = m_xl; i <= m_xu; i++){
       for(int j = m_yl; j <= m_yu; j++){
-        // int i0, i1, i2, i2surf, j0, j1, j2, j2surf; //Need separate indices for surface and vel
-        int i0, i1, i2, j0, j1, j2; //Need separate indices for surface and vel
+        int i0, i1, i2, j0, j1, j2;
         i1 = i; j1 = j;
         if(index == 0){
           //Handle X boundary conditions
@@ -109,7 +108,6 @@ Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, 
           if(x_bound_1 == BoundaryCondition::Periodic && x_bound_2 == BoundaryCondition::Periodic){
             i0 = (i0+m_xdim)%m_xdim;
             i2 = (i2+m_xdim)%m_xdim;
-            //i2surf = (i2surf+m_xdim)%m_xdim;
           }
         }
         else{
@@ -119,17 +117,20 @@ Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, 
           if(y_bound_1 == BoundaryCondition::Periodic && y_bound_2 == BoundaryCondition::Periodic){
             j0 = (j0+m_ydim)%m_ydim;
             j2 = (j2+m_ydim)%m_ydim;
-            //j2surf = (j2surf+m_ydim)%m_ydim;
           }
         }
-        // div(i1,j1) = (surf_quantity(i2surf,j2surf)*0.5*(vel(i1,j1)+vel(i2,j2))
-        //           - surf_quantity(i1,j1)*0.5*(vel(i1,j1)+vel(i0,j0)))/denom(i1,j1);
         div(i1,j1) = (surf_quantity(i2,j2)*boundaryInterpolate(vel,i1,j1,i2,j2)
                   - surf_quantity(i1,j1)*boundaryInterpolate(vel,i0,j0,i1,j1))/denom(i1,j1);
       }
     }
   }
   return div;
+}
+
+Grid PlasmaDomain::transportDivergence2D(const Grid &quantity, const std::vector<Grid> &vel)
+{
+  assert(vel.size() == 2 && "this operator requires 2D velocity");
+  return transportDerivative1D(quantity,vel[0],0) + transportDerivative1D(quantity,vel[1],0);
 }
 
 //Compute single-direction divergence term for non-transport term (central differencing)
@@ -161,7 +162,6 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
             i0 = (i0+xdim)%xdim;
             i2 = (i2+xdim)%xdim;
           }
-          // denom = m_d_x(i1,j1) + 0.5*(m_d_x(i2,j2) + m_d_x(i0,j0));
           denom = m_d_x(i1,j1);
         }
         else{
@@ -172,18 +172,22 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
             j0 = (j0+ydim)%ydim;
             j2 = (j2+ydim)%ydim;
           }
-          // denom = m_d_y(i1,j1) + 0.5*(m_d_y(i2,j2) + m_d_y(i0,j0));
           denom = m_d_y(i1,j1);
         }
-        // div(i1,j1) = (quantity(i2,j2) - quantity(i0,j0))
-        //             /((m_pos_x(i2,j2) - m_pos_x(i0,j0))*(double)(1-index)
-        // div(i1,j1) = (quantity(i2,j2) - quantity(i0,j0)) / denom;
         div(i1,j1) = (boundaryInterpolate(quantity,i1,j1,i2,j2) - boundaryInterpolate(quantity,i0,j0,i1,j1)) / denom;
-                    
       }
     }
   }
   return div;
+}
+
+Grid PlasmaDomain::divergence2D(const Grid& a_x, const Grid& a_y){
+  return derivative1D(a_x, 0) + derivative1D(a_y, 1);
+}
+
+Grid PlasmaDomain::divergence2D(const std::vector<Grid>& a){
+  assert(a.size() == 2 && "divergence function assumes two vector components");
+  return divergence2D(a[0],a[1]);
 }
 
 // //Compute divergence term for simulation parameter "quantity"
@@ -208,7 +212,6 @@ Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index){
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
-  // Grid denom = (m_grids[d_x]*(double)(1-index) + m_grids[d_y]*(double)(index)).square();
   Grid denom = (0.5*m_grids[d_x]*(double)(1-index) + 0.5*m_grids[d_y]*(double)(index)).square();
   #pragma omp parallel
   {
@@ -239,7 +242,6 @@ Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index){
             j2 = (j2+ydim)%ydim;
           }
         }
-        // div(i1,j1) = (quantity(i2,j2) - 2.0*quantity(i1,j1) + quantity(i0,j0))/denom(i1,j1);
         div(i1,j1) = (boundaryInterpolate(quantity,i1,j1,i2,j2) - 2.0*quantity(i1,j1) + boundaryInterpolate(quantity,i0,j0,i1,j1))/denom(i1,j1);
       }
     }
@@ -255,6 +257,18 @@ Grid PlasmaDomain::laplacian(const Grid &quantity){
   Grid result_x = secondDerivative1D(quantity,0);
   Grid result_y = secondDerivative1D(quantity,1);
   return result_x+result_y;
+}
+
+//Computes curl of vector in z-direction (result in xy-plane)
+std::vector<Grid> PlasmaDomain::curlZ(const Grid& z){
+  Grid result_x = derivative1D(z, 1);
+  Grid result_y = -derivative1D(z, 0);
+  return {result_x, result_y};
+}
+
+//Computes curl of vector in xy-plane (result in z-direction)
+Grid PlasmaDomain::curl2D(const Grid& x, const Grid& y){
+  return derivative1D(y, 0) - derivative1D(x, 1);
 }
 
 //Linearly interpolate value of quantity for boundary between (i1,j1) and (i2,j2)
