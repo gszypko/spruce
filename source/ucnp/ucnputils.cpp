@@ -1,4 +1,5 @@
 #include "ucnputils.hpp"
+#include "antihelmholtz.hpp"
 
 MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
 {
@@ -7,18 +8,10 @@ MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
     int Nx, Ny;
     std::vector<double> dx_vec, dy_vec;
     
-    if (strcmp(pms.getopt("grid_opt"),"uniform")){
-        Nx = 2*round2int(pms.getvar("x_lim")/pms.getvar("dx"))+1;
-        Ny = 2*round2int(pms.getvar("y_lim")/pms.getvar("dy"))+1;
-        dx_vec.resize(Nx,pms.getvar("dx"));
-        dy_vec.resize(Ny,pms.getvar("dy"));
-    }
-    else if (strcmp(pms.getopt("grid_opt"),"nonuniform")){
-        Nx = 2*floor(pms.getvar("Nx")/2)+1; // ensure number of grids is odd so that there is a 'center' pixel
-        Ny = 2*floor(pms.getvar("Ny")/2)+1; // ensure number of grids is odd so that there is a 'center' pixel
-        genNonUniformGrids(pms.getvar("x_lim"),pms.getvar("dx"),pms.getvar("Nx"),dx_vec);
-        genNonUniformGrids(pms.getvar("y_lim"),pms.getvar("dy"),pms.getvar("Ny"),dy_vec);
-    }
+    Nx = 2*floor(pms.getvar("Nx")/2)+1; // ensure number of grids is odd so that there is a 'center' pixel
+    Ny = 2*floor(pms.getvar("Ny")/2)+1; // ensure number of grids is odd so that there is a 'center' pixel
+    genNonUniformGrids(pms.getvar("x_lim"),Nx,dx_vec,pms.getopt("grid_opt"));
+    genNonUniformGrids(pms.getvar("y_lim"),Ny,dy_vec,pms.getopt("grid_opt"));
 
     meshgrid(dx_vec,dy_vec,dx,dy);
     std::string center_opt = "center";
@@ -49,12 +42,15 @@ MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
     grids.set_var(PlasmaDomain::mom_x,Grid(Nx,Ny,0));
     grids.set_var(PlasmaDomain::mom_y,Grid(Nx,Ny,0));
 
+    // initialize quadrupole magnetic fields
+    AntiHelmholtz quad(30.,120.,pms.getvar("dBdx"),CurrentLoop::ax_x);
+
     std::vector<Grid> B(3.);
     for (int i = 0; i < B.size(); i++){ // for each B-field component
         B[i] = Grid(Nx,Ny); // initialize that component
         for (int j = 0; j < B[i].rows(); j++){
             for (int k = 0; k < B[i].cols(); k++){
-                std::vector<double> Bquad = quadrupole_field(x(j,k),y(j,k),0.,pms.getvar("dBdx"));
+                std::vector<long double> Bquad = quad.get_field({x(j,k),y(j,k),0.});
                 B[i](j,k) = Bquad[i];
             }
         }
@@ -69,18 +65,29 @@ MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
     return grids;
 }
 
-void genNonUniformGrids(double r_max, double dr_min, int Nr,std::vector<double>& dr)
+void genNonUniformGrids(double r_max, int Nr,std::vector<double>& dr,std::string opt)
 {
-    double p { 10 };
-    double f_sum{0};
-    double N { ceil(Nr/2) };
-    for (int i = 0; i < N; i++){
-        f_sum += abs(pow(i,p));
+    double A = 1.04;
+    double B;
+    if (strcmp(opt,"uniform")) B = 1;
+    else if (strcmp(opt,"nonuniform")) B = 0.995;
+    double N = ceil(Nr/2.);
+    std::vector<double> dx(N);
+    std::vector<double> x(N);
+    dx[0] = 1;
+    x[0] = 0;
+    for (int i = 1; i < N; i++){
+        dx[i] = 1 + A*(dx[i-1]-B);
+        x[i] = x[i-1] + dx[i]/2. + dx[i-1]/2.;
     }
-    double m { (r_max - dr_min*N)/f_sum };
+    double x_max = x.back();
     
-    dr.resize(Nr,0.);
-    for (int i = 0; i < Nr; i++){
-        dr[i] = dr_min + abs(m*pow(i-N,p));
+    dr.clear();
+    dr.reserve(Nr);
+    for (int i = N-1; i > 0; i--){
+        dr.push_back(dx[i]/x_max*r_max);
+    }
+    for (int i = 0; i < N; i++){
+        dr.push_back(dx[i]/x_max*r_max);
     }
 }

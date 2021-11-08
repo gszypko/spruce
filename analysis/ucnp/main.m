@@ -13,15 +13,15 @@ if ~exist('inp','var')
     inp = {};
     openvar('inp')
 end
-fields = {'date','phase','folder','fields','Te','n_dist','n_max','n_min','sigx','sigy','grid_opt','xlim','ylim','tmax','bound_strength','visc_strength'};
+fields = {'date','phase','folder','fields','Te','n_dist','n_max','n_min','sigx','sigy','grid_opt','xlim','ylim','tmax','Nx','Ny','bound_strength','bound_decay','visc_strength'};
 if size(inp,2) ~= length(fields), error('The number of columns in ''inp'' must match the length of ''fields''.'); end
 s = cell2struct(inp,fields,2);
 
 % user controls
-removeGhostCells = true;
-loadFromBaseFiles = false;
+removeGhostCells = false;
+loadFromBaseFiles = true;
 plotGridTimeEvol = true;
-doGaussianAnalysis = true;
+doGaussianAnalysis = false;
 
 %% Read in and Process Data
 % define constnats

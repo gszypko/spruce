@@ -11,7 +11,6 @@
 #include "plasmadomain.hpp"
 
 MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms);
-
-void genNonUniformGrids(double r_max, double dr_min, int Nr,std::vector<double>& dr);
+void genNonUniformGrids(double r_max, int Nr,std::vector<double>& dr,std::string opt);
 
 #endif
