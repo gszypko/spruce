@@ -130,7 +130,7 @@ Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, 
 Grid PlasmaDomain::transportDivergence2D(const Grid &quantity, const std::vector<Grid> &vel)
 {
   assert(vel.size() == 2 && "this operator requires 2D velocity");
-  return transportDerivative1D(quantity,vel[0],0) + transportDerivative1D(quantity,vel[1],0);
+  return transportDerivative1D(quantity,vel[0],0) + transportDerivative1D(quantity,vel[1],1);
 }
 
 //Compute single-direction divergence term for non-transport term (central differencing)
