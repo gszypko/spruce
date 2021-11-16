@@ -86,6 +86,6 @@ double nearest_coulomb_pot(const double& n);
 double debye_length(const double& n,const double& T);
 double screening_parameter(const double& n, const double& Te);
 double dih_temp(const double& n,const double& Te);
-double get_tau_exp(const double& sig,const double& m, const double& Te);
+double tau_exp(const double& sig,const double& m, const double& Te);
 
 #endif

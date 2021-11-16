@@ -20,10 +20,10 @@ MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
 
 
     MhdInp grids(Nx,Ny);
-    double tau_exp { get_tau_exp(pms.getvar("sig_x"),pms.getvar("m_i"),pms.getvar("Te")) };
+    double tau { tau_exp(pms.getvar("sig_x"),pms.getvar("m_i"),pms.getvar("Te")) };
     grids.set_ion_mass(pms.getvar("m_i"));
     grids.set_adiabatic_index(pms.getvar("gam"));
-    grids.set_duration(pms.getvar("tmax/tau_exp")*tau_exp);
+    grids.set_duration(pms.getvar("tmax/tau_exp")*tau);
     grids.set_var(PlasmaDomain::d_x,dx,center_opt);
     grids.set_var(PlasmaDomain::d_y,dy,center_opt);
 
@@ -45,8 +45,8 @@ MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
     // initialize quadrupole magnetic fields
     AntiHelmholtz quad(30.,120.,pms.getvar("dBdx"),CurrentLoop::ax_x);
 
-    std::vector<Grid> B(3.);
-    for (int i = 0; i < B.size(); i++){ // for each B-field component
+    std::vector<Grid> B(2.);
+    for (int i = 0; i < B.size(); i++){ // for each B-field component (x and y)
         B[i] = Grid(Nx,Ny); // initialize that component
         for (int j = 0; j < B[i].rows(); j++){
             for (int k = 0; k < B[i].cols(); k++){
@@ -58,7 +58,6 @@ MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
 
     grids.set_var(PlasmaDomain::b_x,B[0]);
     grids.set_var(PlasmaDomain::b_y,B[1]);
-    grids.set_var(PlasmaDomain::b_z,B[2]);
     grids.set_var(PlasmaDomain::grav_x,Grid(Nx,Ny,0));
     grids.set_var(PlasmaDomain::grav_y,Grid(Nx,Ny,0));
 

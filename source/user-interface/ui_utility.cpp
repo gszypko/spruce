@@ -265,7 +265,7 @@ double dih_temp(const double& n,const double& Te)
 { return 2.*nearest_coulomb_pot(n)/3./K_B*(1.+screening_parameter(n,Te)/2.); }
 
 // timescale for a Gaussian UCNP expansion into vacuum, cgs units
-double get_tau_exp(const double& sig,const double& m, const double& Te)
+double tau_exp(const double& sig,const double& m, const double& Te)
 // n: plasma density (cm^-3)
 // m: ion mass (g)
 // Te: electron temperature (K)

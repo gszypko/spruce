@@ -15,4 +15,5 @@
 !analysis/*/*
 !analysis/*/*/
 !analysis/*/*/*
-analysis/ucnp/figs
+!analysis/*/*/*/
+!analysis/*/*/*/*

@@ -1,5 +1,5 @@
 // Modules: module load ... ... ... -> need to test on cluster eventually, should just need gcc > 8
-// Compile: g++-8 -I source/ -I source/mhd/ -I source/user-interface/ -std=c++17 -fopenmp -g source/ui_main.cpp source/mhd/* source/user-interface/* -o run -lm -lstdc++fs
+// Compile: g++-10 -I source/ -I source/mhd/ -I source/user-interface/ -std=c++20 -fopenmp -g source/ui_main.cpp source/mhd/* source/user-interface/* -o main -lm -lstdc++fs
 // Run: run <plasma_type> <out_path> <array_num>
 //      plasma_type: "ucnp" or "solar"
 //      out_path: relative path to simulation save directory
