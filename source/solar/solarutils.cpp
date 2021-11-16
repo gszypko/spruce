@@ -91,7 +91,7 @@ namespace SolarUtils {
       mi.set_var(PlasmaDomain::b_y, b_y);
       mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
       mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
-      mi.set_var(PlasmaDomain::rho, HydrostaticFalloff(base_rho,scale_height*1.0e1,pos_y));
+      mi.set_var(PlasmaDomain::rho, HydrostaticFalloff(base_rho,scale_height,pos_y));
     } else if(problem_type == "gaussian"){
       mi.set_var(PlasmaDomain::d_x,d_x,"center");
       mi.set_var(PlasmaDomain::d_y,d_y,"center");

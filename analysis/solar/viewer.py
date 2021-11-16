@@ -15,16 +15,18 @@ fullnames = {
   'press': "Pressure",
   'rad': "Radiative Loss Rate",
   'energy': "Energy Density",
-  'b': "Magnetic Field",
-  'vel': "Velocity",
+  'b': "Background Magnetic Field",
+  'db': "Perturbation Magnetic Field",
   'v': "Velocity",
-  'vel_x': "X Velocity",
-  'vel_y': "Y Velocity",
+  'v_x': "X Velocity",
+  'v_y': "Y Velocity",
   'dt': "CFL Timestep",
   'dt_thermal': "Thermal Conduction Timestep",
   'dt_rad': "Radiative Losses Timestep",
   'n': "Number Density",
-  'beta': "Plasma Beta"
+  'beta': "Plasma Beta",
+  'div_b': "Background Field Divergence",
+  'div_db': "Perturbation Field Divergence"
 }
 fullunits = {
   'rho': r'g cm$^{-3}$',
@@ -33,23 +35,25 @@ fullunits = {
   'rad': r'erg cm$^{-3}$ s$^{-1}$',
   'energy': r'erg cm$^{-3}$',
   'b': r'G',
-  'vel': r'cm s$^{-1}$',
+  'db': r'G',
   'v': r'cm s$^{-1}$',
-  'vel_x': r'cm s$^{-1}$',
-  'vel_y': r'cm s$^{-1}$',
+  'v_x': r'cm s$^{-1}$',
+  'v_y': r'cm s$^{-1}$',
   'dt': r's',
   'dt_thermal': r's',
   'dt_rad': r's',
   'n': r'cm$^{-3}$',
-  'beta': r''
+  'beta': r'',
+  'div_b': r'G cm$^{-1}$',
+  'div_db': r'G cm$^{-1}$'
 }
 for key in fullunits.keys():
-  if key != "beta": fullunits[key] = " (" + fullunits[key] + ")"
+  if fullunits[key] != r'': fullunits[key] = " (" + fullunits[key] + ")"
 
 parser = argparse.ArgumentParser(description='View the output from mhdtoy.')
 parser.add_argument('filename', help="the name of the file output from mhdtoy")
 parser.add_argument('timestep', type=float, help="the interval (in simulation time units) between frames of output animation")
-parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', 'energy', 'vel_x', 'vel_y', 'dt', 'dt_thermal', 'dt_rad', 'n', 'beta', 'div_b', 'div_db'])
+parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', 'energy', 'v_x', 'v_y', 'dt', 'dt_thermal', 'dt_rad', 'n', 'beta', 'div_b', 'div_db'])
 parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['b','v','db'])
 parser.add_argument('--density', metavar="vec_display_density", type=int, help="set the interval between displayed vectors", default=25)
 parser.add_argument('-d', '--diff', metavar='diff_filename', help="filename to difference with original file")
@@ -207,12 +211,6 @@ frame = 0
 x = X[:,0]
 y = Y[0,:]
 if output_var == "rad":
-  # im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-  #   interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-5, base=10))
-  # ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
-  # im.set_clim(vmin=1e-4)
-  # var_colorbar = fig.colorbar(im)
-  # var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-5, base=10))
   im.set_data(x,y,np.transpose(var[frame]))
@@ -231,14 +229,7 @@ elif output_var == "dt" or output_var == "dt_thermal" or output_var == "dt_rad":
   ax.set(xlim=(x_min,x_max), ylim=(y_min,y_max), xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
   var_colorbar = fig.colorbar(im)
   var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
-  # im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-  #   interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-10, base=10))
-  # ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
-  # if(np.isnan(np.nanmax(var))): im.set_clim(vmin=1e-4,vmax=1.0)
-  # else: im.set_clim(vmin=1e-4,vmax=np.nanmax(var))
-  # var_colorbar = fig.colorbar(im)
-  # var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
-elif output_var == "vel_x" or output_var == "vel_y":
+elif output_var == "vel_x" or output_var == "vel_y" or output_var == "div_b" or output_var == "div_db":
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest')
   im.set_data(x,y,np.transpose(var[frame]))
@@ -246,11 +237,6 @@ elif output_var == "vel_x" or output_var == "vel_y":
   ax.set(xlim=(x_min,x_max), ylim=(y_min,y_max), xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
   var_colorbar = fig.colorbar(im)
   var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
-  # im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-  #   interpolation='nearest')
-  # ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
-  # var_colorbar = fig.colorbar(im)
-  # var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
 else:
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.LogNorm())
@@ -259,11 +245,6 @@ else:
   ax.set(xlim=(x_min,x_max), ylim=(y_min,y_max), xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
   var_colorbar = fig.colorbar(im)
   var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
-  # im = ax.imshow(np.transpose(var[frame]), animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-  #   interpolation='nearest', norm=matplotlib.colors.LogNorm())
-  # ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
-  # var_colorbar = fig.colorbar(im)
-  # var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
 
 contour_color_axes = fig.axes[-1]
 
@@ -303,34 +284,30 @@ if vec_var == "b":
   norm = np.sqrt(this_vec_x**2 + this_vec_y**2)
   np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
   np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
-  quiv = ax.quiver(X[vec_interval::vec_interval, vec_interval::vec_interval], \
-    Y[vec_interval::vec_interval, vec_interval::vec_interval], \
-      this_vec_x[vec_interval::vec_interval, vec_interval::vec_interval], \
-        this_vec_y[vec_interval::vec_interval, vec_interval::vec_interval], \
-          norm[vec_interval::vec_interval, vec_interval::vec_interval], \
-            cmap=plt.cm.plasma, ec='k', lw=0.2, scale_units='inches', angles='xy', scale=20, \
-              pivot='mid', norm=matplotlib.colors.LogNorm())
+  # quiv = ax.quiver(X[vec_interval::vec_interval, vec_interval::vec_interval], \
+  #   Y[vec_interval::vec_interval, vec_interval::vec_interval], \
+  #     this_vec_x[vec_interval::vec_interval, vec_interval::vec_interval], \
+  #       this_vec_y[vec_interval::vec_interval, vec_interval::vec_interval], \
+  #         norm[vec_interval::vec_interval, vec_interval::vec_interval], \
+  #           cmap=plt.cm.plasma, ec='k', lw=0.2, scale_units='inches', angles='xy', scale=20, \
+  #             pivot='mid', norm=matplotlib.colors.LogNorm())
+  quiv = ax.quiver(X[x_vec_indices, y_vec_indices], \
+    Y[x_vec_indices, y_vec_indices], \
+      this_vec_x[x_vec_indices, y_vec_indices], \
+        this_vec_y[x_vec_indices, y_vec_indices], \
+          norm[x_vec_indices, y_vec_indices], \
+            cmap=plt.cm.plasma, ec='k', lw=0.2, scale_units='inches', angles='xy', scale=10, \
+              width = 0.005, headwidth=3, headlength=3, headaxislength=2.5, \
+                pivot='mid', norm=matplotlib.colors.SymLogNorm(linthresh=1e4, base=10))
   vec_colorbar = fig.colorbar(quiv)
   vec_colorbar.set_label(fullnames[vec_var]+ " (" + fullunits[vec_var] + ")")
   vector_color_axes = fig.axes[-1]
-  # ax.quiver(X[::vec_interval, ::vec_interval], \
-  # Y[::vec_interval, ::vec_interval], \
-  #   bx[::vec_interval, ::vec_interval], \
-  #     by[::vec_interval, ::vec_interval], pivot='mid')
 elif vec_var != None:
   this_vec_x = vec_x[frame].copy()
   this_vec_y = vec_y[frame].copy()
   norm = np.sqrt(this_vec_x**2 + this_vec_y**2)
   np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
   np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
-  # quiv = ax.quiver(X[vec_interval::vec_interval, vec_interval::vec_interval], \
-  #   Y[vec_interval::vec_interval, vec_interval::vec_interval], \
-  #     this_vec_x[vec_interval::vec_interval, vec_interval::vec_interval], \
-  #       this_vec_y[vec_interval::vec_interval, vec_interval::vec_interval], \
-  #         norm[vec_interval::vec_interval, vec_interval::vec_interval], \
-  #           cmap=plt.cm.plasma, ec='k', lw=0.2, scale_units='inches', angles='xy', scale=10, \
-  #             width = 0.005, headwidth=3, headlength=3, headaxislength=2.5, \
-  #               pivot='mid', norm=matplotlib.colors.SymLogNorm(linthresh=1e4, base=10))
   quiv = ax.quiver(X[x_vec_indices, y_vec_indices], \
     Y[x_vec_indices, y_vec_indices], \
       this_vec_x[x_vec_indices, y_vec_indices], \
@@ -342,8 +319,6 @@ elif vec_var != None:
   vec_colorbar = fig.colorbar(quiv)
   vec_colorbar.set_label(fullnames[vec_var]+ fullunits[vec_var])
   vector_color_axes = fig.axes[-1]
-  # ax.quiverkey(quiv, X=0.3, Y=1.1, U=10,
-  #   label='Quiver key, length = 10', labelpos='E')
 plt.tight_layout()
 frame = -2
 
@@ -363,7 +338,7 @@ def updatefig(*args):
     if vec_var != "b" and vec_var != None:
       vector_color_axes.cla()
       vec_colorbar = fig.colorbar(quiv, cax=vector_color_axes)
-      vec_colorbar.set_label(fullnames[vec_var]+ " (" + fullunits[vec_var] + ")")
+      vec_colorbar.set_label(fullnames[vec_var]+ fullunits[vec_var])
       this_vec_x = vec_x[frame].copy()
       this_vec_y = vec_y[frame].copy()
       norm = np.sqrt(this_vec_x**2 + this_vec_y**2)
@@ -373,6 +348,7 @@ def updatefig(*args):
           this_vec_y[x_vec_indices, y_vec_indices], \
             norm[x_vec_indices, y_vec_indices])
       quiv.autoscale()
+    plt.tight_layout()
     return im, ax
 
 ani = animation.FuncAnimation(fig, updatefig, frames=(len(var)), repeat=args.realtime, interval=100, blit=False)
