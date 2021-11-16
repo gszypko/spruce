@@ -7,7 +7,7 @@ os.grids = readOutFile(folder,removeGhostCells);
 
 fields = fieldnames(os.grids.vars);
 if max(strcmp(fields,'rho'))
-    for i = 1:length(os.grids.time)
+    for i = 1:length([os.grids.vars.time])
         os.grids.vars(i).n = os.grids.vars(i).rho./os.settings.mI;
     end
 end
