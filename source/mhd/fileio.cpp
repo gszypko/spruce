@@ -41,9 +41,9 @@ enum class Config {
 //This function will abort execution if an invalid variable name is encountered
 //Does not check that the variables read from the file are a complete
 //description of the plasma, nor that none of them are contradictory
-void PlasmaDomain::readStateFile(const char* in_filename)
+void PlasmaDomain::readStateFile(const fs::path &state_file)
 {  
-  std::ifstream in_file(in_filename);
+  std::ifstream in_file(state_file.string());
 
   //Read in grid dimensions
   std::string line, element;
@@ -106,9 +106,9 @@ void PlasmaDomain::readStateFile(const char* in_filename)
 
 //Read in simulation configuration from .config file
 //Allows to change configuration without recompiling
-void PlasmaDomain::readConfigFile(const char* config_filename)
+void PlasmaDomain::readConfigFile(const fs::path &config_file)
 {
-  std::ifstream in_file(config_filename);
+  std::ifstream in_file(config_file.string());
   std::string line;
   std::vector<std::vector<std::string> > rhs_lists;
   std::vector<int> list_vars;
@@ -158,14 +158,15 @@ void PlasmaDomain::outputCurrentState()
 //Output current state into state file (toggles between overwriting two different files
 //so that the most recent state is still written in event of a crash)
 //All variables included in PlasmaDomain::StateVars are written out here
-void PlasmaDomain::writeStateFile(std::string filename,int precision) const
+//Resulting file is named [filename_stem].state
+void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
 {
   std::ofstream state_file;
-  if (filename.compare("mhd") == 0){
-    if(safe_state_mode) state_file.open(m_out_directory/(filename+std::to_string(m_iter%2)+".state"));
-    else state_file.open(m_out_directory/(filename+".state"));
+  if (filename_stem.compare("mhd") == 0){
+    if(safe_state_mode) state_file.open(m_out_directory/fs::path(filename_stem+std::to_string(m_iter%2)+".state"));
+    else state_file.open(m_out_directory/fs::path(filename_stem+".state"));
   }
-  else state_file.open(m_out_directory/(filename+".state"));
+  else state_file.open(m_out_directory/fs::path(filename_stem+".state"));
   state_file << "xdim,ydim\n";
   state_file << m_xdim << "," << m_ydim << std::endl;
   state_file << "ion_mass\n";
@@ -183,9 +184,9 @@ void PlasmaDomain::writeStateFile(std::string filename,int precision) const
 //Gets rid of the older of the two state files at the end of the sim run
 void PlasmaDomain::cleanUpStateFiles() const
 {
-  std::filesystem::rename(m_out_directory/("mhd"+std::to_string((m_iter)%2)+".state"),
+  fs::rename(m_out_directory/("mhd"+std::to_string((m_iter)%2)+".state"),
           m_out_directory/("mhd.state"));
-  std::filesystem::remove(m_out_directory/("mhd"+std::to_string((m_iter-1)%2)+".state"));
+  fs::remove(m_out_directory/("mhd"+std::to_string((m_iter-1)%2)+".state"));
 }
 
 PlasmaDomain::BoundaryCondition PlasmaDomain::stringToBoundaryCondition(const std::string str) const

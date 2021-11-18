@@ -7,6 +7,7 @@
 #include <vector> // std::vector
 #include <string> // std::string, std::getline
 #include <filesystem> // std::filesystem
+namespace fs = std::filesystem;
 #include <fstream> // std::ofstream, std::ifstream
 #include <sstream> // std::istringstream
 

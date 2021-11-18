@@ -8,6 +8,7 @@
 #include "MhdInp.hpp"
 #include "ui_utility.hpp"
 #include <filesystem>
+namespace fs = std::filesystem;
 #include "PlasmaSettings.hpp"
 #include "mhd.hpp"
 #include "utils.hpp"
@@ -19,22 +20,18 @@ int main(int argc, char *argv[])
 {
     // unfold executable input parameters
     // TODO: encapsulate command line arg parsing into class (make checking for correct specification easier)
-    std::filesystem::path prev_run_path = getCommandLineArg(argc, argv, "-p", "--prev");
-
     std::string plasma_type = getCommandLineArg(argc, argv, "-t", "--type");
 
-    std::filesystem::path out_path = getCommandLineArg(argc, argv, "-o", "--output");
- 
-    std::string config_path = getCommandLineArg(argc, argv, "-c", "--config");
-    if(config_path.empty()) config_path = "default.config";
-
-    std::filesystem::path settings_path = getCommandLineArg(argc, argv, "-s", "--settings");
+    fs::path prev_run_path(getCommandLineArg(argc, argv, "-p", "--prev"));
+    fs::path out_path(getCommandLineArg(argc, argv, "-o", "--output"));
+    fs::path config_path(getCommandLineArg(argc, argv, "-c", "--config"));
+    fs::path settings_path(getCommandLineArg(argc, argv, "-s", "--settings"));
 
     int task_array;
     std::string task_array_str = getCommandLineArg(argc, argv, "-i", "--index");
     if(task_array_str.empty()) task_array = 0; //default array index is zero
     else task_array = std::stoi(task_array_str);
-    std::string array_path = "array" + std::to_string(task_array);
+    fs::path array_path("array" + std::to_string(task_array));
 
     double time_duration; //for previous run duration set by command line, for .settings run duration set by .settings
     std::string time_duration_str = getCommandLineArg(argc, argv, "-d", "--duration");
@@ -43,29 +40,19 @@ int main(int argc, char *argv[])
 
     // continue from previous run
     if(!prev_run_path.empty()){
-        std::filesystem::directory_entry prev_run_dir(prev_run_path);
+        fs::directory_entry prev_run_dir(prev_run_path);
         assert(prev_run_dir.exists() && prev_run_dir.is_directory() && "Given previous run path must be existing directory");
-        mhdSolve(prev_run_path.c_str(), time_duration);
+        mhdSolve(prev_run_path, time_duration);
         return 0;
     }
     // initialize using settings file and pertinent initializer fxn
     else {
+        assert(!config_path.empty() && "config file must be specified");
+        assert(!settings_path.empty() && "settings file must be specified");
+
         // create subdirectory for array index, if one was explicitly given
         if(!task_array_str.empty()) out_path/=array_path;
-        std::filesystem::create_directories(out_path);
-
-        // choose which plasma settings file to use as a default, if none specified
-        if (plasma_type.compare("ucnp") == 0){
-            if(settings_path.string().empty()){
-                settings_path = "ucnp.settings";
-            }
-        }
-        else if (plasma_type.compare("solar") == 0){
-            if(settings_path.string().empty()){
-                settings_path = "solar.settings";
-            }
-        }  
-        else std::cerr << "Plasma type not specified ('ucnp' or 'solar')\n";
+        fs::create_directories(out_path);
 
         // load .settings file
         PlasmaSettings pms(settings_path,task_array);
@@ -79,7 +66,7 @@ int main(int argc, char *argv[])
         time_duration = grids_inp.duration();
 
         // run MHD
-        mhdSolve(grids_inp.grids(), grids_inp.ion_mass(), grids_inp.adiabatic_index(), time_duration, out_path.c_str(), config_path.c_str());
+        mhdSolve(grids_inp.grids(), grids_inp.ion_mass(), grids_inp.adiabatic_index(), time_duration, out_path, config_path);
         return 0;
     }
     

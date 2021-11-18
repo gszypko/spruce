@@ -5,6 +5,7 @@
 #include "MhdInp.hpp"
 #include "ui_utility.hpp"
 #include <filesystem>
+namespace fs = std::filesystem;
 #include "PlasmaSettings.hpp"
 #include "mhd.hpp"
 #include "utils.hpp"

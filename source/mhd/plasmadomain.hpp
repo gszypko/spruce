@@ -15,6 +15,7 @@
 #include <cassert>
 #include <iostream>
 #include <filesystem>
+namespace fs = std::filesystem;
 #include <cstdio>
 #include <cstdlib>
 #include <algorithm>
@@ -45,13 +46,12 @@ public:
                            constant_var_end, num_variables=constant_var_end };
 
   //Constructors and Initialization
-  PlasmaDomain(const char* out_path, const char* config_path, bool continue_mode = false);
+  PlasmaDomain(const fs::path &out_path, const fs::path &config_path, bool continue_mode = false);
   void initialize(const std::vector<Grid>& input_vars, double ion_mass, double adiabatic_index);
   void hydrostaticInitialize();
-  // void gaussianInitialize(double min_rho, double max_rho, double min_temp, double max_temp, double std_dev_x, double std_dev_y);
 
-  void readStateFile(const char* in_filename);
-  void readConfigFile(const char* settings_filename);
+  void readStateFile(const fs::path &state_file);
+  void readConfigFile(const fs::path &config_file);
 
   //Time Evolution
   void run(double time_duration);
@@ -77,7 +77,7 @@ private:
   double m_ion_mass; //in g
   double m_adiabatic_index; //aka gamma, unitless
 
-  std::filesystem::path m_out_directory;
+  fs::path m_out_directory;
   std::ofstream m_out_file;
 
   double m_time;
@@ -134,7 +134,7 @@ private:
   
   void outputPreamble();
   void outputCurrentState();
-  void writeStateFile(std::string filename = "mhd",int precision = -1) const;
+  void writeStateFile(std::string filename_stem = "mhd",int precision = -1) const;
   void cleanUpStateFiles() const;
   void printUpdate(double min_dt, int subcycles_thermal, int subcycles_rad) const;
 

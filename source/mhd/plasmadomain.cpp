@@ -10,12 +10,13 @@
 #include <cmath>
 #include <limits>
 #include <filesystem>
+namespace fs = std::filesystem;
 #include "utils.hpp"
 #include "grid.hpp"
 #include "plasmadomain.hpp"
 #include "constants.hpp"
 
-PlasmaDomain::PlasmaDomain(const char* out_path, const char* config_path, bool continue_mode)
+PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, bool continue_mode)
 {
   //DEFAULT VALUES, TO BE OVERWRITTEN BY readConfigFile
   m_xdim = 1; m_ydim = 1; open_boundary_strength = 1.0;
@@ -28,13 +29,13 @@ PlasmaDomain::PlasmaDomain(const char* out_path, const char* config_path, bool c
     m_output_flags.push_back(false);
   }
   readConfigFile(config_path);
-  m_out_directory = std::filesystem::path(out_path);
-  std::filesystem::path config_filename = std::filesystem::path(config_path).filename();
+  m_out_directory = out_path;
+  fs::path out_filename("mhd.out");
   if(!continue_mode){
-    std::filesystem::copy(config_path, m_out_directory/config_filename, std::filesystem::copy_options::overwrite_existing);
-    m_out_file.open(m_out_directory/"mhd.out");
+    fs::copy(config_path, m_out_directory/(config_path.filename()), fs::copy_options::overwrite_existing);
+    m_out_file.open(m_out_directory/out_filename);
   } else {
-    m_out_file.open(m_out_directory/"mhd.out",std::ofstream::app);
+    m_out_file.open(m_out_directory/out_filename,std::ofstream::app);
   }
   for(int i=0; i<num_variables; i++) m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
 }

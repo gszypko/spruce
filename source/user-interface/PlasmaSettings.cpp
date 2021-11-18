@@ -1,7 +1,7 @@
 #include "PlasmaSettings.hpp"
 
 // class constructor
-PlasmaSettings::PlasmaSettings(std::filesystem::path settings_path, int array):
+PlasmaSettings::PlasmaSettings(fs::path settings_path, int array):
     m_array{array}
 {
     load_settings(settings_path);
@@ -12,7 +12,7 @@ PlasmaSettings::PlasmaSettings(std::filesystem::path settings_path, int array):
 }
 
 // load .settings file that defines plasma characteristics for MHD simulation
-void PlasmaSettings::load_settings(const std::filesystem::path& settings_path)
+void PlasmaSettings::load_settings(const fs::path& settings_path)
 {
     // mat_in[i] contains vector with [name unit values]
     std::vector<std::vector<std::string>> mat_in = readCSV(settings_path);
@@ -125,11 +125,11 @@ std::string PlasmaSettings::getopt(const std::string& name) const
 }
 
 // write plasma settings for specified m_array value (i.e., the corresponding row of m_mat)
-void PlasmaSettings::write_array_params(const std::filesystem::path& path) const
+void PlasmaSettings::write_array_params(const fs::path& path) const
 {
-    std::filesystem::create_directory(path);
-    std::filesystem::path file_path{path/"plasma.settings"};
-    if (std::filesystem::exists(file_path)) std::ofstream out_file(file_path);
+    fs::create_directory(path);
+    fs::path file_path{path/"plasma.settings"};
+    if (fs::exists(file_path)) std::ofstream out_file(file_path);
     append_row_to_csv(file_path,m_names);
     append_row_to_csv(file_path,m_units);
     append_row_to_csv(file_path,m_val);

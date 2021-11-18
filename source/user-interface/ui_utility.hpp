@@ -8,6 +8,7 @@
 
 #include <iostream> // std::cout, std::endl
 #include <filesystem> // std::filesystem - for file directory interactivity
+namespace fs = std::filesystem;
 #include <fstream> // std::ofstream, std::ifstream - file i/o
 #include <sstream> // std::istringstream
 #include <vector> // std::vector
@@ -23,7 +24,7 @@ std::vector<double> bin_vector(const std::vector<double>& vec_in,const std::vect
 double euclidean_norm(const std::vector<double>& vec_in);
 std::vector<std::vector<std::string>> unique_comb(const std::vector<std::vector<std::string>>& mat_in,const std::vector<std::string>& vec_2);
 std::vector<std::vector<std::string>> unique_comb(const std::vector<std::string>& vec_in,const std::vector<std::string>& vec_2);
-std::vector<std::vector<std::string>> readCSV(std::filesystem::path filePath);
+std::vector<std::vector<std::string>> readCSV(fs::path filePath);
 
 //*** FUNCTIONS FOR USE WITH GRID.HPP ***//
 
@@ -55,16 +56,16 @@ template <typename T> std::string num2str(T num,int prec = 3)
 }
 
 // append row to csv
-template <typename T> void append_row_to_csv(const std::filesystem::path file_path, const std::vector<T> data)
-// filePath: full path to .csv file specified as type std::filesystem::path
+template <typename T> void append_row_to_csv(const fs::path file_path, const std::vector<T> data)
+// filePath: full path to .csv file specified as type fs::path
 // data: a std::vector of fundamental data type (i.e., string, double, int, etc)
 {
     // open output stream to file depending on whether file exists or not
     std::ofstream out_file;
-    if (!std::filesystem::exists(file_path)){ // if file does not exist
+    if (!fs::exists(file_path)){ // if file does not exist
         out_file.open(file_path); // open stream to file
     }
-    else if (std::filesystem::exists(file_path)){ // if file does exist
+    else if (fs::exists(file_path)){ // if file does exist
         out_file.open(file_path,std::ofstream::app);
     }
 

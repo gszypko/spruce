@@ -65,11 +65,11 @@ double euclidean_norm(const std::vector<double>& vec_in)
 }
 
 // read file with comma delimiter, "=" functions as ",", all text after "%" is ignored
-std::vector<std::vector<std::string>> readCSV(std::filesystem::path filePath)
+std::vector<std::vector<std::string>> readCSV(fs::path filePath)
 // filePath: full path to .csv file to read from, formatted as std::filesystem::path
 {
     // check that file exists and is not empty
-    if (!std::filesystem::exists(filePath) || std::filesystem::is_empty(filePath)){
+    if (!fs::exists(filePath) || fs::is_empty(filePath)){
         std::cerr << "The specified .csv file is either empty or does not exist." << std::endl;
     }
 
