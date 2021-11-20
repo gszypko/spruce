@@ -56,8 +56,8 @@ MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
         }
     } 
 
-    grids.set_var(PlasmaDomain::b_x,B[0]);
-    grids.set_var(PlasmaDomain::b_y,B[1]);
+    grids.set_var(PlasmaDomain::be_x,B[0]);
+    grids.set_var(PlasmaDomain::be_y,B[1]);
     grids.set_var(PlasmaDomain::grav_x,Grid(Nx,Ny,0));
     grids.set_var(PlasmaDomain::grav_y,Grid(Nx,Ny,0));
 

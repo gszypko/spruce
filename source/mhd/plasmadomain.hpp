@@ -27,23 +27,22 @@ class PlasmaDomain
 public:
   // enum class BoundaryCondition { Periodic, Wall, Open };
   enum class BoundaryCondition { Periodic, Open, Fixed, Reflect };
+  static inline std::vector<std::string> m_boundary_condition_names = {
+    "periodic", "open", "fixed", "reflect"
+  };
 
   //state variables (taken as input, carried over between iterations)
-  enum StateVars { state_var_start=0,
-                        d_x=state_var_start,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,b_x,b_y,grav_x,grav_y,
-                        state_var_end };
-  
-  //derived variables (derived from state variables)
-  enum DerivedVars { derived_var_start=state_var_end,
-                          press=derived_var_start,thermal_energy,kinetic_energy,div_db,db_x,db_y,
-                          rad,dt,dt_thermal,dt_rad,v_x,v_y,n,
-                          derived_var_end };
-
-  //constant variables (unchanging bw iterations, derived from state variables)
-  enum ConstantVars { constant_var_start=derived_var_end,
-                           b_magnitude=constant_var_start,div_b,b_hat_x,b_hat_y,mag_energy,mag_press,lorentz_force_x,lorentz_force_y,
-                           mag_pxx,mag_pyy,mag_pxy,
-                           constant_var_end, num_variables=constant_var_end };
+  enum Vars { d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,grav_x,grav_y,
+              press,thermal_energy,kinetic_energy,div_bi,bi_x,bi_y,
+              rad,dt,dt_thermal,dt_rad,v_x,v_y,n,
+              div_be,b_hat_x,b_hat_y,mag_energy,
+              num_variables };
+  static inline std::vector<std::string> m_var_names = {
+    "d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","be_x","be_y","grav_x","grav_y",
+    "press","thermal_energy","kinetic_energy","div_bi","bi_x","bi_y","rad","dt","dt_thermal","dt_rad","v_x","v_y","n",
+    "div_be","b_hat_x","b_hat_y","mag_energy"
+  };
+  static inline std::vector<int> state_vars = {d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,grav_x,grav_y};
 
   //Constructors and Initialization
   PlasmaDomain(const fs::path &out_path, const fs::path &config_path, bool continue_mode = false);
@@ -67,9 +66,9 @@ public:
 private:
   //Strings corresponding to variables, settings, boundary conditions for file I/O
   //TODO: Move initialization here, now that no longer static!
-  static const std::vector<std::string> m_var_names;
-  static const std::vector<std::string> m_config_names;
-  static const std::vector<std::string> m_boundary_condition_names;
+  // static const std::vector<std::string> m_var_names;
+  // static const std::vector<std::string> m_config_names;
+  // static const std::vector<std::string> m_boundary_condition_names;
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)
 
   std::vector<Grid> m_grids;
@@ -110,6 +109,24 @@ private:
   bool safe_state_mode; //when true, outputs a state file for every iteration; when false, only outputs a state when the run completes without issue
   bool continue_mode; //true when continuing previous run; appends results to mhd.out and replaces mhd.state
   std::string x_origin, y_origin; //specifies where (0,0) position is located; each can be one of "lower", "center", or "upper"
+ 
+  enum class Config {
+    x_bound_1, x_bound_2, y_bound_1, y_bound_2, radiative_losses, ambient_heating,
+    thermal_conduction, flux_saturation, temp_chromosphere, radiation_ramp, heating_rate,
+    epsilon, epsilon_thermal, epsilon_rad, epsilon_viscous, dt_thermal_min, rho_min,
+    temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
+    output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode,
+    open_boundary_decay_base, x_origin, y_origin
+  };
+  static inline std::vector<std::string> m_config_names = {
+    "x_bound_1","x_bound_2","y_bound_1","y_bound_2","radiative_losses","ambient_heating",
+    "thermal_conduction","flux_saturation","temp_chromosphere","radiation_ramp","heating_rate",
+    "epsilon","epsilon_thermal","epsilon_rad","epsilon_viscous","dt_thermal_min","rho_min",
+    "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
+    "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode",
+    "open_boundary_decay_base", "x_origin", "y_origin"
+  };
+
   /*********************************************************************/ 
 
   void advanceTime(bool verbose = true);

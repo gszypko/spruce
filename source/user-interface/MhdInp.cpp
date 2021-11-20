@@ -5,8 +5,8 @@
 MhdInp::MhdInp(size_t Nx,size_t Ny)  
 {
     m_Nx = Nx; m_Ny = Ny;
-    m_grids.resize(PlasmaDomain::state_var_end - PlasmaDomain::state_var_start,Grid(m_Nx,m_Ny,0.));
-    m_initialized.resize(PlasmaDomain::state_var_end - PlasmaDomain::state_var_start,false);
+    m_grids.resize(PlasmaDomain::state_vars.size(),Grid(m_Nx,m_Ny,0.));
+    m_initialized.resize(PlasmaDomain::state_vars.size(),false);
     m_ion_mass = 0.0; m_adiabatic_index = 0.0; m_duration = 0.0;
 }
 
@@ -15,10 +15,10 @@ MhdInp& MhdInp::operator=(const MhdInp& other)
 {
     m_Nx = other.m_Nx; m_Ny = other.m_Ny;
     m_adiabatic_index = other.m_adiabatic_index; m_ion_mass = other.m_ion_mass; m_duration = other.m_duration;
-    m_grids.resize(PlasmaDomain::state_var_end - PlasmaDomain::state_var_start,Grid(m_Nx,m_Ny,0.));
-    m_initialized.resize(PlasmaDomain::state_var_end - PlasmaDomain::state_var_start,false);
+    m_grids.resize(PlasmaDomain::state_vars.size(),Grid(m_Nx,m_Ny,0.));
+    m_initialized.resize(PlasmaDomain::state_vars.size(),false);
 
-    for(int i=PlasmaDomain::state_var_start; i<PlasmaDomain::state_var_end; i++){
+    for(int i : PlasmaDomain::state_vars){
         m_grids[i] = other.m_grids[i];
         m_initialized[i] = other.m_initialized[i];
     }
@@ -86,7 +86,7 @@ double MhdInp::duration()
 // check if all elements of <m_grids> were initialized
 void MhdInp::all_initialized() const
 {
-    for (int i = PlasmaDomain::state_var_start; i < PlasmaDomain::state_var_end; i++){
+    for (int i : PlasmaDomain::state_vars){
         if (!m_initialized[i]) std::cerr << "The grid at index " << i << " was not initialized." << std::endl;
     } 
 }

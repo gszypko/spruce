@@ -87,8 +87,8 @@ namespace SolarUtils {
       Grid b_x, b_y;
       b_x = BipolarField(pos_x, pos_y, b_0, scale_height, 0);
       b_y = BipolarField(pos_x, pos_y, b_0, scale_height, 1);
-      mi.set_var(PlasmaDomain::b_x, b_x);
-      mi.set_var(PlasmaDomain::b_y, b_y);
+      mi.set_var(PlasmaDomain::be_x, b_x);
+      mi.set_var(PlasmaDomain::be_y, b_y);
       mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
       mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
       mi.set_var(PlasmaDomain::rho, HydrostaticFalloff(base_rho,scale_height,pos_y));
@@ -99,8 +99,8 @@ namespace SolarUtils {
       double stdevy = pms.getvar("stdevy");
       mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
       mi.set_var(PlasmaDomain::rho, GaussianGrid(pos_x,pos_y,0.1*base_rho,10.0*base_rho,xdim/stdevx,ydim/stdevy));
-      mi.set_var(PlasmaDomain::b_x, Grid(xdim,ydim,0.0));
-      mi.set_var(PlasmaDomain::b_y, Grid(xdim,ydim,0.0));
+      mi.set_var(PlasmaDomain::be_x, Grid(xdim,ydim,0.0));
+      mi.set_var(PlasmaDomain::be_y, Grid(xdim,ydim,0.0));
       mi.set_var(PlasmaDomain::grav_y, Grid(xdim,ydim,0.0));
       mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
     }

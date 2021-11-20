@@ -48,7 +48,7 @@ void PlasmaDomain::initialize(const std::vector<Grid>& input_vars, double ion_ma
   for(int var=0; var<num_variables; var++){
     m_grids[var] = Grid(m_xdim,m_ydim,0.0);
   }
-  for(int i=state_var_start; i < state_var_end; i++)
+  for(int i : state_vars)
     m_grids[i] = input_vars[i];
   computeIterationBounds();
   computeConstantTerms();

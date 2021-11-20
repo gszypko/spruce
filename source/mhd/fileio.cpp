@@ -3,40 +3,6 @@
 
 #include "plasmadomain.hpp"
 
-//Must match ordering of BoundaryCondition enum in plasmadomain.hpp
-const std::vector<std::string> PlasmaDomain::m_boundary_condition_names = {
-  "periodic", "open", "fixed", "reflect"
-};
-
-//Corresponding variable names for file I/O
-//Must match the ordering of the Variable enum defined in plasmadomain.hpp
-const std::vector<std::string> PlasmaDomain::m_var_names = {
-  "d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","b_x","b_y","grav_x","grav_y",
-  "press","thermal_energy","kinetic_energy","div_db","db_x","db_y","rad","dt","dt_thermal","dt_rad","v_x","v_y","n",
-  "b_magnitude","div_b","b_hat_x","b_hat_y","mag_energy",
-  "mag_press","lorentz_force_x","lorentz_force_y","mag_pxx","mag_pyy","mag_pxy"
-};
-
-//For purposes of reading in .config files
-//Must match ordering of Config enum below
-const std::vector<std::string> PlasmaDomain::m_config_names = {
-  "x_bound_1","x_bound_2","y_bound_1","y_bound_2","radiative_losses","ambient_heating",
-  "thermal_conduction","flux_saturation","temp_chromosphere","radiation_ramp","heating_rate",
-  "epsilon","epsilon_thermal","epsilon_rad","epsilon_viscous","dt_thermal_min","rho_min",
-  "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
-  "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode",
-  "open_boundary_decay_base", "x_origin", "y_origin"
-};
-
-enum class Config {
-  x_bound_1, x_bound_2, y_bound_1, y_bound_2, radiative_losses, ambient_heating,
-  thermal_conduction, flux_saturation, temp_chromosphere, radiation_ramp, heating_rate,
-  epsilon, epsilon_thermal, epsilon_rad, epsilon_viscous, dt_thermal_min, rho_min,
-  temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
-  output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode,
-  open_boundary_decay_base, x_origin, y_origin
-};
-
 //Read in variables from .state file
 //This function will abort execution if an invalid variable name is encountered
 //Does not check that the variables read from the file are a complete
@@ -138,10 +104,10 @@ void PlasmaDomain::outputPreamble()
   m_out_file << m_grids[pos_x].format(',',';');
   m_out_file << "pos_y" << std::endl;
   m_out_file << m_grids[pos_y].format(',',';');
-  m_out_file << "b_x" << std::endl;
-  m_out_file << m_grids[b_x].format(',',';');
-  m_out_file << "b_y" << std::endl;
-  m_out_file << m_grids[b_y].format(',',';');
+  m_out_file << "be_x" << std::endl;
+  m_out_file << m_grids[be_x].format(',',';');
+  m_out_file << "be_y" << std::endl;
+  m_out_file << m_grids[be_y].format(',',';');
 }
 
 void PlasmaDomain::outputCurrentState()
@@ -174,7 +140,8 @@ void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
   state_file << "adiabatic_index\n";
   state_file << m_adiabatic_index << std::endl;
   state_file << "t=" << m_time << std::endl;
-  for(int i=state_var_start; i<state_var_end; i++){
+  // for(int i=state_var_start; i<state_var_end; i++){
+  for(int i : state_vars){
     state_file << m_var_names[i] << std::endl;
     state_file << m_grids[i].format(',',';',precision);
   }
@@ -199,14 +166,6 @@ PlasmaDomain::BoundaryCondition PlasmaDomain::stringToBoundaryCondition(const st
 
 void PlasmaDomain::printUpdate(double min_dt, int subcycles_thermal, int subcycles_rad) const
 {
-  // printf("Iter: %i",m_iter);
-  // if(max_iterations > 0) printf("/%i",max_iterations);
-  // printf("|t: %f",m_time);
-  // if(max_time > 0.0) printf("/%f",max_time);
-  // printf("|dt: %f",min_dt);
-  // if(thermal_conduction) printf("|Cond. Subcyc: %i",subcycles_thermal);
-  // if(radiative_losses) printf("|Rad. Subcyc: %i",subcycles_rad);
-  // printf("\n");
   std::cout << "Iter: " << m_iter;
   if(max_iterations > 0) std::cout << "/" << max_iterations;
   std::cout << "|t: " << m_time;
