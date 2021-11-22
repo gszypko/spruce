@@ -35,12 +35,12 @@ public:
   enum Vars { d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,grav_x,grav_y,
               press,thermal_energy,kinetic_energy,div_bi,bi_x,bi_y,
               rad,dt,dt_thermal,dt_rad,v_x,v_y,n,
-              div_be,b_hat_x,b_hat_y,mag_energy,
+              div_be,b_hat_x,b_hat_y,b_magnitude,
               num_variables };
   static inline std::vector<std::string> m_var_names = {
     "d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","be_x","be_y","grav_x","grav_y",
     "press","thermal_energy","kinetic_energy","div_bi","bi_x","bi_y","rad","dt","dt_thermal","dt_rad","v_x","v_y","n",
-    "div_be","b_hat_x","b_hat_y","mag_energy"
+    "div_be","b_hat_x","b_hat_y","b_magnitude"
   };
   static inline std::vector<int> state_vars = {d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,grav_x,grav_y};
 

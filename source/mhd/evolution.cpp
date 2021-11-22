@@ -47,33 +47,6 @@ void PlasmaDomain::advanceTime(bool verbose)
   if(radiative_losses) subcycleRadiation(subcycles_rad,min_dt);
 
   //Advance time by min_dt
-  // Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y],
-  //       &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y],
-  //       &m_b_x = m_grids[be_x], &m_b_y = m_grids[be_y],
-  //       &m_db_x = m_grids[bi_x], &m_db_y = m_grids[bi_y],
-  //       &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_press = m_grids[press];
-  // double visc_coeff = epsilon_viscous*0.5*((m_grids[d_x].square() + m_grids[d_y].square())/dt_raw).min();
-  // Grid viscous_force_x = visc_coeff*laplacian(m_mom_x);
-  // Grid viscous_force_y = visc_coeff*laplacian(m_mom_y);
-  // Grid d_rho_dt = -transportDerivative1D(m_rho, m_v_x, 0) - transportDerivative1D(m_rho, m_v_y, 1);
-  // Grid d_mom_x_dt = -transportDerivative1D(m_mom_x, m_v_x, 0) - transportDerivative1D(m_mom_x, m_v_y, 1)
-  //                 - derivative1D(m_press, 0)
-  //                 + m_grids[lorentz_force_x]
-  //                 + m_rho*m_grids[grav_x] + viscous_force_x;
-  // Grid d_mom_y_dt = -transportDerivative1D(m_mom_y, m_v_x, 0) - transportDerivative1D(m_mom_y, m_v_y, 1)
-  //                 - derivative1D(m_press, 1)
-  //                 + m_grids[lorentz_force_y]
-  //                 + m_rho*m_grids[grav_y] + viscous_force_y;
-  // Grid d_thermal_energy_dt = - transportDerivative1D(m_thermal_energy + m_grids[kinetic_energy], m_v_x, 0)
-  //                          - transportDerivative1D(m_thermal_energy + m_grids[kinetic_energy], m_v_y, 1)
-  //                          - derivative1D(m_press*m_v_x, 0) - derivative1D(m_press*m_v_y, 1)
-  //                          - derivative1D(m_grids[mag_pxx]*m_v_x + m_grids[mag_pxy]*m_v_y, 0)
-  //                          - derivative1D(m_grids[mag_pxy]*m_v_x + m_grids[mag_pyy]*m_v_y, 1)
-  //                          + (m_rho*m_grids[grav_x] + viscous_force_x)*m_v_x
-  //                          + (m_rho*m_grids[grav_y] + viscous_force_y)*m_v_y
-  //                          + 0.5*(m_v_x.square() + m_v_y.square())*d_rho_dt
-  //                          - m_v_x*d_mom_x_dt - m_v_y*d_mom_y_dt;
-
   Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y],
         &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y],
         &m_b_x = m_grids[be_x], &m_b_y = m_grids[be_y],
@@ -86,7 +59,6 @@ void PlasmaDomain::advanceTime(bool verbose)
   Grid viscous_force_x = visc_coeff*laplacian(m_mom_x);
   Grid viscous_force_y = visc_coeff*laplacian(m_mom_y);
 
-  // Grid d_rho_dt = -transportDerivative1D(m_rho, m_v_x, 0) - transportDerivative1D(m_rho, m_v_y, 1);
   Grid d_rho_dt = -transportDivergence2D(m_rho,m_v);
 
   Grid curl_db = curl2D(m_db_x,m_db_y)/(4.0*PI);
@@ -186,19 +158,6 @@ Grid PlasmaDomain::computeMagneticEnergyTerm()
 
   return -1.0/(4.0*PI)*(divergence2D(bg_field_flux) + divergence2D(db_field_flux) + divergence2D(crossterm_flux));
 
-  // //THIS APPROACH INCLUDES TRANSPORT OF THE BACKGROUND FIELD ENERGY (BAD, I'M PRETTY SURE)
-  // Grid &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y],
-  //      &m_b_x = m_grids[be_x], &m_b_y = m_grids[be_y],
-  //      &m_db_x = m_grids[bi_x], &m_db_y = m_grids[bi_y];
-  // std::vector<Grid> m_b = {m_b_x,m_b_y}, m_db = {m_db_x,m_db_y}, m_v = {m_v_x,m_v_y};
-  // //Splitting out each term to ensure that we don't try to differentiate a large + small term
-  // //i.e. we multiply and differentiate *before* adding
-  // std::vector<Grid> term1 = Grid::CrossProduct2DZ(m_b, Grid::CrossProduct2D(m_v,m_b));
-  // std::vector<Grid> term2 = Grid::CrossProduct2DZ(m_b, Grid::CrossProduct2D(m_v,m_db));
-  // std::vector<Grid> term3 = Grid::CrossProduct2DZ(m_db, Grid::CrossProduct2D(m_v,m_b));
-  // std::vector<Grid> term4 = Grid::CrossProduct2DZ(m_db, Grid::CrossProduct2D(m_v,m_db)); //second order term
-  // Grid mag_energy_term = -(divergence(term1) + divergence(term2) + divergence(term3) + divergence(term4))/(4.0*PI);
-  // return mag_energy_term;
 }
 
 void PlasmaDomain::subcycleConduction(int subcycles_thermal, double dt_total)
@@ -258,17 +217,7 @@ void PlasmaDomain::subcycleRadiation(int subcycles_rad, double dt_total)
 //For terms that are computed once, at initialization, and unchanged thereafter
 void PlasmaDomain::computeConstantTerms()
 {
-  Grid m_b_x = m_grids[be_x] + m_grids[bi_x], m_b_y = m_grids[be_y] + m_grids[bi_y];
-  Grid b_magnitude = (m_b_x.square() + m_b_y.square()).sqrt();
-  m_grids[b_hat_x] = m_b_x/b_magnitude;
-  m_grids[b_hat_y] = m_b_y/b_magnitude;
-  // m_grids[mag_press] = (m_b_x*m_b_x + m_b_y*m_b_y)/(8.0*PI);
-
-  Grid &m_d_x = m_grids[d_x], &m_d_y = m_grids[d_y];
-  Grid &m_pos_x = m_grids[pos_x], &m_pos_y = m_grids[pos_y];
-
   m_grids[div_be] = divergence2D(m_grids[be_x],m_grids[be_y]);
-  
 }
 
 //Recompute pressure, energy, velocity, radiative loss rate, dt, dt_thermal, dt_rad
@@ -283,10 +232,10 @@ void PlasmaDomain::recomputeDerivedVariables()
   m_grids[v_y] = m_grids[mom_y]/m_grids[rho];
   m_grids[n] = m_grids[rho]/m_ion_mass;
   m_grids[div_bi] = divergence2D(m_grids[bi_x],m_grids[bi_y]);
-  //Note, here we compute the "mobile" magnetic energy density, i.e. the
-  //energy density of the field minus the energy density of the background field
-  m_grids[mag_energy] = (2.0*Grid::DotProduct2D({m_grids[be_x],m_grids[be_y]},{m_grids[bi_x],m_grids[bi_y]})
-                           + Grid::DotProduct2D({m_grids[bi_x],m_grids[bi_y]},{m_grids[bi_x],m_grids[bi_y]}))/(8.0*PI);
+  Grid m_b_x = m_grids[be_x] + m_grids[bi_x], m_b_y = m_grids[be_y] + m_grids[bi_y];
+  m_grids[b_magnitude] = (m_b_x.square() + m_b_y.square()).sqrt();
+  m_grids[b_hat_x] = m_b_x/m_grids[b_magnitude];
+  m_grids[b_hat_y] = m_b_y/m_grids[b_magnitude];
   recomputeDT();
   if(thermal_conduction) recomputeDTThermal();
   if(radiative_losses){
@@ -327,9 +276,22 @@ void PlasmaDomain::recomputeDT()
   InstrumentationTimer timer(__PRETTY_FUNCTION__);
   #endif
   Grid c_s = (m_adiabatic_index*m_grids[press]/m_grids[rho]).sqrt();
+  Grid c_s_sq = c_s.square();
+
+  Grid v_alfven = (m_grids[b_magnitude]/(4.0*PI*m_grids[rho])).sqrt();
+  Grid v_alfven_sq = v_alfven.square();
+  Grid one = Grid::Ones(m_xdim,m_ydim);
+
+  //Magnetoacoustic modes
+  Grid delta = (one - 4.0*c_s_sq*v_alfven_sq/(c_s_sq+v_alfven_sq).square()).sqrt();
+  Grid v_fast = (0.5*(c_s_sq + v_alfven_sq)*(one + delta)).sqrt();
+  Grid v_slow = (0.5*(c_s_sq + v_alfven_sq)*(one - delta)).sqrt();
+
+  //Bulk velocity transit time
   Grid diagonals = (m_grids[d_x].square() + m_grids[d_y].square()).sqrt();
   Grid vel_mag = (m_grids[v_x].square() + m_grids[v_y].square()).sqrt();
-  m_grids[dt] = diagonals/(c_s + vel_mag);
+
+  m_grids[dt] = diagonals/(c_s + v_alfven + v_fast + v_slow + vel_mag);
 }
 
 void PlasmaDomain::recomputeDTThermal()
