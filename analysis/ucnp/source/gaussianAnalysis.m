@@ -7,8 +7,8 @@ mkdir(savedir)
 
 s = struct;
 s.t = os.grids.time;
-s.x = os.grids.xVec;
-s.y = os.grids.yVec;
+s.x = os.grids.x_vec;
+s.y = os.grids.y_vec;
 s.Te0 = os.settings.Te;
 s.sig0 = os.settings.sigx;
 s.tau = getTauExp(s.sig0,s.Te0,s.Te0);
@@ -18,13 +18,12 @@ figiter = 0;
 
 for i = 1:length(os.grids.time)
     disp(['2D Gaussian Fits: ' num2str(i) '/' num2str(length(os.grids.time))])
-    x = os.grids.xVec;
-    y = os.grids.yVec;
+    x = os.grids.x_vec;
+    y = os.grids.y_vec;
     X = os.grids.pos_x;
     Y = os.grids.pos_y;
     img = os.grids.vars(i).n;
     [fit(i)] = fitImgWithGaussian(x,y,img);
-    
     
     [~,indx] = min(abs(x));
     [~,indy] = min(abs(y));
@@ -101,15 +100,15 @@ for i = 1:length(s.t)
     s.data(i).sigx = fit(i).sigx;
     s.data(i).sigy = fit(i).sigy;
     s.data(i).n = fit(i).amp;
-    [~,indx] = min(abs(os.grids.xVec));
-    [~,indy] = min(abs(os.grids.yVec));
+    [~,indx] = min(abs(os.grids.x_vec));
+    [~,indy] = min(abs(os.grids.y_vec));
     s.data(i).Te = os.grids.vars(i).temp(indy,indx);
     s.data(i).vx = os.grids.vars(i).v_x(indy,:);
     s.data(i).vy = os.grids.vars(i).v_y(:,indx)';
 end
 
 s.theory = struct;
-[sig,Te,v] = get_ucnp_expansion(s.t,s.sig0,s.Te0,s.x,s.y);
+[sig,Te,v] = getUCNPExpansion(s.t,s.sig0,s.Te0,s.x,s.y);
 for i = 1:length(s.t)
     s.theory(i).sigx = sig(i);
     s.theory(i).sigy = sig(i);

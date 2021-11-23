@@ -40,5 +40,8 @@ for i = 11:length(C)
     end      
 end
 
+out.time = [out.vars.time];
+out.x_vec = out.pos_x(1,:);
+out.y_vec = out.pos_y(:,1)';
 
 end

@@ -3,7 +3,7 @@ clc, clearvars -except inp, close all, f = filesep;
 
 % add paths to MHD analysis for UCNPs
 gitdir = extractBefore(matlab.desktop.editor.getActiveFilename,[f mfilename]);
-folders = {'','file-reading','img-fits','matrix-binning','plasma-quantities','color-maps'};
+folders = {'','file-reading','img-fits','other','plasma-quantities','color-maps'};
 for i = 1:length(folders)
     addpath([gitdir f 'source' f folders{i}])
 end
@@ -19,9 +19,9 @@ s = cell2struct(inp,fields,2);
 
 % user controls
 removeGhostCells = true;
-loadFromBaseFiles = true;
-plotGridTimeEvol = true;
-doGaussianAnalysis = false;
+loadFromBaseFiles = false;
+plotGridTimeEvol = false;
+doGaussianAnalysis = true;
 
 %% Read in and Process Data
 % define constnats
