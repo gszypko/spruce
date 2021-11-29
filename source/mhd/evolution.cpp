@@ -278,7 +278,8 @@ void PlasmaDomain::recomputeDT()
   Grid c_s = (m_adiabatic_index*m_grids[press]/m_grids[rho]).sqrt();
   Grid c_s_sq = c_s.square();
 
-  Grid v_alfven = (m_grids[b_magnitude]/(4.0*PI*m_grids[rho])).sqrt();
+  Grid v_alfven = m_grids[b_magnitude]/(4.0*PI*m_grids[rho]).sqrt();
+  m_grids[v_a] = v_alfven;
   Grid v_alfven_sq = v_alfven.square();
   Grid one = Grid::Ones(m_xdim,m_ydim);
 

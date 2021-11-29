@@ -19,9 +19,9 @@ s = cell2struct(inp,fields,2);
 
 % user controls
 removeGhostCells = true;
-loadFromBaseFiles = false;
-plotGridTimeEvol = false;
-doGaussianAnalysis = true;
+loadFromBaseFiles = true;
+plotGridTimeEvol = true;
+doGaussianAnalysis = false;
 
 %% Read in and Process Data
 % define constnats

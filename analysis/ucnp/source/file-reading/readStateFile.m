@@ -23,7 +23,7 @@ out.Ny = str2double(C{2}{2});
 out.mI = str2double(C{4}{1});
 out.index = str2double(C{6}{1});
 
-q = {'d_x','d_y','pos_x','pos_y','rho','temp','mom_x','mom_y','b_x','b_y'};
+q = {'d_x','d_y','pos_x','pos_y','rho','temp','mom_x','mom_y','be_x','be_y'};
 qind = [];
 for i = 1:length(C)
     ind = find(strcmp(C{i}{1},q));

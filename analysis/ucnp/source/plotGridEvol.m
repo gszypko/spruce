@@ -7,12 +7,12 @@ savedir = [os.folder f 'figs-grid-evol'];
 mkdir(savedir)
 
 % for each time point, plot 2D grids from MHD simulation
-gridnames = {'n','temp','press','v_x','v_y','thermal_energy'};
-gridstr = {'n','T','P','v_x','v_y','E_t_h'};
+gridnames = {'n','temp','press','v_x','v_y','v_a'};
+gridstr = {'n','T','P','v_x','v_y','v_a'};
 for k = 1:length([os.grids.vars.time])
     disp(['Plotting: ' num2str(k) '/' num2str(length([os.grids.vars.time]))])
     
-    fig = figure('Visible','off');
+    fig = figure('Visible','on');
     fig.Position = [158   329   894   467];
     fig.Color = [1 1 1];
 
