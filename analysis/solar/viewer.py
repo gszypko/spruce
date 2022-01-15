@@ -15,8 +15,8 @@ fullnames = {
   'press': "Pressure",
   'rad': "Radiative Loss Rate",
   'energy': "Energy Density",
-  'b': "Background Magnetic Field",
-  'db': "Perturbation Magnetic Field",
+  'be': "Background Magnetic Field",
+  'bi': "Induced Magnetic Field",
   'v': "Velocity",
   'v_x': "X Velocity",
   'v_y': "Y Velocity",
@@ -25,8 +25,8 @@ fullnames = {
   'dt_rad': "Radiative Losses Timestep",
   'n': "Number Density",
   'beta': "Plasma Beta",
-  'div_b': "Background Field Divergence",
-  'div_db': "Perturbation Field Divergence"
+  'div_be': "Background Field Divergence",
+  'div_bi': "Perturbation Field Divergence"
 }
 fullunits = {
   'rho': r'g cm$^{-3}$',
@@ -34,8 +34,8 @@ fullunits = {
   'press': r'dyn cm$^{-2}$',
   'rad': r'erg cm$^{-3}$ s$^{-1}$',
   'energy': r'erg cm$^{-3}$',
-  'b': r'G',
-  'db': r'G',
+  'be': r'G',
+  'bi': r'G',
   'v': r'cm s$^{-1}$',
   'v_x': r'cm s$^{-1}$',
   'v_y': r'cm s$^{-1}$',
@@ -44,8 +44,8 @@ fullunits = {
   'dt_rad': r's',
   'n': r'cm$^{-3}$',
   'beta': r'',
-  'div_b': r'G cm$^{-1}$',
-  'div_db': r'G cm$^{-1}$'
+  'div_be': r'G cm$^{-1}$',
+  'div_bi': r'G cm$^{-1}$'
 }
 for key in fullunits.keys():
   if fullunits[key] != r'': fullunits[key] = " (" + fullunits[key] + ")"
@@ -53,8 +53,8 @@ for key in fullunits.keys():
 parser = argparse.ArgumentParser(description='View the output from mhdtoy.')
 parser.add_argument('filename', help="the name of the file output from mhdtoy")
 parser.add_argument('timestep', type=float, help="the interval (in simulation time units) between frames of output animation")
-parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', 'energy', 'v_x', 'v_y', 'dt', 'dt_thermal', 'dt_rad', 'n', 'beta', 'div_b', 'div_db'])
-parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['b','v','db'])
+parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', 'energy', 'v_x', 'v_y', 'dt', 'dt_thermal', 'dt_rad', 'n', 'beta', 'div_be', 'div_bi'])
+parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['be','v','bi'])
 parser.add_argument('--density', metavar="vec_display_density", type=int, help="set the interval between displayed vectors", default=25)
 parser.add_argument('-d', '--diff', metavar='diff_filename', help="filename to difference with original file")
 parser.add_argument('-r', '--realtime', action='store_true')
@@ -76,8 +76,8 @@ dim = input_file.readline().split(',')
 xdim = int(dim[0])
 ydim = int(dim[1])
 
-xl_ghost = 0
-xu_ghost = 0
+xl_ghost = 2
+xu_ghost = 2
 yl_ghost = 2
 yu_ghost = 2
 
@@ -111,9 +111,9 @@ y_max = Y[0][-1]
 #read in static magnetic field
 bx = np.zeros([xdim_view,ydim_view], dtype=float)
 by = np.zeros([xdim_view,ydim_view], dtype=float)
-assert input_file.readline() == "b_x\n"
+assert input_file.readline() == "be_x\n"
 rows_x = input_file.readline().split(';')
-assert input_file.readline() == "b_y\n"
+assert input_file.readline() == "be_y\n"
 rows_y = input_file.readline().split(';')
 # assert input_file.readline() == "b_z\n"
 # input_file.readline()
@@ -161,7 +161,7 @@ while True:
       this_var[i] = this_var_row
     var.append(this_var)
 
-    if vec_var != None and vec_var != "b":
+    if vec_var != None and vec_var != "be":
       line = input_file.readline()
       while line and line.rstrip().split('_')[0] != vec_var:
         if line[0:2] == "t=":
@@ -203,14 +203,16 @@ if output_var == "rho":
 if output_var == "beta":
   mag_press = (bx*bx + by*by)/(8.0*np.pi)
   for i in range(len(var)):
-    var[i] = var[i]/mag_press
+    var[i] = var[i]/(mag_press**2)
+    var[i] = mag_press*var[i]
+
 
 fig, ax = plt.subplots()
 
 frame = 0
 x = X[:,0]
 y = Y[0,:]
-if output_var == "rad":
+if output_var == "rad" or output_var == "beta":
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-5, base=10))
   im.set_data(x,y,np.transpose(var[frame]))
@@ -229,7 +231,7 @@ elif output_var == "dt" or output_var == "dt_thermal" or output_var == "dt_rad":
   ax.set(xlim=(x_min,x_max), ylim=(y_min,y_max), xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
   var_colorbar = fig.colorbar(im)
   var_colorbar.set_label(fullnames[output_var]+ " (" + fullunits[output_var] + ")")
-elif output_var == "vel_x" or output_var == "vel_y" or output_var == "div_b" or output_var == "div_db":
+elif output_var == "vel_x" or output_var == "vel_y" or output_var == "div_bi" or output_var == "div_be":
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest')
   im.set_data(x,y,np.transpose(var[frame]))
@@ -278,7 +280,7 @@ for i in range(len(x_indices)):
 x_vec_indices = np.array(x_vec_indices)
 y_vec_indices = np.array(y_vec_indices)
 
-if vec_var == "b":
+if vec_var == "be":
   this_vec_x = bx
   this_vec_y = by
   norm = np.sqrt(this_vec_x**2 + this_vec_y**2)
@@ -335,7 +337,7 @@ def updatefig(*args):
     var_colorbar = fig.colorbar(im, cax=contour_color_axes)
     var_colorbar.set_label(fullnames[output_var]+ fullunits[output_var])
     ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
-    if vec_var != "b" and vec_var != None:
+    if vec_var != "be" and vec_var != None:
       vector_color_axes.cla()
       vec_colorbar = fig.colorbar(quiv, cax=vector_color_axes)
       vec_colorbar.set_label(fullnames[vec_var]+ fullunits[vec_var])

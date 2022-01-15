@@ -46,16 +46,48 @@ void PlasmaDomain::advanceTime(bool verbose)
   if(thermal_conduction) subcycleConduction(subcycles_thermal,min_dt);
   if(radiative_losses) subcycleRadiation(subcycles_rad,min_dt);
 
-  //Advance time by min_dt
   Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y],
         &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y],
         &m_b_x = m_grids[be_x], &m_b_y = m_grids[be_y],
         &m_db_x = m_grids[bi_x], &m_db_y = m_grids[bi_y],
         &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_press = m_grids[press];
 
+  double visc_coeff = epsilon_viscous*0.5*((m_grids[d_x].square() + m_grids[d_y].square())/dt_raw).min();
+
+  // {d_rho_dt, d_mom_x_dt, d_mom_y_dt, d_bi_x_dt, d_bi_y_dt, d_thermal_energy_dt}
+  std::vector<Grid> time_derivatives = computeTimeDerivatives(m_grids,visc_coeff);
+
+  if(ambient_heating) time_derivatives[5] += heating_rate;
+
+  m_rho += min_dt*time_derivatives[0];
+  m_mom_x += min_dt*time_derivatives[1];
+  m_mom_y += min_dt*time_derivatives[2];
+  m_thermal_energy += min_dt*time_derivatives[5];
+  m_db_x += min_dt*time_derivatives[3];
+  m_db_y += min_dt*time_derivatives[4];
+  
+  m_time += min_dt;
+  m_iter++;
+
+  catchUnderdensity();
+  recomputeTemperature();
+  recomputeDerivedVariables();
+  updateGhostZones();
+}
+
+// Returns time derivatives in the following order:
+// {d_rho_dt, d_mom_x_dt, d_mom_y_dt, d_bi_x_dt, d_bi_y_dt, d_thermal_energy_dt}
+std::vector<Grid> PlasmaDomain::computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff)
+{
+  //Advance time by min_dt
+  const Grid &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y],
+        &m_v_x = grids[v_x], &m_v_y = grids[v_y],
+        &m_b_x = grids[be_x], &m_b_y = grids[be_y],
+        &m_db_x = grids[bi_x], &m_db_y = grids[bi_y],
+        &m_rho = grids[rho], &m_thermal_energy = grids[thermal_energy], &m_press = grids[press];
+
   std::vector<Grid> m_v = {m_v_x,m_v_y};
 
-  double visc_coeff = epsilon_viscous*0.5*((m_grids[d_x].square() + m_grids[d_y].square())/dt_raw).min();
   Grid viscous_force_x = visc_coeff*laplacian(m_mom_x);
   Grid viscous_force_y = visc_coeff*laplacian(m_mom_y);
 
@@ -66,80 +98,68 @@ void PlasmaDomain::advanceTime(bool verbose)
   std::vector<Grid> mag_mom_terms_secorder = Grid::CrossProductZ2D(curl_db,{m_db_x,m_db_y}); //second order terms
   Grid d_mom_x_dt = -transportDivergence2D(m_mom_x, m_v)
                   - derivative1D(m_press, 0)
-                  + m_rho*m_grids[grav_x] + viscous_force_x
+                  + m_rho*grids[grav_x] + viscous_force_x
                   + mag_mom_terms_firstorder[0] + mag_mom_terms_secorder[0];
   Grid d_mom_y_dt = -transportDivergence2D(m_mom_y, m_v)
                   - derivative1D(m_press, 1)
-                  + m_rho*m_grids[grav_y] + viscous_force_y
+                  + m_rho*grids[grav_y] + viscous_force_y
                   + mag_mom_terms_firstorder[1] + mag_mom_terms_secorder[1];
 
   std::vector<Grid> induction_rhs_b0 = curlZ(Grid::CrossProduct2D({m_v_x,m_v_y},{m_b_x,m_b_y}));
   std::vector<Grid> induction_rhs_db = curlZ(Grid::CrossProduct2D({m_v_x,m_v_y},{m_db_x,m_db_y}));
-  Grid d_db_x_dt = induction_rhs_b0[0] + induction_rhs_db[0];
-  Grid d_db_y_dt = induction_rhs_b0[1] + induction_rhs_db[1];
+  Grid d_bi_x_dt = induction_rhs_b0[0] + induction_rhs_db[0];
+  Grid d_bi_y_dt = induction_rhs_b0[1] + induction_rhs_db[1];
 
-  // Grid mag_energy_term = computeMagneticEnergyTerm();
-  // Grid d_thermal_energy_dt = - transportDivergence2D(m_thermal_energy, m_v)
-  //                          - transportDivergence2D(m_grids[kinetic_energy], m_v)
-  //                          - transportDivergence2D(m_grids[mag_energy], m_v)
-  //                          - divergence2D(m_press*m_v_x, m_press*m_v_y)
-  //                          + (m_rho*m_grids[grav_x] + viscous_force_x)*m_v_x
-  //                          + (m_rho*m_grids[grav_y] + viscous_force_y)*m_v_y
-  //                          + 0.5*(m_v_x.square() + m_v_y.square())*d_rho_dt
-  //                          - m_v_x*d_mom_x_dt - m_v_y*d_mom_y_dt
-  //                          - Grid::DotProduct2D({m_b_x+m_db_x,m_b_y+m_db_y},{d_db_x_dt,d_db_y_dt})/(4.0*PI)
-  //                          + mag_energy_term;
+  // // Grid mag_energy_term = computeMagneticEnergyTerm();
+  // // Grid d_thermal_energy_dt = - transportDivergence2D(m_thermal_energy, m_v)
+  // //                          - transportDivergence2D(m_grids[kinetic_energy], m_v)
+  // //                          - transportDivergence2D(m_grids[mag_energy], m_v)
+  // //                          - divergence2D(m_press*m_v_x, m_press*m_v_y)
+  // //                          + (m_rho*m_grids[grav_x] + viscous_force_x)*m_v_x
+  // //                          + (m_rho*m_grids[grav_y] + viscous_force_y)*m_v_y
+  // //                          + 0.5*(m_v_x.square() + m_v_y.square())*d_rho_dt
+  // //                          - m_v_x*d_mom_x_dt - m_v_y*d_mom_y_dt
+  // //                          - Grid::DotProduct2D({m_b_x+m_db_x,m_b_y+m_db_y},{d_db_x_dt,d_db_y_dt})/(4.0*PI)
+  // //                          + mag_energy_term;
+  // Grid d_thermal_energy_dt = - transportDivergence2D(m_thermal_energy,m_v)
+  //                            - m_press*divergence2D(m_v);
+
+  // // //NOTE: conduction, radiation, heating should also be applied to this equation
+  // // double nu_i_e; //electron-ion collision frequency
+  // // Grid m_thermal_energy_e;
+  // // Grid m_press_e;
+  // // Grid temp_e;
+  // // Grid m_thermal_energy_i;
+  // // Grid m_press_i;
+  // // Grid temp_i;
+
+  // // Grid collision_term = K_B*m_grids[DerivedVars::n]/(gamma - 1.0)*nu_i_e*(temp_i - temp_e);
+
+  // // //Can still add: electric potential term
+  // // Grid d_thermal_energy_e_dt = - transportDerivative1D(m_thermal_energy_e, m_v_x, 0)
+  // //                          - transportDerivative1D(m_thermal_energy_e, m_v_y, 1)
+  // //                          - derivative1D(m_press_e*m_v_x, 0) - derivative1D(m_press_e*m_v_y, 1)
+  // //                          + (viscous_force_x)*m_v_x
+  // //                          + (viscous_force_y)*m_v_y
+  // //                          + collision_term;
+  
+  // // //NOTE: heating may or may not be applied to this equation
+  // // //Can still add: spitzer viscosity, electric potential term
+  // // Grid d_thermal_energy_i_dt = - transportDerivative1D(m_thermal_energy_i + m_grids[kinetic_energy], m_v_x, 0)
+  // //                          - transportDerivative1D(m_thermal_energy_i + m_grids[kinetic_energy], m_v_y, 1)
+  // //                          - derivative1D(m_press_i*m_v_x, 0) - derivative1D(m_press_i*m_v_y, 1)
+  // //                          - derivative1D(m_grids[mag_pxx]*m_v_x + m_grids[mag_pxy]*m_v_y, 0)
+  // //                          - derivative1D(m_grids[mag_pxy]*m_v_x + m_grids[mag_pyy]*m_v_y, 1)
+  // //                          + (m_rho*m_grids[grav_x] + viscous_force_x)*m_v_x
+  // //                          + (m_rho*m_grids[grav_y] + viscous_force_y)*m_v_y
+  // //                          + 0.5*(m_v_x.square() + m_v_y.square())*d_rho_dt
+  // //                          - m_v_x*d_mom_x_dt - m_v_y*d_mom_y_dt
+  // //                          - collision_term;
+
   Grid d_thermal_energy_dt = - transportDivergence2D(m_thermal_energy,m_v)
                              - m_press*divergence2D(m_v);
 
-  // //NOTE: conduction, radiation, heating should also be applied to this equation
-  // double nu_i_e; //electron-ion collision frequency
-  // Grid m_thermal_energy_e;
-  // Grid m_press_e;
-  // Grid temp_e;
-  // Grid m_thermal_energy_i;
-  // Grid m_press_i;
-  // Grid temp_i;
-
-  // Grid collision_term = K_B*m_grids[DerivedVars::n]/(gamma - 1.0)*nu_i_e*(temp_i - temp_e);
-
-  // //Can still add: electric potential term
-  // Grid d_thermal_energy_e_dt = - transportDerivative1D(m_thermal_energy_e, m_v_x, 0)
-  //                          - transportDerivative1D(m_thermal_energy_e, m_v_y, 1)
-  //                          - derivative1D(m_press_e*m_v_x, 0) - derivative1D(m_press_e*m_v_y, 1)
-  //                          + (viscous_force_x)*m_v_x
-  //                          + (viscous_force_y)*m_v_y
-  //                          + collision_term;
-  
-  // //NOTE: heating may or may not be applied to this equation
-  // //Can still add: spitzer viscosity, electric potential term
-  // Grid d_thermal_energy_i_dt = - transportDerivative1D(m_thermal_energy_i + m_grids[kinetic_energy], m_v_x, 0)
-  //                          - transportDerivative1D(m_thermal_energy_i + m_grids[kinetic_energy], m_v_y, 1)
-  //                          - derivative1D(m_press_i*m_v_x, 0) - derivative1D(m_press_i*m_v_y, 1)
-  //                          - derivative1D(m_grids[mag_pxx]*m_v_x + m_grids[mag_pxy]*m_v_y, 0)
-  //                          - derivative1D(m_grids[mag_pxy]*m_v_x + m_grids[mag_pyy]*m_v_y, 1)
-  //                          + (m_rho*m_grids[grav_x] + viscous_force_x)*m_v_x
-  //                          + (m_rho*m_grids[grav_y] + viscous_force_y)*m_v_y
-  //                          + 0.5*(m_v_x.square() + m_v_y.square())*d_rho_dt
-  //                          - m_v_x*d_mom_x_dt - m_v_y*d_mom_y_dt
-  //                          - collision_term;
-
-  if(ambient_heating) d_thermal_energy_dt += heating_rate;
-
-  m_rho += min_dt*d_rho_dt;
-  m_mom_x += min_dt*d_mom_x_dt;
-  m_mom_y += min_dt*d_mom_y_dt;
-  m_thermal_energy += min_dt*d_thermal_energy_dt;
-  m_db_x += min_dt*d_db_x_dt;
-  m_db_y += min_dt*d_db_y_dt;
-  
-  m_time += min_dt;
-  m_iter++;
-
-  catchUnderdensity();
-  recomputeTemperature();
-  recomputeDerivedVariables();
-  updateGhostZones();
+  return {d_rho_dt, d_mom_x_dt, d_mom_y_dt, d_bi_x_dt, d_bi_y_dt, d_thermal_energy_dt};
 }
 
 Grid PlasmaDomain::computeMagneticEnergyTerm()

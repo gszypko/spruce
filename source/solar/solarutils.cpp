@@ -10,7 +10,6 @@ namespace SolarUtils {
     const double init_temp = pms.getvar("init_temp");
     // const double x_size = pms.getvar("x_size");
     // const double y_size = pms.getvar("y_size");
-    const double b_0 = pms.getvar("b_0");
     const double n_base = pms.getvar("n_base");
     double ion_mass = pms.getvar("ion_mass");
     double adiabatic_index = pms.getvar("adiabatic_index");
@@ -81,6 +80,7 @@ namespace SolarUtils {
     mi.set_var(PlasmaDomain::mom_y, Grid(xdim,ydim,0.0));
 
     if(problem_type == "corona"){
+      const double b_0 = pms.getvar("b_0");
       mi.set_var(PlasmaDomain::d_x,d_x,"center");
       mi.set_var(PlasmaDomain::d_y,d_y,"lower");
       mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
@@ -97,10 +97,12 @@ namespace SolarUtils {
       mi.set_var(PlasmaDomain::d_y,d_y,"center");
       double stdevx = pms.getvar("stdevx");
       double stdevy = pms.getvar("stdevy");
+      double b_x = pms.getvar("b_x");
+      double b_y = pms.getvar("b_y");
       mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
       mi.set_var(PlasmaDomain::rho, GaussianGrid(pos_x,pos_y,0.1*base_rho,10.0*base_rho,xdim/stdevx,ydim/stdevy));
-      mi.set_var(PlasmaDomain::be_x, Grid(xdim,ydim,0.0));
-      mi.set_var(PlasmaDomain::be_y, Grid(xdim,ydim,0.0));
+      mi.set_var(PlasmaDomain::be_x, Grid(xdim,ydim,b_x));
+      mi.set_var(PlasmaDomain::be_y, Grid(xdim,ydim,b_y));
       mi.set_var(PlasmaDomain::grav_y, Grid(xdim,ydim,0.0));
       mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
     }

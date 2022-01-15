@@ -25,13 +25,11 @@ namespace fs = std::filesystem;
 class PlasmaDomain
 {
 public:
-  // enum class BoundaryCondition { Periodic, Wall, Open };
   enum class BoundaryCondition { Periodic, Open, Fixed, Reflect };
   static inline std::vector<std::string> m_boundary_condition_names = {
     "periodic", "open", "fixed", "reflect"
   };
 
-  //state variables (taken as input, carried over between iterations)
   enum Vars { d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,grav_x,grav_y,
               press,thermal_energy,kinetic_energy,div_bi,bi_x,bi_y,
               rad,dt,dt_thermal,dt_rad,v_x,v_y,n,
@@ -130,6 +128,7 @@ private:
   /*********************************************************************/ 
 
   void advanceTime(bool verbose = true);
+  std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff);
   void subcycleConduction(int subcycles_thermal, double dt_total);
   void subcycleRadiation(int subcycles_rad, double dt_total);
 

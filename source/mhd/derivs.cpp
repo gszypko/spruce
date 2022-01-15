@@ -54,27 +54,25 @@ Grid PlasmaDomain::upwindSurface(const Grid &cell_center, const Grid &vel, const
         }
         //Apply Barton's method
         double d1, d2, d3;
-        // d2 = 0.5*(cell_center(i1,j1)+cell_center(i2,j2));
         d2 = boundaryInterpolate(cell_center,i1,j1,i2,j2);
-        // if(0.5*(vel(i1,j1)+vel(i2,j2))>=0.0){
-        if(boundaryInterpolate(vel,i1,j1,i2,j2)>=0.0){
+        if(boundaryInterpolate(vel,i1,j1,i2,j2)>0.0){
           d3 = cell_center(i1,j1);
-          // d1 = 1.5*cell_center(i1,j1) - 0.5*cell_center(i0,j0);
           d1 = boundaryExtrapolate(cell_center,i0,j0,i1,j1);
           if(cell_center(i2,j2) <= cell_center(i1,j1)){
             cell_surface(i2,j2) = std::min(d3,std::max(d1,d2));
           } else { //cell_center(i2,j2) > cell_center(i1,j1)
             cell_surface(i2,j2) = std::max(d3,std::min(d1,d2));
           }
-        } else { //vel(i1,j1)<0.0
+        } else if(boundaryInterpolate(vel,i1,j1,i2,j2)<0.0){
           d3 = cell_center(i2,j2);
-          // d1 = 1.5*cell_center(i2,j2) - 0.5*cell_center(i3,j3);
           d1 = boundaryExtrapolate(cell_center,i3,j3,i2,j2);
           if(cell_center(i2,j2) <= cell_center(i1,j1)){
             cell_surface(i2,j2) = std::max(d3,std::min(d1,d2));
           } else { //cell_center(i2,j2) > cell_center(i1,j1)
             cell_surface(i2,j2) = std::min(d3,std::max(d1,d2));
           }
+        } else {
+          cell_surface(i2,j2) = d2; //default case if no flow direction; linear interp
         }
       }
     }
