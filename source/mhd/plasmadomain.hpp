@@ -128,26 +128,40 @@ private:
   /*********************************************************************/ 
 
   void advanceTime(bool verbose = true);
-  std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff);
-  void subcycleConduction(int subcycles_thermal, double dt_total);
-  void subcycleRadiation(int subcycles_rad, double dt_total);
 
+  void integrateEuler(std::vector<Grid> &grids, double time_step, double visc_coeff);
+  void integrateRK2(std::vector<Grid> &grids, double time_step, double visc_coeff);
+  void integrateRK4(std::vector<Grid> &grids, double time_step, double visc_coeff);
+  std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff);
+  void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step);
+
+  //Functions to be applied between each time step
   void recomputeDerivedVariables();
   void recomputeTemperature();
-  void computeConstantTerms();
-  void computeIterationBounds();
-
   void catchUnderdensity();
   void updateGhostZones();
-  void openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
-  void reflectBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
-  void fixedBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
 
+  //Versions of the above for operating on intermediate states of the system
+  //i.e. for acting on Grid vectors other than m_grids
+  void recomputeDerivedVariables(std::vector<Grid> &grids);
+  void recomputeTemperature(std::vector<Grid> &grids);
+  void catchUnderdensity(std::vector<Grid> &grids);
+  void updateGhostZones(std::vector<Grid> &grids);
+
+  void openBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
+  void reflectBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
+  void fixedBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
+
+  void subcycleConduction(int subcycles_thermal, double dt_total);
+  void subcycleRadiation(int subcycles_rad, double dt_total);
   void recomputeRadiativeLosses();
   void recomputeDT();
   void recomputeDTThermal();
   void recomputeDTRadiative();
-  
+
+  void computeConstantTerms();
+  void computeIterationBounds();
+
   void outputPreamble();
   void outputCurrentState();
   void writeStateFile(std::string filename_stem = "mhd",int precision = -1) const;

@@ -46,33 +46,86 @@ void PlasmaDomain::advanceTime(bool verbose)
   if(thermal_conduction) subcycleConduction(subcycles_thermal,min_dt);
   if(radiative_losses) subcycleRadiation(subcycles_rad,min_dt);
 
-  Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y],
-        &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y],
-        &m_b_x = m_grids[be_x], &m_b_y = m_grids[be_y],
-        &m_db_x = m_grids[bi_x], &m_db_y = m_grids[bi_y],
-        &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_press = m_grids[press];
+  // Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y],
+  //       &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y],
+  //       &m_bi_x = m_grids[bi_x], &m_bi_y = m_grids[bi_y],
+  //       &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_press = m_grids[press];
 
   double visc_coeff = epsilon_viscous*0.5*((m_grids[d_x].square() + m_grids[d_y].square())/dt_raw).min();
 
-  // {d_rho_dt, d_mom_x_dt, d_mom_y_dt, d_bi_x_dt, d_bi_y_dt, d_thermal_energy_dt}
-  std::vector<Grid> time_derivatives = computeTimeDerivatives(m_grids,visc_coeff);
+  integrateRK4(m_grids, min_dt, visc_coeff);
+  // integrateRK2(m_grids, min_dt, visc_coeff);
+  // // First create copy of system advanced by half the timestep (Euler)...
+  // std::vector<Grid> time_derivatives_naive = computeTimeDerivatives(m_grids,visc_coeff);
+  // std::vector<Grid> grids_halfstep = m_grids;
+  // applyTimeDerivatives(grids_halfstep, time_derivatives_naive, 0.5*min_dt);
 
-  if(ambient_heating) time_derivatives[5] += heating_rate;
+  // // ...then use that half-advanced system to compute time derivatives to
+  // // apply to actual system for full time step (second-order R-K, a.k.a. midpoint method)
+  // std::vector<Grid> time_derivatives = computeTimeDerivatives(grids_halfstep,visc_coeff);
+  // applyTimeDerivatives(m_grids, time_derivatives, min_dt);
 
-  m_rho += min_dt*time_derivatives[0];
-  m_mom_x += min_dt*time_derivatives[1];
-  m_mom_y += min_dt*time_derivatives[2];
-  m_thermal_energy += min_dt*time_derivatives[5];
-  m_db_x += min_dt*time_derivatives[3];
-  m_db_y += min_dt*time_derivatives[4];
-  
   m_time += min_dt;
   m_iter++;
+}
 
-  catchUnderdensity();
-  recomputeTemperature();
-  recomputeDerivedVariables();
-  updateGhostZones();
+void PlasmaDomain::integrateEuler(std::vector<Grid> &grids, double time_step, double visc_coeff)
+{
+  std::vector<Grid> time_derivatives = computeTimeDerivatives(grids,visc_coeff);
+  applyTimeDerivatives(grids, time_derivatives, time_step);
+}
+
+void PlasmaDomain::integrateRK2(std::vector<Grid> &grids, double time_step, double visc_coeff)
+{
+  // First create copy of system advanced by half the timestep (Euler)...
+  std::vector<Grid> time_derivatives_naive = computeTimeDerivatives(grids,visc_coeff);
+  std::vector<Grid> grids_halfstep = grids;
+  applyTimeDerivatives(grids_halfstep, time_derivatives_naive, 0.5*time_step);
+
+  // ...then use that half-advanced system to compute time derivatives to
+  // apply to actual system for full time step (second-order R-K, a.k.a. midpoint method)
+  std::vector<Grid> time_derivatives = computeTimeDerivatives(grids_halfstep,visc_coeff);
+  applyTimeDerivatives(grids, time_derivatives, time_step);
+}
+
+void PlasmaDomain::integrateRK4(std::vector<Grid> &grids, double time_step, double visc_coeff)
+{
+  std::vector<Grid> k1 = computeTimeDerivatives(grids,visc_coeff);
+
+  std::vector<Grid> grids_copy = grids;
+  applyTimeDerivatives(grids_copy, k1, 0.5*time_step);
+  std::vector<Grid> k2 = computeTimeDerivatives(grids_copy,visc_coeff);
+
+  grids_copy = grids;
+  applyTimeDerivatives(grids_copy, k2, 0.5*time_step);
+  std::vector<Grid> k3 = computeTimeDerivatives(grids_copy,visc_coeff);
+
+  grids_copy = grids;
+  applyTimeDerivatives(grids_copy, k3, time_step);
+  std::vector<Grid> k4 = computeTimeDerivatives(grids_copy,visc_coeff);
+
+  std::vector<Grid> k_final = k1;
+  for(int i=0; i<k_final.size(); i++)
+    k_final[i] = (k1[i] + k4[i])/6.0 + (k2[i] + k3[i])/3.0;
+  
+  applyTimeDerivatives(grids, k_final, time_step);
+}
+
+// Adds time derivatives (in order of {d_rho_dt, d_mom_x_dt, d_mom_y_dt, d_bi_x_dt, d_bi_y_dt, d_thermal_energy_dt})
+// to the Grids of the system given (in place), multiplied by the given step
+// and applies all post-step cleanup (floor underdensity, recompute derived quantities, update ghost zones)
+void PlasmaDomain::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step)
+{
+  grids[rho] += step*time_derivatives[0];
+  grids[mom_x] += step*time_derivatives[1];
+  grids[mom_y] += step*time_derivatives[2];
+  grids[bi_x] += step*time_derivatives[3];
+  grids[bi_y] += step*time_derivatives[4];
+  grids[thermal_energy] += step*time_derivatives[5];
+  catchUnderdensity(grids);
+  recomputeTemperature(grids);
+  recomputeDerivedVariables(grids);
+  updateGhostZones(grids);
 }
 
 // Returns time derivatives in the following order:
@@ -82,8 +135,8 @@ std::vector<Grid> PlasmaDomain::computeTimeDerivatives(const std::vector<Grid> &
   //Advance time by min_dt
   const Grid &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y],
         &m_v_x = grids[v_x], &m_v_y = grids[v_y],
-        &m_b_x = grids[be_x], &m_b_y = grids[be_y],
-        &m_db_x = grids[bi_x], &m_db_y = grids[bi_y],
+        &m_be_x = grids[be_x], &m_be_y = grids[be_y],
+        &m_bi_x = grids[bi_x], &m_bi_y = grids[bi_y],
         &m_rho = grids[rho], &m_thermal_energy = grids[thermal_energy], &m_press = grids[press];
 
   std::vector<Grid> m_v = {m_v_x,m_v_y};
@@ -93,9 +146,9 @@ std::vector<Grid> PlasmaDomain::computeTimeDerivatives(const std::vector<Grid> &
 
   Grid d_rho_dt = -transportDivergence2D(m_rho,m_v);
 
-  Grid curl_db = curl2D(m_db_x,m_db_y)/(4.0*PI);
-  std::vector<Grid> mag_mom_terms_firstorder = Grid::CrossProductZ2D(curl_db,{m_b_x,m_b_y});
-  std::vector<Grid> mag_mom_terms_secorder = Grid::CrossProductZ2D(curl_db,{m_db_x,m_db_y}); //second order terms
+  Grid curl_db = curl2D(m_bi_x,m_bi_y)/(4.0*PI);
+  std::vector<Grid> mag_mom_terms_firstorder = Grid::CrossProductZ2D(curl_db,{m_be_x,m_be_y});
+  std::vector<Grid> mag_mom_terms_secorder = Grid::CrossProductZ2D(curl_db,{m_bi_x,m_bi_y}); //second order terms
   Grid d_mom_x_dt = -transportDivergence2D(m_mom_x, m_v)
                   - derivative1D(m_press, 0)
                   + m_rho*grids[grav_x] + viscous_force_x
@@ -105,8 +158,8 @@ std::vector<Grid> PlasmaDomain::computeTimeDerivatives(const std::vector<Grid> &
                   + m_rho*grids[grav_y] + viscous_force_y
                   + mag_mom_terms_firstorder[1] + mag_mom_terms_secorder[1];
 
-  std::vector<Grid> induction_rhs_b0 = curlZ(Grid::CrossProduct2D({m_v_x,m_v_y},{m_b_x,m_b_y}));
-  std::vector<Grid> induction_rhs_db = curlZ(Grid::CrossProduct2D({m_v_x,m_v_y},{m_db_x,m_db_y}));
+  std::vector<Grid> induction_rhs_b0 = curlZ(Grid::CrossProduct2D({m_v_x,m_v_y},{m_be_x,m_be_y}));
+  std::vector<Grid> induction_rhs_db = curlZ(Grid::CrossProduct2D({m_v_x,m_v_y},{m_bi_x,m_bi_y}));
   Grid d_bi_x_dt = induction_rhs_b0[0] + induction_rhs_db[0];
   Grid d_bi_y_dt = induction_rhs_b0[1] + induction_rhs_db[1];
 
@@ -158,6 +211,7 @@ std::vector<Grid> PlasmaDomain::computeTimeDerivatives(const std::vector<Grid> &
 
   Grid d_thermal_energy_dt = - transportDivergence2D(m_thermal_energy,m_v)
                              - m_press*divergence2D(m_v);
+  if(ambient_heating) d_thermal_energy_dt += heating_rate;
 
   return {d_rho_dt, d_mom_x_dt, d_mom_y_dt, d_bi_x_dt, d_bi_y_dt, d_thermal_energy_dt};
 }
@@ -245,17 +299,22 @@ void PlasmaDomain::computeConstantTerms()
 //by the member physics settings.
 void PlasmaDomain::recomputeDerivedVariables()
 {
-  m_grids[press] = 2.0*K_B*m_grids[rho]*m_grids[temp]/m_ion_mass;
-  m_grids[thermal_energy] = m_grids[press]/(m_adiabatic_index - 1.0);
-  m_grids[kinetic_energy] = 0.5*(m_grids[mom_x].square() + m_grids[mom_y].square())/m_grids[rho];
-  m_grids[v_x] = m_grids[mom_x]/m_grids[rho];
-  m_grids[v_y] = m_grids[mom_y]/m_grids[rho];
-  m_grids[n] = m_grids[rho]/m_ion_mass;
-  m_grids[div_bi] = divergence2D(m_grids[bi_x],m_grids[bi_y]);
-  Grid m_b_x = m_grids[be_x] + m_grids[bi_x], m_b_y = m_grids[be_y] + m_grids[bi_y];
-  m_grids[b_magnitude] = (m_b_x.square() + m_b_y.square()).sqrt();
-  m_grids[b_hat_x] = m_b_x/m_grids[b_magnitude];
-  m_grids[b_hat_y] = m_b_y/m_grids[b_magnitude];
+  recomputeDerivedVariables(m_grids);
+}
+
+void PlasmaDomain::recomputeDerivedVariables(std::vector<Grid> &grids)
+{
+  grids[press] = 2.0*K_B*grids[rho]*grids[temp]/m_ion_mass;
+  grids[thermal_energy] = grids[press]/(m_adiabatic_index - 1.0);
+  grids[kinetic_energy] = 0.5*(grids[mom_x].square() + grids[mom_y].square())/grids[rho];
+  grids[v_x] = grids[mom_x]/grids[rho];
+  grids[v_y] = grids[mom_y]/grids[rho];
+  grids[n] = grids[rho]/m_ion_mass;
+  grids[div_bi] = divergence2D(grids[bi_x],grids[bi_y]);
+  Grid m_b_x = grids[be_x] + grids[bi_x], m_b_y = grids[be_y] + grids[bi_y];
+  grids[b_magnitude] = (m_b_x.square() + m_b_y.square()).sqrt();
+  grids[b_hat_x] = m_b_x/grids[b_magnitude];
+  grids[b_hat_y] = m_b_y/grids[b_magnitude];
   recomputeDT();
   if(thermal_conduction) recomputeDTThermal();
   if(radiative_losses){
@@ -266,21 +325,31 @@ void PlasmaDomain::recomputeDerivedVariables()
 
 void PlasmaDomain::recomputeTemperature()
 {
-  Grid &m_press = m_grids[press], &m_thermal_energy = m_grids[thermal_energy];
+  recomputeTemperature(m_grids);
+}
+
+void PlasmaDomain::recomputeTemperature(std::vector<Grid> &grids)
+{
+  Grid &m_press = grids[press], &m_thermal_energy = grids[thermal_energy];
   m_thermal_energy = m_thermal_energy.max(thermal_energy_min);
   m_press = (m_adiabatic_index - 1.0)*m_thermal_energy;
-  m_grids[temp] = (m_ion_mass*m_press/(2.0*K_B*m_grids[rho])).max(temp_min);
+  grids[temp] = (m_ion_mass*m_press/(2.0*K_B*grids[rho])).max(temp_min);
 }
 
 void PlasmaDomain::catchUnderdensity()
 {
+  catchUnderdensity(m_grids);
+}
+
+void PlasmaDomain::catchUnderdensity(std::vector<Grid> &grids)
+{
   for(int i=0; i<m_xdim; i++){
     for(int j=0; j<m_ydim; j++){
-      if(m_grids[rho](i,j) < rho_min){
+      if(grids[rho](i,j) < rho_min){
         //Only notify if not within ghost zones
         if(i >= m_xl && i <= m_xu && j >= m_yl && j <= m_yu){
           std::cout << "Density too low at (" << i << "," << j << ")" << "\n";
-          m_grids[rho](i,j) = rho_min;
+          grids[rho](i,j) = rho_min;
         }
       }
     }
@@ -473,32 +542,37 @@ void PlasmaDomain::saturateConductiveFlux(Grid &flux_out_x, Grid &flux_out_y, co
 
 void PlasmaDomain::updateGhostZones()
 {
+  updateGhostZones(m_grids);
+}
+
+void PlasmaDomain::updateGhostZones(std::vector<Grid> &grids)
+{
   if(x_bound_1 != BoundaryCondition::Periodic){
     for(int j=m_yl; j<=m_yu; j++){
-      if(x_bound_1 == BoundaryCondition::Open) openBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
-      else if(x_bound_1 == BoundaryCondition::Reflect) reflectBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
-      else if(x_bound_1 == BoundaryCondition::Fixed) fixedBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
+      if(x_bound_1 == BoundaryCondition::Open) openBoundaryExtrapolate(grids, 0, 1, 2, 3, j, j, j, j);
+      else if(x_bound_1 == BoundaryCondition::Reflect) reflectBoundaryExtrapolate(grids, 0, 1, 2, 3, j, j, j, j);
+      else if(x_bound_1 == BoundaryCondition::Fixed) fixedBoundaryExtrapolate(grids, 0, 1, 2, 3, j, j, j, j);
     }
   }
   if(x_bound_2 != BoundaryCondition::Periodic){
     for(int j=m_yl; j<=m_yu; j++){
-      if(x_bound_2 == BoundaryCondition::Open) openBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
-      else if(x_bound_2 == BoundaryCondition::Reflect) reflectBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
-      else if(x_bound_2 == BoundaryCondition::Fixed) fixedBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
+      if(x_bound_2 == BoundaryCondition::Open) openBoundaryExtrapolate(grids, m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
+      else if(x_bound_2 == BoundaryCondition::Reflect) reflectBoundaryExtrapolate(grids, m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
+      else if(x_bound_2 == BoundaryCondition::Fixed) fixedBoundaryExtrapolate(grids, m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
     }
   }
   if(y_bound_1 != BoundaryCondition::Periodic){
     for(int i=m_xl; i<=m_xu; i++){
-      if(y_bound_1 == BoundaryCondition::Open) openBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
-      else if(y_bound_1 == BoundaryCondition::Reflect) reflectBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
-      else if(y_bound_1 == BoundaryCondition::Fixed) fixedBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
+      if(y_bound_1 == BoundaryCondition::Open) openBoundaryExtrapolate(grids, i, i, i, i, 0, 1, 2, 3);
+      else if(y_bound_1 == BoundaryCondition::Reflect) reflectBoundaryExtrapolate(grids, i, i, i, i, 0, 1, 2, 3);
+      else if(y_bound_1 == BoundaryCondition::Fixed) fixedBoundaryExtrapolate(grids, i, i, i, i, 0, 1, 2, 3);
     }
   }
   if(y_bound_2 != BoundaryCondition::Periodic){
     for(int i=m_xl; i<=m_xu; i++){
-      if(y_bound_2 == BoundaryCondition::Open) openBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
-      else if(y_bound_2 == BoundaryCondition::Reflect) reflectBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
-      else if(y_bound_2 == BoundaryCondition::Fixed) fixedBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
+      if(y_bound_2 == BoundaryCondition::Open) openBoundaryExtrapolate(grids, i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
+      else if(y_bound_2 == BoundaryCondition::Reflect) reflectBoundaryExtrapolate(grids, i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
+      else if(y_bound_2 == BoundaryCondition::Fixed) fixedBoundaryExtrapolate(grids, i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
     }
   }
 }
@@ -507,13 +581,13 @@ void PlasmaDomain::updateGhostZones()
 //assuming that (i1,j1) is at the edge of the domain and (i4,j4) is on the interior
 //Assumes two ghost zones (i.e. N_GHOST == 2), will abort if not
 //Meant to be called repeatedly during advanceTime; energy is handled, not temperature
-void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
+void PlasmaDomain::openBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
 {
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
   assert((i1 == i2 || j1 == j2) && "Points to extrapolate must be x-aligned or y-aligned");
-  Grid &m_pos_x = m_grids[pos_x], &m_pos_y = m_grids[pos_y];
+  Grid &m_pos_x = grids[pos_x], &m_pos_y = grids[pos_y];
 
-  Grid &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y], &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy];
+  Grid &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y], &m_rho = grids[rho], &m_thermal_energy = grids[thermal_energy];
 
   // m_rho(i1,j1) = 0.25*m_rho(i3,j3); m_rho(i2,j2) = 0.5*m_rho(i3,j3);
   // m_thermal_energy(i1,j1) = 0.25*m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = 0.5*m_thermal_energy(i3,j3);
@@ -527,7 +601,7 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
   double vel_y = m_mom_y(i3,j3)/m_rho(i3,j3);
 
   // double boundary_strength = 1.0;
-  double c_s = std::sqrt(m_adiabatic_index*m_grids[press](i3,j3)/m_rho(i3,j3));
+  double c_s = std::sqrt(m_adiabatic_index*grids[press](i3,j3)/m_rho(i3,j3));
   double boost_vel = open_boundary_strength*c_s;
   if(i2 > i1 || j2 > j1) boost_vel *= -1.0;
   
@@ -537,7 +611,7 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
     double boundary_vel;
     if(j1 > j2) boundary_vel = std::max(0.0, vel_y + boost_vel);
     else { assert(j2 > j1); boundary_vel = std::min(0.0, vel_y + boost_vel); }
-    double ghost_vel = (dist*(boundary_vel) - 0.5*m_grids[d_y](i2,j2)*vel_y)/(0.5*m_grids[d_y](i3,j3)); //add vel_y to c_s? sound speed relative to current bulk velocity?
+    double ghost_vel = (dist*(boundary_vel) - 0.5*grids[d_y](i2,j2)*vel_y)/(0.5*grids[d_y](i3,j3)); //add vel_y to c_s? sound speed relative to current bulk velocity?
     m_mom_x(i1,j1) = m_rho(i1,j1)*vel_x;
     m_mom_x(i2,j2) = m_rho(i2,j2)*vel_x;
     m_mom_y(i1,j1) = m_rho(i1,j1)*ghost_vel;
@@ -547,7 +621,7 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
     double boundary_vel;
     if(i1 > i2) boundary_vel = std::max(0.0, vel_x + boost_vel);
     else { assert(i2 > i1); boundary_vel = std::min(0.0, vel_x + boost_vel); }
-    double ghost_vel = (dist*(boundary_vel) - 0.5*m_grids[d_x](i2,j2)*vel_x)/(0.5*m_grids[d_x](i3,j3));
+    double ghost_vel = (dist*(boundary_vel) - 0.5*grids[d_x](i2,j2)*vel_x)/(0.5*grids[d_x](i3,j3));
     m_mom_x(i1,j1) = m_rho(i1,j1)*ghost_vel;
     m_mom_x(i2,j2) = m_rho(i2,j2)*ghost_vel;
     m_mom_y(i1,j1) = m_rho(i1,j1)*vel_y;
@@ -559,10 +633,10 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
 //assuming that (i1,j1) is at the edge of the domain and (i4,j4) is on the interior
 //Assumes two ghost zones (i.e. N_GHOST == 2), will abort if not
 //Meant to be called repeatedly during advanceTime; energy is handled, not temperature
-void PlasmaDomain::reflectBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
+void PlasmaDomain::reflectBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
 {
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
-  Grid &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y];
+  Grid &m_rho = grids[rho], &m_thermal_energy = grids[thermal_energy], &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y];
   m_rho(i1,j1) = m_rho(i3,j3); m_rho(i2,j2) = m_rho(i3,j3); //Match density of nearest interior cell
   m_thermal_energy(i1,j1) = m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = m_thermal_energy(i3,j3); //Match temperature of nearest interior cell
   m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0; //Halt all advection at the wall boundary
@@ -573,11 +647,11 @@ void PlasmaDomain::reflectBoundaryExtrapolate(int i1, int i2, int i3, int i4, in
 //assuming that (i1,j1) is at the edge of the domain and (i4,j4) is on the interior
 //Assumes two ghost zones (i.e. N_GHOST == 2), will abort if not
 //Meant to be called repeatedly during advanceTime; energy is handled, not temperature
-void PlasmaDomain::fixedBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
+void PlasmaDomain::fixedBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
 {
   // Currently does nothing; leaves the ghost cells at their initial values
   // assert(N_GHOST == 2 && "This function assumes two ghost zones");
-  // Grid &m_rho = m_grids[rho], &m_thermal_energy = m_grids[thermal_energy], &m_mom_x = m_grids[mom_x], &m_mom_y = m_grids[mom_y];
+  // Grid &m_rho = grids[rho], &m_thermal_energy = grids[thermal_energy], &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y];
   // m_rho(i1,j1) = m_rho(i3,j3); m_rho(i2,j2) = m_rho(i3,j3); //Match density of nearest interior cell
   // m_thermal_energy(i1,j1) = m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = m_thermal_energy(i3,j3); //Match temperature of nearest interior cell
   // m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0; //Halt all advection at the wall boundary
