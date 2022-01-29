@@ -20,6 +20,7 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
 {
   //DEFAULT VALUES, TO BE OVERWRITTEN BY readConfigFile
   m_xdim = 1; m_ydim = 1; open_boundary_strength = 1.0;
+  sg_filter_interval = -1; time_integrator = TimeIntegrator::Euler;
   std_out_interval = 1;
   safe_state_mode = true;
   //***************************************************

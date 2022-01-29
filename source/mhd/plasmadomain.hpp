@@ -29,6 +29,10 @@ public:
   static inline std::vector<std::string> m_boundary_condition_names = {
     "periodic", "open", "fixed", "reflect"
   };
+  enum class TimeIntegrator { Euler, RK2, RK4 };
+  static inline std::vector<std::string> m_time_integrator_names = {
+    "euler", "rk2", "rk4"
+  };
 
   enum Vars { d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,grav_x,grav_y,
               press,thermal_energy,kinetic_energy,div_bi,bi_x,bi_y,
@@ -100,6 +104,8 @@ private:
   double epsilon_viscous; //Prefactor for artificial viscosity
   double dt_thermal_min; //Minimum timestep for thermal conduction
   double rho_min, temp_min, thermal_energy_min; //Lower bounds for mass density and thermal energy density
+  int sg_filter_interval; //number of time steps between sg filter applications; negative value does not apply the filter
+  TimeIntegrator time_integrator; //indicates time integration scheme to use
   //Output settings
   int iter_output_interval;
   double time_output_interval;
@@ -114,7 +120,7 @@ private:
     epsilon, epsilon_thermal, epsilon_rad, epsilon_viscous, dt_thermal_min, rho_min,
     temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
     output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode,
-    open_boundary_decay_base, x_origin, y_origin
+    open_boundary_decay_base, x_origin, y_origin, sg_filter_interval, time_integrator
   };
   static inline std::vector<std::string> m_config_names = {
     "x_bound_1","x_bound_2","y_bound_1","y_bound_2","radiative_losses","ambient_heating",
@@ -122,7 +128,7 @@ private:
     "epsilon","epsilon_thermal","epsilon_rad","epsilon_viscous","dt_thermal_min","rho_min",
     "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
     "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode",
-    "open_boundary_decay_base", "x_origin", "y_origin"
+    "open_boundary_decay_base", "x_origin", "y_origin", "sg_filter_interval", "time_integrator"
   };
 
   /*********************************************************************/ 
@@ -135,11 +141,12 @@ private:
   std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff);
   void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step);
 
-  //Functions to be applied between each time step
+  //Functions to be applied between time steps
   void recomputeDerivedVariables();
   void recomputeTemperature();
   void catchUnderdensity();
   void updateGhostZones();
+  void filterSavitzkyGolay();
 
   //Versions of the above for operating on intermediate states of the system
   //i.e. for acting on Grid vectors other than m_grids
@@ -147,6 +154,8 @@ private:
   void recomputeTemperature(std::vector<Grid> &grids);
   void catchUnderdensity(std::vector<Grid> &grids);
   void updateGhostZones(std::vector<Grid> &grids);
+  void filterSavitzkyGolay(std::vector<Grid> &grids);
+  void singleVarSavitzkyGolay(Grid &grid);
 
   void openBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
   void reflectBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
@@ -172,6 +181,7 @@ private:
   void setOutputFlags(const std::vector<std::string> var_names, bool new_flag);
 
   BoundaryCondition stringToBoundaryCondition(const std::string str) const;
+  TimeIntegrator stringToTimeIntegrator(const std::string str) const;
   void handleSingleConfig(int setting_index, std::string rhs);
   void handleConfigList(int setting_index, std::vector<std::string> rhs_vec,
                         std::vector<std::vector<std::string> > &rhs_lists,

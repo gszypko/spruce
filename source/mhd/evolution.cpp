@@ -16,6 +16,7 @@ void PlasmaDomain::run(double time_duration)
     #endif
     double old_time = m_time;
     advanceTime();
+    if(sg_filter_interval > 0 && m_iter != 0 && m_iter%sg_filter_interval == 0) filterSavitzkyGolay();
     if((iter_output_interval > 0 && m_iter%iter_output_interval == 0) || (time_output_interval > 0.0
         && (int)(m_time/time_output_interval) > (int)(old_time/time_output_interval))) outputCurrentState();
     if(safe_state_mode) writeStateFile();
@@ -53,17 +54,9 @@ void PlasmaDomain::advanceTime(bool verbose)
 
   double visc_coeff = epsilon_viscous*0.5*((m_grids[d_x].square() + m_grids[d_y].square())/dt_raw).min();
 
-  integrateRK4(m_grids, min_dt, visc_coeff);
-  // integrateRK2(m_grids, min_dt, visc_coeff);
-  // // First create copy of system advanced by half the timestep (Euler)...
-  // std::vector<Grid> time_derivatives_naive = computeTimeDerivatives(m_grids,visc_coeff);
-  // std::vector<Grid> grids_halfstep = m_grids;
-  // applyTimeDerivatives(grids_halfstep, time_derivatives_naive, 0.5*min_dt);
-
-  // // ...then use that half-advanced system to compute time derivatives to
-  // // apply to actual system for full time step (second-order R-K, a.k.a. midpoint method)
-  // std::vector<Grid> time_derivatives = computeTimeDerivatives(grids_halfstep,visc_coeff);
-  // applyTimeDerivatives(m_grids, time_derivatives, min_dt);
+  if(time_integrator == TimeIntegrator::RK2) integrateRK2(m_grids, min_dt, visc_coeff);
+  else if(time_integrator == TimeIntegrator::RK4) integrateRK4(m_grids, min_dt, visc_coeff);
+  else if(time_integrator == TimeIntegrator::Euler) integrateEuler(m_grids, min_dt, visc_coeff);
 
   m_time += min_dt;
   m_iter++;
@@ -71,12 +64,14 @@ void PlasmaDomain::advanceTime(bool verbose)
 
 void PlasmaDomain::integrateEuler(std::vector<Grid> &grids, double time_step, double visc_coeff)
 {
+  assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
   std::vector<Grid> time_derivatives = computeTimeDerivatives(grids,visc_coeff);
   applyTimeDerivatives(grids, time_derivatives, time_step);
 }
 
 void PlasmaDomain::integrateRK2(std::vector<Grid> &grids, double time_step, double visc_coeff)
 {
+  assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
   // First create copy of system advanced by half the timestep (Euler)...
   std::vector<Grid> time_derivatives_naive = computeTimeDerivatives(grids,visc_coeff);
   std::vector<Grid> grids_halfstep = grids;
@@ -90,6 +85,7 @@ void PlasmaDomain::integrateRK2(std::vector<Grid> &grids, double time_step, doub
 
 void PlasmaDomain::integrateRK4(std::vector<Grid> &grids, double time_step, double visc_coeff)
 {
+  assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
   std::vector<Grid> k1 = computeTimeDerivatives(grids,visc_coeff);
 
   std::vector<Grid> grids_copy = grids;
@@ -116,6 +112,7 @@ void PlasmaDomain::integrateRK4(std::vector<Grid> &grids, double time_step, doub
 // and applies all post-step cleanup (floor underdensity, recompute derived quantities, update ghost zones)
 void PlasmaDomain::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step)
 {
+  assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
   grids[rho] += step*time_derivatives[0];
   grids[mom_x] += step*time_derivatives[1];
   grids[mom_y] += step*time_derivatives[2];
@@ -132,6 +129,7 @@ void PlasmaDomain::applyTimeDerivatives(std::vector<Grid> &grids, const std::vec
 // {d_rho_dt, d_mom_x_dt, d_mom_y_dt, d_bi_x_dt, d_bi_y_dt, d_thermal_energy_dt}
 std::vector<Grid> PlasmaDomain::computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff)
 {
+  assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
   //Advance time by min_dt
   const Grid &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y],
         &m_v_x = grids[v_x], &m_v_y = grids[v_y],
@@ -304,6 +302,7 @@ void PlasmaDomain::recomputeDerivedVariables()
 
 void PlasmaDomain::recomputeDerivedVariables(std::vector<Grid> &grids)
 {
+  assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
   grids[press] = 2.0*K_B*grids[rho]*grids[temp]/m_ion_mass;
   grids[thermal_energy] = grids[press]/(m_adiabatic_index - 1.0);
   grids[kinetic_energy] = 0.5*(grids[mom_x].square() + grids[mom_y].square())/grids[rho];
@@ -330,6 +329,7 @@ void PlasmaDomain::recomputeTemperature()
 
 void PlasmaDomain::recomputeTemperature(std::vector<Grid> &grids)
 {
+  assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
   Grid &m_press = grids[press], &m_thermal_energy = grids[thermal_energy];
   m_thermal_energy = m_thermal_energy.max(thermal_energy_min);
   m_press = (m_adiabatic_index - 1.0)*m_thermal_energy;
@@ -343,12 +343,13 @@ void PlasmaDomain::catchUnderdensity()
 
 void PlasmaDomain::catchUnderdensity(std::vector<Grid> &grids)
 {
+  assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
   for(int i=0; i<m_xdim; i++){
     for(int j=0; j<m_ydim; j++){
       if(grids[rho](i,j) < rho_min){
         //Only notify if not within ghost zones
         if(i >= m_xl && i <= m_xu && j >= m_yl && j <= m_yu){
-          std::cout << "Density too low at (" << i << "," << j << ")" << "\n";
+          // std::cout << "Density too low at (" << i << "," << j << ")" << "\n";
           grids[rho](i,j) = rho_min;
         }
       }
@@ -547,6 +548,7 @@ void PlasmaDomain::updateGhostZones()
 
 void PlasmaDomain::updateGhostZones(std::vector<Grid> &grids)
 {
+  assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
   if(x_bound_1 != BoundaryCondition::Periodic){
     for(int j=m_yl; j<=m_yu; j++){
       if(x_bound_1 == BoundaryCondition::Open) openBoundaryExtrapolate(grids, 0, 1, 2, 3, j, j, j, j);
@@ -583,6 +585,7 @@ void PlasmaDomain::updateGhostZones(std::vector<Grid> &grids)
 //Meant to be called repeatedly during advanceTime; energy is handled, not temperature
 void PlasmaDomain::openBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
 {
+  assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
   assert((i1 == i2 || j1 == j2) && "Points to extrapolate must be x-aligned or y-aligned");
   Grid &m_pos_x = grids[pos_x], &m_pos_y = grids[pos_y];
@@ -635,6 +638,7 @@ void PlasmaDomain::openBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int
 //Meant to be called repeatedly during advanceTime; energy is handled, not temperature
 void PlasmaDomain::reflectBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
 {
+  assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
   Grid &m_rho = grids[rho], &m_thermal_energy = grids[thermal_energy], &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y];
   m_rho(i1,j1) = m_rho(i3,j3); m_rho(i2,j2) = m_rho(i3,j3); //Match density of nearest interior cell
@@ -649,6 +653,7 @@ void PlasmaDomain::reflectBoundaryExtrapolate(std::vector<Grid> &grids, int i1, 
 //Meant to be called repeatedly during advanceTime; energy is handled, not temperature
 void PlasmaDomain::fixedBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
 {
+  assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
   // Currently does nothing; leaves the ghost cells at their initial values
   // assert(N_GHOST == 2 && "This function assumes two ghost zones");
   // Grid &m_rho = grids[rho], &m_thermal_energy = grids[thermal_energy], &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y];
@@ -656,4 +661,76 @@ void PlasmaDomain::fixedBoundaryExtrapolate(std::vector<Grid> &grids, int i1, in
   // m_thermal_energy(i1,j1) = m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = m_thermal_energy(i3,j3); //Match temperature of nearest interior cell
   // m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0; //Halt all advection at the wall boundary
   // m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
+}
+
+// Applies two-dimensional Sovitzky-Golay filter to member variable m_grids
+// with 3x3 window and 2x2-order fitting polynomials
+void PlasmaDomain::filterSavitzkyGolay()
+{
+  filterSavitzkyGolay(m_grids);
+}
+
+// Applies two-dimensional Sovitzky-Golay filter to given Grid vector
+// with 5x5 window and 3x3-order fitting polynomials
+void PlasmaDomain::filterSavitzkyGolay(std::vector<Grid> &grids)
+{
+  assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+  std::vector<Grid> filtered = grids;
+  #pragma omp parallel
+  {
+    #pragma omp for
+    for(int varname : {rho, thermal_energy}){
+      singleVarSavitzkyGolay(grids[varname]);
+    }
+  }
+  catchUnderdensity(grids);
+  recomputeTemperature(grids);
+  recomputeDerivedVariables(grids);
+  updateGhostZones(grids);
+}
+
+void PlasmaDomain::singleVarSavitzkyGolay(Grid &grid)
+{
+  assert(N_GHOST == 2 && "S-G filtering implementation assumes two ghost zones");
+  static const double coeff[] =
+    {+7.346939E-03,	-2.938776E-02,	-4.163265E-02,	-2.938776E-02,	+7.346939E-03,
+    -2.938776E-02,	+1.175510E-01,	+1.665306E-01,	+1.175510E-01,	-2.938776E-02,
+    -4.163265E-02,	+1.665306E-01,	+2.359184E-01,  +1.665306E-01,  -4.163265E-02,
+    -2.938776E-02,  +1.175510E-01,  +1.665306E-01,  +1.175510E-01,  -2.938776E-02,
+    +7.346939E-03,  -2.938776E-02,  -4.163265E-02,  -2.938776E-02,  +7.346939E-03}; //from Chandra Sekhar, 2015
+  int xdim = grid.rows();
+  int ydim = grid.cols();
+  Grid filtered = grid;
+  for (int center_i = m_xl; center_i <= m_xu; center_i++){
+    for(int center_j = m_yl; center_j <= m_yu; center_j++){
+      int i[] = {center_i-2, center_i-1, center_i, center_i+1, center_i+2};
+      int j[] = {center_j-2, center_j-1, center_j, center_j+1, center_j+2};
+      if(x_bound_1 == BoundaryCondition::Periodic && x_bound_2 == BoundaryCondition::Periodic){
+        i[0] = (i[0]+xdim)%xdim;
+        i[1] = (i[1]+xdim)%xdim;
+        i[3] = (i[3]+xdim)%xdim;
+        i[4] = (i[4]+xdim)%xdim;
+      }
+      if(y_bound_1 == BoundaryCondition::Periodic && y_bound_2 == BoundaryCondition::Periodic){
+        j[0] = (j[0]+ydim)%ydim;
+        j[1] = (j[1]+ydim)%ydim;
+        j[3] = (j[3]+ydim)%ydim;
+        j[4] = (j[4]+ydim)%ydim;
+      }
+      double filtered_val = 0.0;
+      // double total_weight = 0.0;
+      for(int u = 0; u < 5; u++){
+        for(int v = 0; v < 5; v++){
+          int curr_i = i[u], curr_j = j[v];
+          // if(curr_i >= m_xl && curr_i <= m_xu && curr_j >= m_yl && curr_j <= m_yu){
+            filtered_val = filtered_val + coeff[u*5 + v]*grid(curr_j,curr_j);
+            // total_weight = total_weight + coeff[u*5 + v];
+          // }
+        }
+      }
+      // filtered_val = filtered_val/total_weight;
+      filtered(center_i,center_j) = filtered_val;
+    }
+  }
+  grid = filtered;
 }

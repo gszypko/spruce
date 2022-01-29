@@ -164,6 +164,14 @@ PlasmaDomain::BoundaryCondition PlasmaDomain::stringToBoundaryCondition(const st
   return static_cast<BoundaryCondition>(index);
 }
 
+PlasmaDomain::TimeIntegrator PlasmaDomain::stringToTimeIntegrator(const std::string str) const
+{
+  auto it = std::find(m_time_integrator_names.begin(),m_time_integrator_names.end(),str);
+  assert(it != m_time_integrator_names.end()); //Ensure that given name is valid
+  auto index = std::distance(m_time_integrator_names.begin(),it);
+  return static_cast<TimeIntegrator>(index);
+}
+
 void PlasmaDomain::printUpdate(double min_dt, int subcycles_thermal, int subcycles_rad) const
 {
   std::cout << "Iter: " << m_iter;
@@ -210,6 +218,8 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::open_boundary_decay_base): open_boundary_decay_base = std::stod(rhs); break;
   case static_cast<int>(Config::x_origin): x_origin = rhs; break;
   case static_cast<int>(Config::y_origin): y_origin = rhs; break;
+  case static_cast<int>(Config::sg_filter_interval): sg_filter_interval = std::stoi(rhs); break;
+  case static_cast<int>(Config::time_integrator): time_integrator = stringToTimeIntegrator(rhs); break;
   default: break;
   }
 }
