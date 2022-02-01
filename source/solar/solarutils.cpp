@@ -14,6 +14,7 @@ namespace SolarUtils {
     double ion_mass = pms.getvar("ion_mass");
     double adiabatic_index = pms.getvar("adiabatic_index");
     double duration = pms.getvar("duration");
+    double growth_factor = pms.getvar("growth_factor");
 
     double base_rho = ion_mass*n_base; //initial mass density at base in g cm ^-3
     double scale_height = 2.0*K_B*init_temp/(ion_mass*BASE_GRAV);
@@ -22,8 +23,7 @@ namespace SolarUtils {
     double dx = 4.0*PI*scale_height/xdim, dy = 4.0*PI*scale_height/ydim; //this ensures correct periodicity of bipolar field
 
     if(problem_type == "corona" || problem_type == "uniform"){
-      double uniform_fraction = 0.75;
-      double growth_factor = 1.1;
+      double uniform_fraction = pms.getvar("uniform_fraction");
       double curr_scaling = 1.0;
       for(int i=0; i<xdim; i++)
         for(int j=0; j<ydim; j++) d_x(i,j) = dx;
@@ -32,7 +32,6 @@ namespace SolarUtils {
         for(int i=0; i<xdim; i++) d_y(i,j) = curr_scaling*dy;
       }
     } else {
-      double growth_factor = 1.1;
       assert(xdim%4 == 0 && ydim%4 == 0);
       int x_core_size = xdim/2, y_core_size = ydim/2;
       for(int j=0; j<ydim; j++){
@@ -140,7 +139,7 @@ namespace SolarUtils {
     InstrumentationTimer timer(__PRETTY_FUNCTION__);
     #endif
     int m_xdim = m_pos_x.rows(); int m_ydim = m_pos_y.cols();
-    assert(m_xdim == m_ydim && "pos_x and pos_y must have same dimensions");
+    // assert(m_xdim == m_ydim && "pos_x and pos_y must have same dimensions");
     Grid result = Grid::Zero(m_xdim, m_ydim);
     #pragma omp parallel for collapse(2)
     for(int i=0; i<m_xdim; i++){
