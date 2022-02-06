@@ -76,10 +76,10 @@ dim = input_file.readline().split(',')
 xdim = int(dim[0])
 ydim = int(dim[1])
 
-xl_ghost = 2
-xu_ghost = 2
-yl_ghost = 2
-yu_ghost = 2
+xl_ghost = 0
+xu_ghost = 0
+yl_ghost = 0
+yu_ghost = 0
 
 xdim_view = xdim - (xl_ghost + xu_ghost)
 ydim_view = ydim - (yl_ghost + yu_ghost)

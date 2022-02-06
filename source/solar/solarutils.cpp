@@ -23,6 +23,7 @@ namespace SolarUtils {
     double dx = 4.0*PI*scale_height/xdim, dy = 4.0*PI*scale_height/ydim; //this ensures correct periodicity of bipolar field
 
     if(problem_type == "corona" || problem_type == "uniform"){
+      dy = scale_height*pms.getvar("y_size")/ydim;
       double uniform_fraction = pms.getvar("uniform_fraction");
       double curr_scaling = 1.0;
       for(int i=0; i<xdim; i++)
@@ -125,7 +126,8 @@ namespace SolarUtils {
     Grid result(m_xdim,m_ydim);
     for(int j=0; j<m_ydim; j++){
       for(int i=0; i<m_xdim; i++){
-        result(i,j) = -base_gravity*std::pow(r_solar/(r_solar+m_pos_y(i,j)),2.0);
+        result(i,j) = -base_gravity;
+        // result(i,j) = -base_gravity*std::pow(r_solar/(r_solar+m_pos_y(i,j)),2.0);
       }
     }
     return result;
@@ -163,8 +165,8 @@ namespace SolarUtils {
     #pragma omp parallel for collapse(2)
     for(int i=0; i<xdim; i++){
       for(int j=0; j<ydim; j++){
-        //result(i,j) = base_value*std::exp(-y/scale_height);
-        result(i,j) = base_value*std::exp(M_SUN*GRAV_CONST/BASE_GRAV/scale_height*(1.0/(m_pos_y(i,j)+R_SUN) - 1.0/R_SUN));
+        result(i,j) = base_value*std::exp(-m_pos_y(i,j)/scale_height);
+        // result(i,j) = base_value*std::exp(M_SUN*GRAV_CONST/BASE_GRAV/scale_height*(1.0/(m_pos_y(i,j)+R_SUN) - 1.0/R_SUN));
       }
     }
     return result;

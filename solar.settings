@@ -12,10 +12,11 @@
 type = opt = corona
 xdim = cgs = 100
 ydim = cgs = 100
+y_size = cgs = 3.0
 duration = cgs = 2000
 init_temp = cgs = 3.0e4
-growth_factor = cgs = 1.1
-uniform_fraction = cgs = 0.75
+growth_factor = cgs = 1.0
+uniform_fraction = cgs = 1.0
 b_0 = cgs = 100
 n_base = cgs = 1.0e12
 ion_mass = cgs = 1.6726e-24
