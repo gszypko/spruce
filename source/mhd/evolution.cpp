@@ -149,12 +149,12 @@ std::vector<Grid> PlasmaDomain::computeTimeDerivatives(const std::vector<Grid> &
   std::vector<Grid> mag_mom_terms_secorder = Grid::CrossProductZ2D(curl_db,{m_bi_x,m_bi_y}); //second order terms
   Grid d_mom_x_dt = -transportDivergence2D(m_mom_x, m_v)
                   - derivative1D(m_press, 0)
-                  + m_rho*grids[grav_x] + viscous_force_x
-                  + mag_mom_terms_firstorder[0] + mag_mom_terms_secorder[0];
+                  + m_ghost_zone_mask * (m_rho*grids[grav_x] + viscous_force_x
+                  + mag_mom_terms_firstorder[0] + mag_mom_terms_secorder[0]);
   Grid d_mom_y_dt = -transportDivergence2D(m_mom_y, m_v)
                   - derivative1D(m_press, 1)
-                  + m_rho*grids[grav_y] + viscous_force_y
-                  + mag_mom_terms_firstorder[1] + mag_mom_terms_secorder[1];
+                  + m_ghost_zone_mask * (m_rho*grids[grav_y] + viscous_force_y
+                  + mag_mom_terms_firstorder[1] + mag_mom_terms_secorder[1]);
 
   std::vector<Grid> induction_rhs_b0 = curlZ(Grid::CrossProduct2D({m_v_x,m_v_y},{m_be_x,m_be_y}));
   std::vector<Grid> induction_rhs_db = curlZ(Grid::CrossProduct2D({m_v_x,m_v_y},{m_bi_x,m_bi_y}));
@@ -656,11 +656,9 @@ void PlasmaDomain::fixedBoundaryExtrapolate(std::vector<Grid> &grids, int i1, in
   assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
   // Currently does nothing; leaves the ghost cells at their initial values
   // assert(N_GHOST == 2 && "This function assumes two ghost zones");
-  // Grid &m_rho = grids[rho], &m_thermal_energy = grids[thermal_energy], &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y];
-  // m_rho(i1,j1) = m_rho(i3,j3); m_rho(i2,j2) = m_rho(i3,j3); //Match density of nearest interior cell
-  // m_thermal_energy(i1,j1) = m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = m_thermal_energy(i3,j3); //Match temperature of nearest interior cell
-  // m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0; //Halt all advection at the wall boundary
-  // m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
+  Grid &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y];
+  m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0; //Halt all advection at the wall boundary
+  m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
 }
 
 // Applies two-dimensional Sovitzky-Golay filter to member variable m_grids

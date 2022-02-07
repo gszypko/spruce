@@ -67,11 +67,8 @@ public:
 
 private:
   //Strings corresponding to variables, settings, boundary conditions for file I/O
-  //TODO: Move initialization here, now that no longer static!
-  // static const std::vector<std::string> m_var_names;
-  // static const std::vector<std::string> m_config_names;
-  // static const std::vector<std::string> m_boundary_condition_names;
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)
+  Grid m_ghost_zone_mask; //Equals 0 inside ghost zones and 1 everywhere else; for multiplying to negate values in ghost zones
 
   std::vector<Grid> m_grids;
   std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)

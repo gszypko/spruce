@@ -59,6 +59,7 @@ void PlasmaDomain::initialize(const std::vector<Grid>& input_vars, double ion_ma
 
 //Compute lower and upper x- and y- indicies for differential operations
 //from boundary conditions, to exclude ghost zones. Results stored in m_xl, m_xu, m_yl, m_yu
+//Also generates m_ghost_zone_mask Grid.
 void PlasmaDomain::computeIterationBounds()
 {
   assert(m_xdim > 2*N_GHOST && m_ydim > 2*N_GHOST && "Grid too small for ghost zones");
@@ -70,6 +71,12 @@ void PlasmaDomain::computeIterationBounds()
   else{ assert(y_bound_1 == BoundaryCondition::Periodic && "Boundary cond'n must be defined"); m_yl = 0; }
   if(y_bound_2 == BoundaryCondition::Open || y_bound_2 == BoundaryCondition::Reflect || y_bound_2 == BoundaryCondition::Fixed) m_yu = m_ydim - N_GHOST - 1;
   else{ assert(y_bound_2 == BoundaryCondition::Periodic && "Boundary cond'n must be defined"); m_yu = m_ydim - 1; }
+  m_ghost_zone_mask = Grid(m_xdim,m_ydim,0.0);
+  for(int i = m_xl; i <= m_xu; i++){
+    for(int j = m_yl; j <= m_yu; j++){
+      m_ghost_zone_mask(i,j) = 1.0;
+    }
+  }
 }
 
 //Takes not-necessarily-uniform cell sizes d and converts to cell center positions,
