@@ -113,12 +113,12 @@ void PlasmaDomain::integrateRK4(std::vector<Grid> &grids, double time_step, doub
 void PlasmaDomain::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step)
 {
   assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-  grids[rho] += step*time_derivatives[0];
-  grids[mom_x] += step*time_derivatives[1];
-  grids[mom_y] += step*time_derivatives[2];
-  grids[bi_x] += step*time_derivatives[3];
-  grids[bi_y] += step*time_derivatives[4];
-  grids[thermal_energy] += step*time_derivatives[5];
+  grids[rho] += step*m_ghost_zone_mask*time_derivatives[0];
+  grids[mom_x] += step*m_ghost_zone_mask*time_derivatives[1];
+  grids[mom_y] += step*m_ghost_zone_mask*time_derivatives[2];
+  grids[bi_x] += step*m_ghost_zone_mask*time_derivatives[3];
+  grids[bi_y] += step*m_ghost_zone_mask*time_derivatives[4];
+  grids[thermal_energy] += step*m_ghost_zone_mask*time_derivatives[5];
   catchUnderdensity(grids);
   recomputeTemperature(grids);
   recomputeDerivedVariables(grids);
@@ -209,7 +209,7 @@ std::vector<Grid> PlasmaDomain::computeTimeDerivatives(const std::vector<Grid> &
 
   Grid d_thermal_energy_dt = - transportDivergence2D(m_thermal_energy,m_v)
                              - m_press*divergence2D(m_v);
-  if(ambient_heating) d_thermal_energy_dt += heating_rate;
+  if(ambient_heating) d_thermal_energy_dt += m_ghost_zone_mask*heating_rate;
 
   return {d_rho_dt, d_mom_x_dt, d_mom_y_dt, d_bi_x_dt, d_bi_y_dt, d_thermal_energy_dt};
 }
@@ -239,7 +239,6 @@ void PlasmaDomain::subcycleConduction(int subcycles_thermal, double dt_total)
   // Grid nonthermal_energy = 0.5*(m_grids[mom_x]*m_grids[v_x] + m_grids[mom_y]*m_grids[v_y]) + m_grids[mag_press];
   // Grid energy_floor = nonthermal_energy + thermal_energy_min; //To ensure non-negative thermal pressure
   Grid thermal_energy_next;
-  Grid dummy_grid(m_xdim,m_ydim,0.0); //to feed into clampWallBoundaries, since rho and mom are unchanged here
   for(int subcycle = 0; subcycle < subcycles_thermal; subcycle++){
     Grid con_flux_x(m_xdim,m_ydim,0.0);
     Grid con_flux_y(m_xdim,m_ydim,0.0);
