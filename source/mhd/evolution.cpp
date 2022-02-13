@@ -244,7 +244,7 @@ void PlasmaDomain::subcycleConduction(int subcycles_thermal, double dt_total)
     Grid con_flux_y(m_xdim,m_ydim,0.0);
     fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_temp, m_grids[rho], m_grids[b_hat_x], m_grids[b_hat_y], KAPPA_0);
     if(flux_saturation) saturateConductiveFlux(con_flux_x, con_flux_y, m_grids[rho], m_temp);
-    thermal_energy_next = m_thermal_energy - (dt_total/(double)subcycles_thermal)*(derivative1D(con_flux_x,0)+derivative1D(con_flux_y,1));
+    thermal_energy_next = m_thermal_energy - m_ghost_zone_mask*(dt_total/(double)subcycles_thermal)*(derivative1D(con_flux_x,0)+derivative1D(con_flux_y,1));
     m_thermal_energy = thermal_energy_next.max(thermal_energy_min);
     updateGhostZones();
     m_thermal_energy = m_thermal_energy.max(thermal_energy_min); //double floor to cover ghost zone extrapolations
@@ -268,7 +268,7 @@ void PlasmaDomain::subcycleRadiation(int subcycles_rad, double dt_total)
   Grid dummy_grid(m_xdim,m_ydim,0.0); //to feed into clampWallBoundaries, since rho and mom are unchanged here
   for(int subcycle = 0; subcycle < subcycles_rad; subcycle++){
     recomputeRadiativeLosses();
-    thermal_energy_next = m_thermal_energy - (dt_total/(double)subcycles_rad)*m_grids[rad];
+    thermal_energy_next = m_thermal_energy - m_ghost_zone_mask*(dt_total/(double)subcycles_rad)*m_grids[rad];
     m_thermal_energy = thermal_energy_next.max(thermal_energy_min);
     updateGhostZones();
     m_thermal_energy = m_thermal_energy.max(thermal_energy_min); //double floor to cover ghost zone extrapolations
