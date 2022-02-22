@@ -144,6 +144,8 @@ private:
   void catchUnderdensity();
   void updateGhostZones();
   void filterSavitzkyGolay();
+  void applyRuntimeAdjustment(double dt);
+  void runtimeAdjustment(double dt);
 
   //Versions of the above for operating on intermediate states of the system
   //i.e. for acting on Grid vectors other than m_grids

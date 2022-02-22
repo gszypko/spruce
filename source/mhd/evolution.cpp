@@ -2,6 +2,7 @@
 //PlasmaDomain functionality relating to time-evolution of the plasma
 
 #include "plasmadomain.hpp"
+#include "solarutils.hpp"
 
 void PlasmaDomain::run(double time_duration)
 {
@@ -57,6 +58,8 @@ void PlasmaDomain::advanceTime(bool verbose)
   if(time_integrator == TimeIntegrator::RK2) integrateRK2(m_grids, min_dt, visc_coeff);
   else if(time_integrator == TimeIntegrator::RK4) integrateRK4(m_grids, min_dt, visc_coeff);
   else if(time_integrator == TimeIntegrator::Euler) integrateEuler(m_grids, min_dt, visc_coeff);
+
+  applyRuntimeAdjustment(min_dt);
 
   m_time += min_dt;
   m_iter++;
@@ -730,4 +733,24 @@ void PlasmaDomain::singleVarSavitzkyGolay(Grid &grid)
     }
   }
   grid = filtered;
+}
+
+// General function to apply arbitrary changes to the simulation domain
+// during run time. Calls function runtimeAdjustment, meant to be modified
+// by the user, where the adjustment is actually applied.
+void PlasmaDomain::applyRuntimeAdjustment(double dt)
+{
+  runtimeAdjustment(dt);
+  catchUnderdensity(m_grids);
+  recomputeTemperature(m_grids);
+  recomputeDerivedVariables(m_grids);
+  updateGhostZones(m_grids);
+}
+
+void PlasmaDomain::runtimeAdjustment(double dt)
+{
+  if(m_time > 3000.0 && m_time < 5000.0){
+    Grid appliedHeating = SolarUtils::GaussianGrid(m_grids[pos_x],m_grids[pos_y],-1.0e-5,1.0e-3,10,10).max(0.0);
+    m_grids[thermal_energy] += dt*appliedHeating;
+  }
 }
