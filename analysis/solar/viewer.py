@@ -9,6 +9,8 @@ from matplotlib.image import NonUniformImage
 import sys
 import argparse
 
+matplotlib.rcParams.update({'font.size': 22})
+
 fullnames = {
   'rho': "Density",
   'temp': "Temperature",
@@ -78,8 +80,8 @@ ydim = int(dim[1])
 
 xl_ghost = 0
 xu_ghost = 0
-yl_ghost = 0
-yu_ghost = 0
+yl_ghost = 2
+yu_ghost = 2
 
 xdim_view = xdim - (xl_ghost + xu_ghost)
 ydim_view = ydim - (yl_ghost + yu_ghost)
@@ -336,7 +338,8 @@ def updatefig(*args):
     contour_color_axes.cla()
     var_colorbar = fig.colorbar(im, cax=contour_color_axes)
     var_colorbar.set_label(fullnames[output_var]+ fullunits[output_var])
-    ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
+    # ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(round(t[frame]))+" s")
+    ax.set(xlabel="x (cm)",ylabel="y (cm)",title="t="+str(round(t[frame]))+" s")
     if vec_var != "be" and vec_var != None:
       vector_color_axes.cla()
       vec_colorbar = fig.colorbar(quiv, cax=vector_color_axes)

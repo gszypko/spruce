@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 #include "plasmadomain.hpp"
 #include "constants.hpp"
 
-PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, bool continue_mode)
+PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, bool continue_mode) : m_module_handler(*this)
 {
   //DEFAULT VALUES, TO BE OVERWRITTEN BY readConfigFile
   m_xdim = 1; m_ydim = 1; open_boundary_strength = 1.0;

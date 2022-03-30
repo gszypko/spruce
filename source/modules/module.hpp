@@ -1,0 +1,45 @@
+//module.hpp
+//Defines abstract base class Module
+//All specific Modules must be defined/implemented as
+//a derived class of Module
+
+#ifndef MODULE_HPP
+#define MODULE_HPP
+
+#include "constants.hpp"
+#include "utils.hpp"
+#include <iostream>
+#include <fstream>
+#include <cassert>
+#include <vector>
+
+class PlasmaDomain;
+
+class Module {
+    public:
+        Module(PlasmaDomain &pd, bool propagate_changes = true);
+        virtual ~Module() {}
+        void configureModule(std::ifstream &in_file);
+        //Evolve the system in time by dt according to the Module
+        //Note that all changes made in this function are automatically propagated
+        //(using propagateChanges()) such that all variables remains consistent
+        //For subcycled processes, propagateChanges() must be called explicity between subcycles
+        virtual void iterateModule(double dt) = 0;
+        //Returns a short message to print to stdout related to the most recent iteration
+        //of the Module. Should not include any line breaks.
+        //Default behavior is no message; override in derived Module classes to customize.
+        virtual std::string commandLineMessage() const;
+        //Returns data to write to the PlasmaDomain output file corresponding to
+        //the most recent iteration of the Module.
+        //Any variables to output must have their names appended to var_names
+        //and the corresponding Grids appended to var_grids, in the same order. 
+        //Default behavior is no data; override in derived Module classes to customize.
+        virtual void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) const;
+    protected:
+        PlasmaDomain& m_pd;
+        bool m_propagate_changes;
+        //Apply the values (in rhs) to the appropriate Module configs (in lhs)
+        virtual void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) = 0;
+};
+
+#endif

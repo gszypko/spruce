@@ -8,6 +8,7 @@
 #include "utils.hpp"
 #include "grid.hpp"
 #include "constants.hpp"
+#include "modulehandler.hpp"
 #include <vector>
 #include <string>
 #include <fstream>
@@ -36,12 +37,12 @@ public:
 
   enum Vars { d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,grav_x,grav_y,
               press,thermal_energy,kinetic_energy,div_bi,bi_x,bi_y,
-              rad,dt,dt_thermal,dt_rad,v_x,v_y,n,
+              dt,v_x,v_y,n,
               div_be,b_hat_x,b_hat_y,b_magnitude,v_a,
               num_variables };
   static inline std::vector<std::string> m_var_names = {
     "d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","be_x","be_y","grav_x","grav_y",
-    "press","thermal_energy","kinetic_energy","div_bi","bi_x","bi_y","rad","dt","dt_thermal","dt_rad","v_x","v_y","n",
+    "press","thermal_energy","kinetic_energy","div_bi","bi_x","bi_y","dt","v_x","v_y","n",
     "div_be","b_hat_x","b_hat_y","b_magnitude","v_a"
   };
   static inline std::vector<int> state_vars = {d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,grav_x,grav_y};
@@ -66,6 +67,15 @@ public:
   static Grid convertCellSizesToCellPositions(const Grid& d, int index, std::string origin_position);
 
 private:
+
+  //Friend class declarations (for Modules)
+  friend class ModuleHandler;
+  friend class Module;
+  friend class AmbientHeating;
+  friend class LocalizedHeating;
+  friend class RadiativeLosses;
+  friend class ThermalConduction;
+
   //Strings corresponding to variables, settings, boundary conditions for file I/O
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)
   Grid m_ghost_zone_mask; //Equals 0 inside ghost zones and 1 everywhere else; for multiplying to negate values in ghost zones
@@ -74,6 +84,8 @@ private:
   std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
   double m_ion_mass; //in g
   double m_adiabatic_index; //aka gamma, unitless
+
+  ModuleHandler m_module_handler;
 
   fs::path m_out_directory;
   std::ofstream m_out_file;
@@ -89,17 +101,9 @@ private:
   BoundaryCondition x_bound_1, x_bound_2, y_bound_1, y_bound_2;
   double open_boundary_strength; // multiple of local sound speed added to velocity at boundary surface
   double open_boundary_decay_base; // base of exponential decay of rho, thermal_energy beyond open boundary surface
-  //Physics settings
-  bool radiative_losses, ambient_heating, thermal_conduction;
-  bool flux_saturation; //Config for thermal conduction
-  //Physical parameters
-  double temp_chromosphere; //Cutoff temperature for radiative losses
-  double radiation_ramp;  //Width of cutoff ramp, in units of temperature, for low-temp radiation
-  double heating_rate;  //Constant ambient heating rate
   //Safety factors
-  double epsilon, epsilon_thermal, epsilon_rad; //Time step calculation
+  double epsilon; //Time step calculation
   double epsilon_viscous; //Prefactor for artificial viscosity
-  double dt_thermal_min; //Minimum timestep for thermal conduction
   double rho_min, temp_min, thermal_energy_min; //Lower bounds for mass density and thermal energy density
   int sg_filter_interval; //number of time steps between sg filter applications; negative value does not apply the filter
   TimeIntegrator time_integrator; //indicates time integration scheme to use
@@ -112,17 +116,15 @@ private:
   std::string x_origin, y_origin; //specifies where (0,0) position is located; each can be one of "lower", "center", or "upper"
  
   enum class Config {
-    x_bound_1, x_bound_2, y_bound_1, y_bound_2, radiative_losses, ambient_heating,
-    thermal_conduction, flux_saturation, temp_chromosphere, radiation_ramp, heating_rate,
-    epsilon, epsilon_thermal, epsilon_rad, epsilon_viscous, dt_thermal_min, rho_min,
+    x_bound_1, x_bound_2, y_bound_1, y_bound_2,
+    epsilon, epsilon_viscous, rho_min,
     temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
     output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode,
     open_boundary_decay_base, x_origin, y_origin, sg_filter_interval, time_integrator
   };
   static inline std::vector<std::string> m_config_names = {
-    "x_bound_1","x_bound_2","y_bound_1","y_bound_2","radiative_losses","ambient_heating",
-    "thermal_conduction","flux_saturation","temp_chromosphere","radiation_ramp","heating_rate",
-    "epsilon","epsilon_thermal","epsilon_rad","epsilon_viscous","dt_thermal_min","rho_min",
+    "x_bound_1","x_bound_2","y_bound_1","y_bound_2",
+    "epsilon","epsilon_viscous","rho_min",
     "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
     "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode",
     "open_boundary_decay_base", "x_origin", "y_origin", "sg_filter_interval", "time_integrator"
@@ -139,16 +141,16 @@ private:
   void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step);
 
   //Functions to be applied between time steps
+  void propagateChanges(); //Encapsulates all of the below, except SG filtering
   void recomputeDerivedVariables();
   void recomputeTemperature();
   void catchUnderdensity();
   void updateGhostZones();
   void filterSavitzkyGolay();
-  void applyRuntimeAdjustment(double dt);
-  void runtimeAdjustment(double dt);
 
   //Versions of the above for operating on intermediate states of the system
   //i.e. for acting on Grid vectors other than m_grids
+  void propagateChanges(std::vector<Grid> &grids);
   void recomputeDerivedVariables(std::vector<Grid> &grids);
   void recomputeTemperature(std::vector<Grid> &grids);
   void catchUnderdensity(std::vector<Grid> &grids);
@@ -160,21 +162,17 @@ private:
   void reflectBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
   void fixedBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
 
-  void subcycleConduction(int subcycles_thermal, double dt_total);
-  void subcycleRadiation(int subcycles_rad, double dt_total);
-  void recomputeRadiativeLosses();
   void recomputeDT();
-  void recomputeDTThermal();
-  void recomputeDTRadiative();
 
   void computeConstantTerms();
   void computeIterationBounds();
 
   void outputPreamble();
   void outputCurrentState();
+  void writeGridToOutput(const Grid& grid, std::string var_name);
   void writeStateFile(std::string filename_stem = "mhd",int precision = -1) const;
   void cleanUpStateFiles() const;
-  void printUpdate(double min_dt, int subcycles_thermal, int subcycles_rad) const;
+  void printUpdate(double dt) const;
 
   void setOutputFlag(std::string var_name, bool new_flag);
   void setOutputFlags(const std::vector<std::string> var_names, bool new_flag);
@@ -220,23 +218,6 @@ private:
   
   //Compute (perturbation) magnetic field term on RHS of energy equation
   Grid computeMagneticEnergyTerm();
-
-  //Computes 1D cell-centered conductive flux from temperature "temp"
-  //Flux computed in direction indicated by "index": 0 for x, 1 for y
-  //k0 is conductive coefficient
-  Grid oneDimConductiveFlux(const Grid &temp, const Grid &rho, double k0, int index);
-
-  //Computes cell-centered, field-aligned conductive flux from temperature "temp"
-  //temp is temperature Grid
-  //b_hat_x, b_hat_y are the components of the *unit* vector b_hat
-  //k0 is conductive coefficient
-  //Output is written to flux_out_x and flux_out_y
-  void fieldAlignedConductiveFlux(Grid &flux_out_x, Grid &flux_out_y, const Grid &temp, const Grid &rho,
-                                      const Grid &b_hat_x, const Grid &b_hat_y, const double k0);
-
-  //Computes saturated conductive flux at each point in grid,
-  //then ensures that provided fluxes do not exceed the saturation point
-  void saturateConductiveFlux(Grid &flux_out_x, Grid &flux_out_y, const Grid &rho, const Grid &temp);
 
   double boundaryInterpolate(const Grid &quantity, int i1, int j1, int i2, int j2);
   double boundaryExtrapolate(const Grid &quantity, int i1, int j1, int i2, int j2);

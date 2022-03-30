@@ -87,8 +87,13 @@ void PlasmaDomain::readConfigFile(const fs::path &config_file)
     std::string lhs, rhs;
     std::getline(ss_line,lhs,'=');
     std::getline(ss_line,rhs,'#');
+    if(m_module_handler.isModuleName(lhs)){
+      m_module_handler.instantiateModule(lhs,in_file,(rhs == "true"));
+      continue;
+    }
     std::vector<std::string> rhs_vec = splitString(rhs,',');
     auto it = std::find(m_config_names.begin(),m_config_names.end(),lhs);
+    std::cout << lhs << std::endl;
     assert(it != m_config_names.end());
     auto index = std::distance(m_config_names.begin(),it);
     if(rhs_vec.size() == 1) handleSingleConfig(index,rhs);
@@ -114,11 +119,20 @@ void PlasmaDomain::outputCurrentState()
 {
   m_out_file << "t=" << m_time << std::endl;
   for(int i=0; i<num_variables; i++){
-    if(m_output_flags[i]){
-      m_out_file << m_var_names[i] << std::endl;
-      m_out_file << m_grids[i].format(',',';');
-    }
+    if(m_output_flags[i]) writeGridToOutput(m_grids[i],m_var_names[i]);
   }
+  std::vector<std::string> module_varnames;
+  std::vector<Grid> module_data;
+  m_module_handler.getFileOutputData(module_varnames,module_data);
+  for(int i=0; i<module_varnames.size(); i++){
+    writeGridToOutput(module_data[i],module_varnames[i]);
+  }
+}
+
+void PlasmaDomain::writeGridToOutput(const Grid& grid, std::string var_name)
+{
+  m_out_file << var_name << std::endl;
+  m_out_file << grid.format(',',';');
 }
 
 //Output current state into state file (toggles between overwriting two different files
@@ -172,15 +186,17 @@ PlasmaDomain::TimeIntegrator PlasmaDomain::stringToTimeIntegrator(const std::str
   return static_cast<TimeIntegrator>(index);
 }
 
-void PlasmaDomain::printUpdate(double min_dt, int subcycles_thermal, int subcycles_rad) const
+void PlasmaDomain::printUpdate(double dt) const
 {
   std::cout << "Iter: " << m_iter;
   if(max_iterations > 0) std::cout << "/" << max_iterations;
   std::cout << "|t: " << m_time;
   if(max_time > 0.0) std::cout << "/" << max_time;
-  std::cout << "|dt: " << min_dt;
-  if(thermal_conduction) std::cout << "|Cond. Subcyc: " << subcycles_thermal;
-  if(radiative_losses) std::cout << "|Rad. Subcyc: " << subcycles_rad;
+  std::cout << "|dt: " << dt;
+  std::vector<std::string> module_messages = m_module_handler.getCommandLineMessages();
+  for(int i=0; i<module_messages.size(); i++){
+    std::cout << "|" << module_messages[i];
+  }
   std::cout << std::endl;
 }
 
@@ -191,18 +207,8 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::x_bound_2): x_bound_2 = stringToBoundaryCondition(rhs); break;
   case static_cast<int>(Config::y_bound_1): y_bound_1 = stringToBoundaryCondition(rhs); break;
   case static_cast<int>(Config::y_bound_2): y_bound_2 = stringToBoundaryCondition(rhs); break;
-  case static_cast<int>(Config::radiative_losses): radiative_losses = (rhs == "true"); break;
-  case static_cast<int>(Config::ambient_heating): ambient_heating = (rhs == "true"); break;
-  case static_cast<int>(Config::thermal_conduction): thermal_conduction = (rhs == "true"); break;
-  case static_cast<int>(Config::flux_saturation): flux_saturation = (rhs == "true"); break;
-  case static_cast<int>(Config::temp_chromosphere): temp_chromosphere = std::stod(rhs); break;
-  case static_cast<int>(Config::radiation_ramp): radiation_ramp = std::stod(rhs); break;
-  case static_cast<int>(Config::heating_rate): heating_rate = std::stod(rhs); break;
   case static_cast<int>(Config::epsilon): epsilon = std::stod(rhs); break;
-  case static_cast<int>(Config::epsilon_thermal): epsilon_thermal = std::stod(rhs); break;
-  case static_cast<int>(Config::epsilon_rad): epsilon_rad = std::stod(rhs); break;
   case static_cast<int>(Config::epsilon_viscous): epsilon_viscous = std::stod(rhs); break;
-  case static_cast<int>(Config::dt_thermal_min): dt_thermal_min = std::stod(rhs); break;
   case static_cast<int>(Config::rho_min): rho_min = std::stod(rhs); break;
   case static_cast<int>(Config::temp_min): temp_min = std::stod(rhs); break;
   case static_cast<int>(Config::thermal_energy_min): thermal_energy_min = std::stod(rhs); break;

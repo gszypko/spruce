@@ -176,17 +176,22 @@ namespace SolarUtils {
   //std_dev_x and std_dev_y are the standard deviation of the distribution in the x
   //and y directions (units of distance)
   Grid GaussianGrid(const Grid& pos_x, const Grid& pos_y, double min, double max, double std_dev_x, double std_dev_y){
+    assert(pos_x.rows() == pos_y.rows() && pos_x.cols() == pos_y.cols());
+    int xdim = pos_x.rows(), ydim = pos_x.cols();
+    return GaussianGrid(xdim, ydim, min, max, std_dev_x, std_dev_y, 0.5*(double)(xdim-1), 0.5*(double)(ydim-1));
+  }
+
+  Grid GaussianGrid(int xdim, int ydim, double min, double max, double std_dev_x, double std_dev_y,
+                    double center_x, double center_y){
     #if BENCHMARKING_ON
     InstrumentationTimer timer(__PRETTY_FUNCTION__);
     #endif
-    assert(pos_x.rows() == pos_y.rows() && pos_x.cols() == pos_y.cols());
-    int xdim = pos_x.rows(), ydim = pos_x.cols();
     std::vector<double> gauss_x(xdim), gauss_y(ydim);
     for(int i=0; i<xdim; i++){
-      gauss_x[i] = std::exp(-0.5*std::pow(((double)i-0.5*(double)(xdim-1))/std_dev_x,2.0));
+      gauss_x[i] = std::exp(-0.5*std::pow(((double)i-center_x)/std_dev_x,2.0));
     }
     for(int j=0; j<ydim; j++){
-      gauss_y[j] = std::exp(-0.5*std::pow(((double)j-0.5*(double)(ydim-1))/std_dev_y,2.0));
+      gauss_y[j] = std::exp(-0.5*std::pow(((double)j-center_y)/std_dev_y,2.0));
     }
     Grid result(xdim,ydim);
     for(int i=0; i<xdim; i++){
@@ -197,5 +202,6 @@ namespace SolarUtils {
     // std::cout << result << std::endl;
     return result;
   }
+
 
 }
