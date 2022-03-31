@@ -9,7 +9,7 @@ from matplotlib.image import NonUniformImage
 import sys
 import argparse
 
-matplotlib.rcParams.update({'font.size': 22})
+# matplotlib.rcParams.update({'font.size': 22})
 
 fullnames = {
   'rho': "Density",
