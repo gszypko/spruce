@@ -21,7 +21,7 @@ void PlasmaDomain::readStateFile(const fs::path &state_file)
   m_xdim = std::stoi(element);
   std::getline(ss_dim,element,',');
   m_ydim = std::stoi(element);
-  for(int var=0; var<num_variables; var++) m_grids[var] = Grid(m_xdim,m_ydim,0.0);
+  for(int var=0; var<num_variables; var++) m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
 
   std::getline(in_file, line);
   assert(line == "ion_mass");
@@ -65,9 +65,6 @@ void PlasmaDomain::readStateFile(const fs::path &state_file)
     m_grids[index] = curr_grid;
   }
   in_file.close();
-  computeIterationBounds();
-  computeConstantTerms();
-  recomputeDerivedVariables();
 }
 
 //Read in simulation configuration from .config file
@@ -93,7 +90,6 @@ void PlasmaDomain::readConfigFile(const fs::path &config_file)
     }
     std::vector<std::string> rhs_vec = splitString(rhs,',');
     auto it = std::find(m_config_names.begin(),m_config_names.end(),lhs);
-    std::cout << lhs << std::endl;
     assert(it != m_config_names.end());
     auto index = std::distance(m_config_names.begin(),it);
     if(rhs_vec.size() == 1) handleSingleConfig(index,rhs);

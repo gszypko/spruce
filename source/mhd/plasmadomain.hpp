@@ -48,10 +48,8 @@ public:
   static inline std::vector<int> state_vars = {d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,grav_x,grav_y};
 
   //Constructors and Initialization
-  PlasmaDomain(const fs::path &out_path, const fs::path &config_path, bool continue_mode = false);
-  void initialize(const std::vector<Grid>& input_vars, double ion_mass, double adiabatic_index);
-  void hydrostaticInitialize();
-
+  PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const std::vector<Grid>& input_vars, double ion_mass, double adiabatic_index);
+  PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file);
   void readStateFile(const fs::path &state_file);
   void readConfigFile(const fs::path &config_file);
 
@@ -131,6 +129,8 @@ private:
   };
 
   /*********************************************************************/ 
+
+  void configureSimulation(const fs::path &config_path, const fs::path &out_path, bool continue_mode = false);
 
   void advanceTime(bool verbose = true);
 

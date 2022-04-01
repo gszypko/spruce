@@ -261,8 +261,18 @@ void PlasmaDomain::recomputeDerivedVariables(std::vector<Grid> &grids)
   grids[div_bi] = divergence2D(grids[bi_x],grids[bi_y]);
   Grid m_b_x = grids[be_x] + grids[bi_x], m_b_y = grids[be_y] + grids[bi_y];
   grids[b_magnitude] = (m_b_x.square() + m_b_y.square()).sqrt();
-  grids[b_hat_x] = m_b_x/grids[b_magnitude];
-  grids[b_hat_y] = m_b_y/grids[b_magnitude];
+  //Need to ensure that b_hat is zero when b is zero
+  Grid &b_h_x = grids[b_hat_x], &b_h_y = grids[b_hat_y], &b_mag = grids[b_magnitude];
+  b_h_x = m_b_x/b_mag;
+  b_h_y = m_b_y/b_mag;
+  for(int i=0; i<m_xdim; i++){
+    for(int j=0; j<m_ydim; j++){
+      if(b_mag(i,j) == 0.0){
+        b_h_x(i,j) = 0.0;
+        b_h_y(i,j) = 0.0;
+      }
+    }
+  }
   recomputeDT();
 }
 

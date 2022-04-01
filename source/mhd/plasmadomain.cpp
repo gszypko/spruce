@@ -16,20 +16,42 @@ namespace fs = std::filesystem;
 #include "plasmadomain.hpp"
 #include "constants.hpp"
 
-PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, bool continue_mode) : m_module_handler(*this)
+//Construction with newly constructed initial state (not continue mode)
+PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const std::vector<Grid>& input_vars,
+                          double ion_mass, double adiabatic_index) : m_module_handler(*this)
+{
+  m_ion_mass = ion_mass;
+  m_adiabatic_index = adiabatic_index;
+  m_xdim = input_vars[0].rows(); m_ydim = input_vars[0].cols();
+  for(int var=0; var<num_variables; var++){
+    m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
+  }
+  for(int i : state_vars)
+    m_grids[i] = input_vars[i];
+  m_time = 0.0; 
+  configureSimulation(config_path,out_path,false);
+}
+
+//Construction with initial state from state file (continue mode)
+PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file) : m_module_handler(*this)
+{
+  readStateFile(state_file);
+  configureSimulation(config_path,out_path,true);
+}
+
+void PlasmaDomain::configureSimulation(const fs::path &config_path, const fs::path &out_path, bool continue_mode)
 {
   //DEFAULT VALUES, TO BE OVERWRITTEN BY readConfigFile
-  m_xdim = 1; m_ydim = 1; open_boundary_strength = 1.0;
+  open_boundary_strength = 1.0;
   sg_filter_interval = -1; time_integrator = TimeIntegrator::Euler;
   std_out_interval = 1;
   safe_state_mode = true;
   //***************************************************
-  m_time = 0.0; m_iter = 0;
+  m_iter = 0;
   this->continue_mode = continue_mode;
   for(int i=0; i<num_variables; i++){
     m_output_flags.push_back(false);
   }
-  readConfigFile(config_path);
   m_out_directory = out_path;
   fs::path out_filename("mhd.out");
   if(!continue_mode){
@@ -38,23 +60,11 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   } else {
     m_out_file.open(m_out_directory/out_filename,std::ofstream::app);
   }
-  for(int i=0; i<num_variables; i++) m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
-}
-
-void PlasmaDomain::initialize(const std::vector<Grid>& input_vars, double ion_mass, double adiabatic_index)
-{
-  m_ion_mass = ion_mass;
-  m_adiabatic_index = adiabatic_index;
-  m_xdim = input_vars[0].rows(); m_ydim = input_vars[0].cols();
-  for(int var=0; var<num_variables; var++){
-    m_grids[var] = Grid(m_xdim,m_ydim,0.0);
-  }
-  for(int i : state_vars)
-    m_grids[i] = input_vars[i];
+  readConfigFile(config_path);
   computeIterationBounds();
   computeConstantTerms();
   recomputeDerivedVariables();
-  writeStateFile("init");
+  if(!continue_mode) writeStateFile("init");
 }
 
 //Compute lower and upper x- and y- indicies for differential operations
