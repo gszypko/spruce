@@ -17,7 +17,6 @@ void PlasmaDomain::run(double time_duration)
     #endif
     double old_time = m_time;
     advanceTime();
-    if(sg_filter_interval > 0 && m_iter != 0 && m_iter%sg_filter_interval == 0) filterSavitzkyGolay();
     if((iter_output_interval > 0 && m_iter%iter_output_interval == 0) || (time_output_interval > 0.0
         && (int)(m_time/time_output_interval) > (int)(old_time/time_output_interval))) outputCurrentState();
     if(safe_state_mode) writeStateFile();
@@ -460,71 +459,71 @@ void PlasmaDomain::fixedBoundaryExtrapolate(std::vector<Grid> &grids, int i1, in
   m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
 }
 
-// Applies two-dimensional Sovitzky-Golay filter to member variable m_grids
-// with 3x3 window and 2x2-order fitting polynomials
-void PlasmaDomain::filterSavitzkyGolay()
-{
-  filterSavitzkyGolay(m_grids);
-}
+// // Applies two-dimensional Sovitzky-Golay filter to member variable m_grids
+// // with 3x3 window and 2x2-order fitting polynomials
+// void PlasmaDomain::filterSavitzkyGolay()
+// {
+//   filterSavitzkyGolay(m_grids);
+// }
 
-// Applies two-dimensional Sovitzky-Golay filter to given Grid vector
-// with 5x5 window and 3x3-order fitting polynomials
-void PlasmaDomain::filterSavitzkyGolay(std::vector<Grid> &grids)
-{
-  assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-  std::vector<Grid> filtered = grids;
-  #pragma omp parallel
-  {
-    #pragma omp for
-    for(int varname : {rho, thermal_energy}){
-      singleVarSavitzkyGolay(grids[varname]);
-    }
-  }
-  propagateChanges(grids);
-}
+// // Applies two-dimensional Sovitzky-Golay filter to given Grid vector
+// // with 5x5 window and 3x3-order fitting polynomials
+// void PlasmaDomain::filterSavitzkyGolay(std::vector<Grid> &grids)
+// {
+//   assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+//   std::vector<Grid> filtered = grids;
+//   #pragma omp parallel
+//   {
+//     #pragma omp for
+//     for(int varname : {rho, thermal_energy}){
+//       singleVarSavitzkyGolay(grids[varname]);
+//     }
+//   }
+//   propagateChanges(grids);
+// }
 
-void PlasmaDomain::singleVarSavitzkyGolay(Grid &grid)
-{
-  assert(N_GHOST == 2 && "S-G filtering implementation assumes two ghost zones");
-  static const double coeff[] =
-    {+7.346939E-03,	-2.938776E-02,	-4.163265E-02,	-2.938776E-02,	+7.346939E-03,
-    -2.938776E-02,	+1.175510E-01,	+1.665306E-01,	+1.175510E-01,	-2.938776E-02,
-    -4.163265E-02,	+1.665306E-01,	+2.359184E-01,  +1.665306E-01,  -4.163265E-02,
-    -2.938776E-02,  +1.175510E-01,  +1.665306E-01,  +1.175510E-01,  -2.938776E-02,
-    +7.346939E-03,  -2.938776E-02,  -4.163265E-02,  -2.938776E-02,  +7.346939E-03}; //from Chandra Sekhar, 2015
-  int xdim = grid.rows();
-  int ydim = grid.cols();
-  Grid filtered = grid;
-  for (int center_i = m_xl; center_i <= m_xu; center_i++){
-    for(int center_j = m_yl; center_j <= m_yu; center_j++){
-      int i[] = {center_i-2, center_i-1, center_i, center_i+1, center_i+2};
-      int j[] = {center_j-2, center_j-1, center_j, center_j+1, center_j+2};
-      if(x_bound_1 == BoundaryCondition::Periodic && x_bound_2 == BoundaryCondition::Periodic){
-        i[0] = (i[0]+xdim)%xdim;
-        i[1] = (i[1]+xdim)%xdim;
-        i[3] = (i[3]+xdim)%xdim;
-        i[4] = (i[4]+xdim)%xdim;
-      }
-      if(y_bound_1 == BoundaryCondition::Periodic && y_bound_2 == BoundaryCondition::Periodic){
-        j[0] = (j[0]+ydim)%ydim;
-        j[1] = (j[1]+ydim)%ydim;
-        j[3] = (j[3]+ydim)%ydim;
-        j[4] = (j[4]+ydim)%ydim;
-      }
-      double filtered_val = 0.0;
-      // double total_weight = 0.0;
-      for(int u = 0; u < 5; u++){
-        for(int v = 0; v < 5; v++){
-          int curr_i = i[u], curr_j = j[v];
-          // if(curr_i >= m_xl && curr_i <= m_xu && curr_j >= m_yl && curr_j <= m_yu){
-            filtered_val = filtered_val + coeff[u*5 + v]*grid(curr_j,curr_j);
-            // total_weight = total_weight + coeff[u*5 + v];
-          // }
-        }
-      }
-      // filtered_val = filtered_val/total_weight;
-      filtered(center_i,center_j) = filtered_val;
-    }
-  }
-  grid = filtered;
-}
+// void PlasmaDomain::singleVarSavitzkyGolay(Grid &grid)
+// {
+//   assert(N_GHOST == 2 && "S-G filtering implementation assumes two ghost zones");
+//   static const double coeff[] =
+//     {+7.346939E-03,	-2.938776E-02,	-4.163265E-02,	-2.938776E-02,	+7.346939E-03,
+//     -2.938776E-02,	+1.175510E-01,	+1.665306E-01,	+1.175510E-01,	-2.938776E-02,
+//     -4.163265E-02,	+1.665306E-01,	+2.359184E-01,  +1.665306E-01,  -4.163265E-02,
+//     -2.938776E-02,  +1.175510E-01,  +1.665306E-01,  +1.175510E-01,  -2.938776E-02,
+//     +7.346939E-03,  -2.938776E-02,  -4.163265E-02,  -2.938776E-02,  +7.346939E-03}; //from Chandra Sekhar, 2015
+//   int xdim = grid.rows();
+//   int ydim = grid.cols();
+//   Grid filtered = grid;
+//   for (int center_i = m_xl; center_i <= m_xu; center_i++){
+//     for(int center_j = m_yl; center_j <= m_yu; center_j++){
+//       int i[] = {center_i-2, center_i-1, center_i, center_i+1, center_i+2};
+//       int j[] = {center_j-2, center_j-1, center_j, center_j+1, center_j+2};
+//       if(x_bound_1 == BoundaryCondition::Periodic && x_bound_2 == BoundaryCondition::Periodic){
+//         i[0] = (i[0]+xdim)%xdim;
+//         i[1] = (i[1]+xdim)%xdim;
+//         i[3] = (i[3]+xdim)%xdim;
+//         i[4] = (i[4]+xdim)%xdim;
+//       }
+//       if(y_bound_1 == BoundaryCondition::Periodic && y_bound_2 == BoundaryCondition::Periodic){
+//         j[0] = (j[0]+ydim)%ydim;
+//         j[1] = (j[1]+ydim)%ydim;
+//         j[3] = (j[3]+ydim)%ydim;
+//         j[4] = (j[4]+ydim)%ydim;
+//       }
+//       double filtered_val = 0.0;
+//       // double total_weight = 0.0;
+//       for(int u = 0; u < 5; u++){
+//         for(int v = 0; v < 5; v++){
+//           int curr_i = i[u], curr_j = j[v];
+//           // if(curr_i >= m_xl && curr_i <= m_xu && curr_j >= m_yl && curr_j <= m_yu){
+//             filtered_val = filtered_val + coeff[u*5 + v]*grid(curr_j,curr_j);
+//             // total_weight = total_weight + coeff[u*5 + v];
+//           // }
+//         }
+//       }
+//       // filtered_val = filtered_val/total_weight;
+//       filtered(center_i,center_j) = filtered_val;
+//     }
+//   }
+//   grid = filtered;
+// }

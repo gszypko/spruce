@@ -43,7 +43,7 @@ void PlasmaDomain::configureSimulation(const fs::path &config_path, const fs::pa
 {
   //DEFAULT VALUES, TO BE OVERWRITTEN BY readConfigFile
   open_boundary_strength = 1.0;
-  sg_filter_interval = -1; time_integrator = TimeIntegrator::Euler;
+  time_integrator = TimeIntegrator::Euler;
   std_out_interval = 1;
   safe_state_mode = true;
   //***************************************************

@@ -150,7 +150,6 @@ void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
   state_file << "adiabatic_index\n";
   state_file << m_adiabatic_index << std::endl;
   state_file << "t=" << m_time << std::endl;
-  // for(int i=state_var_start; i<state_var_end; i++){
   for(int i : state_vars){
     state_file << m_var_names[i] << std::endl;
     state_file << m_grids[i].format(',',';',precision);
@@ -220,7 +219,6 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::open_boundary_decay_base): open_boundary_decay_base = std::stod(rhs); break;
   case static_cast<int>(Config::x_origin): x_origin = rhs; break;
   case static_cast<int>(Config::y_origin): y_origin = rhs; break;
-  case static_cast<int>(Config::sg_filter_interval): sg_filter_interval = std::stoi(rhs); break;
   case static_cast<int>(Config::time_integrator): time_integrator = stringToTimeIntegrator(rhs); break;
   default: break;
   }

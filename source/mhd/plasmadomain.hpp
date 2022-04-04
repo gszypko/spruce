@@ -69,6 +69,7 @@ private:
   //Friend class declarations (for Modules)
   friend class ModuleHandler;
   friend class Module;
+  friend class SGFilter;
   friend class AmbientHeating;
   friend class LocalizedHeating;
   friend class RadiativeLosses;
@@ -103,7 +104,7 @@ private:
   double epsilon; //Time step calculation
   double epsilon_viscous; //Prefactor for artificial viscosity
   double rho_min, temp_min, thermal_energy_min; //Lower bounds for mass density and thermal energy density
-  int sg_filter_interval; //number of time steps between sg filter applications; negative value does not apply the filter
+  // int sg_filter_interval; //number of time steps between sg filter applications; negative value does not apply the filter
   TimeIntegrator time_integrator; //indicates time integration scheme to use
   //Output settings
   int iter_output_interval;
@@ -118,14 +119,14 @@ private:
     epsilon, epsilon_viscous, rho_min,
     temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
     output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode,
-    open_boundary_decay_base, x_origin, y_origin, sg_filter_interval, time_integrator
+    open_boundary_decay_base, x_origin, y_origin, time_integrator
   };
   static inline std::vector<std::string> m_config_names = {
     "x_bound_1","x_bound_2","y_bound_1","y_bound_2",
     "epsilon","epsilon_viscous","rho_min",
     "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
     "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode",
-    "open_boundary_decay_base", "x_origin", "y_origin", "sg_filter_interval", "time_integrator"
+    "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator"
   };
 
   /*********************************************************************/ 
@@ -146,7 +147,6 @@ private:
   void recomputeTemperature();
   void catchUnderdensity();
   void updateGhostZones();
-  void filterSavitzkyGolay();
 
   //Versions of the above for operating on intermediate states of the system
   //i.e. for acting on Grid vectors other than m_grids
@@ -155,8 +155,6 @@ private:
   void recomputeTemperature(std::vector<Grid> &grids);
   void catchUnderdensity(std::vector<Grid> &grids);
   void updateGhostZones(std::vector<Grid> &grids);
-  void filterSavitzkyGolay(std::vector<Grid> &grids);
-  void singleVarSavitzkyGolay(Grid &grid);
 
   void openBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
   void reflectBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);

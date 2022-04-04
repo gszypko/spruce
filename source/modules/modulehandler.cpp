@@ -42,6 +42,7 @@ void ModuleHandler::instantiateModule(const std::string &module_name, std::ifstr
     else if(module_name == "radiative_losses") m_modules.push_back(std::unique_ptr<Module>(new RadiativeLosses(m_pd)));
     else if(module_name == "thermal_conduction") m_modules.push_back(std::unique_ptr<Module>(new ThermalConduction(m_pd)));
     else if(module_name == "localized_heating") m_modules.push_back(std::unique_ptr<Module>(new LocalizedHeating(m_pd)));
+    else if(module_name == "sg_filtering") m_modules.push_back(std::unique_ptr<Module>(new SGFilter(m_pd)));
     else assert(false && "Module name was not recognized");
     m_modules.back()->configureModule(in_file);
 }
