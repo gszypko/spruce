@@ -14,7 +14,8 @@ class RadiativeLosses : public Module {
     public:
         RadiativeLosses(PlasmaDomain &pd);
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs);
-        void iterateModule(double dt);
+        void preIterateModule(double dt) override;
+        void iterateModule(double dt) override;
         std::string commandLineMessage() const override;
         void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) const override;
     private:

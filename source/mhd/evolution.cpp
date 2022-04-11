@@ -32,6 +32,7 @@ void PlasmaDomain::advanceTime(bool verbose)
   double dt_raw = m_grids[dt].min(m_xl,m_yl,m_xu,m_yu);
   min_dt = epsilon*dt_raw;
 
+  m_module_handler.preIterateModules(min_dt);
   m_module_handler.iterateModules(min_dt);
 
   double visc_coeff = epsilon_viscous*0.5*((m_grids[d_x].square() + m_grids[d_y].square())/dt_raw).min();
@@ -40,10 +41,9 @@ void PlasmaDomain::advanceTime(bool verbose)
   else if(time_integrator == TimeIntegrator::RK4) integrateRK4(m_grids, min_dt, visc_coeff);
   else if(time_integrator == TimeIntegrator::Euler) integrateEuler(m_grids, min_dt, visc_coeff);
 
-  propagateChanges();
+  m_module_handler.postIterateModules(min_dt);
 
   if(std_out_interval > 0 && m_iter%std_out_interval == 0) printUpdate(min_dt);
-
   m_time += min_dt;
   m_iter++;
 }

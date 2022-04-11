@@ -42,9 +42,10 @@ void LocalizedHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vec
     }
 }
 
-void LocalizedHeating::iterateModule(double dt){
+void LocalizedHeating::postIterateModule(double dt){
     if(m_pd.m_time < start_time || m_pd.m_time > start_time+duration) return;
     m_pd.m_grids[PlasmaDomain::thermal_energy] += m_pd.m_ghost_zone_mask*(dt*heating_template);
+    m_pd.propagateChanges();
 }
 
 std::string LocalizedHeating::commandLineMessage() const

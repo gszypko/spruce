@@ -21,13 +21,16 @@ void ThermalConduction::parseModuleConfigs(std::vector<std::string> lhs, std::ve
     }
 }
 
+void ThermalConduction::preIterateModule(double dt){
+    curr_num_subcycles = numberSubcycles(dt);
+}
+
 void ThermalConduction::iterateModule(double dt){
     //Subcycle to simulate field-aligned thermal conduction
     Grid &m_thermal_energy = m_pd.m_grids[PlasmaDomain::thermal_energy], &m_temp = m_pd.m_grids[PlasmaDomain::temp], &m_press = m_pd.m_grids[PlasmaDomain::press];
     // Grid nonthermal_energy = 0.5*(m_grids[mom_x]*m_grids[v_x] + m_grids[mom_y]*m_grids[v_y]) + m_grids[mag_press];
     // Grid energy_floor = nonthermal_energy + thermal_energy_min; //To ensure non-negative thermal pressure
     Grid thermal_energy_next;
-    curr_num_subcycles = numberSubcycles(dt);
     for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
         Grid con_flux_x(m_pd.m_xdim,m_pd.m_ydim,0.0);
         Grid con_flux_y(m_pd.m_xdim,m_pd.m_ydim,0.0);
@@ -52,10 +55,9 @@ int ThermalConduction::numberSubcycles(double dt){
                                 + m_pd.derivative1D(m_pd.m_grids[PlasmaDomain::temp],1)*m_pd.m_grids[PlasmaDomain::b_hat_y];
         fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_pd.m_grids[PlasmaDomain::temp], m_pd.m_grids[PlasmaDomain::rho],
                                     m_pd.m_grids[PlasmaDomain::b_hat_x], m_pd.m_grids[PlasmaDomain::b_hat_y], KAPPA_0);
-        Grid flux_c = (con_flux_x.square() + con_flux_y.square()).sqrt();
-        saturateConductiveFlux(con_flux_x, con_flux_y, m_pd.m_grids[PlasmaDomain::rho], m_pd.m_grids[PlasmaDomain::temp]);
-        Grid flux_sat = (con_flux_x.square() + con_flux_y.square()).sqrt();
-        kappa_modified = (flux_sat/field_temp_gradient).abs();
+        if(flux_saturation) saturateConductiveFlux(con_flux_x, con_flux_y, m_pd.m_grids[PlasmaDomain::rho], m_pd.m_grids[PlasmaDomain::temp]);
+        Grid flux_mag = (con_flux_x.square() + con_flux_y.square()).sqrt();
+        kappa_modified = (flux_mag/field_temp_gradient).abs();
         if(field_temp_gradient.abs().max() == 0.0) return 0;
         else {
             dt_subcycle = K_B/kappa_modified*(m_pd.m_grids[PlasmaDomain::rho]/m_pd.m_ion_mass)*m_pd.m_grids[PlasmaDomain::d_x]*m_pd.m_grids[PlasmaDomain::d_y];

@@ -21,10 +21,18 @@ class Module {
         virtual ~Module() {}
         void configureModule(std::ifstream &in_file);
         //Evolve the system in time by dt according to the Module
-        //Note that all changes made in this function are automatically propagated
-        //(using propagateChanges()) such that all variables remains consistent
-        //For subcycled processes, propagateChanges() must be called explicity between subcycles
-        virtual void iterateModule(double dt) = 0;
+        //Note that m_pd.propagateChanges() is NOT automatically applied;
+        //this must be done manually such that all variables remains consistent
+        virtual void iterateModule(double dt);
+        //Perform any processing that occurs before the main iteration step
+        //All modules are guaranteed to run this function before any of them
+        //run iterateModule() or postIterateModule()
+        virtual void preIterateModule(double dt);
+        //Perform any processing that occurs after the main iteration step
+        //and after the evolution of the main MHD equations by m_pd
+        //All modules are guaranteed to run this function after all of them
+        //run iterateModule() and postIterateModule()
+        virtual void postIterateModule(double dt);
         //Returns a short message to print to stdout related to the most recent iteration
         //of the Module. Should not include any line breaks.
         //Default behavior is no message; override in derived Module classes to customize.

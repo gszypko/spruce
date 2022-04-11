@@ -16,7 +16,7 @@ class PlasmaDomain;
 class SGFilter : public Module {
     public:
         SGFilter(PlasmaDomain &pd);
-        void iterateModule(double dt) override;
+        void postIterateModule(double dt) override;
         std::string commandLineMessage() const override;
     private:
         void applyFilter(std::vector<Grid> &grids);

@@ -13,6 +13,20 @@ void ModuleHandler::iterateModules(double dt)
     }
 }
 
+void ModuleHandler::preIterateModules(double dt)
+{
+    for(int i=0; i<m_modules.size(); i++){
+        m_modules[i]->preIterateModule(dt);
+    }
+}
+
+void ModuleHandler::postIterateModules(double dt)
+{
+    for(int i=0; i<m_modules.size(); i++){
+        m_modules[i]->postIterateModule(dt);
+    }
+}
+
 bool ModuleHandler::isModuleName(std::string name) const
 {
     auto it = std::find(m_module_names.begin(),m_module_names.end(),name);

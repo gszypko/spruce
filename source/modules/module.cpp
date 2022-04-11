@@ -28,6 +28,21 @@ void Module::configureModule(std::ifstream &in_file)
     parseModuleConfigs(lhs_strings,rhs_strings);
 }
 
+void Module::iterateModule(double dt)
+{
+    return;
+}
+
+void Module::preIterateModule(double dt)
+{
+    return;
+}
+
+void Module::postIterateModule(double dt)
+{
+    return;
+}
+
 std::string Module::commandLineMessage() const
 {
     return "";

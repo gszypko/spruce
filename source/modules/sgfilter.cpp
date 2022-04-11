@@ -10,7 +10,7 @@ void SGFilter::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std:
     }
 }
 
-void SGFilter::iterateModule(double dt){
+void SGFilter::postIterateModule(double dt){
     if(filter_interval > 0 && m_pd.m_iter != 0 && m_pd.m_iter%filter_interval == 0){
         applyFilter(m_pd.m_grids);
     }

@@ -10,8 +10,9 @@ void AmbientHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vecto
     }
 }
 
-void AmbientHeating::iterateModule(double dt){
+void AmbientHeating::postIterateModule(double dt){
     m_pd.m_grids[PlasmaDomain::thermal_energy] += m_pd.m_ghost_zone_mask*(dt*heating_rate);
+    m_pd.propagateChanges();
 }
 
 std::string AmbientHeating::commandLineMessage() const

@@ -22,11 +22,13 @@ void RadiativeLosses::parseModuleConfigs(std::vector<std::string> lhs, std::vect
     }
 }
 
-void RadiativeLosses::iterateModule(double dt){
+void RadiativeLosses::preIterateModule(double dt){
     next_losses = Grid(m_pd.m_xdim,m_pd.m_ydim,0.0);
     if(output_to_file) avg_losses = Grid(m_pd.m_xdim,m_pd.m_ydim,0.0);
-
     curr_num_subcycles = numberSubcycles(dt);
+}
+
+void RadiativeLosses::iterateModule(double dt){
     for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
         computeLosses();
         if(output_to_file) avg_losses += next_losses/curr_num_subcycles;

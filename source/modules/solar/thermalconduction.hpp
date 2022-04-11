@@ -16,7 +16,8 @@ class ThermalConduction : public Module {
     public:
         ThermalConduction(PlasmaDomain &pd);
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs);
-        void iterateModule(double dt);
+        void preIterateModule(double dt) override;
+        void iterateModule(double dt) override;
         std::string commandLineMessage() const override;
     private:
         bool flux_saturation;

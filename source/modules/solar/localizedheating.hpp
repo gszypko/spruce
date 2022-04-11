@@ -14,7 +14,7 @@ class PlasmaDomain;
 class LocalizedHeating : public Module {
     public:
         LocalizedHeating(PlasmaDomain &pd);
-        void iterateModule(double dt);
+        void postIterateModule(double dt) override;
         std::string commandLineMessage() const override;
     private:
         double start_time;

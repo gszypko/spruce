@@ -13,7 +13,7 @@ class PlasmaDomain;
 class AmbientHeating : public Module {
     public:
         AmbientHeating(PlasmaDomain &pd);
-        void iterateModule(double dt) override;
+        void postIterateModule(double dt) override;
         std::string commandLineMessage() const override;
     private:
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
