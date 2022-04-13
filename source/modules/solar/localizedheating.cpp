@@ -25,19 +25,19 @@ void LocalizedHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vec
         else std::cerr << this_lhs << " config not recognized.\n";
     }
     heating_template = SolarUtils::GaussianGrid(m_pd.m_xdim,m_pd.m_ydim,-1.0e-2*max_heating_rate,
-                                                max_heating_rate,stddev_x,stddev_y,center_x,center_y);
+                                                max_heating_rate,stddev_x,stddev_y,center_x,center_y).max(0.0);
     if(m_pd.x_bound_1 == PlasmaDomain::BoundaryCondition::Periodic){
         Grid left_shifted = SolarUtils::GaussianGrid(m_pd.m_xdim,m_pd.m_ydim,-1.0e-2*max_heating_rate,
-                                                max_heating_rate,stddev_x,stddev_y,center_x+(double)(m_pd.m_xdim),center_y);
+                                                max_heating_rate,stddev_x,stddev_y,center_x+(double)(m_pd.m_xdim),center_y).max(0.0);
         Grid right_shifted = SolarUtils::GaussianGrid(m_pd.m_xdim,m_pd.m_ydim,-1.0e-2*max_heating_rate,
-                                                max_heating_rate,stddev_x,stddev_y,center_x-(double)(m_pd.m_xdim),center_y);
+                                                max_heating_rate,stddev_x,stddev_y,center_x-(double)(m_pd.m_xdim),center_y).max(0.0);
         heating_template = heating_template.max(left_shifted).max(right_shifted);
     }
     if(m_pd.y_bound_1 == PlasmaDomain::BoundaryCondition::Periodic){
         Grid down_shifted = SolarUtils::GaussianGrid(m_pd.m_xdim,m_pd.m_ydim,-1.0e-2*max_heating_rate,
-                                                max_heating_rate,stddev_x,stddev_y,center_x,center_y+(double)(m_pd.m_ydim));
+                                                max_heating_rate,stddev_x,stddev_y,center_x,center_y+(double)(m_pd.m_ydim)).max(0.0);
         Grid up_shifted = SolarUtils::GaussianGrid(m_pd.m_xdim,m_pd.m_ydim,-1.0e-2*max_heating_rate,
-                                                max_heating_rate,stddev_x,stddev_y,center_x,center_y-(double)(m_pd.m_ydim));
+                                                max_heating_rate,stddev_x,stddev_y,center_x,center_y-(double)(m_pd.m_ydim)).max(0.0);
         heating_template = heating_template.max(down_shifted).max(up_shifted);
     }
 }

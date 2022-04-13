@@ -13,7 +13,7 @@ type = opt = corona
 xdim = cgs = 100
 ydim = cgs = 100
 y_size = cgs = 4.0
-duration = cgs = 2000
+duration = cgs = 8000
 init_temp = cgs = 5.0e4
 growth_factor = cgs = 1.0
 uniform_fraction = cgs = 1.0
