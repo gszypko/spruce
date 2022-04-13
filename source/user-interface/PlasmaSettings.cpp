@@ -7,7 +7,7 @@ PlasmaSettings::PlasmaSettings(fs::path settings_path, int array):
     load_settings(settings_path);
     check_units();
 
-    if (array < 0 || array > m_mat.size()) std::cerr << "User-specified <array> value must correspond to row index of m_unique_val.";
+    assert(array >= 0 && array < m_mat.size() && "User-specified <array> value must correspond to valid unique combination of settings.");
     m_val = m_mat[m_array];
 }
 
