@@ -104,13 +104,13 @@ private:
   double epsilon; //Time step calculation
   double epsilon_viscous; //Prefactor for artificial viscosity
   double rho_min, temp_min, thermal_energy_min; //Lower bounds for mass density and thermal energy density
-  // int sg_filter_interval; //number of time steps between sg filter applications; negative value does not apply the filter
   TimeIntegrator time_integrator; //indicates time integration scheme to use
   //Output settings
   int iter_output_interval;
   double time_output_interval;
   int std_out_interval; //number of iterations between printing an update to standard out
   bool safe_state_mode; //when true, outputs a state file for every iteration; when false, only outputs a state when the run completes without issue
+  int safe_state_interval; //when safe_state_mode == true, number of iterations between .state files written out during run
   bool continue_mode; //true when continuing previous run; appends results to mhd.out and replaces mhd.state
   std::string x_origin, y_origin; //specifies where (0,0) position is located; each can be one of "lower", "center", or "upper"
  
@@ -118,14 +118,14 @@ private:
     x_bound_1, x_bound_2, y_bound_1, y_bound_2,
     epsilon, epsilon_viscous, rho_min,
     temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
-    output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode,
+    output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode, safe_state_interval,
     open_boundary_decay_base, x_origin, y_origin, time_integrator
   };
   static inline std::vector<std::string> m_config_names = {
     "x_bound_1","x_bound_2","y_bound_1","y_bound_2",
     "epsilon","epsilon_viscous","rho_min",
     "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
-    "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode",
+    "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode", "safe_state_interval",
     "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator"
   };
 

@@ -6,23 +6,22 @@
 
 void PlasmaDomain::run(double time_duration)
 {
+  if(safe_state_interval <= 0) safe_state_mode = false;
   max_time = m_time + time_duration;
   if(!continue_mode){
     outputPreamble();
     outputCurrentState();
   }
   while( m_time < max_time && (max_iterations < 0 || m_iter < max_iterations)){
-    #if BENCHMARKING_ON
-    InstrumentationTimer timer((std::string("iteration ") + std::to_string(m_iter)).c_str());
-    #endif
+    if(safe_state_mode && m_iter%safe_state_interval == 0) writeStateFile();
     double old_time = m_time;
     advanceTime();
     if((iter_output_interval > 0 && m_iter%iter_output_interval == 0) || (time_output_interval > 0.0
         && (int)(m_time/time_output_interval) > (int)(old_time/time_output_interval))) outputCurrentState();
-    if(safe_state_mode) writeStateFile();
+    m_iter++;
   }
+  writeStateFile();
   if(safe_state_mode) cleanUpStateFiles();
-  else writeStateFile();
 }
 
 void PlasmaDomain::advanceTime(bool verbose)
@@ -45,7 +44,6 @@ void PlasmaDomain::advanceTime(bool verbose)
 
   if(std_out_interval > 0 && m_iter%std_out_interval == 0) printUpdate(min_dt);
   m_time += min_dt;
-  m_iter++;
 }
 
 void PlasmaDomain::integrateEuler(std::vector<Grid> &grids, double time_step, double visc_coeff)

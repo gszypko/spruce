@@ -139,7 +139,7 @@ void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
 {
   std::ofstream state_file;
   if (filename_stem.compare("mhd") == 0){
-    if(safe_state_mode) state_file.open(m_out_directory/fs::path(filename_stem+std::to_string(m_iter%2)+".state"));
+    if(safe_state_mode) state_file.open(m_out_directory/fs::path(filename_stem+std::to_string((m_iter/safe_state_interval)%2)+".state"));
     else state_file.open(m_out_directory/fs::path(filename_stem+".state"));
   }
   else state_file.open(m_out_directory/fs::path(filename_stem+".state"));
@@ -160,9 +160,9 @@ void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
 //Gets rid of the older of the two state files at the end of the sim run
 void PlasmaDomain::cleanUpStateFiles() const
 {
-  fs::rename(m_out_directory/("mhd"+std::to_string((m_iter)%2)+".state"),
+  fs::rename(m_out_directory/("mhd"+std::to_string((m_iter/safe_state_interval)%2)+".state"),
           m_out_directory/("mhd.state"));
-  fs::remove(m_out_directory/("mhd"+std::to_string((m_iter-1)%2)+".state"));
+  fs::remove(m_out_directory/("mhd"+std::to_string((m_iter/safe_state_interval - 1)%2)+".state"));
 }
 
 PlasmaDomain::BoundaryCondition PlasmaDomain::stringToBoundaryCondition(const std::string str) const
@@ -215,6 +215,7 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::ydim): m_ydim = std::stoi(rhs); break;
   case static_cast<int>(Config::open_boundary_strength): open_boundary_strength = std::stod(rhs); break;
   case static_cast<int>(Config::safe_state_mode): safe_state_mode = (rhs == "true"); break;
+  case static_cast<int>(Config::safe_state_interval): safe_state_interval = std::stoi(rhs); break;
   case static_cast<int>(Config::std_out_interval): std_out_interval = std::stoi(rhs); break;
   case static_cast<int>(Config::open_boundary_decay_base): open_boundary_decay_base = std::stod(rhs); break;
   case static_cast<int>(Config::x_origin): x_origin = rhs; break;
