@@ -49,6 +49,7 @@ int main(int argc, char *argv[])
     else {
         assert(!config_path.empty() && "config file must be specified");
         assert(!settings_path.empty() && "settings file must be specified");
+        assert(!out_path.empty() && "output directory must be specified");
 
         // create subdirectory for array index, if one was explicitly given
         if(!task_array_str.empty()) out_path/=array_path;

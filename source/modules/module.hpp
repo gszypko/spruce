@@ -17,7 +17,7 @@ class PlasmaDomain;
 
 class Module {
     public:
-        Module(PlasmaDomain &pd, bool propagate_changes = true);
+        Module(PlasmaDomain &pd);
         virtual ~Module() {}
         void configureModule(std::ifstream &in_file);
         //Evolve the system in time by dt according to the Module
@@ -45,7 +45,6 @@ class Module {
         virtual void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) const;
     protected:
         PlasmaDomain& m_pd;
-        bool m_propagate_changes;
         //Apply the values (in rhs) to the appropriate Module configs (in lhs)
         virtual void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) = 0;
 };

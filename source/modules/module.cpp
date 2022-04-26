@@ -3,7 +3,7 @@
 #include "module.hpp"
 #include <vector>
 
-Module::Module(PlasmaDomain &pd, bool propagate_changes): m_pd(pd), m_propagate_changes(propagate_changes) {}
+Module::Module(PlasmaDomain &pd): m_pd(pd) {}
 
 void Module::configureModule(std::ifstream &in_file)
 {
