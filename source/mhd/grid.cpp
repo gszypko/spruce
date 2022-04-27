@@ -10,6 +10,7 @@
 
 Grid::Grid(size_t rows, size_t cols): m_rows(rows), m_cols(cols), m_size(rows * cols), m_data(rows * cols) {}
 Grid::Grid(size_t rows, size_t cols, double val): m_rows(rows), m_cols(cols), m_size(rows * cols), m_data(rows * cols, val) {}
+Grid::Grid(size_t rows, size_t cols, std::vector<double> data): m_rows(rows), m_cols(cols), m_size(rows * cols), m_data(data) {}
 Grid::Grid(): m_rows(1), m_cols(1), m_size(1), m_data(1) {}
 Grid Grid::Zero(size_t rows, size_t cols) { return Grid(rows,cols,0.0); }
 Grid Grid::Ones(size_t rows, size_t cols) { return Grid(rows,cols,1.0); }

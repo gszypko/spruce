@@ -19,6 +19,7 @@ class Grid
 public:
   Grid(size_t rows, size_t cols);
   Grid(size_t rows, size_t cols, double val);
+  Grid(size_t rows, size_t cols, std::vector<double> data);
   Grid();
   static Grid Zero(size_t rows, size_t cols);
   static Grid Ones(size_t rows, size_t cols);
