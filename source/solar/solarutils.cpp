@@ -76,7 +76,6 @@ namespace SolarUtils {
       }
     }
 
-    std::cout << "woo\n";
     MhdInp mi(xdim,ydim);
     mi.set_var(PlasmaDomain::pos_x, pos_x);
     mi.set_var(PlasmaDomain::pos_y, pos_y);
@@ -84,7 +83,6 @@ namespace SolarUtils {
     mi.set_var(PlasmaDomain::mom_y, Grid(xdim,ydim,0.0));
     mi.set_var(PlasmaDomain::bi_x, Grid(xdim,ydim,0.0));
     mi.set_var(PlasmaDomain::bi_y, Grid(xdim,ydim,0.0));
-    std::cout << "foo\n";
 
     if(problem_type == "corona"){
       double b_0 = pms.getvar("b_0");
@@ -94,7 +92,6 @@ namespace SolarUtils {
       Grid b_x, b_y;
       b_x = BipolarField(pos_x, pos_y, b_0, scale_height, 0);
       b_y = BipolarField(pos_x, pos_y, b_0, scale_height, 1);
-      std::cout << "loo\n";
       mi.set_var(PlasmaDomain::be_x, b_x);
       mi.set_var(PlasmaDomain::be_y, b_y);
       mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
@@ -119,7 +116,6 @@ namespace SolarUtils {
     mi.set_adiabatic_index(adiabatic_index);
     mi.set_duration(duration);
 
-    std::cout << "noo\n";
     return mi;
   }
 

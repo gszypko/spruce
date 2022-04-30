@@ -81,7 +81,6 @@ int main(int argc, char *argv[])
         else if (plasma_type.compare("solar") == 0) grids_inp = SolarUtils::SolarMHDInput(pms);
         else std::cerr << "Plasma type not specified ('ucnp' or 'solar')";
 
-        std::cout << "bar\n";
         // run 
         std::cout << "Running in Problem Generator Mode using the " << plasma_type << " problem generator for " << time_duration << " s...\n";
         mhdSolve(grids_inp.grids(), grids_inp.ion_mass(), grids_inp.adiabatic_index(), time_duration, out_path, config_path);
