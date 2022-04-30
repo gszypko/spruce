@@ -33,10 +33,10 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
 }
 
 //Construction with initial state from state file (continue mode)
-PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file) : m_module_handler(*this)
+PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file, bool continue_mode) : m_module_handler(*this)
 {
-  readStateFile(state_file);
-  configureSimulation(config_path,out_path,true);
+  readStateFile(state_file,continue_mode);
+  configureSimulation(config_path,out_path,continue_mode);
 }
 
 void PlasmaDomain::configureSimulation(const fs::path &config_path, const fs::path &out_path, bool continue_mode)
@@ -54,12 +54,19 @@ void PlasmaDomain::configureSimulation(const fs::path &config_path, const fs::pa
   }
   m_out_directory = out_path;
   fs::path out_filename("mhd.out");
-  if(!continue_mode){
-    fs::copy(config_path, m_out_directory/(config_path.filename()), fs::copy_options::overwrite_existing);
-    m_out_file.open(m_out_directory/out_filename);
-  } else {
+  if(continue_mode){
     m_out_file.open(m_out_directory/out_filename,std::ofstream::app);
+  } else {
+    m_out_file.open(m_out_directory/out_filename);
+    fs::path new_config_path = m_out_directory/(config_path.filename());
+    fs::directory_entry new_config_dir(new_config_path);
+    if(!(new_config_dir.exists() && fs::equivalent(config_path,new_config_path))){
+      std::cout << "Copying " << config_path.string() << " into " << m_out_directory.string() << "...\n";
+      fs::copy(config_path, new_config_path, fs::copy_options::overwrite_existing);
+    }
+    else std::cout << config_path.string() << " already located in output directory.\n";
   }
+  assert(validateCellSizesAndPositions(m_grids[d_x],m_grids[pos_x],0) && validateCellSizesAndPositions(m_grids[d_y],m_grids[pos_y],1) && "Cell sizes and positions must correspond");
   readConfigFile(config_path);
   computeIterationBounds();
   computeConstantTerms();
@@ -117,4 +124,22 @@ Grid PlasmaDomain::convertCellSizesToCellPositions(const Grid& d, int index, std
   } else assert(origin_position == "lower" && "origin_position must be one of upper, lower, or center");
 
   return pos;
+}
+
+//Verifies that spacings d (in x-direction for index==0 and y-direction for index==1) correctly
+//matches positions pos (corresponding to index as above), within fractional tolerance
+bool PlasmaDomain::validateCellSizesAndPositions(const Grid& d, const Grid& pos, int index, double tolerance)
+{
+  int xdim = d.rows(), ydim = d.cols();
+  bool valid = true;
+
+  for(int i=0; i<xdim-1; i++){
+    for(int j=0; j<ydim-1; j++){
+      int i_next = i+(1-index);
+      int j_next = j+index;
+      double expected = pos(i,j) + 0.5*d(i,j) + 0.5*d(i_next,j_next);
+      valid = valid && (std::abs((expected - pos(i_next,j_next))/expected) < tolerance);
+    }
+  }
+  return valid;
 }

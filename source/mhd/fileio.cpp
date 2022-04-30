@@ -7,7 +7,7 @@
 //This function will abort execution if an invalid variable name is encountered
 //Does not check that the variables read from the file are a complete
 //description of the plasma, nor that none of them are contradictory
-void PlasmaDomain::readStateFile(const fs::path &state_file)
+void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
 {  
   std::ifstream in_file(state_file.string());
 
@@ -39,29 +39,30 @@ void PlasmaDomain::readStateFile(const fs::path &state_file)
   std::getline(ss_time,element,'=');
   assert(element == "t");
   std::getline(ss_time,element);
-  m_time = std::stod(element);
+  if(continue_mode) m_time = std::stod(element);
+  else m_time = 0.0;
 
   while(std::getline(in_file, line)){
     //Ensure that variable in file is valid
     auto it = std::find(m_var_names.begin(),m_var_names.end(),line);
-    assert(it != m_var_names.end());
+    assert(it != m_var_names.end() && "Variable name in state file not recognized");
     auto index = std::distance(m_var_names.begin(),it);
     Grid curr_grid(m_xdim,m_ydim);
     //Read in Grid corresponding to variable
-    int i=0; int j=0;
+    int j;
     std::string row; std::string el;
-    std::getline(in_file,line);
-    i=0;
-    std::istringstream ss_line(line);
-    while(std::getline(ss_line,row,';')){
+    for(int i=0; i<m_xdim; i++){
       j=0;
+      std::getline(in_file,row);
       std::istringstream ss_row(row);
+      assert((std::isdigit(ss_row.peek()) || (ss_row.peek()=='-')) && "Encountered non-numerical row in .state file sooner than expected");
       while(std::getline(ss_row,el,',')){
+        assert(j < m_ydim && "Row in .state file is too long (greater than ydim)");
         curr_grid(i,j) = std::stod(el);
         j++;
       }
-      i++;
     }
+    assert(!std::isdigit(in_file.peek()) && !(in_file.peek()=='-') && "Encountered more rows in a .state file grid than expected");
     m_grids[index] = curr_grid;
   }
   in_file.close();
@@ -152,16 +153,17 @@ void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
   state_file << "t=" << m_time << std::endl;
   for(int i : state_vars){
     state_file << m_var_names[i] << std::endl;
-    state_file << m_grids[i].format(',',';',precision);
+    state_file << m_grids[i].format(',','\n',precision);
   }
   state_file.close();
 }
 
-//Gets rid of the older of the two state files at the end of the sim run
-void PlasmaDomain::cleanUpStateFiles() const
+//Gets rid of the older of the two state files, named mhd0.state and mhd1.state, at the end of the sim run
+//The remaining one is renamed to [filename_stem].state
+void PlasmaDomain::cleanUpStateFiles(std::string filename_stem) const
 {
   fs::rename(m_out_directory/("mhd"+std::to_string((m_iter/safe_state_interval)%2)+".state"),
-          m_out_directory/("mhd.state"));
+          m_out_directory/(filename_stem+".state"));
   fs::remove(m_out_directory/("mhd"+std::to_string((m_iter/safe_state_interval - 1)%2)+".state"));
 }
 
@@ -218,8 +220,8 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::safe_state_interval): safe_state_interval = std::stoi(rhs); break;
   case static_cast<int>(Config::std_out_interval): std_out_interval = std::stoi(rhs); break;
   case static_cast<int>(Config::open_boundary_decay_base): open_boundary_decay_base = std::stod(rhs); break;
-  case static_cast<int>(Config::x_origin): x_origin = rhs; break;
-  case static_cast<int>(Config::y_origin): y_origin = rhs; break;
+  // case static_cast<int>(Config::x_origin): x_origin = rhs; break;
+  // case static_cast<int>(Config::y_origin): y_origin = rhs; break;
   case static_cast<int>(Config::time_integrator): time_integrator = stringToTimeIntegrator(rhs); break;
   default: break;
   }

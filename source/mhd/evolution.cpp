@@ -20,8 +20,12 @@ void PlasmaDomain::run(double time_duration)
         && (int)(m_time/time_output_interval) > (int)(old_time/time_output_interval))) outputCurrentState();
     m_iter++;
   }
-  writeStateFile();
-  if(safe_state_mode) cleanUpStateFiles();
+  
+  if(safe_state_mode){
+    writeStateFile();
+    cleanUpStateFiles("end");
+  }
+  else writeStateFile("end");
 }
 
 void PlasmaDomain::advanceTime(bool verbose)

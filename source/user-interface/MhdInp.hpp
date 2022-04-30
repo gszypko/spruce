@@ -6,6 +6,8 @@
 #include <iostream> // std::cerr, std::endl, std::cout
 #include <vector> // std::vector
 #include <string> // std::string, std::getline
+#include <filesystem>
+namespace fs = std::filesystem;
 
 class MhdInp
 {
@@ -13,7 +15,8 @@ public:
     MhdInp& operator=(const MhdInp& other);
     MhdInp(size_t Nx,size_t Ny);
     MhdInp() : MhdInp(1,1) {}
-    void set_var(const int& var,const Grid& grid,const std::string origin_pos="");
+    // void read_custom_input_csvs(const fs::path &grid_path);
+    void set_var(int var,const Grid& grid,const std::string origin_pos = "");
     void set_ion_mass(double mass);
     void set_adiabatic_index(double index);
     void set_duration(double duration);

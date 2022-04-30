@@ -15,8 +15,8 @@ PlasmaSettings::PlasmaSettings(fs::path settings_path, int array):
 void PlasmaSettings::load_settings(const fs::path& settings_path)
 {
     // mat_in[i] contains vector with [name unit values]
-    std::vector<std::vector<std::string>> mat_in = readCSV(settings_path);
-    std::vector<std::vector<std::string>> vars(mat_in.size());
+    std::vector<std::vector<std::string> > mat_in = readCSV(settings_path);
+    std::vector<std::vector<std::string> > vars(mat_in.size());
     for (int i = 0; i < mat_in.size(); i++){
         for (int j = 2; j < mat_in[i].size(); j++){
             vars[i].push_back(mat_in[i][j]);

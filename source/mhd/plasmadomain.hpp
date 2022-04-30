@@ -45,12 +45,12 @@ public:
     "press","thermal_energy","kinetic_energy","div_bi","bi_x","bi_y","dt","v_x","v_y","n",
     "div_be","b_hat_x","b_hat_y","b_magnitude","v_a"
   };
-  static inline std::vector<int> state_vars = {d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,grav_x,grav_y};
+  static inline std::vector<int> state_vars = {d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,bi_x,bi_y,grav_x,grav_y};
 
   //Constructors and Initialization
   PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const std::vector<Grid>& input_vars, double ion_mass, double adiabatic_index);
-  PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file);
-  void readStateFile(const fs::path &state_file);
+  PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file, bool continue_mode);
+  void readStateFile(const fs::path &state_file, bool continue_mode = true);
   void readConfigFile(const fs::path &config_file);
 
   //Time Evolution
@@ -63,6 +63,8 @@ public:
   //For example, x_origin = "center" and y_origin = "center" places the origin
   //at the center of the domain.
   static Grid convertCellSizesToCellPositions(const Grid& d, int index, std::string origin_position);
+
+  static bool validateCellSizesAndPositions(const Grid& d, const Grid& pos, int index, double tolerance = 1.0e-4);
 
 private:
 
@@ -112,7 +114,7 @@ private:
   bool safe_state_mode; //when true, outputs a state file for every iteration; when false, only outputs a state when the run completes without issue
   int safe_state_interval; //when safe_state_mode == true, number of iterations between .state files written out during run
   bool continue_mode; //true when continuing previous run; appends results to mhd.out and replaces mhd.state
-  std::string x_origin, y_origin; //specifies where (0,0) position is located; each can be one of "lower", "center", or "upper"
+  // std::string x_origin, y_origin; //specifies where (0,0) position is located; each can be one of "lower", "center", or "upper"
  
   enum class Config {
     x_bound_1, x_bound_2, y_bound_1, y_bound_2,
@@ -169,7 +171,7 @@ private:
   void outputCurrentState();
   void writeGridToOutput(const Grid& grid, std::string var_name);
   void writeStateFile(std::string filename_stem = "mhd",int precision = -1) const;
-  void cleanUpStateFiles() const;
+  void cleanUpStateFiles(std::string filename_stem = "end") const;
   void printUpdate(double dt) const;
 
   void setOutputFlag(std::string var_name, bool new_flag);

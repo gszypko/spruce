@@ -75,26 +75,34 @@ namespace SolarUtils {
         else pos_y(i,j) = pos_y(i,j-1) + 0.5*d_y(i,j-1) + 0.5*d_y(i,j);
       }
     }
+
+    std::cout << "woo\n";
     MhdInp mi(xdim,ydim);
+    mi.set_var(PlasmaDomain::pos_x, pos_x);
+    mi.set_var(PlasmaDomain::pos_y, pos_y);
     mi.set_var(PlasmaDomain::mom_x, Grid(xdim,ydim,0.0));
     mi.set_var(PlasmaDomain::mom_y, Grid(xdim,ydim,0.0));
+    mi.set_var(PlasmaDomain::bi_x, Grid(xdim,ydim,0.0));
+    mi.set_var(PlasmaDomain::bi_y, Grid(xdim,ydim,0.0));
+    std::cout << "foo\n";
 
     if(problem_type == "corona"){
-      const double b_0 = pms.getvar("b_0");
-      mi.set_var(PlasmaDomain::d_x,d_x,"center");
-      mi.set_var(PlasmaDomain::d_y,d_y,"lower");
+      double b_0 = pms.getvar("b_0");
+      mi.set_var(PlasmaDomain::d_x,d_x);
+      mi.set_var(PlasmaDomain::d_y,d_y);
       mi.set_var(PlasmaDomain::temp, Grid(xdim,ydim,init_temp));
       Grid b_x, b_y;
       b_x = BipolarField(pos_x, pos_y, b_0, scale_height, 0);
       b_y = BipolarField(pos_x, pos_y, b_0, scale_height, 1);
+      std::cout << "loo\n";
       mi.set_var(PlasmaDomain::be_x, b_x);
       mi.set_var(PlasmaDomain::be_y, b_y);
       mi.set_var(PlasmaDomain::grav_y, SolarGravity(BASE_GRAV,R_SUN,pos_y));
       mi.set_var(PlasmaDomain::grav_x, Grid(xdim,ydim,0.0));
       mi.set_var(PlasmaDomain::rho, HydrostaticFalloff(base_rho,scale_height,pos_y));
     } else if(problem_type == "gaussian"){
-      mi.set_var(PlasmaDomain::d_x,d_x,"center");
-      mi.set_var(PlasmaDomain::d_y,d_y,"center");
+      mi.set_var(PlasmaDomain::d_x,d_x);
+      mi.set_var(PlasmaDomain::d_y,d_y);
       double stdevx = pms.getvar("stdevx");
       double stdevy = pms.getvar("stdevy");
       double b_x = pms.getvar("b_x");
@@ -111,6 +119,7 @@ namespace SolarUtils {
     mi.set_adiabatic_index(adiabatic_index);
     mi.set_duration(duration);
 
+    std::cout << "noo\n";
     return mi;
   }
 
