@@ -50,7 +50,7 @@ The compiled executable includes a number of automated initial state generators,
 
 The variables that need to be specified throughout the simulation domain at run-time are `{d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,bi_,bi_y,grav_x,grav_y}`. These are
 - `d_x` and `d_y`: The width of each cell, in cm, in the x- and y-directions respectively. In the current implementation these need not be uniform, but they can only change along the corresponding direction. That is, `d_x` must be the same for all y-values given a corresponding x-value, and likewise for `d_y`.
-- `pos_x` and `pos_y`: The positions of each cell's center, in cm, in the x- and y-directions. These must correspond to the given `d_x` and `d_y`, but the position of the origin is up to the user to decide.
+- `pos_x` and `pos_y`: The positions of each cell's center, in cm, in the x- and y-directions. These must correspond to the given `d_x` and `d_y` such that `pos_x[i+1,j]` = `pos_x[i,j]+0.5*d_x[i,j]+0.5*d_x[i+1,j]`, and so on. Note that these quantities are not used for the purposes of the simulation--all calculations use `d_x` and `d_y`--but they allow the user to specify the origin of their system.
 - `rho`: The mass density, in g cm^-3.
 - `temp`: The temperature, in K
 - `mom_x` and `mom_y`: The momentum density, in erg cm^-3
@@ -80,7 +80,7 @@ where the bracketed text should be repalced as follows:
 - `adiabatic index`: The adiabatic index to be used in the simulation. This is used to convert between pressure `press` and thermal energy `thermal_energy`.
 - `start time`: The time, in seconds, at which to start the simulation run. Unless continuing from a previous run, this should probably be set to zero.
 - `variable name`: One of the variable names given in the list above. These can be specified in any order, and any variables not specified will be set to zero.
-- `variable grid`: The values of the immediately previous `variable name` specified at every position in the simulation grid. This should be formatted as a set of comma-separated values, where each row corresponds to an x-value, running from top to bottom. Each column corresponds to a y-value, running from left to right. This means that each `variable grid` should consist of `xdim` rows and `ydim` columns, with the conventional matrix indexing `(i,j)` corresponding to the x- and y-indices, respectively.
+- `variable grid`: The values of the immediately previous `variable name` specified at every position in the simulation grid. This should be formatted as a set of comma-separated values, where each row corresponds to an x-value, running from top to bottom. Each column corresponds to a y-value, running from left to right. This means that each `variable grid` should consist of `xdim` rows and `ydim` columns, with the conventional matrix indexing `(i,j)` corresponding to the x- and y-indices, respectively. In other words, index `(0,0)` should be located at the top-left corner with x increasing downward and y increasing to the right.
 
 See the `example.state` file for an example of a correctly formatted `.state` file.
 
@@ -127,6 +127,10 @@ module_name = true|false
 ```
 
 which can be included anywhere in the `.config` file. When the `module` is set to `true`, it will be activated at run time and fed the specified module configs in the `{}`. When the `module` is set to `false`, it will not be activated and the module configs following it in the `{}` will be ignored. 
+
+# The Output File
+
+**UNDER CONSTRUCTION**
 
 # Modules
 

@@ -237,9 +237,9 @@ void PlasmaDomain::propagateChanges()
 void PlasmaDomain::propagateChanges(std::vector<Grid> &grids)
 {
   catchUnderdensity(grids);
+  updateGhostZones(grids);
   recomputeTemperature(grids);
   recomputeDerivedVariables(grids);
-  updateGhostZones(grids);
 }
 
 //Recompute pressure, energy, velocity, radiative loss rate, dt, dt_thermal, dt_rad
@@ -388,39 +388,29 @@ void PlasmaDomain::openBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int
   assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
   assert((i1 == i2 || j1 == j2) && "Points to extrapolate must be x-aligned or y-aligned");
-  Grid &m_pos_x = grids[pos_x], &m_pos_y = grids[pos_y];
+  bool x_boundary = (j1 == j2);
+  Grid &m_d_x = grids[d_x], &m_d_y = grids[d_y];
 
   Grid &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y], &m_rho = grids[rho], &m_thermal_energy = grids[thermal_energy];
 
-  // m_rho(i1,j1) = 0.25*m_rho(i3,j3); m_rho(i2,j2) = 0.5*m_rho(i3,j3);
-  // m_thermal_energy(i1,j1) = 0.25*m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = 0.5*m_thermal_energy(i3,j3);
-  double delta_last = std::abs(m_pos_x(i3,j3) - m_pos_x(i4,j4) + m_pos_y(i3,j3) - m_pos_y(i4,j4));
-  double scale_2 = std::pow(open_boundary_decay_base,std::abs(m_pos_x(i2,j2) - m_pos_x(i3,j3) + m_pos_y(i2,j2) - m_pos_y(i3,j3))/delta_last);
-  double scale_1 = std::pow(open_boundary_decay_base,std::abs(m_pos_x(i1,j1) - m_pos_x(i3,j3) + m_pos_y(i1,j1) - m_pos_y(i3,j3))/delta_last);
+  double delta_last = x_boundary ? m_d_x(i3,j3) : m_d_y(i3,j3);
+  double dist23 = x_boundary ? 0.5*(m_d_x(i2,j2) + m_d_x(i3,j3)) : 0.5*(m_d_y(i2,j2) + m_d_y(i3,j3));
+  double dist12 = x_boundary ? 0.5*(m_d_x(i1,j1) + m_d_x(i2,j2)) : 0.5*(m_d_y(i1,j1) + m_d_y(i2,j2));
+  double scale_2 = std::pow(open_boundary_decay_base,dist23/delta_last);
+  double scale_1 = std::pow(open_boundary_decay_base,dist12/delta_last);
   m_rho(i1,j1) = scale_1*m_rho(i3,j3); m_rho(i2,j2) = scale_2*m_rho(i3,j3);
   m_thermal_energy(i1,j1) = scale_1*m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = scale_2*m_thermal_energy(i3,j3);
 
   double vel_x = m_mom_x(i3,j3)/m_rho(i3,j3);
   double vel_y = m_mom_y(i3,j3)/m_rho(i3,j3);
 
-  // double boundary_strength = 1.0;
   double c_s = std::sqrt(m_adiabatic_index*grids[press](i3,j3)/m_rho(i3,j3));
   double boost_vel = open_boundary_strength*c_s;
   if(i2 > i1 || j2 > j1) boost_vel *= -1.0;
   
   //Determine ghost cell velocity s.t. interpolated velocity at interior cell boundary is some multiple of sound speed, outward
-  double dist = std::abs(m_pos_x(i3,j3) - m_pos_x(i2,j2) + m_pos_y(i3,j3) - m_pos_y(i2,j2));
-  if(i1 == i2){
-    double boundary_vel;
-    if(j1 > j2) boundary_vel = std::max(0.0, vel_y + boost_vel);
-    else { assert(j2 > j1); boundary_vel = std::min(0.0, vel_y + boost_vel); }
-    double ghost_vel = (dist*(boundary_vel) - 0.5*grids[d_y](i2,j2)*vel_y)/(0.5*grids[d_y](i3,j3)); //add vel_y to c_s? sound speed relative to current bulk velocity?
-    m_mom_x(i1,j1) = m_rho(i1,j1)*vel_x;
-    m_mom_x(i2,j2) = m_rho(i2,j2)*vel_x;
-    m_mom_y(i1,j1) = m_rho(i1,j1)*ghost_vel;
-    m_mom_y(i2,j2) = m_rho(i2,j2)*ghost_vel;
-  } else {
-    assert(j1 == j2);
+  double dist = dist23;
+  if(x_boundary){
     double boundary_vel;
     if(i1 > i2) boundary_vel = std::max(0.0, vel_x + boost_vel);
     else { assert(i2 > i1); boundary_vel = std::min(0.0, vel_x + boost_vel); }
@@ -429,13 +419,24 @@ void PlasmaDomain::openBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int
     m_mom_x(i2,j2) = m_rho(i2,j2)*ghost_vel;
     m_mom_y(i1,j1) = m_rho(i1,j1)*vel_y;
     m_mom_y(i2,j2) = m_rho(i2,j2)*vel_y;
+  } else {
+    assert(i1 == i2);
+    double boundary_vel;
+    if(j1 > j2) boundary_vel = std::max(0.0, vel_y + boost_vel);
+    else { assert(j2 > j1); boundary_vel = std::min(0.0, vel_y + boost_vel); }
+    double ghost_vel = (dist*(boundary_vel) - 0.5*grids[d_y](i2,j2)*vel_y)/(0.5*grids[d_y](i3,j3)); //add vel_y to c_s? sound speed relative to current bulk velocity?
+    m_mom_x(i1,j1) = m_rho(i1,j1)*vel_x;
+    m_mom_x(i2,j2) = m_rho(i2,j2)*vel_x;
+    m_mom_y(i1,j1) = m_rho(i1,j1)*ghost_vel;
+    m_mom_y(i2,j2) = m_rho(i2,j2)*ghost_vel;
   }
 }
 
-//Applies the wall boundary condition to the cells indexed by the given indices
+//Applies the reflect boundary condition to the cells indexed by the given indices
 //assuming that (i1,j1) is at the edge of the domain and (i4,j4) is on the interior
+//Matches the thermal energy and mass density of the closest interior (i.e. non-ghost) cell
+//throughout the ghost zone and halts advection at the boundary
 //Assumes two ghost zones (i.e. N_GHOST == 2), will abort if not
-//Meant to be called repeatedly during advanceTime; energy is handled, not temperature
 void PlasmaDomain::reflectBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
 {
   assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
@@ -443,89 +444,19 @@ void PlasmaDomain::reflectBoundaryExtrapolate(std::vector<Grid> &grids, int i1, 
   Grid &m_rho = grids[rho], &m_thermal_energy = grids[thermal_energy], &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y];
   m_rho(i1,j1) = m_rho(i3,j3); m_rho(i2,j2) = m_rho(i3,j3); //Match density of nearest interior cell
   m_thermal_energy(i1,j1) = m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = m_thermal_energy(i3,j3); //Match temperature of nearest interior cell
-  m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0; //Halt all advection at the wall boundary
+  m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0;
   m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
 }
 
-//Applies the wall boundary condition to the cells indexed by the given indices
+//Applies the fixed boundary condition to the cells indexed by the given indices
 //assuming that (i1,j1) is at the edge of the domain and (i4,j4) is on the interior
+//Halts all advection at the boundary; leaves all other quantities in the ghost zones fixed
 //Assumes two ghost zones (i.e. N_GHOST == 2), will abort if not
-//Meant to be called repeatedly during advanceTime; energy is handled, not temperature
 void PlasmaDomain::fixedBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
 {
   assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-  // Currently does nothing; leaves the ghost cells at their initial values
-  // assert(N_GHOST == 2 && "This function assumes two ghost zones");
+  assert(N_GHOST == 2 && "This function assumes two ghost zones");
   Grid &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y];
-  m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0; //Halt all advection at the wall boundary
+  m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0;
   m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
 }
-
-// // Applies two-dimensional Sovitzky-Golay filter to member variable m_grids
-// // with 3x3 window and 2x2-order fitting polynomials
-// void PlasmaDomain::filterSavitzkyGolay()
-// {
-//   filterSavitzkyGolay(m_grids);
-// }
-
-// // Applies two-dimensional Sovitzky-Golay filter to given Grid vector
-// // with 5x5 window and 3x3-order fitting polynomials
-// void PlasmaDomain::filterSavitzkyGolay(std::vector<Grid> &grids)
-// {
-//   assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-//   std::vector<Grid> filtered = grids;
-//   #pragma omp parallel
-//   {
-//     #pragma omp for
-//     for(int varname : {rho, thermal_energy}){
-//       singleVarSavitzkyGolay(grids[varname]);
-//     }
-//   }
-//   propagateChanges(grids);
-// }
-
-// void PlasmaDomain::singleVarSavitzkyGolay(Grid &grid)
-// {
-//   assert(N_GHOST == 2 && "S-G filtering implementation assumes two ghost zones");
-//   static const double coeff[] =
-//     {+7.346939E-03,	-2.938776E-02,	-4.163265E-02,	-2.938776E-02,	+7.346939E-03,
-//     -2.938776E-02,	+1.175510E-01,	+1.665306E-01,	+1.175510E-01,	-2.938776E-02,
-//     -4.163265E-02,	+1.665306E-01,	+2.359184E-01,  +1.665306E-01,  -4.163265E-02,
-//     -2.938776E-02,  +1.175510E-01,  +1.665306E-01,  +1.175510E-01,  -2.938776E-02,
-//     +7.346939E-03,  -2.938776E-02,  -4.163265E-02,  -2.938776E-02,  +7.346939E-03}; //from Chandra Sekhar, 2015
-//   int xdim = grid.rows();
-//   int ydim = grid.cols();
-//   Grid filtered = grid;
-//   for (int center_i = m_xl; center_i <= m_xu; center_i++){
-//     for(int center_j = m_yl; center_j <= m_yu; center_j++){
-//       int i[] = {center_i-2, center_i-1, center_i, center_i+1, center_i+2};
-//       int j[] = {center_j-2, center_j-1, center_j, center_j+1, center_j+2};
-//       if(x_bound_1 == BoundaryCondition::Periodic && x_bound_2 == BoundaryCondition::Periodic){
-//         i[0] = (i[0]+xdim)%xdim;
-//         i[1] = (i[1]+xdim)%xdim;
-//         i[3] = (i[3]+xdim)%xdim;
-//         i[4] = (i[4]+xdim)%xdim;
-//       }
-//       if(y_bound_1 == BoundaryCondition::Periodic && y_bound_2 == BoundaryCondition::Periodic){
-//         j[0] = (j[0]+ydim)%ydim;
-//         j[1] = (j[1]+ydim)%ydim;
-//         j[3] = (j[3]+ydim)%ydim;
-//         j[4] = (j[4]+ydim)%ydim;
-//       }
-//       double filtered_val = 0.0;
-//       // double total_weight = 0.0;
-//       for(int u = 0; u < 5; u++){
-//         for(int v = 0; v < 5; v++){
-//           int curr_i = i[u], curr_j = j[v];
-//           // if(curr_i >= m_xl && curr_i <= m_xu && curr_j >= m_yl && curr_j <= m_yu){
-//             filtered_val = filtered_val + coeff[u*5 + v]*grid(curr_j,curr_j);
-//             // total_weight = total_weight + coeff[u*5 + v];
-//           // }
-//         }
-//       }
-//       // filtered_val = filtered_val/total_weight;
-//       filtered(center_i,center_j) = filtered_val;
-//     }
-//   }
-//   grid = filtered;
-// }
