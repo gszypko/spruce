@@ -11,29 +11,19 @@ The included Makefile can be used to compile by invoking `make` from the command
 
 The resulting simulation will be output as a time series to the file `mhd.out` in the run's output directory. Other files written to the output directory are:
 - `init.state`: contains the full initial state of the system
-- `mhd.state`: contains the full final state of the system
+- `end.state`: contains the full final state of the system
 - A copy of the `.config` file used for the run
 - `plasma.settings`: (if run in Problem Generator Mode) encodes the particular `settings` used for the run. Note that this is not the same as the original `.settings` file if multiple sets of `settings` are possible from that file, depending on the specified `job_index`
 
-### Custom Input Mode (Preferred)
+### Custom Input Mode
 
-A user-generated set of grids, in the form of `.csv` files, can be specified to initialize the simulation. Running in this mode requires the following syntax **UNDER CONSTRUCTION**:
+A user-generated set of grids, in the form of a `.state` file, can be specified to initialize the simulation. See below for more details on formatting a `.state` file. Running in this mode requires the following syntax:
 
-`./run  [-g grid_directory] [-c config_file] [-o out_directory]`
-- `-g` or `--grids` (Required) specifies the directory containing individual `.csv` files, each corresponding to a variable. **INCLUDE INFO HERE ABOUT VARIABLES TO BE SPECIFIED**
+`./run  [-g grid_file] [-c config_file] [-o out_directory] [-d time_duration]`
+- `-g` or `--grids` (Required) specifies the `.state` file to be used to initialize the simulation run
 - `-c` or `--config` (Required) specifies the `.config` file to be used for configuring the simulation run. 
 - `-o` or `--output` (Required) specifies the name of the directory to which all output will be written. If the directory does not exist it will be created, and existing simulation outputs in that directory will be overwritten. 
-
-### Problem Generator Mode (Deprecated)
-
-The compiled executable includes a number of automated initial state generators, the specifics of which are dictated by a human-readable `.settings` file. In this mode, the initial state will be generated at run-time and the simulation will immediately proceed from there. Running in this mode requires the following syntax:
-
-`./run [-t solar|ucnp] [-s settings_file] [-i job_index] [-c config_file] [-o out_directory]`
-- `-t` or `--type` (Required) specifies the problem generator to use. Currently the only valid `type`s are `ucnp` (ultracold neutral plasma) and `solar` (solar coronal plasma). 
-- `-s` or `--settings` (Required) specifies the `.settings` file containing `settings` that are fed into the problem generator. The `settings` to be specified are dictated by the `type` of the problem generator being used.
-- `-i` or `--index` (Optional) specifies the index (starting at zero) of the combination of `settings` to use. The `.settings` file can be written to allow multiple values for any number of different `settings` (see below). Specifying the `index` of the run uniquely specifies a combination of those `settings` to use. Defaults to `0` if not specified. If specified, output for the run will be written to a subdirectory of `out_directory`: `out_directory/array0/`, `out_directory/array1/`, etc.
-- `-c` or `--config` (Required) specifies the `.config` file to be used for configuring the simulation run. 
-- `-o` or `--output` (Required) specifies the name of the directory to which all output will be written. If the directory does not exist it will be created, and existing simulation outputs in that directory will be overwritten. 
+- `-d` or `--duration` (Required) specifies how long the simulation is to be continued, in units of simulation time.
 
 ### Continue Mode
 
@@ -43,10 +33,56 @@ Any previous run can be continued from where it left off, appending to the exist
 - `-p` or `--prev` (Required) specifies the `out_directory` of the previous simulation run to be continued. Note that if the previous run had a `job_index` specified, the corresponding subdirectory must also be specified.
 - `-d` or `--duration` (Required) specifies how long the simulation is to be continued, in units of simulation time.
 
+### Problem Generator Mode (Deprecated)
 
-# Custom Input Files
+The compiled executable includes a number of automated initial state generators, the specifics of which are dictated by a human-readable `.settings` file. In this mode, the initial state will be generated at run-time and the simulation will immediately proceed from there. Running in this mode requires the following syntax:
 
-The variables that need to be specified throughout the simulation domain at run-time are `{d_x,d_y,rho,temp,mom_x,mom_y,be_x,be_y,bi_,bi_y,grav_x,grav_y}`. The dimension of the grid in each direction is set implicitly in each direction by the data given; the files given must all match.
+`./run [-t solar|ucnp] [-s settings_file] [-i job_index] [-c config_file] [-o out_directory] [-d time_duration]`
+- `-t` or `--type` (Required) specifies the problem generator to use. Currently the only valid `type`s are `ucnp` (ultracold neutral plasma) and `solar` (solar coronal plasma). 
+- `-s` or `--settings` (Required) specifies the `.settings` file containing `settings` that are fed into the problem generator. The `settings` to be specified are dictated by the `type` of the problem generator being used.
+- `-i` or `--index` (Optional) specifies the index (starting at zero) of the combination of `settings` to use. The `.settings` file can be written to allow multiple values for any number of different `settings` (see below). Specifying the `index` of the run uniquely specifies a combination of those `settings` to use. Defaults to `0` if not specified. If specified, output for the run will be written to a subdirectory of `out_directory`: `out_directory/array0/`, `out_directory/array1/`, etc.
+- `-c` or `--config` (Required) specifies the `.config` file to be used for configuring the simulation run. 
+- `-o` or `--output` (Required) specifies the name of the directory to which all output will be written. If the directory does not exist it will be created, and existing simulation outputs in that directory will be overwritten. 
+- `-d` or `--duration` (Required) specifies how long the simulation is to be continued, in units of simulation time.
+
+
+# The State File
+
+The variables that need to be specified throughout the simulation domain at run-time are `{d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,bi_,bi_y,grav_x,grav_y}`. These are
+- `d_x` and `d_y`: The width of each cell, in cm, in the x- and y-directions respectively. In the current implementation these need not be uniform, but they can only change along the corresponding direction. That is, `d_x` must be the same for all y-values given a corresponding x-value, and likewise for `d_y`.
+- `pos_x` and `pos_y`: The positions of each cell's center, in cm, in the x- and y-directions. These must correspond to the given `d_x` and `d_y`, but the position of the origin is up to the user to decide.
+- `rho`: The mass density, in g cm^-3.
+- `temp`: The temperature, in K
+- `mom_x` and `mom_y`: The momentum density, in erg cm^-3
+- `be_x` and `be_y`: The external magnetic field, in gauss. This magnetic field is held constant, and can act on the plasma but cannot be acted on by it.
+- `bi_x` and `bi_y`: The induced magnetic field, in gauss. This is the magnetic field generated by motion of the plasma. A self-consistent MHD equilibrium, for instance, should have its field specified using `bi_x` and `bi_y` while `be_x` and `be_y` are set to zero.
+- `grav_x` and `grav_y`: The acceleration due to gravity at each position, in cm s^-2.
+
+The state file must be formatted as follows:
+```
+xdim,ydim
+[xdim],[ydim]
+ion_mass
+[ion mass]
+adiabatic_index
+[adiabatic index]
+t=[start time]
+[variable name]
+[variable grid]
+[variable name]
+[variable grid]
+...
+```
+where the bracketed text should be repalced as follows:
+- `xdim`: The number of grid cells in the x-direction.
+- `ydim`: The number of grid cells in the y-direction.
+- `ion mass`: The ion mass to be used in the ideal MHD equations, in grams. This is used to convert between `rho` and number density `n`.
+- `adiabatic index`: The adiabatic index to be used in the simulation. This is used to convert between pressure `press` and thermal energy `thermal_energy`.
+- `start time`: The time, in seconds, at which to start the simulation run. Unless continuing from a previous run, this should probably be set to zero.
+- `variable name`: One of the variable names given in the list above. These can be specified in any order, and any variables not specified will be set to zero.
+- `variable grid`: The values of the immediately previous `variable name` specified at every position in the simulation grid. This should be formatted as a set of comma-separated values, where each row corresponds to an x-value, running from top to bottom. Each column corresponds to a y-value, running from left to right. This means that each `variable grid` should consist of `xdim` rows and `ydim` columns, with the conventional matrix indexing `(i,j)` corresponding to the x- and y-indices, respectively.
+
+See the `example.state` file for an example of a correctly formatted `.state` file.
 
 # The Config File
 
