@@ -45,6 +45,8 @@ int main(int argc, char *argv[])
     if(!grid_path.empty()){
         fs::create_directories(out_path);
         if(grid_path.extension().string() == ".state"){ // Specify initial state with .state file
+            fs::directory_entry grid_path_dir(grid_path);
+            assert(grid_path_dir.exists() && grid_path_dir.is_regular_file() && "Given state file must exist and be a file");
             std::cout << "Running in Custom Input Mode from the state file " << grid_path.string() << " for " << time_duration << " s...\n";
             mhdSolve(grid_path, config_path, out_path, time_duration);
             return 0;

@@ -4,15 +4,25 @@
 #include "instrumentor.hpp"
 #endif
 
-//Erase all occurences of ' ', '\t', and '\n' in str.
+//Erase all occurences of whitesapce characters in str.
 //Modifies in-place.
 void clearWhitespace(std::string &str)
 {
   if(str.empty()) return;
   auto new_end = std::remove(str.begin(),str.end(),' ');
-  new_end = std::remove(str.begin(),new_end,'\t');
-  new_end = std::remove(str.begin(),new_end,'\n');
+  for (char c : {'\t','\n','\v','\b','\r','\f','\a'}){
+    new_end = std::remove(str.begin(),new_end,c);
+  }
   str.erase(new_end, str.end());
+}
+
+//Wrapper for using std::getline, then removing all whitespace characters from the result
+//Meant to avoid strange behavior when reading directly from a file (e.g. ifstream)
+std::istream &getCleanedLine(std::istream &is, std::string &str)
+{
+  std::getline(is,str);
+  clearWhitespace(str);
+  return is;
 }
 
 //Splits string into vector of substrings, delimited by delim

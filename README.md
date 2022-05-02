@@ -48,7 +48,7 @@ The compiled executable includes a number of automated initial state generators,
 
 # The State File
 
-The variables that need to be specified throughout the simulation domain at run-time are `{d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,bi_,bi_y,grav_x,grav_y}`. These are
+The variables that need to be specified throughout the simulation domain at run-time are `{d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,bi_x,bi_y,grav_x,grav_y}`. These are
 - `d_x` and `d_y`: The width of each cell, in cm, in the x- and y-directions respectively. In the current implementation these need not be uniform, but they can only change along the corresponding direction. That is, `d_x` must be the same for all y-values given a corresponding x-value, and likewise for `d_y`.
 - `pos_x` and `pos_y`: The positions of each cell's center, in cm, in the x- and y-directions. These must correspond to the given `d_x` and `d_y` such that `pos_x[i+1,j]` = `pos_x[i,j]+0.5*d_x[i,j]+0.5*d_x[i+1,j]`, and so on. Note that these quantities are not used for the purposes of the simulation--all calculations use `d_x` and `d_y`--but they allow the user to specify the origin of their system.
 - `rho`: The mass density, in g cm^-3.

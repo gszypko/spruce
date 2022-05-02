@@ -15,6 +15,10 @@
 //Modifies in-place.
 void clearWhitespace(std::string &str);
 
+//Wrapper for using std::getline, then removing all whitespace characters from the result
+//Meant to avoid strange behavior when reading directly from a file (e.g. ifstream)
+std::istream &getCleanedLine(std::istream &is, std::string &str);
+
 //Splits string into vector of substrings, delimited by delim
 std::vector<std::string> splitString(const std::string &str, const char delim);
 

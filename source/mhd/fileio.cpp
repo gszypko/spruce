@@ -13,9 +13,11 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
 
   //Read in grid dimensions
   std::string line, element;
-  std::getline(in_file, line);
+  // std::getline(in_file, line);
+  // clearWhitespace(line);
+  getCleanedLine(in_file,line);
   assert(line == "xdim,ydim");
-  std::getline(in_file, line);
+  getCleanedLine(in_file, line);
   std::istringstream ss_dim(line);
   std::getline(ss_dim,element,',');
   m_xdim = std::stoi(element);
@@ -23,18 +25,18 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
   m_ydim = std::stoi(element);
   for(int var=0; var<num_variables; var++) m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
 
-  std::getline(in_file, line);
+  getCleanedLine(in_file, line);
   assert(line == "ion_mass");
-  std::getline(in_file, line);
+  getCleanedLine(in_file, line);
   m_ion_mass = std::stod(line);
 
-  std::getline(in_file, line);
+  getCleanedLine(in_file, line);
   assert(line == "adiabatic_index");
-  std::getline(in_file, line);
+  getCleanedLine(in_file, line);
   m_adiabatic_index = std::stod(line);
 
   //Read in time of state file
-  std::getline(in_file,line);
+  getCleanedLine(in_file,line);
   std::istringstream ss_time(line);
   std::getline(ss_time,element,'=');
   assert(element == "t");
@@ -42,10 +44,13 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
   if(continue_mode) m_time = std::stod(element);
   else m_time = 0.0;
 
-  while(std::getline(in_file, line)){
+  while(getCleanedLine(in_file, line)){
     //Ensure that variable in file is valid
     auto it = std::find(m_var_names.begin(),m_var_names.end(),line);
-    assert(it != m_var_names.end() && "Variable name in state file not recognized");
+    if(it == m_var_names.end()){
+      std::cerr << "Variable name " << line << " in state file not recognized\n";
+      abort();
+    }
     auto index = std::distance(m_var_names.begin(),it);
     Grid curr_grid(m_xdim,m_ydim);
     //Read in Grid corresponding to variable
@@ -53,7 +58,7 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
     std::string row; std::string el;
     for(int i=0; i<m_xdim; i++){
       j=0;
-      std::getline(in_file,row);
+      getCleanedLine(in_file,row);
       std::istringstream ss_row(row);
       assert((std::isdigit(ss_row.peek()) || (ss_row.peek()=='-')) && "Encountered non-numerical row in .state file sooner than expected");
       while(std::getline(ss_row,el,',')){
