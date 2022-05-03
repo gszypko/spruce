@@ -8,7 +8,6 @@
 #define THERMALCONDUCTION_HPP
 
 #include "module.hpp"
-#include "plasmadomain.hpp"
 
 class PlasmaDomain;
 

@@ -8,7 +8,6 @@
 #define RADIATIVELOSSES_HPP
 
 #include "module.hpp"
-#include "plasmadomain.hpp"
 
 class RadiativeLosses : public Module {
     public:
