@@ -13,8 +13,6 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
 
   //Read in grid dimensions
   std::string line, element;
-  // std::getline(in_file, line);
-  // clearWhitespace(line);
   getCleanedLine(in_file,line);
   assert(line == "xdim,ydim");
   getCleanedLine(in_file, line);
@@ -44,7 +42,23 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
   if(continue_mode) m_time = std::stod(element);
   else m_time = 0.0;
 
+  bool first_loop = true;
   while(getCleanedLine(in_file, line)){
+    if(first_loop){
+      if(line.find("duration")!=std::string::npos){
+        std::istringstream ss_line(line);
+        std::string el;
+        std::getline(ss_line,el,'=');
+        assert(el == "duration" && "Duration specification must be formatted as duration=[duration]");
+        std::getline(ss_line,el);
+        clearWhitespace(el);
+        assert( (std::isdigit(el[0]) || el[0] == '.' || el[0] == '-') && "Encountered non-numerical value for duration from state file");
+        m_duration = std::stod(el);
+        first_loop = false;
+        continue;
+      }
+      first_loop = false;
+    }
     //Ensure that variable in file is valid
     auto it = std::find(m_var_names.begin(),m_var_names.end(),line);
     if(it == m_var_names.end()){
@@ -60,7 +74,7 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
       j=0;
       getCleanedLine(in_file,row);
       std::istringstream ss_row(row);
-      assert((std::isdigit(ss_row.peek()) || (ss_row.peek()=='-')) && "Encountered non-numerical row in .state file sooner than expected");
+      assert((std::isdigit(ss_row.peek()) || (ss_row.peek()=='-') || (ss_row.peek()=='.')) && "Encountered non-numerical row in .state file sooner than expected");
       while(std::getline(ss_row,el,',')){
         assert(j < m_ydim && "Row in .state file is too long (greater than ydim)");
         curr_grid(i,j) = std::stod(el);

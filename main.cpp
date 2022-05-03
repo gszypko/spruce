@@ -21,12 +21,12 @@ int main(int argc, char *argv[])
     // unfold executable input parameters
     // TODO: encapsulate command line arg parsing into class (make checking for correct specification easier)
     std::string time_duration_str = getCommandLineArg(argc, argv, "-d", "--duration");
-    assert(!time_duration_str.empty() && "Duration of simulation must be specified on command line");
-    double time_duration = std::stod(time_duration_str);
+    double time_duration = time_duration_str.empty() ? -1.0 : std::stod(time_duration_str); //set to -1 if unspecified on cmd line
 
     // Continue Mode
     fs::path prev_run_path(getCommandLineArg(argc, argv, "-p", "--prev"));
     if(!prev_run_path.empty()){
+        assert(!time_duration_str.empty() && "In Continue Mode, duration of simulation must be specified on command line");
         fs::directory_entry prev_run_dir(prev_run_path);
         assert(prev_run_dir.exists() && prev_run_dir.is_directory() && "Given previous run path must be existing directory");
 
@@ -47,7 +47,12 @@ int main(int argc, char *argv[])
         if(grid_path.extension().string() == ".state"){ // Specify initial state with .state file
             fs::directory_entry grid_path_dir(grid_path);
             assert(grid_path_dir.exists() && grid_path_dir.is_regular_file() && "Given state file must exist and be a file");
-            std::cout << "Running in Custom Input Mode from the state file " << grid_path.string() << " for " << time_duration << " s...\n";
+            if(time_duration_str.empty()){
+                std::cout << "Running in Custom Input Mode from the state file " << grid_path.string() << " for duration specified in file...\n";
+            }
+            else {
+                std::cout << "Running in Custom Input Mode from the state file " << grid_path.string() << " for " << time_duration << " s...\n";
+            }
             mhdSolve(grid_path, config_path, out_path, time_duration);
             return 0;
         } else {
@@ -82,6 +87,7 @@ int main(int argc, char *argv[])
         if (plasma_type.compare("ucnp") == 0) grids_inp = gen_inp_grids_ucnp(pms);
         else if (plasma_type.compare("solar") == 0) grids_inp = SolarUtils::SolarMHDInput(pms);
         else std::cerr << "Plasma type not specified ('ucnp' or 'solar')";
+        if(time_duration_str.empty()) time_duration = grids_inp.duration();
 
         // run 
         std::cout << "Running in Problem Generator Mode using the " << plasma_type << " problem generator for " << time_duration << " s...\n";

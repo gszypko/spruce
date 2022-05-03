@@ -6,8 +6,12 @@
 
 void PlasmaDomain::run(double time_duration)
 {
+  if(time_duration >= 0.0) m_duration = time_duration; //command-line-provided duration overrides state file duration
+  else {
+    assert(m_duration >= 0.0 && "Duration must be specified on command line, or in state file");
+  }
   if(safe_state_interval <= 0) safe_state_mode = false;
-  max_time = m_time + time_duration;
+  max_time = m_time + m_duration;
   if(!continue_mode){
     outputPreamble();
     outputCurrentState();

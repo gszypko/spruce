@@ -10,7 +10,7 @@ The included Makefile can be used to compile by invoking `make` from the command
 `mhdtoy` can be run in three different modes, depending on the method used to specify the initial state of the simulation run.
 
 The resulting simulation will be output as a time series to the file `mhd.out` in the run's output directory. Other files written to the output directory are:
-- `init.state`: contains the full initial state of the system
+- `init.state`: contains the full initial state of the system (written after loading; not a copy of a .state file used to initialize)
 - `end.state`: contains the full final state of the system
 - A copy of the `.config` file used for the run
 - `plasma.settings`: (if run in Problem Generator Mode) encodes the particular `settings` used for the run. Note that this is not the same as the original `.settings` file if multiple sets of `settings` are possible from that file, depending on the specified `job_index`
@@ -23,7 +23,7 @@ A user-generated set of grids, in the form of a `.state` file, can be specified 
 - `-g` or `--grids` (Required) specifies the `.state` file to be used to initialize the simulation run
 - `-c` or `--config` (Required) specifies the `.config` file to be used for configuring the simulation run. 
 - `-o` or `--output` (Required) specifies the name of the directory to which all output will be written. If the directory does not exist it will be created, and existing simulation outputs in that directory will be overwritten. 
-- `-d` or `--duration` (Required) specifies how long the simulation is to be continued, in units of simulation time.
+- `-d` or `--duration` (Optional) specifies how long the simulation is to be continued, in units of simulation time. Providing this argument will override any duration specified in the `grid_file` file used for input
 
 ### Continue Mode
 
@@ -67,6 +67,7 @@ ion_mass
 adiabatic_index
 [adiabatic index]
 t=[start time]
+duration=[duration]
 [variable name]
 [variable grid]
 [variable name]
@@ -79,6 +80,7 @@ where the bracketed text should be repalced as follows:
 - `ion mass`: The ion mass to be used in the ideal MHD equations, in grams. This is used to convert between `rho` and number density `n`.
 - `adiabatic index`: The adiabatic index to be used in the simulation. This is used to convert between pressure `press` and thermal energy `thermal_energy`.
 - `start time`: The time, in seconds, at which to start the simulation run. Unless continuing from a previous run, this should probably be set to zero.
+- `duration` (**OPTIONAL**): The time, in seconds, that the simulation will be allowed to last (in simulation time). A negative value will be ignored, and any value will be overridden by a command-line specified duration. This entire line may be safely omitted from the state file.
 - `variable name`: One of the variable names given in the list above. These can be specified in any order, and any variables not specified will be set to zero.
 - `variable grid`: The values of the immediately previous `variable name` specified at every position in the simulation grid. This should be formatted as a set of comma-separated values, where each row corresponds to an x-value, running from top to bottom. Each column corresponds to a y-value, running from left to right. This means that each `variable grid` should consist of `xdim` rows and `ydim` columns, with the conventional matrix indexing `(i,j)` corresponding to the x- and y-indices, respectively. In other words, index `(0,0)` should be located at the top-left corner with x increasing downward and y increasing to the right.
 

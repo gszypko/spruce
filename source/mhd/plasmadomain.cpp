@@ -28,13 +28,15 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   }
   for(int i : state_vars)
     m_grids[i] = input_vars[i];
-  m_time = 0.0; 
+  m_time = 0.0;
+  m_duration = -1.0;
   configureSimulation(config_path,out_path,false);
 }
 
-//Construction with initial state from state file (continue mode)
+//Construction with initial state from state file (continue mode and custom input)
 PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file, bool continue_mode) : m_module_handler(*this)
 {
+  m_duration = -1.0;
   readStateFile(state_file,continue_mode);
   configureSimulation(config_path,out_path,continue_mode);
 }

@@ -35,6 +35,8 @@ public:
     "euler", "rk2", "rk4"
   };
 
+  //Remember: keep same ordering between Vars, m_var_names, and state_vars
+  //(with all elements of state_vars at the front of the former two)
   enum Vars { d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,bi_x,bi_y,grav_x,grav_y,
               press,thermal_energy,kinetic_energy,div_bi,
               dt,v_x,v_y,n,
@@ -92,6 +94,7 @@ private:
   std::ofstream m_out_file;
 
   double m_time;
+  double m_duration;
   int m_iter;
   double max_time; //Upper bound on simulation time
 
