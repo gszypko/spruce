@@ -1,15 +1,13 @@
-function [out] = readSettingsFile(directory)
+function [out] = readSettingsFile(path)
 % directory (string): full path to directory containing 'plasma.settings'
 % out (struct): fields of <out> contain plasma quantities in cgs units, see below
 
 % ensure that plasma.settings file exists
-f = filesep;
-files = dir(directory);
-ind = strcmp({files.name},'plasma.settings');
-if max(ind)~=1, error('The file <plasma.settings> not found in <directory>.'); end
+if ~endsWith(path,'.settings'), error('Specified path does not point to .settings file'); end
+if ~isfile(path), error('.settings file does not exist'); end
 
 % read in contents from file
-fid = fopen([files(ind).folder f files(ind).name],'r');
+fid = fopen(path,'r');
 iter = 0;
 while ~feof(fid)
     iter = iter + 1;
