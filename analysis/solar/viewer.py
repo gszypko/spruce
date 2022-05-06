@@ -16,7 +16,7 @@ fullnames = {
   'temp': "Temperature",
   'press': "Pressure",
   'rad': "Radiative Loss Rate",
-  'energy': "Energy Density",
+  'thermal_energy': "Energy Density",
   'be': "Background Magnetic Field",
   'bi': "Induced Magnetic Field",
   'v': "Velocity",
@@ -35,7 +35,7 @@ fullunits = {
   'temp': r'K',
   'press': r'dyn cm$^{-2}$',
   'rad': r'erg cm$^{-3}$ s$^{-1}$',
-  'energy': r'erg cm$^{-3}$',
+  'thermal_energy': r'erg cm$^{-3}$',
   'be': r'G',
   'bi': r'G',
   'v': r'cm s$^{-1}$',
@@ -55,7 +55,7 @@ for key in fullunits.keys():
 parser = argparse.ArgumentParser(description='View the output from mhdtoy.')
 parser.add_argument('filename', help="the name of the file output from mhdtoy")
 parser.add_argument('timestep', type=float, help="the interval (in simulation time units) between frames of output animation")
-parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', 'energy', 'v_x', 'v_y', 'dt', 'dt_thermal', 'dt_rad', 'n', 'beta', 'div_be', 'div_bi'])
+parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', 'thermal_energy', 'v_x', 'v_y', 'dt', 'dt_thermal', 'dt_rad', 'n', 'beta', 'div_be', 'div_bi'])
 parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['be','v','bi'])
 parser.add_argument('--density', metavar="vec_display_density", type=int, help="set the interval between displayed vectors", default=25)
 parser.add_argument('-d', '--diff', metavar='diff_filename', help="filename to difference with original file")
@@ -80,8 +80,8 @@ ydim = int(dim[1])
 
 xl_ghost = 0
 xu_ghost = 0
-yl_ghost = 2
-yu_ghost = 2
+yl_ghost = 0
+yu_ghost = 0
 
 xdim_view = xdim - (xl_ghost + xu_ghost)
 ydim_view = ydim - (yl_ghost + yu_ghost)
@@ -140,61 +140,61 @@ while True:
     break
   time = float(line.split('=')[1])
 
-  #read through to correct variable
-  #vector quantities must be last in each time step
-  line = input_file.readline()
-  while line and line.rstrip() != file_var_name:
-    if line[0:2] == "t=":
-      sys.exit("Specified output variable not found in file")
-    input_file.readline()
+  var_found = False
+  vec_x_found = (vec_var == None or vec_var == "be")
+  vec_y_found = (vec_var == None or vec_var == "be")
+
+  # collect all necessary data at the current time step
+  while not (var_found and vec_x_found and vec_y_found):
     line = input_file.readline()
+    while line and not (line.rstrip() == file_var_name or line.rstrip() == (str(vec_var)+"_x") or line.rstrip() == (str(vec_var)+"_y")):
+      if line[0:2] == "t=" and not var_found:
+        sys.exit("Specified output variable not found in file")
+      if line[0:2] == "t=" and not (vec_x_found and vec_y_found):
+        sys.exit("Specified output vector not found in file")
+      line = input_file.readline()
+    if not line:
+      break
+
+    curr_data = ""
+    if line.rstrip() == file_var_name: 
+      curr_data = "var"
+      var_found = True
+    elif line.rstrip() == (str(vec_var)+"_x"): 
+      curr_data = "vec_x"
+      vec_x_found = True
+    elif line.rstrip() == (str(vec_var)+"_y"): 
+      curr_data = "vec_y"
+      vec_y_found = True
+    else: 
+      sys.exit("This should never happen")
+    
+    if output_number == 0 or display_interval == 0 or ((time - t[0])/display_interval >= output_number and not math.isinf(t[-1])):
+      if (var_found and vec_x_found and vec_y_found):
+        output_number += 1
+        t.append(time)
+      this_var = np.zeros([xdim_view,ydim_view], dtype=float)
+      rows = input_file.readline().split(';')[xl:xu]
+      if len(rows) != xdim_view: break
+      for i in range(xdim_view):
+        this_var_row = np.asarray(rows[i].split(','))[yl:yu]
+        if len(this_var_row) != ydim_view: break
+        this_var[i] = this_var_row
+      if curr_data == "var":
+        var.append(this_var)
+      elif curr_data == "vec_x":
+        vec_x.append(this_var)
+      elif curr_data == "vec_y":
+        vec_y.append(this_var)
+      else:
+        sys.exit("This also shouldn't happen")
+
   if not line:
     break
 
-  if output_number == 0 or display_interval == 0 or ((time - t[0])/display_interval >= output_number and not math.isinf(t[-1])):
-    output_number += 1
-    t.append(time)
-    this_var = np.zeros([xdim_view,ydim_view], dtype=float)
-    rows = input_file.readline().split(';')[xl:xu]
-    if len(rows) != xdim_view: break
-    for i in range(xdim_view):
-      this_var_row = np.asarray(rows[i].split(','))[yl:yu]
-      if len(this_var_row) != ydim_view: break
-      this_var[i] = this_var_row
-    var.append(this_var)
-
-    if vec_var != None and vec_var != "be":
-      line = input_file.readline()
-      while line and line.rstrip().split('_')[0] != vec_var:
-        if line[0:2] == "t=":
-          sys.exit("Specified output vector not found in file")
-        input_file.readline()
-        line = input_file.readline()
-      if not line:
-        break
-
-      if output_number == 1 or display_interval == 0 or (time - t[0])/display_interval >= (output_number-1):
-        this_vec_x = np.zeros([xdim_view,ydim_view], dtype=float)
-        rows = input_file.readline().split(';')[xl:xu]
-        if len(rows) != xdim_view: break
-        for i in range(xdim_view):
-          row_list = rows[i].split(',')[yl:yu]
-          if len(row_list) != ydim_view: break
-          this_vec_x[i] = np.asarray(row_list)
-        this_vec_y = np.zeros([xdim_view,ydim_view], dtype=float)
-        input_file.readline()
-        rows = input_file.readline().split(';')[xl:xu]
-        if len(rows) != xdim_view: break
-        for i in range(xdim_view):
-          row_list = rows[i].split(',')[yl:yu]
-          if len(row_list) != ydim_view: break
-          this_vec_y[i] = np.asarray(row_list)
-        vec_x.append(this_vec_x)
-        vec_y.append(this_vec_y)
-  
 input_file.close()
 
-if vec_var != None and len(var) > len(vec_x):
+if vec_var != None and vec_var != "be" and len(var) > len(vec_x):
   print("pop!")
   var.pop()
 
@@ -207,7 +207,6 @@ if output_var == "beta":
   for i in range(len(var)):
     var[i] = var[i]/(mag_press**2)
     var[i] = mag_press*var[i]
-
 
 fig, ax = plt.subplots()
 
@@ -339,7 +338,7 @@ def updatefig(*args):
     var_colorbar = fig.colorbar(im, cax=contour_color_axes)
     var_colorbar.set_label(fullnames[output_var]+ fullunits[output_var])
     # ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(round(t[frame]))+" s")
-    ax.set(xlabel="x (cm)",ylabel="y (cm)",title="t="+str(round(t[frame]))+" s")
+    ax.set(xlabel="x (cm)",ylabel="y (cm)",title="t="+str(t[frame])+" s")
     if vec_var != "be" and vec_var != None:
       vector_color_axes.cla()
       vec_colorbar = fig.colorbar(quiv, cax=vector_color_axes)
