@@ -15,7 +15,6 @@ public:
     MhdInp& operator=(const MhdInp& other);
     MhdInp(size_t Nx,size_t Ny);
     MhdInp() : MhdInp(1,1) {}
-    // void read_custom_input_csvs(const fs::path &grid_path);
     void set_var(int var,const Grid& grid,const std::string origin_pos = "");
     void set_ion_mass(double mass);
     void set_adiabatic_index(double index);

@@ -16,8 +16,8 @@ void mhdSolve(const fs::path &prev_run_directory, double time_duration)
     if(exten == ".config"){
       assert(config_filename.empty() && "There must be only one .config file in the specified directory");
       config_filename = dir_entry.path();
-    } else if(dir_entry.path().filename() == "mhd.state"){
-      assert(state_filename.empty() && "There must be only one .state file in the specified directory");
+    } else if(dir_entry.path().filename() == "end.state"){
+      assert(state_filename.empty() && "The state file to continue from must be named end.state");
       state_filename = dir_entry.path();
     }
   }
