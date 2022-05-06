@@ -132,14 +132,10 @@ void PlasmaDomain::outputPreamble()
   }
   m_out_file << "xdim,ydim" << std::endl;
   m_out_file << m_xdim << "," << m_ydim << std::endl;
-  m_out_file << "pos_x" << std::endl;
-  m_out_file << m_grids[pos_x].format(',',';');
-  m_out_file << "pos_y" << std::endl;
-  m_out_file << m_grids[pos_y].format(',',';');
-  m_out_file << "be_x" << std::endl;
-  m_out_file << m_grids[be_x].format(',',';');
-  m_out_file << "be_y" << std::endl;
-  m_out_file << m_grids[be_y].format(',',';');
+  writeGridToOutput(m_grids[pos_x],m_var_names[pos_x]);
+  writeGridToOutput(m_grids[pos_y],m_var_names[pos_y]);
+  writeGridToOutput(m_grids[be_x],m_var_names[be_x]);
+  writeGridToOutput(m_grids[be_y],m_var_names[be_y]);
 }
 
 void PlasmaDomain::outputCurrentState()
@@ -159,7 +155,7 @@ void PlasmaDomain::outputCurrentState()
 void PlasmaDomain::writeGridToOutput(const Grid& grid, std::string var_name)
 {
   m_out_file << var_name << std::endl;
-  m_out_file << grid.format(',',';');
+  m_out_file << grid.format(',','\n');
 }
 
 //Output current state into state file (toggles between overwriting two different files
@@ -254,8 +250,6 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::safe_state_interval): safe_state_interval = std::stoi(rhs); break;
   case static_cast<int>(Config::std_out_interval): std_out_interval = std::stoi(rhs); break;
   case static_cast<int>(Config::open_boundary_decay_base): open_boundary_decay_base = std::stod(rhs); break;
-  // case static_cast<int>(Config::x_origin): x_origin = rhs; break;
-  // case static_cast<int>(Config::y_origin): y_origin = rhs; break;
   case static_cast<int>(Config::time_integrator): time_integrator = stringToTimeIntegrator(rhs); break;
   default: break;
   }

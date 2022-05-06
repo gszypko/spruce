@@ -11,6 +11,13 @@ import argparse
 
 # matplotlib.rcParams.update({'font.size': 22})
 
+def read_grid(in_file,xl,yl,xu,yu):
+  result = []
+  for i in range(xl,xu):
+    row = in_file.readline().split(',')[yl:yu]
+    result.append(row)
+  return np.asarray(result).astype(np.float64)
+
 fullnames = {
   'rho': "Density",
   'temp': "Temperature",
@@ -94,38 +101,22 @@ xu = xdim - xu_ghost
 yl = 0 + yl_ghost
 yu = ydim - yu_ghost
 
+
 #read in grid cell positions
 assert input_file.readline() == "pos_x\n"
-X = np.zeros([xdim_view,ydim_view], dtype=float)
-rows = input_file.readline().split(';')[xl:xu]
-for i in range(xdim_view):
-  X[i] = np.asarray(rows[i].split(','))[yl:yu]
-  assert len(X[i]) == ydim_view
+X = read_grid(input_file,xl,yl,xu,yu)
 assert input_file.readline() == "pos_y\n"
-Y = np.zeros([xdim_view,ydim_view], dtype=float)
-rows = input_file.readline().split(';')[xl:xu]
-for i in range(xdim_view):
-  Y[i] = np.asarray(rows[i].split(','))[yl:yu]
-  assert len(Y[i]) == ydim_view
+Y = read_grid(input_file,xl,yl,xu,yu)
 
 x_min = X[0][0]
 x_max = X[-1][0]
 y_min = Y[0][0]
 y_max = Y[0][-1]
 
-#read in static magnetic field
-bx = np.zeros([xdim_view,ydim_view], dtype=float)
-by = np.zeros([xdim_view,ydim_view], dtype=float)
 assert input_file.readline() == "be_x\n"
-rows_x = input_file.readline().split(';')
+bx = read_grid(input_file,xl,yl,xu,yu)
 assert input_file.readline() == "be_y\n"
-rows_y = input_file.readline().split(';')
-# assert input_file.readline() == "b_z\n"
-# input_file.readline()
-
-for i in range(xdim_view):
-  bx[i] = np.asarray(rows_x[i].split(','))[yl:yu]
-  by[i] = np.asarray(rows_y[i].split(','))[yl:yu]
+by = read_grid(input_file,xl,yl,xu,yu)
 
 var = []
 vec_x = []
@@ -176,13 +167,7 @@ while True:
       if (var_found and vec_x_found and vec_y_found):
         output_number += 1
         t.append(time)
-      this_var = np.zeros([xdim_view,ydim_view], dtype=float)
-      rows = input_file.readline().split(';')[xl:xu]
-      if len(rows) != xdim_view: break
-      for i in range(xdim_view):
-        this_var_row = np.asarray(rows[i].split(','))[yl:yu]
-        if len(this_var_row) != ydim_view: break
-        this_var[i] = this_var_row
+      this_var = read_grid(input_file,xl,yl,xu,yu)
       if curr_data == "var":
         var.append(this_var)
       elif curr_data == "vec_x":

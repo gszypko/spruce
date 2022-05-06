@@ -101,7 +101,7 @@ The `.config` file determines the base runtime behavior of the simulation. Each 
 - `std_out_interval`: Integer. Specifies how frequently, in terms of iterations, to write a short (one-line) update on the simulation run to standard output.
 - `safe_state_mode`: One of `{true,false}`. When `true`, a full `.state` file will be written periodically during the simulation run so that it can be continued even if execution is halted unceremoniously. Subsequent state files will be written and overwritten to `mhd0.state` and `mhd1.state` in the output directory; upon successful completion they will be removed in favor of the final `mhd.state`. When `false`, a full `.state` file will only be written out upon completion of the simulation run.
 - `safe_state_interval`: Integer. When `safe_state_mode` is `true`, specifies the number of iterations between writing successive `.state` files.
-- `output_flags`: A comma-separated list composed of any of `{d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,grav_x,grav_y,press,thermal_energy,kinetic_energy,div_bi,bi_x,bi_y,dt,v_x,v_y,n,div_be,b_hat_x,b_hat_y,b_magnitude,v_a}` and/or any outputs specified by active `module`s. Specifies the variables that are written to the `mhd.out` file whenever required.
+- `output_flags`: A comma-separated list composed of any of `{d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,grav_x,grav_y,press,thermal_energy,kinetic_energy,div_bi,bi_x,bi_y,dt,v_x,v_y,n,div_be,b_hat_x,b_hat_y,b_magnitude,v_a}` and/or any outputs defined by active `module`s. Specifies the variables that are written to the `mhd.out` file whenever required.
 
 ### Boundary conditions
 - `x_bound_1`, `x_bound_2`, `y_bound_1`, and `y_bound_2`: One of `{periodic, open, fixed, reflect}` for each. Specifies the lower (1) and upper (2) boundary conditions applied in the `x` and `y` directions.
@@ -134,7 +134,44 @@ which can be included anywhere in the `.config` file. When the `module` is set t
 
 # The Output File
 
-**UNDER CONSTRUCTION**
+The primary output of the simulation is found in `mhd.out` in the output directory. This file contains a time series of any variables that were specified in `output_flags` in the `.config` file used for the simulation. The cadence of this time series is determined by `iter_output_interval` or by `time_output_interval` in the `.config` file.
+
+The output file is formatted as follows:
+
+```
+# [comments]
+xdim,ydim
+[xdim],[xdim]
+pos_x
+[pos_x]
+pos_y
+[pos_y]
+be_x
+[be_x]
+be_y
+[be_y]
+t=[time]
+[variable name]
+[variable grid]
+[variable name]
+[variable grid]
+[...]
+t=[time]
+[variable name]
+[variable grid]
+[variable name]
+[variable grid]
+[...]
+```
+where the bracketed text is replaced as follows:
+
+- `comment`: Any comments that were included in the `.state` file used to initialize the simulation.
+- `xdim`: The number of grid cells in the x-direction.
+- `ydim`: The number of grid cells in the y-direction.
+- `pos_x`, `pos_y`, `be_x`, and `be_y`: The data corresponding to these labels; see [above](#the-state-file) for more on the meaning of these variables and the formatting of their data, which is here the same as when seen in a `.state` file.
+- `time`: The time, in seconds, during the simulation corresponding to the immediately following set of variable grids.
+- `variable name`: One of the variable names specified in `output_flags`.
+- `variable grid`: The values of the immediately previous `variable name` specified at every position in the simulation grid. This is formatted the same way as in the `.state` file; see [above](#the-state-file) for details.
 
 # Modules
 
