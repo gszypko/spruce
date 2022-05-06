@@ -1,12 +1,5 @@
 %% Initiate Program
-clc, clearvars -except inp, close all, f = filesep;
-
-% add paths to MHD analysis for UCNPs
-gitdir = extractBefore(matlab.desktop.editor.getActiveFilename,[f mfilename]);
-folders = {'','file-reading','img-fits','other','plasma-quantities','color-maps'};
-for i = 1:length(folders)
-    addpath([gitdir f 'source' f folders{i}])
-end
+clc, clearvars -except inp, close all, f = filesep; setpath;
 
 if ~exist('inp','var')
     %% Generate Input Cell
