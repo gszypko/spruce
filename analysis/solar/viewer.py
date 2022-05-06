@@ -72,8 +72,11 @@ if output_var == "beta":
   file_var_name = "press"
 vec_var = args.vector
 
+line = input_file.readline()
+while line[0] == '#' or len(line) == 0:
+  line = input_file.readline()
 #determine grid size
-assert input_file.readline() == "xdim,ydim\n"
+assert line == "xdim,ydim\n"
 dim = input_file.readline().split(',')
 xdim = int(dim[0])
 ydim = int(dim[1])

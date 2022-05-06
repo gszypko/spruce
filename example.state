@@ -1,3 +1,6 @@
+# Example state file
+# Comments at the top of the file will be printed in all .state and .out files
+# Comments must come at the top of the .state file and start with '#'
 xdim,ydim
 100,100
 ion_mass

@@ -60,6 +60,7 @@ The variables that need to be specified throughout the simulation domain at run-
 
 The state file must be formatted as follows:
 ```
+# [comment]
 xdim,ydim
 [xdim],[ydim]
 ion_mass
@@ -75,6 +76,7 @@ duration=[duration]
 ...
 ```
 where the bracketed text should be repalced as follows:
+- `comment`: Any comment related to the state file. Comments will be reproduced at the top of all `.state` and `.out` files written during the simulation, for user documentation and/or analysis purposes, but are otherwise unused in the simulation. Any number of comment lines (including zero) may be included at the top of the state file, but they must all start with '#'.
 - `xdim`: The number of grid cells in the x-direction.
 - `ydim`: The number of grid cells in the y-direction.
 - `ion mass`: The ion mass to be used in the ideal MHD equations, in grams. This is used to convert between `rho` and number density `n`.

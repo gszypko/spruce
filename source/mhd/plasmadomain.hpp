@@ -92,6 +92,7 @@ private:
 
   fs::path m_out_directory;
   std::ofstream m_out_file;
+  std::vector<std::string> comment_lines;
 
   double m_time;
   double m_duration;

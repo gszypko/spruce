@@ -7,13 +7,20 @@
 //This function will abort execution if an invalid variable name is encountered
 //Does not check that the variables read from the file are a complete
 //description of the plasma, nor that none of them are contradictory
+//Any lines at the top beginning with '#' will be stored as comment lines
+//and written out at the top of all .state and .out files for documentation purposes
 void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
 {  
   std::ifstream in_file(state_file.string());
 
   //Read in grid dimensions
   std::string line, element;
-  getCleanedLine(in_file,line);
+  std::getline(in_file,line);
+  while(line.empty() || line[0] == '#'){
+    if(line[0] == '#') comment_lines.push_back(line);
+    std::getline(in_file,line);
+  }
+  clearWhitespace(line);
   assert(line == "xdim,ydim");
   getCleanedLine(in_file, line);
   std::istringstream ss_dim(line);
@@ -119,6 +126,10 @@ void PlasmaDomain::readConfigFile(const fs::path &config_file)
 
 void PlasmaDomain::outputPreamble()
 {
+  for(std::string comment : comment_lines){
+    assert(comment[0] == '#');
+    m_out_file << comment << std::endl;
+  }
   m_out_file << "xdim,ydim" << std::endl;
   m_out_file << m_xdim << "," << m_ydim << std::endl;
   m_out_file << "pos_x" << std::endl;
@@ -163,6 +174,10 @@ void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
     else state_file.open(m_out_directory/fs::path(filename_stem+".state"));
   }
   else state_file.open(m_out_directory/fs::path(filename_stem+".state"));
+  for(std::string comment : comment_lines){
+    assert(comment[0] == '#');
+    state_file << comment << std::endl;
+  }
   state_file << "xdim,ydim\n";
   state_file << m_xdim << "," << m_ydim << std::endl;
   state_file << "ion_mass\n";
