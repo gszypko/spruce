@@ -6,7 +6,7 @@
 
 namespace fs = std::filesystem;
 
-// function notes:
+// execs\gengrids -o 05.10.22 -s ucnp.settings -c ucnp.config -a 0
 
 int main(int argc, char *argv[])
 {
