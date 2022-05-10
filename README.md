@@ -15,36 +15,25 @@ The resulting simulation will be output as a time series to the file `mhd.out` i
 - A copy of the `.config` file used for the run
 - `plasma.settings`: (if run in Problem Generator Mode) encodes the particular `settings` used for the run. Note that this is not the same as the original `.settings` file if multiple sets of `settings` are possible from that file, depending on the specified `job_index`
 
-### Custom Input Mode
+### Input Mode
 
 A user-generated set of grids, in the form of a `.state` file, can be specified to initialize the simulation. See below for more details on formatting a `.state` file. Running in this mode requires the following syntax:
 
-`./run -m input [-o out_directory] [-g grid_file] [-c config_file] [-d time_duration]`
+`./run -m input [-o out_directory] [-s state_file] [-c config_file] [-d time_duration]`
+- `-m` or `--mode` (Required) specifies the mode in which to run the simulation. Use `-m input` or `--mode input` to run in this mode.
 - `-o` or `--output` (Required) specifies the name of the directory to which all output will be written. If the directory does not exist it will be created, and existing simulation outputs in that directory will be overwritten. 
 - `-s` or `--state` (Optional) specifies the `.state` file to be used to initialize the simulation run. If not specified, the program will look for a file named `init.state` inside of `out_directory` to use instead.
 - `-c` or `--config` (Optional) specifies the `.config` file to be used for configuring the simulation run. If not specified, the program will look for a `.config` file inside of `out_directory` to use instead. (There can only be one `.config` file in `out_directory` if this is the case.)
-- `-d` or `--duration` (Optional) specifies how long the simulation is to be continued, in units of simulation time. Providing this argument will override any duration specified in the `grid_file` file used for input
+- `-d` or `--duration` (Optional) specifies how long the simulation is to be continued, in units of simulation time. Providing this argument will override any duration specified in the `state_file` file used for input
 
 ### Continue Mode
 
 Any previous run can be continued from where it left off, appending to the existing output files. Running in this mode requires the following syntax:
 
 `./run -m continue [-o prev_out_directory] [-d time_duration]`
-- `-o` or `--output` (Required) specifies the `out_directory` of the previous simulation run to be continued. Note that if the previous run had a `job_index` specified, the corresponding subdirectory must also be specified.
+- `-m` or `--mode` (Required) specifies the mode in which to run the simulation. Use `-m continue` or `--mode continue` to run in this mode.
+- `-o` or `--output` (Required) specifies the `out_directory` of the previous simulation run to be continued.
 - `-d` or `--duration` (Required) specifies how long the simulation is to be continued, in units of simulation time.
-
-### Problem Generator Mode (Deprecated)
-
-The compiled executable includes a number of automated initial state generators, the specifics of which are dictated by a human-readable `.settings` file. In this mode, the initial state will be generated at run-time and the simulation will immediately proceed from there. Running in this mode requires the following syntax:
-
-`./run [-t solar|ucnp] [-s settings_file] [-i job_index] [-c config_file] [-o out_directory] [-d time_duration]`
-- `-t` or `--type` (Required) specifies the problem generator to use. Currently the only valid `type`s are `ucnp` (ultracold neutral plasma) and `solar` (solar coronal plasma). 
-- `-s` or `--settings` (Required) specifies the `.settings` file containing `settings` that are fed into the problem generator. The `settings` to be specified are dictated by the `type` of the problem generator being used.
-- `-i` or `--index` (Optional) specifies the index (starting at zero) of the combination of `settings` to use. The `.settings` file can be written to allow multiple values for any number of different `settings` (see below). Specifying the `index` of the run uniquely specifies a combination of those `settings` to use. Defaults to `0` if not specified. If specified, output for the run will be written to a subdirectory of `out_directory`: `out_directory/array0/`, `out_directory/array1/`, etc.
-- `-c` or `--config` (Required) specifies the `.config` file to be used for configuring the simulation run. 
-- `-o` or `--output` (Required) specifies the name of the directory to which all output will be written. If the directory does not exist it will be created, and existing simulation outputs in that directory will be overwritten. 
-- `-d` or `--duration` (Required) specifies how long the simulation is to be continued, in units of simulation time.
-
 
 # The State File
 
@@ -99,12 +88,12 @@ The `.config` file determines the base runtime behavior of the simulation. Each 
 - `iter_output_interval`: Integer. Specifies how frequently to write the state of the system to the `mhd.out` file in terms of iterations. If negative, number of iterations is ignored for the purposes of writing to `mhd.out`.
 - `time_output_interval`: Decimal. Specifies how frequently to write the state of the system to the `mhd.out` file in terms of simulation time. If negative, simulation time is ignored for the purposes of writing to `mhd.out`.
 - `std_out_interval`: Integer. Specifies how frequently, in terms of iterations, to write a short (one-line) update on the simulation run to standard output.
-- `safe_state_mode`: One of `{true,false}`. When `true`, a full `.state` file will be written periodically during the simulation run so that it can be continued even if execution is halted unceremoniously. Subsequent state files will be written and overwritten to `mhd0.state` and `mhd1.state` in the output directory; upon successful completion they will be removed in favor of the final `mhd.state`. When `false`, a full `.state` file will only be written out upon completion of the simulation run.
+- `safe_state_mode`: One of `{true,false}`. When `true`, a full `.state` file will be written periodically during the simulation run so that it can be continued even if execution is halted unceremoniously. Subsequent state files will be written and overwritten to `mhd0.state` and `mhd1.state` in the output directory; upon successful completion they will be removed in favor of the final `end.state`. Note that continuing an aborted simulation run in this mode requires renaming either `mhd0.state` or `mhs1.state` to `end.state`. When `false`, a full `.state` file will only be written out upon completion of the simulation run.
 - `safe_state_interval`: Integer. When `safe_state_mode` is `true`, specifies the number of iterations between writing successive `.state` files.
 - `output_flags`: A comma-separated list composed of any of `{d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,grav_x,grav_y,press,thermal_energy,kinetic_energy,div_bi,bi_x,bi_y,dt,v_x,v_y,n,div_be,b_hat_x,b_hat_y,b_magnitude,v_a}` and/or any outputs defined by active `module`s. Specifies the variables that are written to the `mhd.out` file whenever required.
 
 ### Boundary conditions
-- `x_bound_1`, `x_bound_2`, `y_bound_1`, and `y_bound_2`: One of `{periodic, open, fixed, reflect}` for each. Specifies the lower (1) and upper (2) boundary conditions applied in the `x` and `y` directions.
+- `x_bound_1`, `x_bound_2`, `y_bound_1`, and `y_bound_2`: One of `{periodic, open, fixed, reflect}` for each. Specifies the lower (1) and upper (2) boundary conditions applied in the `x` and `y` directions. Note that if one of `{x_bound_1,x_bound_2}` is set to `periodic`, both must be. The same goes for `{y_bound_1,y_bound_2}`.
 - `open_boundary_strength`: Decimal. When any boundary conditions is set to `open`, controls how strongly outward advection is imposed at the boundary as a multiple of the local sound speed.
 - `open_boundary_decay_base`: Decimal between 0.0 and 1.0. When any boundary conditions is set to `open`, controls the imposed outward decay of mass density and thermal energy at `open` boundaries.
 
@@ -168,7 +157,7 @@ where the bracketed text is replaced as follows:
 - `comment`: Any comments that were included in the `.state` file used to initialize the simulation.
 - `xdim`: The number of grid cells in the x-direction.
 - `ydim`: The number of grid cells in the y-direction.
-- `pos_x`, `pos_y`, `be_x`, and `be_y`: The data corresponding to these labels; see [above](#the-state-file) for more on the meaning of these variables and the formatting of their data, which is here the same as when seen in a `.state` file.
+- `pos_x`, `pos_y`, `be_x`, and `be_y`: The data corresponding to these labels; see [above](#the-state-file) for more on the meaning of these variables and the formatting of their data, which is here the same as when seen in a `.state` file. Note that these quantities remain constant for the duration of the simulation.
 - `time`: The time, in seconds, during the simulation corresponding to the immediately following set of variable grids.
 - `variable name`: One of the variable names specified in `output_flags`.
 - `variable grid`: The values of the immediately previous `variable name` specified at every position in the simulation grid. This is formatted the same way as in the `.state` file; see [above](#the-state-file) for details.
@@ -179,7 +168,7 @@ where the bracketed text is replaced as follows:
 
 ## Basic Modular Structure
 
-The `PlasmaDomain` object that handles the main simulation loop of the plasma maintains a `ModuleHandler` object, which is responsible for administrating the behavior of all individual `Module`s in effect. All `Module`s maintain a reference to the grandparent `PlasmaDomain` and have private `friend` access, meaning they can access and modify any members of the grandparent `PlasmaDomain` by accessing their `m_pd` object during run time.
+The `PlasmaDomain` object that handles the main simulation loop of the plasma maintains a `ModuleHandler` object, which is responsible for administrating the behavior of all individual `Module`s in effect. All `Module`s maintain a reference `m_pd` to the grandparent `PlasmaDomain` and have private `friend` access, meaning they can access and modify any members of the grandparent `PlasmaDomain` by accessing their `m_pd` object during run time.
 
 All Modules should be implemented as a `derived` class of the abstract `Module` class, declared in `source/modules/module.hpp`. The following functions may be overridden from the base Module class; note that, unless marked as **REQUIRED**, the functions below do nothing if they aren't overridden. The **REQUIRED** functions should be overridden.
 

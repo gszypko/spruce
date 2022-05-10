@@ -62,10 +62,10 @@ int main(int argc, char *argv[])
             fs::directory_entry grid_path_dir(grid_path);
             assert(grid_path_dir.exists() && grid_path_dir.is_regular_file() && "Given state file must exist and be a file");
             if(time_duration_str.empty()){
-                std::cout << "Running in Custom Input Mode from the state file " << grid_path.string() << " for duration specified in file...\n";
+                std::cout << "Running in Input Mode from the state file " << grid_path.string() << " for duration specified in file...\n";
             }
             else {
-                std::cout << "Running in Custom Input Mode from the state file " << grid_path.string() << " for " << time_duration << " s...\n";
+                std::cout << "Running in Input Mode from the state file " << grid_path.string() << " for " << time_duration << " s...\n";
             }
             mhdSolve(grid_path, config_path, out_path, time_duration, !seek_grids);
             return 0;
@@ -74,42 +74,8 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
-    else std::cerr << "Mode not recognized\n";
-
-
-
-    // Problem Generator Mode
-    // std::string plasma_type = getCommandLineArg(argc, argv, "-t", "--type");
-    // if(!plasma_type.empty()){
-    //     fs::path settings_path(getCommandLineArg(argc, argv, "-s", "--settings"));
-    //     assert(!settings_path.empty() && "settings file must be specified");
-
-    //     int task_array;
-    //     std::string task_array_str = getCommandLineArg(argc, argv, "-i", "--index");
-    //     if(task_array_str.empty()) task_array = 0; //default array index is zero
-    //     else task_array = std::stoi(task_array_str);
-    //     fs::path array_path("array" + std::to_string(task_array));
-
-    //     // create subdirectory for array index, if one was explicitly given
-    //     if(!task_array_str.empty()) out_path/=array_path;
-    //     fs::create_directories(out_path);
-
-    //     // load .settings file
-    //     PlasmaSettings pms(settings_path,task_array);
-    //     pms.write_array_params(out_path);
-        
-    //     // generate input grids for MHD code
-    //     MhdInp grids_inp;
-
-    //     if (plasma_type.compare("ucnp") == 0) grids_inp = gen_inp_grids_ucnp(pms);
-    //     else if (plasma_type.compare("solar") == 0) grids_inp = SolarUtils::SolarMHDInput(pms);
-    //     else std::cerr << "Plasma type not specified ('ucnp' or 'solar')";
-    //     if(time_duration_str.empty()) time_duration = grids_inp.duration();
-
-    //     // run 
-    //     std::cout << "Running in Problem Generator Mode using the " << plasma_type << " problem generator for " << time_duration << " s...\n";
-    //     mhdSolve(grids_inp.grids(), grids_inp.ion_mass(), grids_inp.adiabatic_index(), time_duration, out_path, config_path);
-    //     return 0;
-    // }
-    
+    else {
+        std::cerr << "Mode \'" << run_mode << "\' not recognized\n";
+        return 1;
+    }   
 }
