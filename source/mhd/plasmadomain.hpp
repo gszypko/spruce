@@ -51,7 +51,7 @@ public:
 
   //Constructors and Initialization
   PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const std::vector<Grid>& input_vars, double ion_mass, double adiabatic_index);
-  PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file, bool continue_mode);
+  PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file, bool continue_mode, bool overwrite_init);
   void readStateFile(const fs::path &state_file, bool continue_mode = true);
   void readConfigFile(const fs::path &config_file);
 
@@ -92,6 +92,7 @@ private:
 
   fs::path m_out_directory;
   std::ofstream m_out_file;
+  bool m_overwrite_init;
   std::vector<std::string> comment_lines;
 
   double m_time;
@@ -99,7 +100,7 @@ private:
   int m_iter;
   double max_time; //Upper bound on simulation time
 
-  /**************************** SETTINGS ******************************/
+  /**************************** CONFIGS ******************************/
   size_t m_xdim, m_ydim;
   int max_iterations; //Upper bound on simulation iterations; unbounded if negative
   //Boundary condition settings
@@ -118,7 +119,6 @@ private:
   bool safe_state_mode; //when true, outputs a state file for every iteration; when false, only outputs a state when the run completes without issue
   int safe_state_interval; //when safe_state_mode == true, number of iterations between .state files written out during run
   bool continue_mode; //true when continuing previous run; appends results to mhd.out and replaces mhd.state
-  // std::string x_origin, y_origin; //specifies where (0,0) position is located; each can be one of "lower", "center", or "upper"
  
   enum class Config {
     x_bound_1, x_bound_2, y_bound_1, y_bound_2,

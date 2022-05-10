@@ -20,6 +20,7 @@ namespace fs = std::filesystem;
 PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const std::vector<Grid>& input_vars,
                           double ion_mass, double adiabatic_index) : m_module_handler(*this)
 {
+  m_overwrite_init = true;
   m_ion_mass = ion_mass;
   m_adiabatic_index = adiabatic_index;
   m_xdim = input_vars[0].rows(); m_ydim = input_vars[0].cols();
@@ -34,8 +35,10 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
 }
 
 //Construction with initial state from state file (continue mode and custom input)
-PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file, bool continue_mode) : m_module_handler(*this)
+PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file,
+                          bool continue_mode, bool overwrite_init) : m_module_handler(*this)
 {
+  m_overwrite_init = overwrite_init;
   m_duration = -1.0;
   readStateFile(state_file,continue_mode);
   configureSimulation(config_path,out_path,continue_mode);
@@ -62,8 +65,9 @@ void PlasmaDomain::configureSimulation(const fs::path &config_path, const fs::pa
     m_out_file.open(m_out_directory/out_filename);
     fs::path new_config_path = m_out_directory/(config_path.filename());
     fs::directory_entry new_config_dir(new_config_path);
-    if(!(new_config_dir.exists() && fs::equivalent(config_path,new_config_path))){
+    if(!fs::equivalent(config_path,new_config_path)){
       std::cout << "Copying " << config_path.string() << " into " << m_out_directory.string() << "...\n";
+      if(new_config_dir.exists()) fs::remove(new_config_path);
       fs::copy(config_path, new_config_path, fs::copy_options::overwrite_existing);
     }
     else std::cout << config_path.string() << " already located in output directory.\n";
@@ -73,7 +77,10 @@ void PlasmaDomain::configureSimulation(const fs::path &config_path, const fs::pa
   computeIterationBounds();
   computeConstantTerms();
   recomputeDerivedVariables();
-  if(!continue_mode) writeStateFile("init");
+  if(!continue_mode && m_overwrite_init){
+    std::cout << "Writing out init.state...\n";
+    writeStateFile("init");
+  }
 }
 
 //Compute lower and upper x- and y- indicies for differential operations
@@ -139,8 +146,9 @@ bool PlasmaDomain::validateCellSizesAndPositions(const Grid& d, const Grid& pos,
     for(int j=0; j<ydim-1; j++){
       int i_next = i+(1-index);
       int j_next = j+index;
-      double expected = pos(i,j) + 0.5*d(i,j) + 0.5*d(i_next,j_next);
-      valid = valid && (std::abs((expected - pos(i_next,j_next))/expected) < tolerance);
+      double diff_pos = pos(i_next,j_next) - pos(i,j);
+      double diff_d = 0.5*d(i,j) + 0.5*d(i_next,j_next);
+      valid = valid && ( std::abs( 1.0 - diff_pos / diff_d ) < tolerance);
     }
   }
   return valid;

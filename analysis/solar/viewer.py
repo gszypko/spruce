@@ -73,7 +73,7 @@ vec_interval = args.density #number of vectors in each direction to display(?)
 
 input_file = open(args.filename)
 display_interval = float(args.timestep)
-output_var = args.contourvar #must be one of rho, temp, press, energy, rad
+output_var = args.contourvar
 file_var_name = output_var
 if output_var == "beta":
   file_var_name = "press"
@@ -275,13 +275,6 @@ if vec_var == "be":
   norm = np.sqrt(this_vec_x**2 + this_vec_y**2)
   np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
   np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
-  # quiv = ax.quiver(X[vec_interval::vec_interval, vec_interval::vec_interval], \
-  #   Y[vec_interval::vec_interval, vec_interval::vec_interval], \
-  #     this_vec_x[vec_interval::vec_interval, vec_interval::vec_interval], \
-  #       this_vec_y[vec_interval::vec_interval, vec_interval::vec_interval], \
-  #         norm[vec_interval::vec_interval, vec_interval::vec_interval], \
-  #           cmap=plt.cm.plasma, ec='k', lw=0.2, scale_units='inches', angles='xy', scale=20, \
-  #             pivot='mid', norm=matplotlib.colors.LogNorm())
   quiv = ax.quiver(X[x_vec_indices, y_vec_indices], \
     Y[x_vec_indices, y_vec_indices], \
       this_vec_x[x_vec_indices, y_vec_indices], \
@@ -325,8 +318,7 @@ def updatefig(*args):
     contour_color_axes.cla()
     var_colorbar = fig.colorbar(im, cax=contour_color_axes)
     var_colorbar.set_label(fullnames[output_var]+ fullunits[output_var])
-    # ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(round(t[frame]))+" s")
-    ax.set(xlabel="x (cm)",ylabel="y (cm)",title="t="+str(t[frame])+" s")
+    ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame])+" s")
     if vec_var != "be" and vec_var != None:
       vector_color_axes.cla()
       vec_colorbar = fig.colorbar(quiv, cax=vector_color_axes)

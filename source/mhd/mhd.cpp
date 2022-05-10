@@ -24,12 +24,12 @@ void mhdSolve(const fs::path &prev_run_directory, double time_duration)
 
   assert(!config_filename.empty() && !state_filename.empty() && "There must be a .state and a .config file in the specified directory");
 
-  PlasmaDomain simulation(prev_run_directory,config_filename,state_filename,true); // run in continue mode
+  PlasmaDomain simulation(prev_run_directory,config_filename,state_filename,true,false); // run in continue mode
   simulation.run(time_duration);
 }
 
-void mhdSolve(const fs::path &state_filename, const fs::path &config_filename, const fs::path &output_pathname, double time_duration)
+void mhdSolve(const fs::path &state_filename, const fs::path &config_filename, const fs::path &output_pathname, double time_duration, bool overwrite_init)
 {
-  PlasmaDomain simulation(output_pathname,config_filename,state_filename,false); // run from state file input
+  PlasmaDomain simulation(output_pathname,config_filename,state_filename,false,overwrite_init); // run from state file input
   simulation.run(time_duration);
 }

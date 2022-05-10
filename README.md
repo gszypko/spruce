@@ -7,10 +7,10 @@ This code was only developed using the GNU g++ compiler. Support for other C++ c
 The included Makefile can be used to compile by invoking `make` from the command line. The Makefile also allows you to specify the name of the executable file with the variable `EXEC`. For instance, `make EXEC=test_run` will compile into an executable named `test_run`. The default executable name is `run`, which will be used as the name of the executable in all examples below.
 
 # Running
-`mhdtoy` can be run in three different modes, depending on the method used to specify the initial state of the simulation run.
+`mhdtoy` can be run in two different modes, depending on the method used to specify the initial state of the simulation run.
 
 The resulting simulation will be output as a time series to the file `mhd.out` in the run's output directory. Other files written to the output directory are:
-- `init.state`: contains the full initial state of the system (written after loading; not a copy of a .state file used to initialize)
+- `init.state`: contains the full initial state of the system; if an `init.state` in the output directory was used to initialize the run, it will not be overwritten; otherwise, an existing `init.state` in the output directory will be overwritten by the initial state from a command-line-specified one.
 - `end.state`: contains the full final state of the system
 - A copy of the `.config` file used for the run
 - `plasma.settings`: (if run in Problem Generator Mode) encodes the particular `settings` used for the run. Note that this is not the same as the original `.settings` file if multiple sets of `settings` are possible from that file, depending on the specified `job_index`
@@ -19,18 +19,18 @@ The resulting simulation will be output as a time series to the file `mhd.out` i
 
 A user-generated set of grids, in the form of a `.state` file, can be specified to initialize the simulation. See below for more details on formatting a `.state` file. Running in this mode requires the following syntax:
 
-`./run  [-g grid_file] [-c config_file] [-o out_directory] [-d time_duration]`
-- `-g` or `--grids` (Required) specifies the `.state` file to be used to initialize the simulation run
-- `-c` or `--config` (Required) specifies the `.config` file to be used for configuring the simulation run. 
+`./run -m input [-o out_directory] [-g grid_file] [-c config_file] [-d time_duration]`
 - `-o` or `--output` (Required) specifies the name of the directory to which all output will be written. If the directory does not exist it will be created, and existing simulation outputs in that directory will be overwritten. 
+- `-s` or `--state` (Optional) specifies the `.state` file to be used to initialize the simulation run. If not specified, the program will look for a file named `init.state` inside of `out_directory` to use instead.
+- `-c` or `--config` (Optional) specifies the `.config` file to be used for configuring the simulation run. If not specified, the program will look for a `.config` file inside of `out_directory` to use instead. (There can only be one `.config` file in `out_directory` if this is the case.)
 - `-d` or `--duration` (Optional) specifies how long the simulation is to be continued, in units of simulation time. Providing this argument will override any duration specified in the `grid_file` file used for input
 
 ### Continue Mode
 
 Any previous run can be continued from where it left off, appending to the existing output files. Running in this mode requires the following syntax:
 
-`./run [-p prev_out_directory] [-d time_duration]`
-- `-p` or `--prev` (Required) specifies the `out_directory` of the previous simulation run to be continued. Note that if the previous run had a `job_index` specified, the corresponding subdirectory must also be specified.
+`./run -m continue [-o prev_out_directory] [-d time_duration]`
+- `-o` or `--output` (Required) specifies the `out_directory` of the previous simulation run to be continued. Note that if the previous run had a `job_index` specified, the corresponding subdirectory must also be specified.
 - `-d` or `--duration` (Required) specifies how long the simulation is to be continued, in units of simulation time.
 
 ### Problem Generator Mode (Deprecated)

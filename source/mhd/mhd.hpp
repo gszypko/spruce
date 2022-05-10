@@ -12,6 +12,6 @@ void mhdSolve(std::vector<Grid> input_vars, double ion_mass, double adiabatic_in
 void mhdSolve(const fs::path &prev_run_directory, double time_duration);
 
 //Custom Input Mode (from state file)
-void mhdSolve(const fs::path &state_filename, const fs::path &config_filename, const fs::path &output_pathname, double time_duration);
+void mhdSolve(const fs::path &state_filename, const fs::path &config_filename, const fs::path &output_pathname, double time_duration, bool overwrite_init);
 
 #endif
