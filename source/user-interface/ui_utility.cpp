@@ -134,6 +134,13 @@ std::vector<std::vector<std::string>> readCSV(fs::path filePath)
     return data;
 }
 
+
+void error(const std::string& err_msg)
+{
+    std::cerr << "Error: " << err_msg << std::endl;
+    std::abort();
+}
+
 // compare <str1> and <str2>
 bool strcmp(std::string str1, std::string str2)
 {

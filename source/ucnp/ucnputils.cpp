@@ -26,6 +26,8 @@ MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
     grids.set_duration(pms.getvar("tmax/tau_exp")*tau);
     grids.set_var(PlasmaDomain::d_x,dx,center_opt);
     grids.set_var(PlasmaDomain::d_y,dy,center_opt);
+    grids.set_var(PlasmaDomain::pos_x,x);
+    grids.set_var(PlasmaDomain::pos_y,y);
 
 
     double rho_max { pms.getvar("n")*pms.getvar("m_i") };
@@ -58,6 +60,73 @@ MhdInp gen_inp_grids_ucnp(const PlasmaSettings& pms)
 
     grids.set_var(PlasmaDomain::be_x,B[0]);
     grids.set_var(PlasmaDomain::be_y,B[1]);
+    grids.set_var(PlasmaDomain::grav_x,Grid(Nx,Ny,0));
+    grids.set_var(PlasmaDomain::grav_y,Grid(Nx,Ny,0));
+
+    return grids;
+}
+
+MhdInp gen_inp_grids_ucnp(const Settings& pms)
+{
+    // set up position grids
+    Grid x, y, dx, dy;
+    int Nx, Ny;
+    std::vector<double> dx_vec, dy_vec;
+    
+    Nx = 2*floor(pms.getvar("Nx")/2)+1; // ensure number of grids is odd so that there is a 'center' pixel
+    Ny = 2*floor(pms.getvar("Ny")/2)+1; // ensure number of grids is odd so that there is a 'center' pixel
+    genNonUniformGrids(pms.getvar("x_lim"),Nx,dx_vec,pms.getopt("grid_opt"));
+    genNonUniformGrids(pms.getvar("y_lim"),Ny,dy_vec,pms.getopt("grid_opt"));
+
+    meshgrid(dx_vec,dy_vec,dx,dy);
+    std::string center_opt = "center";
+    x = PlasmaDomain::convertCellSizesToCellPositions(dx,0,center_opt);
+    y = PlasmaDomain::convertCellSizesToCellPositions(dy,1,center_opt);
+
+
+    MhdInp grids(Nx,Ny);
+    double sig = pow(pms.getvar("sig_x")*pow(pms.getvar("sig_y"),2.),1./3.); // geometric mean of plasma size
+    double tau { tau_exp(sig,pms.getvar("m_i"),pms.getvar("Te")) };
+    grids.set_ion_mass(pms.getvar("m_i"));
+    grids.set_adiabatic_index(pms.getvar("gam"));
+    grids.set_duration(pms.getvar("tmax/tau_exp")*tau);
+    grids.set_var(PlasmaDomain::d_x,dx,center_opt);
+    grids.set_var(PlasmaDomain::d_y,dy,center_opt);
+    grids.set_var(PlasmaDomain::pos_x,x);
+    grids.set_var(PlasmaDomain::pos_y,y);
+
+    double rho_max { pms.getvar("n")*pms.getvar("m_i") };
+    double rho_min { pms.getvar("n_min")*pms.getvar("m_i") };
+    if (strcmp(pms.getopt("n_dist"),"gaussian")){
+        grids.set_var(PlasmaDomain::rho,gaussian2D(x,y,rho_max,rho_min,pms.getvar("sig_x"),pms.getvar("sig_y"),0,0));
+    }
+    else if (strcmp(pms.getopt("n_dist"),"exponential")){
+        grids.set_var(PlasmaDomain::rho,exponential2D(x,y,rho_max,rho_min,pms.getvar("sig_x"),pms.getvar("sig_y"),0,0));
+    }
+    else std::cerr << "<n_dist> must be specified as <gaussian> or <exponential>";
+
+    grids.set_var(PlasmaDomain::temp,Grid(Nx,Ny,pms.getvar("Te")));
+    grids.set_var(PlasmaDomain::mom_x,Grid(Nx,Ny,0));
+    grids.set_var(PlasmaDomain::mom_y,Grid(Nx,Ny,0));
+
+    // initialize quadrupole magnetic fields
+    AntiHelmholtz quad(30.,120.,pms.getvar("dBdx"),CurrentLoop::ax_x);
+
+    std::vector<Grid> B(2.);
+    for (int i = 0; i < B.size(); i++){ // for each B-field component (x and y)
+        B[i] = Grid(Nx,Ny); // initialize that component
+        for (int j = 0; j < B[i].rows(); j++){
+            for (int k = 0; k < B[i].cols(); k++){
+                std::vector<long double> Bquad = quad.get_field({x(j,k),y(j,k),0.});
+                B[i](j,k) = Bquad[i];
+            }
+        }
+    } 
+
+    grids.set_var(PlasmaDomain::be_x,B[0]);
+    grids.set_var(PlasmaDomain::be_y,B[1]);
+    grids.set_var(PlasmaDomain::bi_x,Grid(Nx,Ny,0));
+    grids.set_var(PlasmaDomain::bi_y,Grid(Nx,Ny,0));
     grids.set_var(PlasmaDomain::grav_x,Grid(Nx,Ny,0));
     grids.set_var(PlasmaDomain::grav_y,Grid(Nx,Ny,0));
 

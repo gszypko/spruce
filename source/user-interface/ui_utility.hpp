@@ -3,7 +3,6 @@
 
 #include "constants.hpp" // global macro definitions of constants in cgs units
 #include "grid.hpp" // Grid:: parallelized matrix class used in MHD simulation
-#include "PlasmaSettings.hpp" // class definition for plasma definition
 #include "MhdInp.hpp" // input parameters for MHD solver
 
 #include <iostream> // std::cout, std::endl
@@ -25,6 +24,7 @@ double euclidean_norm(const std::vector<double>& vec_in);
 std::vector<std::vector<std::string>> unique_comb(const std::vector<std::vector<std::string>>& mat_in,const std::vector<std::string>& vec_2);
 std::vector<std::vector<std::string>> unique_comb(const std::vector<std::string>& vec_in,const std::vector<std::string>& vec_2);
 std::vector<std::vector<std::string>> readCSV(fs::path filePath);
+void error(const std::string& err_msg);
 
 //*** FUNCTIONS FOR USE WITH GRID.HPP ***//
 
