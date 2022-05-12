@@ -4,11 +4,8 @@ function [] = plotGridEvol(data)
 % set up save directories
 f = filesep;
 savedir = [data.folder f 'grid-evol'];
-if exist(savedir,'dir')
-    if endsWith(savedir,'grid-evol') rmdir(savedir); end
-else 
-    mkdir(savedir);
-end
+if exist
+mkdir(savedir)
 
 % for each time point, plot 2D grids from MHD simulation
 gridnames = {'n','temp','v_x','v_y'};

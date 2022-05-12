@@ -1,28 +1,28 @@
-function [] = gaussianAnalysis(os)
+function [] = gaussianAnalysis(data)
 
 % set up save directories
 f = filesep;
-savedir = [os.folder f 'figs-gauss-fits'];
+savedir = [data.folder f 'gauss-fits'];
 mkdir(savedir)
 
 s = struct;
-s.t = os.grids.time;
-s.x = os.grids.x_vec;
-s.y = os.grids.y_vec;
-s.Te0 = os.settings.Te;
-s.sig0 = os.settings.sigx;
-s.tau = getTauExp(s.sig0,s.Te0,s.Te0);
+s.t = data.grids.time;
+s.x = data.grids.x_vec;
+s.y = data.grids.y_vec;
+s.Te0 = data.settings.Te;
+s.sig0 = data.sig0;
+s.tau = data.tau;
 
 figiter = 0;
 %% Fit Density Distribution with 2D Gaussian to Extract RMS Width
 
-for i = 1:length(os.grids.time)
-    disp(['2D Gaussian Fits: ' num2str(i) '/' num2str(length(os.grids.time))])
-    x = os.grids.x_vec;
-    y = os.grids.y_vec;
-    X = os.grids.pos_x;
-    Y = os.grids.pos_y;
-    img = os.grids.vars(i).n;
+for i = 1:length(data.grids.time)
+    disp(['2D Gaussian Fits: ' num2str(i) '/' num2str(length(data.grids.time))])
+    x = data.grids.x_vec;
+    y = data.grids.y_vec;
+    X = data.grids.pos_x;
+    Y = data.grids.pos_y;
+    img = data.grids.vars(i).n;
     [fit(i)] = fitImgWithGaussian(x,y,img);
     
     [~,indx] = min(abs(x));
@@ -38,20 +38,22 @@ for i = 1:length(os.grids.time)
     fig = figure('Visible','off');
     figiter = figiter + 1;
     fig.Position = [195         259        1027         491];
+    fig.Color = [1 1 1];
+
     ax = subplot(2,3,1);
-    pcolor(X,Y,img./1e8)
+    imagesc(x,y,img./1e8)
     ax.PlotBoxAspectRatio = [1 1 1];
     shading interp
     cb = colorbar;
     
     ax = subplot(2,3,2);
-    pcolor(X,Y,fit(i).imgfit./1e8);
+    imagesc(x,y,fit(i).imgfit./1e8);
     ax.PlotBoxAspectRatio = [1 1 1];
     shading interp
     cb = colorbar;
     
     ax = subplot(2,3,3);
-    pcolor(X,Y,fit(i).imgres./1e8);
+    imagesc(x,y,fit(i).imgres./1e8);
     ax.PlotBoxAspectRatio = [1 1 1];
     shading interp
     cb = colorbar;
@@ -82,7 +84,7 @@ for i = 1:length(os.grids.time)
     an.LineStyle = 'none';
     an.FontSize = 12;
     
-    str1 = ['t = ' num2str(os.grids.time(i)*1e6,'%.2g') ' \mus = ' num2str(os.grids.time(i)/s.tau,'%.2g') ' \tau_{exp}'];
+    str1 = ['t = ' num2str(data.grids.time(i)*1e6,'%.2g') ' \mus = ' num2str(data.grids.time(i)/s.tau,'%.2g') ' \tau_{exp}'];
     str2 = ['n_{max} = ' num2str(fit(i).amp/1e8,'%.2g') '\times10^8 cm^{-3}'];
     str3 = ['\sigma_x = ' num2str(fit(i).sigx*10,'%.2g') ' \pm ' num2str(fit(i).sigxErr*10,'%.2g') ' mm'];
     str4 = ['\sigma_y = ' num2str(fit(i).sigy*10,'%.2g') ' \pm ' num2str(fit(i).sigyErr*10,'%.2g') ' mm'];
@@ -100,11 +102,11 @@ for i = 1:length(s.t)
     s.data(i).sigx = fit(i).sigx;
     s.data(i).sigy = fit(i).sigy;
     s.data(i).n = fit(i).amp;
-    [~,indx] = min(abs(os.grids.x_vec));
-    [~,indy] = min(abs(os.grids.y_vec));
-    s.data(i).Te = os.grids.vars(i).temp(indy,indx);
-    s.data(i).vx = os.grids.vars(i).v_x(indy,:);
-    s.data(i).vy = os.grids.vars(i).v_y(:,indx)';
+    [~,indx] = min(abs(data.grids.x_vec));
+    [~,indy] = min(abs(data.grids.y_vec));
+    s.data(i).Te = data.grids.vars(i).temp(indy,indx);
+    s.data(i).vx = data.grids.vars(i).v_x(indy,:);
+    s.data(i).vy = data.grids.vars(i).v_y(:,indx)';
 end
 
 s.theory = struct;

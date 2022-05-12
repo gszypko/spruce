@@ -1,15 +1,22 @@
-function [os] = loadData(folder,removeGhostCells)
+function [data] = loadData(folder,removeGhostCells,numGhostCells)
 
-os.folder = folder;
-os.settings = readSettingsFile(folder);
-os.state = readStateFile(folder,removeGhostCells);
-os.grids = readOutFile(folder,removeGhostCells);
+f = filesep;
 
-fields = fieldnames(os.grids.vars);
+data.folder = folder;
+data.settings = readSettingsFile([folder f 'plasma.settings']);
+data.state.init = readStateFile([folder f 'init.state'],removeGhostCells,numGhostCells);
+data.state.end = readStateFile([folder f 'end.state'],removeGhostCells,numGhostCells);
+data.grids = readOutFile([folder f 'mhd.out'],removeGhostCells,numGhostCells);
+
+fields = fieldnames(data.grids.vars);
 if max(strcmp(fields,'rho'))
-    for i = 1:length([os.grids.vars.time])
-        os.grids.vars(i).n = os.grids.vars(i).rho./os.settings.mI;
+    for i = 1:length([data.grids.vars.time])
+        data.grids.vars(i).n = data.grids.vars(i).rho./data.settings.mI;
     end
 end
+
+Te = data.settings.Te;
+data.sig0 = (data.settings.sigx*data.settings.sigy^2)^(1/3);
+data.tau = getTauExp(data.sig0,Te,Te);
 
 end

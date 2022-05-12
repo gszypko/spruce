@@ -1,39 +1,33 @@
-function [out] = readStateFile(directory,opt)
+function [out] = readStateFile(path,removeGhostCells,Ng)
 % directory (string): full path to directory containing 'plasma.settings'
 % opt (bool): (true) trim ghost cells from matrices (false) do not
 % out (struct): fields of <out> contain plasma quantities in cgs units, see below
 
-% ensure that plasma.settings file exists
-f = filesep;
-files = dir(directory);
-ind = strcmp({files.name},'init.state');
-if max(ind)~=1, error('The file <mhd.state> not found in <directory>.'); end
+if ~removeGhostCells, Ng = 0; end
 
-% read in contents from file
-fid = fopen([files(ind).folder f files(ind).name],'r');
-iter = 0;
-while ~feof(fid)
-    iter = iter + 1;
-    line = fgetl(fid);
-    C{iter} = strsplit(line,{',',';'});
-end
+% ensure that .state file exists
+if ~endsWith(path,'.state'), error('File extension must be .state'); end
 
-out.Nx = str2double(C{2}{1});
-out.Ny = str2double(C{2}{2});
-out.mI = str2double(C{4}{1});
-out.index = str2double(C{6}{1});
+C = readfile(path);
+dlm = ',';
+
+temp = split(C{2},dlm);
+out.Nx = str2double(temp{1}) - 2*Ng;
+out.Ny = str2double(temp{2}) - 2*Ng;
+out.mI = str2double(C{4});
+out.index = str2double(C{6});
 
 q = {'d_x','d_y','pos_x','pos_y','rho','temp','mom_x','mom_y','be_x','be_y'};
-qind = [];
+qind = zeros(size(q));
 for i = 1:length(C)
-    ind = find(strcmp(C{i}{1},q));
+    ind = find(strcmp(C{i},q));
     if ~isempty(ind)
-        qind(ind) = i+1;
+        qind(ind) = i;
     end
 end
 
 for i = 1:length(q)
-    out.grids.(q{i}) = grid2mat(C{qind(i)},out.Nx,out.Ny,opt);
+    out.grids.(q{i}) = getgrid(C,qind(i),Ng,out.Nx,out.Ny);
 end
 
 out.pos_x = out.grids.pos_x(1,:);

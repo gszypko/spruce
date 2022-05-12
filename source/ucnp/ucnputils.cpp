@@ -86,7 +86,7 @@ MhdInp gen_inp_grids_ucnp(const Settings& pms)
 
     MhdInp grids(Nx,Ny);
     double sig = pow(pms.getvar("sig_x")*pow(pms.getvar("sig_y"),2.),1./3.); // geometric mean of plasma size
-    double tau { tau_exp(sig,pms.getvar("m_i"),pms.getvar("Te")) };
+    double tau { tau_exp(sig,pms.getvar("m_i"),2*pms.getvar("Te")) };
     grids.set_ion_mass(pms.getvar("m_i"));
     grids.set_adiabatic_index(pms.getvar("gam"));
     grids.set_duration(pms.getvar("tmax/tau_exp")*tau);

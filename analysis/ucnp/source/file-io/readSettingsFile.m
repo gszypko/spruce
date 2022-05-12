@@ -3,37 +3,46 @@ function [out] = readSettingsFile(path)
 % out (struct): fields of <out> contain plasma quantities in cgs units, see below
 
 % ensure that plasma.settings file exists
-if ~endsWith(path,'.settings'), error('Specified path does not point to .settings file'); end
-if ~isfile(path), error('.settings file does not exist'); end
+if ~endsWith(path,'.settings'), error('<path> does not point to .settings file'); end
 
 % read in contents from file
-fid = fopen(path,'r');
-iter = 0;
-while ~feof(fid)
-    iter = iter + 1;
-    line = fgetl(fid);
-    C{iter} = strsplit(line,',');
-end
+C = readfile(path);
 
-names = C{1};
-units = C{2};
-vals = C{3};
+names = cell(length(C),1);
+vals = cell(length(C),1);
+units = cell(length(C),1);
+for i = 1:length(C)
+    line = split(C{i},"=");
+    names{i} = strtrim(line{1});
+    units{i} = strtrim(line{2});
+    vals{i} = strtrim(line{3});
+end
 
 % reformat file contents into output structure
 out = struct;
 q = {'n','sig_x','sig_y','Ti','Te','dBdx','x_lim','y_lim','Nx','Ny','m_i','gam'};
 qstr = {'n','sigx','sigy','Ti','Te','dBdx','xlim','ylim','Nx','Ny','mI','adiabatic_index'};
+specified = zeros(size(q));
 for i = 1:length(names)
     ind = find(strcmp(names{i},q)); 
     if length(ind) == 1
-        out.(qstr{ind}) = str2double(vals{i});
+        specified(ind) = 1;
+        if strcmp(units{i},'opt')
+            out.(qstr{ind}) = vals{i};
+        else
+            out.(qstr{ind}) = str2double(vals{i});
+        end
         
-        ind2 = find(strcmp(units{i},names));
-        if length(ind2) == 1
-            if ~strcmp(units{ind2},'cgs')
-                error('You can only express quantities in terms of other quantities that are in cgs units.')
+        if ~max(strcmp(units{i},{'cgs','opt'}))
+            ind2 = find(strcmp(units{i},names));
+            if isempty(ind2)
+                error('Variable unit must be ''cgs'', ''opt'', or another variable name.')
+            elseif length(ind2) == 1
+                if ~strcmp(units{ind2},'cgs')
+                    error('You can only express quantities in terms of other quantities that are in cgs units.')
+                end
+                out.(qstr{ind}) = out.(qstr{ind})*str2double(vals{ind2});
             end
-            out.(qstr{ind}) = out.(qstr{ind})*str2double(vals{ind2});
         end
     end
 
