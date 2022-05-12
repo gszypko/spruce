@@ -1,5 +1,5 @@
 // compile: g++ -I source -I source\mhd -I source\modules\solar -I source\modules -I source\solar -I source\ucnp -I source\user-interface -std=c++20 -fopenmp -O3 execs\gengrids.cpp source\mhd\*.cpp source\modules\*.cpp source\modules\solar\*.cpp source\solar\*.cpp source\ucnp\*.cpp source\user-interface\*.cpp -o execs\gengrids.exe -lm -lstdc++fs
-// run: execs\gengrids -o E:\Grant-Gorman\data-mhd\05.12.22 -s ucnp.settings -c ucnp.config -f 0 -a 0
+// run: execs\gengrids -o E:\Grant-Gorman\data-mhd\test -s ucnp.settings -c ucnp.config -f 1 -a 5
 #include <iostream>
 #include "utils.hpp"
 #include "settings.hpp"
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     Settings pms(settings);
     
     // for each unique set of conditions, generate the grids and write them to file
-    for (auto i : pms.get_valid_arrays()){
+    for (auto i : pms.task_array()){
         fs::path set_path = output/("set_"+num2str(i+array));
         if (overwrite==0) assert(!fs::exists(set_path) && "Error: folder already exists and overwrite_flag=0");
         
