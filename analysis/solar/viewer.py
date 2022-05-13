@@ -339,12 +339,17 @@ if vec_var != None:
   np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
   np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
   if vec_mode == "stream":
-    norm_normalized = norm[:,0]**2/np.trapz(norm[:,0]**2)
-    cdf = [np.trapz(norm_normalized[:(i+1)]) for i in range(len(norm_normalized))]
     num_points = 17
     if this_vec_x[1,1]*this_vec_x[-2,1] > 0.0:
+      print("loop detected")
       num_points = int(num_points*2)
-    stream_points = np.interp(np.linspace(0.02,0.98,num=num_points),cdf,x)
+      stream_pow = 1
+    else:
+      stream_pow = 2
+    norm_normalized = norm[:,0]**stream_pow/np.trapz(norm[:,0]**stream_pow)
+    cdf = [np.trapz(norm_normalized[:(i+1)]) for i in range(len(norm_normalized))]
+    stream_points = np.interp(np.linspace(0.05,0.95,num=num_points),cdf,x)
+    print(stream_points)
     stream = ax.streamplot(x_eq,y_eq,this_vec_x.transpose(),this_vec_y.transpose(),\
       start_points=np.column_stack((stream_points,y_eq[0]*np.ones_like(stream_points))),\
         color=(0.0,0.0,0.0),density=100,linewidth=1.0,arrowstyle='->',maxlength=1000.0)
