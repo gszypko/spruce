@@ -1,7 +1,10 @@
 //module.cpp
 
 #include "module.hpp"
-#include <vector>
+#include "utils.hpp"
+#include <iostream>
+#include <fstream>
+#include <cassert>
 
 Module::Module(PlasmaDomain &pd): m_pd(pd) {}
 

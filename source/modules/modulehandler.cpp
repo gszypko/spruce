@@ -1,8 +1,13 @@
 //modulehandler.cpp
 
-#include "plasmadomain.hpp"
+#include "utils.hpp"
 #include "modulehandler.hpp"
 #include "module.hpp"
+#include "ambientheating.hpp"
+#include "localizedheating.hpp"
+#include "thermalconduction.hpp"
+#include "radiativelosses.hpp"
+#include "sgfilter.hpp"
 
 ModuleHandler::ModuleHandler(PlasmaDomain &pd): m_pd(pd) {}
 

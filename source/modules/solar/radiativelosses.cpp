@@ -7,6 +7,8 @@
 #include "module.hpp"
 #include "plasmadomain.hpp"
 #include "radiativelosses.hpp"
+#include <cmath>
+#include <iostream>
 
 RadiativeLosses::RadiativeLosses(PlasmaDomain &pd): Module(pd) {}
 

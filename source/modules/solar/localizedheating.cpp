@@ -8,6 +8,7 @@
 #include "plasmadomain.hpp"
 #include "solarutils.hpp"
 #include <sstream>
+#include <iostream>
 
 LocalizedHeating::LocalizedHeating(PlasmaDomain &pd) : Module(pd) {}
 

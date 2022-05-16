@@ -5,16 +5,14 @@
 #ifndef MODULEHANDLER_HPP
 #define MODULEHANDLER_HPP
 
-#include "constants.hpp"
-#include "ambientheating.hpp"
-#include "localizedheating.hpp"
-#include "thermalconduction.hpp"
-#include "radiativelosses.hpp"
-#include "sgfilter.hpp"
 #include <memory>
+#include <string>
+#include <vector>
+#include <fstream>
+#include "grid.hpp"
+#include "module.hpp"
 
 class PlasmaDomain;
-class Module;
 
 class ModuleHandler {
     public:

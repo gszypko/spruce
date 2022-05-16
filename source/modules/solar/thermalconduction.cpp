@@ -7,6 +7,9 @@
 #include "module.hpp"
 #include "plasmadomain.hpp"
 #include "thermalconduction.hpp"
+#include "constants.hpp"
+#include <iostream>
+#include <cmath>
 
 ThermalConduction::ThermalConduction(PlasmaDomain &pd): Module(pd) {}
 

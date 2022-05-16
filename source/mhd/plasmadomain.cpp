@@ -2,19 +2,11 @@
 //PlasmaDomain functionality related to initializing
 //and setting/modifying simulation configuration
 
-#include <vector>
-#include <iostream>
-#include <assert.h>
-#include <algorithm>
-#include <iterator>
-#include <cmath>
-#include <limits>
-#include <filesystem>
-namespace fs = std::filesystem;
-#include "utils.hpp"
-#include "grid.hpp"
 #include "plasmadomain.hpp"
 #include "constants.hpp"
+#include <fstream>
+#include <cassert>
+#include <iostream>
 
 //Construction with newly constructed initial state (not continue mode)
 PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const std::vector<Grid>& input_vars,

@@ -2,7 +2,9 @@
 //PlasmaDomain functionality relating to time-evolution of the plasma
 
 #include "plasmadomain.hpp"
-#include "solarutils.hpp"
+#include "constants.hpp"
+#include <cmath>
+// #include "solarutils.hpp"
 
 void PlasmaDomain::run(double time_duration)
 {
@@ -321,12 +323,9 @@ void PlasmaDomain::catchUnderdensity(std::vector<Grid> &grids)
 //with safety coefficient
 void PlasmaDomain::recomputeDT()
 {
-  #if BENCHMARKING_ON
-  InstrumentationTimer timer(__PRETTY_FUNCTION__);
-  #endif
   Grid c_s = (m_adiabatic_index*m_grids[press]/m_grids[rho]).sqrt();
   Grid c_s_sq = c_s.square();
-
+  
   Grid v_alfven = m_grids[b_magnitude]/(4.0*PI*m_grids[rho]).sqrt();
   m_grids[v_a] = v_alfven;
   Grid v_alfven_sq = v_alfven.square();

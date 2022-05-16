@@ -2,6 +2,8 @@
 //PlasmaDomain functionality relating to file I/O
 
 #include "plasmadomain.hpp"
+#include "utils.hpp"
+#include <iostream>
 
 //Read in variables from .state file
 //This function will abort execution if an invalid variable name is encountered

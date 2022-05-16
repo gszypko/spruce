@@ -1,4 +1,7 @@
 #include "mhd.hpp"
+#include "plasmadomain.hpp"
+#include <cassert>
+#include <string>
 
 void mhdSolve(std::vector<Grid> input_vars, double ion_mass, double adiabatic_index, double time_duration,
               const fs::path &output_pathname, const fs::path &config_filename)
