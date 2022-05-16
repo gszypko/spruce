@@ -6,6 +6,8 @@ This code was only developed using the GNU g++ compiler. Support for other C++ c
 
 The included Makefile can be used to compile by invoking `make` from the command line. The Makefile also allows you to specify the name of the executable file with the variable `EXEC`. For instance, `make EXEC=test_run` will compile into an executable named `test_run`. The default executable name is `run`, which will be used as the name of the executable in all examples below.
 
+Compiling in this way will generate a directory named `obj` to contain the object (`.o`) file for each source file, with an additional subdirectory `obj/.deps` to contain the dependency (`.d`) files that are generated automatically on compilation. This should allow for more efficient recompiling by only recompiling the source files that have changed, then linking with the older, but still up-to-date, object files. `make clean` will delete the executable and clear out the `obj` directory to allow for a clean slate, in case any issues arise.
+
 # Running
 `mhdtoy` can be run in two different modes, depending on the method used to specify the initial state of the simulation run.
 
