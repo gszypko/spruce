@@ -66,6 +66,7 @@ private:
   friend class SGFilter;
   friend class AmbientHeating;
   friend class LocalizedHeating;
+  friend class FieldHeating;
   friend class RadiativeLosses;
   friend class ThermalConduction;
 

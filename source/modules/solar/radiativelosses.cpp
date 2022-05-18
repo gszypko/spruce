@@ -1,9 +1,3 @@
-//radiativelosses.hpp
-//Header for the Radiative Losses Module,
-//an implementation of the abstract Module class
-//Applies a piecewise power-law approximation
-//of optically-thin radiation in the solar corona
-
 #include "module.hpp"
 #include "plasmadomain.hpp"
 #include "radiativelosses.hpp"
@@ -102,6 +96,8 @@ std::string RadiativeLosses::commandLineMessage() const
 
 void RadiativeLosses::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) const
 {
-    var_names.push_back("rad");
-    var_grids.push_back(avg_losses);
+    if (output_to_file) {
+        var_names.push_back("rad");
+        var_grids.push_back(avg_losses);
+    }
 }

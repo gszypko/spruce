@@ -17,6 +17,7 @@ SRCS := source/solar/solarutils.cpp \
 	source/ucnp/settings.cpp \
 	source/modules/solar/thermalconduction.cpp \
 	source/modules/solar/localizedheating.cpp \
+	source/modules/solar/fieldheating.cpp \
 	source/modules/solar/ambientheating.cpp \
 	source/modules/solar/radiativelosses.cpp \
 	source/modules/modulehandler.cpp \

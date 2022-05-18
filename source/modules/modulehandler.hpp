@@ -29,7 +29,7 @@ class ModuleHandler {
         PlasmaDomain &m_pd;
         std::vector<std::unique_ptr<Module>> m_modules;
         static inline std::vector<std::string> m_module_names = {
-            "radiative_losses", "thermal_conduction", "ambient_heating", "localized_heating", "sg_filtering"
+            "radiative_losses", "thermal_conduction", "ambient_heating", "localized_heating", "field_heating", "sg_filtering"
         };
 };
 
