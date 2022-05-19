@@ -16,6 +16,7 @@ void RadiativeLosses::parseModuleConfigs(std::vector<std::string> lhs, std::vect
         else if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
         else std::cerr << this_lhs << " config not recognized.\n";
     }
+    avg_losses = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
 }
 
 void RadiativeLosses::preIterateModule(double dt){

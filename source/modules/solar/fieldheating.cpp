@@ -14,10 +14,13 @@ void FieldHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vector<
         else if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
         else std::cerr << this_lhs << " config not recognized.\n";
     }
+    heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
 }
 
 void FieldHeating::computeHeating(){
     heating = rate*(m_pd.m_grids[PlasmaDomain::b_magnitude]).square()/(8.0*PI);
+    // heating = rate*C/(4.0*PI)*PlasmaDomain::curl2D(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_grids[PlasmaDomain::bi_x],
+    //                                                 m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_grids[PlasmaDomain::bi_y]);
 }
 
 void FieldHeating::postIterateModule(double dt){
