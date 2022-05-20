@@ -38,7 +38,8 @@ fullnames = {
   'beta': "Plasma Beta",
   'div_be': "Background Field Divergence",
   'div_bi': "Induced Field Divergence",
-  'b_mag': "Field Magnitude"
+  'b_mag': "Field Magnitude",
+  'field_heating': "Field-Based Heating Rate"
 }
 fullunits = {
   'rho': r'g cm$^{-3}$',
@@ -58,7 +59,8 @@ fullunits = {
   'beta': r'',
   'div_be': r'G cm$^{-1}$',
   'div_bi': r'G cm$^{-1}$',
-  'b_mag': r'G'
+  'b_mag': r'G',
+  'field_heating': r'erg cm$^{-3}$ s$^{-1}$'
 }
 for key in fullunits.keys():
   if fullunits[key] != r'':
@@ -68,7 +70,7 @@ parser = argparse.ArgumentParser(description='View the output from mhdtoy.')
 parser.add_argument('filename', help="the name of the file output from mhdtoy")
 parser.add_argument('timestep', type=float, help="the interval (in simulation time units) between frames of output animation")
 parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', \
-  'thermal_energy', 'v_x', 'v_y', 'dt', 'dt_thermal', 'dt_rad', 'n', 'beta', 'div_be', 'div_bi', 'b_mag'])
+  'thermal_energy', 'v_x', 'v_y', 'dt', 'dt_thermal', 'dt_rad', 'n', 'beta', 'div_be', 'div_bi', 'b_mag', 'field_heating'])
 parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['be','v','bi'])
 parser.add_argument('-V', '--vecmode', help="designates mode of display for the chosen vector quantity", choices=['quiver','stream'], default='quiver')
 parser.add_argument('--density', metavar="vec_display_density", type=int, help="set the interval between displayed vectors", default=25)
@@ -253,7 +255,7 @@ if vec_var != None:
   if min_v_vec == np.finfo(np.float_).max:
     min_v_vec = 0.0
 
-if output_var in ["rad","beta","dt","dt_thermal","dt_rad"]: #variables that can go to zero
+if output_var in ["rad","beta","dt","dt_thermal","dt_rad","field_heating"]: #variables that can go to zero
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-8, base=10))
 elif output_var in ["div_bi","div_be"]:
