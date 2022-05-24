@@ -12,15 +12,16 @@ void FieldHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vector<
         std::string this_rhs = rhs[i];
         if(this_lhs == "rate") rate = std::stod(this_rhs);
         else if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
+        else if(this_lhs == "current_mode") current_mode = (this_rhs == "true");
         else std::cerr << this_lhs << " config not recognized.\n";
     }
     heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
 }
 
 void FieldHeating::computeHeating(){
-    heating = rate*(m_pd.m_grids[PlasmaDomain::b_magnitude]).square()/(8.0*PI);
-    // heating = rate*C/(4.0*PI)*PlasmaDomain::curl2D(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_grids[PlasmaDomain::bi_x],
-    //                                                 m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_grids[PlasmaDomain::bi_y]);
+    if(current_mode) heating = rate*C/(4.0*PI)*m_pd.curl2D(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_grids[PlasmaDomain::bi_x],
+                                                            m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_grids[PlasmaDomain::bi_y]);
+    else heating = rate*(m_pd.m_grids[PlasmaDomain::b_magnitude]).square()/(8.0*PI);
 }
 
 void FieldHeating::postIterateModule(double dt){
@@ -31,7 +32,7 @@ void FieldHeating::postIterateModule(double dt){
 
 std::string FieldHeating::commandLineMessage() const
 {
-    return "Field Heating On";
+    return (current_mode ? "Field Heating On (Current Mode)" : "Field Heating On");
 }
 
 void FieldHeating::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) const

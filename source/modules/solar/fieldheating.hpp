@@ -19,6 +19,7 @@ class FieldHeating : public Module {
     private:
         double rate;
         bool output_to_file;
+        bool current_mode; //when true, heating is calculated relative to current density J instead of magnetic pressure
         Grid heating;
         void computeHeating();
 };
