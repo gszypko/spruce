@@ -64,11 +64,6 @@ with open(in_filename, newline='') as f:
             curr_grid.append(next(reader))
             assert(len(curr_grid[-1]) == ydim)
         vars[curr_name] = np.asarray(curr_grid).astype(np.float64)
-    # for row in reader:
-    #     print(row)
-    # names = ["d_x","d_y","pos_x","pos_y"]
-
-    # IN: names = ["d_x","d_y","pos_x","pos_y","press","temp","b0_x","b0_y","b1_x","b1_y"]
 
 zero = np.zeros((xdim,ydim))
 one = np.ones((xdim,ydim))
@@ -100,8 +95,3 @@ with open(out_path+"/"+out_filename, 'w', newline='') as f:
         mult = mults[i]
         writer.writerow([name])
         writer.writerows(mult*vars[name])
-
-
-# varnames = ["d_x","d_y","pos_x","pos_y"]
-# for varname in varnames:
-#     print(vars[varname])
