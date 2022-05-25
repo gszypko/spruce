@@ -3,6 +3,8 @@ function [out] = readOutFile(path,removeGhostCells,Ng)
 % opt (bool): (true) trim ghost cells from matrices (false) do not
 % out (struct): fields of <out> contain plasma quantities in cgs units, see below
 
+if ~removeGhostCells, Ng = 0; end
+
 % ensure that plasma.settings file exists
 if ~endsWith(path,'.out'), error('File extension must be .out'); end
 
@@ -34,7 +36,7 @@ for i = 1:length(static_vars)
     iter = 0;
     for j = static_ind(i)+1+Ng:static_ind(i)+Ng+out.Nx
         iter = iter + 1;
-        temp = split(C{j},',');
+        temp = split(C{j},dlm);
         line = sscanf(sprintf(' %s',temp{:}),'%f',[1,Inf]);
         grid(:,iter) = line(Ng+1:end-Ng);
     end

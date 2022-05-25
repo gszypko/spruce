@@ -1,8 +1,8 @@
-function [out] = getLineSpecs(m)
+function [out] = get_line_specs(m)
 %%
 % m is the number of lines to be plotted on the same graph
 
-s.col = plasmaModified(m); % each row of s.col contains RGB triplet
+s.col = plasma_modified(m); % each row of s.col contains RGB triplet
 s.style = cell(m,1);        % line style for each line color (row of s.col)
 
 ind = 0;

@@ -1,70 +1,56 @@
 function [] = plotGridEvol(data)
 % os (struct): contains grid info from 'os.grids.out' file
 
-% set up save directories
-f = filesep;
-savedir = [data.folder f 'grid-evol'];
-if exist(savedir,'dir')
-    if endsWith(savedir,'grid-evol') rmdir(savedir); end
-else 
-    mkdir(savedir);
-end
-
 % for each time point, plot 2D grids from MHD simulation
 gridnames = {'n','temp','v_x','v_y'};
 gridstr = {'n','T','v_x','v_y'};
-row = 2;
-col = 2;
-num = length(gridnames);
+
+% generate figure
+f = filesep;
+filepath = [data.folder f 'grid-evol'];
+row = 2; 
+col = 2; 
+num = row*col;
+[fig,ax,an] = open_subplot(row,col,num);
+fig.Position = [471.6667  349.0000  754.0000  574.6667];
+move_ax(ax(1,:),0,.05)
+an.Position = [0.1595    0.9084    0.7230    0.0801];
+
+frames = cell(1,length(data));
 for k = 1:length([data.grids.vars.time])
     disp(['Plotting: ' num2str(k) '/' num2str(length([data.grids.vars.time]))])
     
-    fig = figure('Visible','off');
-    fig.Position = [463.6667  307.0000  970.0000  672.0000];
-    fig.Color = [1 1 1];
-    
-    ax = cell(row,col);
+    % update axis information
     iter = 0;
-    for i = 1:row
-        for j = 1:col
-            if iter > num - 1, break, end
+    for i = 1:size(ax,1)
+        for j = 1:size(ax,2)
             iter = iter + 1;
-            ax{i,j} = subplot(row,col,iter);
-
+            if iter > num, break, end
+            
+            cax = get_axis(fig,ax{i,j});
             xdata = data.grids.x_vec;
             ydata = data.grids.y_vec;
             zdata = data.grids.vars(k).(gridnames{iter});
             imagesc(xdata,ydata,zdata)
-            
-            cb = colorbar;
-            ax{i,j}.YDir = 'Normal';
-
-            ax{i,j}.PlotBoxAspectRatio = [1 1 1];
-            ax{i,j}.FontSize = 12;
-
-            if i == row, xlabel('x (cm)'), end
+            colorbar
+            cax.YDir = 'Normal';
+            cax.PlotBoxAspectRatio = [1 1 1];
+            cax.FontSize = 12;
+            if i == size(ax,1), xlabel('x (cm)'), end
             if j == 1, ylabel('y (cm)'), end
             title(gridstr{iter},'FontWeight','normal')
-
         end
     end
-
-    an = annotation('textbox');
-    an.Position = [-0.0073    0.9417    0.9919    0.0686];
-    an.HorizontalAlignment = 'center';
-    an.VerticalAlignment = 'middle';
-    an.LineStyle = 'none';
-    an.FontSize = 12;
 
     dlm = ' - ';
     str1 = ['Iter = ' num2str(k-1)];
     str2 = ['t = ' num2str(data.grids.vars(k).time*1e6,'%.3g') '\mus = ' num2str(data.grids.vars(k).time/data.tau,'%.3g') '\tau_e_x_p'];
     an.String = [str1 dlm str2];
 
-    savepath = [savedir f 'tEvol' num2str(k-1) '.png'];
-    saveas(fig,savepath)
-    close(fig)
+    frames{k} = getframe(fig);
 end
-    
+close(fig)
+write_video(filepath,frames);
+
 end
 

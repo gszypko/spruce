@@ -3,13 +3,13 @@ function [C] = readfile(path)
 if ~isfile(path), error('<path> does not correspond to a file.'); end
 
 fid = fopen(path,'r');
-iter = 0;
+line_num = 0;
 C = cell(1000,1);
 while ~feof(fid)
-    iter = iter + 1;
-    C{iter} = fgetl(fid);
-    if length(C) == iter, C{length(C)*2} = []; end
+    line_num = line_num + 1;
+    C{line_num} = fgetl(fid);
+    if length(C) == line_num, C{length(C)*2} = []; end
 end
-C(iter+1:end) = [];
+C(line_num+1:end) = [];
 
 end

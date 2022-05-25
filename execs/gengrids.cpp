@@ -1,5 +1,5 @@
 // compile: g++ -I source -I source\mhd -I source\modules\solar -I source\modules -I source\solar -I source\ucnp -I source\user-interface -std=c++20 -fopenmp -O3 execs\gengrids.cpp source\mhd\*.cpp source\modules\*.cpp source\modules\solar\*.cpp source\solar\*.cpp source\ucnp\*.cpp source\user-interface\*.cpp -o execs\gengrids.exe -lm -lstdc++fs
-// run: execs\gengrids -o E:\Grant-Gorman\data-mhd\test -s ucnp.settings -c ucnp.config -f 1 -a 5
+// run: execs\gengrids --path E:\Grant-Gorman\data-mhd\05.23.22 -s ucnp.settings -c ucnp.config --overwrite 0 --array 0
 #include <iostream>
 #include "utils.hpp"
 #include "settings.hpp"
@@ -11,11 +11,11 @@ namespace fs = std::filesystem;
 int main(int argc, char *argv[])
 {
     // handle input arguments
-    fs::path output = getCommandLineArg(argc, argv, "-o", "--directory");
+    fs::path output = getCommandLineArg(argc, argv, "-p", "--path");
     fs::path settings = getCommandLineArg(argc, argv, "-s", "--settings");
     fs::path config = getCommandLineArg(argc, argv, "-c", "--config");
     int array = stoi(getCommandLineArg(argc, argv, "-a", "--array"));
-    std::string overwrite_str = getCommandLineArg(argc, argv, "-f", "--flag");
+    std::string overwrite_str = getCommandLineArg(argc, argv, "-o", "--overwrite");
 
     assert(settings.extension().string()==".settings" && fs::exists(settings) && "Error: settings file must exist and have extension .settings");
     assert(config.extension().string()==".config" && fs::exists(config) && "Error: config file must exist and have extension .config");
