@@ -1,4 +1,8 @@
 #include "solarutils.hpp"
+#include "constants.hpp"
+#include "PlasmaSettings.hpp"
+#include "plasmadomain.hpp"
+#include <cmath>
 
 namespace SolarUtils {
 
@@ -124,9 +128,6 @@ namespace SolarUtils {
   //as though from the surface of a planet with radius r_solar
   Grid SolarGravity(double base_gravity, double r_solar, const Grid &m_pos_y)
   {
-    #if BENCHMARKING_ON
-    InstrumentationTimer timer(__PRETTY_FUNCTION__);
-    #endif
     int m_xdim = m_pos_y.rows(), m_ydim = m_pos_y.cols();
     Grid result(m_xdim,m_ydim);
     for(int j=0; j<m_ydim; j++){
@@ -142,9 +143,6 @@ namespace SolarUtils {
   //Centered s.t. origin lies at bottom middle of domain
   //Pressure scale height h, field poles at +/- l, field strength at poles b0
   Grid BipolarField(const Grid& m_pos_x, const Grid& m_pos_y, double b0, double h, int index){
-    #if BENCHMARKING_ON
-    InstrumentationTimer timer(__PRETTY_FUNCTION__);
-    #endif
     int m_xdim = m_pos_x.rows(); int m_ydim = m_pos_y.cols();
     // assert(m_xdim == m_ydim && "pos_x and pos_y must have same dimensions");
     Grid result = Grid::Zero(m_xdim, m_ydim);
@@ -162,9 +160,6 @@ namespace SolarUtils {
   //"base_value" at y=0. Assumes isothermal atmosphere with temperature "iso_temp".
   //Assumes that gravity is set to vary with distance.
   Grid HydrostaticFalloff(double base_value, double scale_height, const Grid& m_pos_y){
-    #if BENCHMARKING_ON
-    InstrumentationTimer timer(__PRETTY_FUNCTION__);
-    #endif
     Grid result = Grid::Zero(m_pos_y.rows(), m_pos_y.cols());
     int xdim = m_pos_y.rows(), ydim = m_pos_y.cols();
     #pragma omp parallel for collapse(2)
@@ -188,9 +183,6 @@ namespace SolarUtils {
 
   Grid GaussianGrid(int xdim, int ydim, double min, double max, double std_dev_x, double std_dev_y,
                     double center_x, double center_y){
-    #if BENCHMARKING_ON
-    InstrumentationTimer timer(__PRETTY_FUNCTION__);
-    #endif
     std::vector<double> gauss_x(xdim), gauss_y(ydim);
     for(int i=0; i<xdim; i++){
       gauss_x[i] = std::exp(-0.5*std::pow(((double)i-center_x)/std_dev_x,2.0));

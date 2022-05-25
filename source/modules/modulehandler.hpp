@@ -5,16 +5,14 @@
 #ifndef MODULEHANDLER_HPP
 #define MODULEHANDLER_HPP
 
-#include "constants.hpp"
-#include "ambientheating.hpp"
-#include "localizedheating.hpp"
-#include "thermalconduction.hpp"
-#include "radiativelosses.hpp"
-#include "sgfilter.hpp"
 #include <memory>
+#include <string>
+#include <vector>
+#include <fstream>
+#include "grid.hpp"
+#include "module.hpp"
 
 class PlasmaDomain;
-class Module;
 
 class ModuleHandler {
     public:
@@ -31,7 +29,7 @@ class ModuleHandler {
         PlasmaDomain &m_pd;
         std::vector<std::unique_ptr<Module>> m_modules;
         static inline std::vector<std::string> m_module_names = {
-            "radiative_losses", "thermal_conduction", "ambient_heating", "localized_heating", "sg_filtering"
+            "radiative_losses", "thermal_conduction", "ambient_heating", "localized_heating", "field_heating", "sg_filtering"
         };
 };
 

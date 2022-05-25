@@ -3,26 +3,16 @@
 
 #include "plasmadomain.hpp"
 
-#if BENCHMARKING_ON
-#include "instrumentor.hpp"
-#endif
-
 //Compute surface values from cell-centered values using Barton's method
 //Meant to be used for transport terms only
 //Result indexed s.t. element i,j indicates surface between i,j and i-1,j
 //if "index"==0, or i,j and i,j-1 if "index"==1
 Grid PlasmaDomain::upwindSurface(const Grid &cell_center, const Grid &vel, const int index){
-  #if BENCHMARKING_ON
-  InstrumentationTimer timer(__PRETTY_FUNCTION__);
-  #endif
   int xdim = m_xdim+1-index;
   int ydim = m_ydim+index;
   Grid cell_surface = Grid::Zero(xdim,ydim);
   #pragma omp parallel
   {
-    #if BENCHMARKING_ON
-    InstrumentationTimer timer("loop thread");
-    #endif
     #pragma omp for collapse(2)
     for (int i = m_xl; i <= m_xu+1-index; i++){
       for(int j = m_yl; j <= m_yu+index; j++){
@@ -81,9 +71,6 @@ Grid PlasmaDomain::upwindSurface(const Grid &cell_center, const Grid &vel, const
 }
 
 Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, const int index){
-  #if BENCHMARKING_ON
-  InstrumentationTimer timer(__PRETTY_FUNCTION__);
-  #endif
   Grid surf_quantity = upwindSurface(quantity, vel, index);
   int xdim = quantity.rows();
   int ydim = quantity.cols();
@@ -91,9 +78,6 @@ Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, 
   Grid div = Grid::Zero(xdim,ydim);
   #pragma omp parallel
   {
-    #if BENCHMARKING_ON
-    InstrumentationTimer timer("loop thread");
-    #endif
     #pragma omp for collapse(2)
     for (int i = m_xl; i <= m_xu; i++){
       for(int j = m_yl; j <= m_yu; j++){
@@ -133,18 +117,12 @@ Grid PlasmaDomain::transportDivergence2D(const Grid &quantity, const std::vector
 
 //Compute single-direction divergence term for non-transport term (central differencing)
 Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
-  #if BENCHMARKING_ON
-  InstrumentationTimer timer(__PRETTY_FUNCTION__);
-  #endif
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
   Grid &m_d_x = m_grids[d_x], &m_d_y = m_grids[d_y];
   #pragma omp parallel
   {
-    #if BENCHMARKING_ON
-    InstrumentationTimer timer("loop thread");
-    #endif
     #pragma omp for collapse(2)
     for (int i = m_xl; i <= m_xu; i++){
       for(int j = m_yl; j <= m_yu; j++){
@@ -193,9 +171,6 @@ Grid PlasmaDomain::divergence2D(const std::vector<Grid>& a){
 // //Non-transport terms contained in "nontransp_x", "nontransp_y"
 // //Grids of size() 1 can be passed in for non-transport terms if none apply
 // Grid PlasmaDomain::divergence(const Grid &quantity, const Grid &nontransp_x, const Grid &nontransp_y){
-//   #if BENCHMARKING_ON
-//   InstrumentationTimer timer(__PRETTY_FUNCTION__);
-//   #endif
 //   Grid result = transportDerivative1D(quantity, m_grids[v_x], 0) + transportDerivative1D(quantity, m_grids[v_y], 1);
 //   if(nontransp_x.size() > 1) result += derivative1D(nontransp_x, 0);
 //   if(nontransp_y.size() > 1) result += derivative1D(nontransp_y, 1);
@@ -204,18 +179,12 @@ Grid PlasmaDomain::divergence2D(const std::vector<Grid>& a){
 
 //Compute single-direction second derivative
 Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index){
-  #if BENCHMARKING_ON
-  InstrumentationTimer timer(__PRETTY_FUNCTION__);
-  #endif
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
   Grid denom = (0.5*m_grids[d_x]*(double)(1-index) + 0.5*m_grids[d_y]*(double)(index)).square();
   #pragma omp parallel
   {
-    #if BENCHMARKING_ON
-    InstrumentationTimer timer("loop thread");
-    #endif
     #pragma omp for collapse(2)
     for (int i = m_xl; i <= m_xu; i++){
       for(int j = m_yl; j <= m_yu; j++){
@@ -249,9 +218,6 @@ Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index){
 
 //Computes Laplacian (del squared) of "quantity"
 Grid PlasmaDomain::laplacian(const Grid &quantity){
-  #if BENCHMARKING_ON
-  InstrumentationTimer timer(__PRETTY_FUNCTION__);
-  #endif
   Grid result_x = secondDerivative1D(quantity,0);
   Grid result_y = secondDerivative1D(quantity,1);
   return result_x+result_y;

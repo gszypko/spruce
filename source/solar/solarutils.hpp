@@ -1,13 +1,10 @@
 #ifndef SOLARUTILS_HPP
 #define SOLARUTILS_HPP
 
-#include <cmath>
 #include "grid.hpp"
 #include "MhdInp.hpp"
-#include "constants.hpp"
-#include "PlasmaSettings.hpp"
-#include "plasmadomain.hpp"
 
+class PlasmaSettings;
 
 namespace SolarUtils {
   MhdInp SolarMHDInput(const PlasmaSettings& pms);

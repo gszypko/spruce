@@ -1,5 +1,7 @@
 #include "sgfilter.hpp"
 #include "plasmadomain.hpp"
+#include "constants.hpp"
+#include <iostream>
 
 SGFilter::SGFilter(PlasmaDomain &pd): Module(pd) {}
 

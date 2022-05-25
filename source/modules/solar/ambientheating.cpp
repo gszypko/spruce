@@ -1,5 +1,6 @@
 #include "ambientheating.hpp"
 #include "plasmadomain.hpp"
+#include <iostream>
 
 AmbientHeating::AmbientHeating(PlasmaDomain &pd): Module(pd) {}
 

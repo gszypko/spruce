@@ -1,12 +1,9 @@
-//thermalconduction.hpp
-//Header for the Thermal Conduction Module,
-//an implementation of the abstract Module class
-//Applies field-aligned Spitzer-Harm thermal conductivity
-//with free-streaming saturation
-
 #include "module.hpp"
 #include "plasmadomain.hpp"
 #include "thermalconduction.hpp"
+#include "constants.hpp"
+#include <iostream>
+#include <cmath>
 
 ThermalConduction::ThermalConduction(PlasmaDomain &pd): Module(pd) {}
 

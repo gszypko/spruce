@@ -2,7 +2,9 @@
 #define MHD_HPP
 
 #include "grid.hpp"
-#include "plasmadomain.hpp"
+#include <filesystem>
+namespace fs = std::filesystem;
+#include <vector>
 
 //Problem Generator Mode
 void mhdSolve(std::vector<Grid> input_vars, double ion_mass, double adiabatic_index, double time_duration,

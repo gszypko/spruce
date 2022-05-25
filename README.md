@@ -6,6 +6,8 @@ This code was only developed using the GNU g++ compiler. Support for other C++ c
 
 The included Makefile can be used to compile by invoking `make` from the command line. The Makefile also allows you to specify the name of the executable file with the variable `EXEC`. For instance, `make EXEC=test_run` will compile into an executable named `test_run`. The default executable name is `run`, which will be used as the name of the executable in all examples below.
 
+Compiling in this way will generate a directory named `obj` to contain the object (`.o`) file for each source file, with an additional subdirectory `obj/.deps` to contain the dependency (`.d`) files that are generated automatically on compilation. This should allow for more efficient recompiling by only recompiling the source files that have changed, then linking with the older, but still up-to-date, object files. `make clean` will delete the executable and clear out the `obj` directory to allow for a clean slate, in case any issues arise.
+
 # Running
 `mhdtoy` can be run in two different modes, depending on the method used to specify the initial state of the simulation run.
 
@@ -184,3 +186,9 @@ All Modules should be implemented as a `derived` class of the abstract `Module` 
     - Returns data to write to the `PlasmaDomain`'s `mhd.out` file corresponding to the most recent iteration of the Module. Any variables to output must have their names appended to `var_names` and the corresponding Grids appended to `var_grids`, in the same order. 
 - `void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;` (**REQUIRED**)
     - Applies the module configs from the current run's `.config` file. `lhs` contains the names of the module configs for the current Module from the `.config` file, and `rhs` contains the corresponding value(s) in the same order, as strings.
+
+Once a new Module class has been written, it must be integrated into the codebase as follows:
+- Add a `private` `friend class` declaration of the class in `plasmadomain.hpp`
+- `#include` the Module's header file in `modulehandler.cpp`
+- Add a name for the Module to `m_module_names` in `modulehandler.hpp`. This name will be used to denote the Module in any `.config` files.
+- Add a check for the Module's name (as defined in `m_module_names`) in `ModuleHandler::instantiateModule()` with the corresponding instantiation of a `std::unique_ptr<Module>` pointing to a `new` instance of the newly defined Module

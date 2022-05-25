@@ -5,23 +5,12 @@
 #ifndef PLASMADOMAIN_HPP
 #define PLASMADOMAIN_HPP
 
-#include "utils.hpp"
-#include "grid.hpp"
-#include "constants.hpp"
-#include "modulehandler.hpp"
-#include <vector>
-#include <string>
-#include <fstream>
-#include <sstream>
-#include <cassert>
-#include <iostream>
 #include <filesystem>
 namespace fs = std::filesystem;
-#include <cstdio>
-#include <cstdlib>
-#include <algorithm>
-#include <cmath>
-#include <omp.h>
+#include <vector>
+#include <string>
+#include "grid.hpp"
+#include "modulehandler.hpp"
 
 class PlasmaDomain
 {
@@ -34,6 +23,7 @@ public:
   static inline std::vector<std::string> m_time_integrator_names = {
     "euler", "rk2", "rk4"
   };
+
 
   //Remember: keep same ordering between Vars, m_var_names, and state_vars
   //(with all elements of state_vars at the front of the former two)
@@ -76,6 +66,7 @@ private:
   friend class SGFilter;
   friend class AmbientHeating;
   friend class LocalizedHeating;
+  friend class FieldHeating;
   friend class RadiativeLosses;
   friend class ThermalConduction;
 

@@ -1,8 +1,7 @@
 #include "utils.hpp"
-
-#if BENCHMARKING_ON
-#include "instrumentor.hpp"
-#endif
+#include <cmath>
+#include <algorithm>
+#include <cassert>
 
 //Erase all occurences of whitesapce characters in str.
 //Modifies in-place.

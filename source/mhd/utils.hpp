@@ -1,15 +1,9 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-#include <omp.h>
-#include <cmath>
-#include <vector>
-#include <limits>
 #include <string>
-#include <algorithm>
 #include <sstream>
-#include "grid.hpp"
-#include "constants.hpp"
+#include <vector>
 
 //Erase all occurences of ' ', '\t', and '\n' in str.
 //Modifies in-place.

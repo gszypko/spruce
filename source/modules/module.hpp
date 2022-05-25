@@ -6,12 +6,9 @@
 #ifndef MODULE_HPP
 #define MODULE_HPP
 
-#include "constants.hpp"
-#include "utils.hpp"
-#include <iostream>
-#include <fstream>
-#include <cassert>
+#include "grid.hpp"
 #include <vector>
+#include <string>
 
 class PlasmaDomain;
 

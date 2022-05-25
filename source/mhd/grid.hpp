@@ -4,15 +4,12 @@
 #ifndef GRID_HPP
 #define GRID_HPP
 
-#include "instrumentor.hpp"
 #include <vector>
 #include <string>
 #include <functional>
 #include <cassert>
 #include <omp.h>
 #include <sstream>
-#include <limits>
-#include <cmath>
 
 class Grid
 {
@@ -89,9 +86,6 @@ private:
     const std::vector<double> &b_data = b.m_data;
     #pragma omp parallel
     {
-      #if BENCHMARKING_ON
-      InstrumentationTimer timer("componentwise op loop thread");
-      #endif
       #pragma omp for
       for(int i=0; i<m_size; i++) result_data[i] = func(m_data[i],b_data[i]);
     }
@@ -103,9 +97,6 @@ private:
     std::vector<double> &result_data = result.m_data;
     #pragma omp parallel
     {
-      #if BENCHMARKING_ON
-      InstrumentationTimer timer("scalar op loop thread");
-      #endif
       #pragma omp for
       for(int i=0; i<m_size; i++) result_data[i] = func(m_data[i],b);
     }
@@ -117,9 +108,6 @@ private:
     std::vector<double> &result_data = result.m_data;
     #pragma omp parallel
     {
-      #if BENCHMARKING_ON
-      InstrumentationTimer timer("unary op loop thread");
-      #endif
       #pragma omp for
       for(int i=0; i<m_size; i++) result_data[i] = func(m_data[i]);
     }
@@ -131,9 +119,6 @@ private:
     const std::vector<double> &b_data = b.m_data;
     #pragma omp parallel
     {
-      #if BENCHMARKING_ON
-      InstrumentationTimer timer("in place componentwise op loop thread");
-      #endif
       #pragma omp for
       for(int i=0; i<m_size; i++) func(m_data[i],b_data[i]);
     }
@@ -143,9 +128,6 @@ private:
   {
     #pragma omp parallel
     {
-      #if BENCHMARKING_ON
-      InstrumentationTimer timer("in place scalar op loop thread");
-      #endif
       #pragma omp for
       for(int i=0; i<m_size; i++) func(m_data[i],b);
     }

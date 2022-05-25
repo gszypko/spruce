@@ -2,6 +2,9 @@
 //Supports component-wise arithmetic, among other functions
 //Built in usage of OpenMP parallelization
 #include "grid.hpp"
+#include <limits>
+#include <cmath>
+
 #define SCALAR_LAMBDA(expr) [](double this_comp, double scalar){return expr;}
 #define COMPONENTWISE_LAMBDA(expr) [](double this_comp, double that_comp){return expr;}
 #define UNARY_LAMBDA(expr) [=](double this_comp){return expr;}

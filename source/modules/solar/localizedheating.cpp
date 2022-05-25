@@ -1,13 +1,8 @@
-//localizedheating.hpp
-//Header for the Localized Heating Module,
-//an implementation of the abstract Module class
-//Applies a (Gaussian) localized volumetric heating rate in the domain
-//Location, strength, and time duration specified in module configuration
-
 #include "localizedheating.hpp"
 #include "plasmadomain.hpp"
 #include "solarutils.hpp"
 #include <sstream>
+#include <iostream>
 
 LocalizedHeating::LocalizedHeating(PlasmaDomain &pd) : Module(pd) {}
 
