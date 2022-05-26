@@ -9,41 +9,64 @@
 #include "grid.hpp"
 #include <vector>
 #include <string>
+// Functions that need to be split out into EquationSet
+// evolution.cpp
+// void PlasmaDomain::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step)
+// std::vector<Grid> PlasmaDomain::computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff)
+// Grid PlasmaDomain::computeMagneticEnergyTerm()
+// void PlasmaDomain::computeConstantTerms()
+// void PlasmaDomain::recomputeDerivedVariables(std::vector<Grid> &grids)
+// void PlasmaDomain::recomputeTemperature(std::vector<Grid> &grids)
+// void PlasmaDomain::catchUnderdensity(std::vector<Grid> &grids)
+// void PlasmaDomain::recomputeDT()
+
+
+// Leave BoundaryConditions inside of PlasmaDomain, include way for EquationSet to categorize quantities (as momenta, thermal energies, fields, etc.)
+// so that the boundary extrapolations can simply iterate over all of the quantities of a particular type
+
+// d_x,d_y and pos_x,pos_y should remain in the PlasmaDomain, not split out
+// Also leave be_x,be_y as part of the plasmadomain, bi_x,bi_y should be part of EquationSet
+
+// Make a getter for the m_grids, by Enum, by integer, or by name string
+// Make the Enum and variable names publicly accessible (Enum cannot be defined as "abstract" in the sense that definition is enforced; a redefined enum in a derived class is an entirely separate entity)
+// AND make getters for densities, momenta, energies, etc. (for purposes of boundary conditions)
+// Make num_variables into a function call
+
+//NOTE: NEED TO HANDLE recomputeTemperature, which refers to a specific variable by definition
+//Maybe should instead have a generic "makeVariablesConsistent" function, with recomputeTemperature as a function particular to IdealMHD
+
 
 class PlasmaDomain;
 
-class Module {
+class EquationSet {
     public:
-        Module(PlasmaDomain &pd);
-        virtual ~Module() {}
-        void configureModule(std::ifstream &in_file);
-        //Evolve the system in time by dt according to the Module
-        //Note that m_pd.propagateChanges() is NOT automatically applied;
-        //this must be done manually such that all variables remains consistent
-        virtual void iterateModule(double dt);
-        //Perform any processing that occurs before the main iteration step
-        //All modules are guaranteed to run this function before any of them
-        //run iterateModule() or postIterateModule()
-        virtual void preIterateModule(double dt);
-        //Perform any processing that occurs after the main iteration step
-        //and after the evolution of the main MHD equations by m_pd
-        //All modules are guaranteed to run this function after all of them
-        //run iterateModule() and postIterateModule()
-        virtual void postIterateModule(double dt);
-        //Returns a short message to print to stdout related to the most recent iteration
-        //of the Module. Should not include any line breaks.
-        //Default behavior is no message; override in derived Module classes to customize.
-        virtual std::string commandLineMessage() const;
-        //Returns data to write to the PlasmaDomain output file corresponding to
-        //the most recent iteration of the Module.
-        //Any variables to output must have their names appended to var_names
-        //and the corresponding Grids appended to var_grids, in the same order. 
-        //Default behavior is no data; override in derived Module classes to customize.
-        virtual void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) const;
+        EquationSet(PlasmaDomain &pd);
+        virtual ~EquationSet() {}
+        
+        Grid& grid(int index); 
+        Grid& grid(std::string name);
+        std::string gridName(int index);
+        int num_variables();
+
+        virtual std::vector<int> state_variables() = 0;
+        virtual std::vector<int> densities() = 0;
+        virtual std::vector<int> momenta() = 0;
+        virtual std::vector<int> thermal_energies() = 0;
+        virtual std::vector<int> fields() = 0;
+
+        virtual void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) = 0;
+        virtual std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff) = 0;
+        virtual Grid computeMagneticEnergyTerm() = 0;
+        virtual void computeConstantTerms() = 0;
+        virtual void recomputeDerivedVariables(std::vector<Grid> &grids) = 0;
+        virtual void recomputeTemperature(std::vector<Grid> &grids) = 0; //need to rethink this in the general case
+        virtual void catchUnderdensity(std::vector<Grid> &grids) = 0;
+        virtual void recomputeDT() = 0;
+
     protected:
         PlasmaDomain& m_pd;
-        //Apply the values (in rhs) to the appropriate Module configs (in lhs)
-        virtual void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) = 0;
+        std::vector<Grid> m_grids;
+        const std::vector<std::string> var_names;
 };
 
 #endif
