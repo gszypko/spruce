@@ -22,18 +22,28 @@
 //NOTE: NEED TO HANDLE recomputeTemperature, which refers to a specific variable by definition
 //Maybe should instead have a generic "makeVariablesConsistent" function, with recomputeTemperature as a function particular to IdealMHD
 
-
 class PlasmaDomain;
 
 class IdealMHD: public EquationSet {
     public:
         IdealMHD(PlasmaDomain &pd);
-                
-        std::vector<int> state_variables() override;
-        std::vector<int> densities() override;
-        std::vector<int> momenta() override;
-        std::vector<int> thermal_energies() override;
-        std::vector<int> fields() override;
+        std::vector<std::string> def_var_names() const override{
+            return {"rho","temp","mom_x","mom_y","bi_x","bi_y","grav_x","grav_y",
+                "press","thermal_energy","kinetic_energy","div_bi","dt","v_x","v_y","n",
+                "div_be","b_hat_x","b_hat_y","b_magnitude","v_a"};
+        }
+        enum Vars { rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y,
+                press,thermal_energy,kinetic_energy,div_bi,dt,v_x,v_y,n,
+                div_be,b_hat_x,b_hat_y,b_magnitude,v_a };
+
+        std::vector<int> state_variables() override {
+            // return {d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,bi_x,bi_y,grav_x,grav_y};
+            return {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};
+        }
+        std::vector<int> densities() override { return {rho}; }
+        std::vector<int> momenta() override { return {mom_x,mom_y}; }
+        std::vector<int> thermal_energies() override { return {thermal_energy}; }
+        std::vector<int> fields() override { return {bi_x,bi_y}; }
 
         void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
         std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff) override;
@@ -43,12 +53,6 @@ class IdealMHD: public EquationSet {
         void recomputeTemperature(std::vector<Grid> &grids); //need to rethink this in the general case
         void catchUnderdensity(std::vector<Grid> &grids) override;
         void recomputeDT() override;
-    
-    private:
-    const std::vector<std::string> p_var_names{"d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","be_x","be_y","bi_x","bi_y","grav_x","grav_y",
-                "press","thermal_energy","kinetic_energy","div_bi","dt","v_x","v_y","n",
-                "div_be","b_hat_x","b_hat_y","b_magnitude","v_a"};
-
 };
 
 #endif

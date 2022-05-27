@@ -1,8 +1,6 @@
 #include "idealmhd.hpp"
 
-IdealMHD::IdealMHD(PlasmaDomain &pd): EquationSet(pd) {
-    m_grids = std::vector<Grid>(num_variables(),Grid::Zero(1,1));
-}
+IdealMHD::IdealMHD(PlasmaDomain &pd): EquationSet(pd,def_var_names()) {}
 
 std::vector<int> IdealMHD::state_variables(){ return {0}; }
 std::vector<int> IdealMHD::densities(){ return{0};  }

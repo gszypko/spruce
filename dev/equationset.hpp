@@ -9,6 +9,7 @@
 #include "grid.hpp"
 #include <vector>
 #include <string>
+#include <cassert>
 // Functions that need to be split out into EquationSet
 // evolution.cpp
 // void PlasmaDomain::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step)
@@ -40,13 +41,20 @@ class PlasmaDomain;
 
 class EquationSet {
     public:
-        EquationSet(PlasmaDomain &pd);
+        EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names);
         virtual ~EquationSet() {}
         
         Grid& grid(int index); 
         Grid& grid(std::string name);
         std::string gridName(int index);
         int num_variables();
+        bool allGridsInitialized();
+        bool allStateGridsInitialized();
+
+        virtual std::vector<std::string> def_var_names() const { 
+            assert(false && "Please override def_var_names in derived EquationSet class to define m_var_names");
+            return {};
+        }
 
         virtual std::vector<int> state_variables() = 0;
         virtual std::vector<int> densities() = 0;
@@ -54,14 +62,15 @@ class EquationSet {
         virtual std::vector<int> thermal_energies() = 0;
         virtual std::vector<int> fields() = 0;
 
-        virtual void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) = 0;
         virtual std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff) = 0;
+        virtual void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) = 0;
         virtual Grid computeMagneticEnergyTerm() = 0;
         virtual void computeConstantTerms() = 0;
         virtual void recomputeDerivedVariables(std::vector<Grid> &grids) = 0;
         virtual void recomputeTemperature(std::vector<Grid> &grids) = 0; //need to rethink this in the general case
         virtual void catchUnderdensity(std::vector<Grid> &grids) = 0;
         virtual void recomputeDT() = 0;
+
 
     protected:
         PlasmaDomain& m_pd;

@@ -6,7 +6,7 @@
 
 int main(int argc, char *argv[]){
     std::cout << "foo\n";
-    PlasmaDomain pd("./foobar","~/Desktop/mhdtoy/mhs_corona.config","~/Desktop/mhdtoy/mhs_ar.state",false,false);
+    PlasmaDomain pd("/Users/gszypko/Desktop/mhdtoy/dev/foobar/","/Users/gszypko/Desktop/mhdtoy/mhs_corona.config","/Users/gszypko/Desktop/mhdtoy/mhs_ar.state",false,true);
     std::cout << "bar\n";
     std::unique_ptr<EquationSet> m_eq(new IdealMHD(pd));
     std::cout << "how\n";
