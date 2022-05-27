@@ -45,7 +45,7 @@ class IdealMHD: public EquationSet {
         void recomputeDT() override;
     
     private:
-    const std::vector<std::string> m_var_names{"d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","be_x","be_y","bi_x","bi_y","grav_x","grav_y",
+    const std::vector<std::string> p_var_names{"d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","be_x","be_y","bi_x","bi_y","grav_x","grav_y",
                 "press","thermal_energy","kinetic_energy","div_bi","dt","v_x","v_y","n",
                 "div_be","b_hat_x","b_hat_y","b_magnitude","v_a"};
 

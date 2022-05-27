@@ -5,7 +5,12 @@
 #include <memory>
 
 int main(int argc, char *argv[]){
-    PlasmaDomain pd("./foobar_path","./mhs_corona.config","./mhs_ar.state",false,true);
+    std::cout << "foo\n";
+    PlasmaDomain pd("./foobar","~/Desktop/mhdtoy/mhs_corona.config","~/Desktop/mhdtoy/mhs_ar.state",false,false);
+    std::cout << "bar\n";
     std::unique_ptr<EquationSet> m_eq(new IdealMHD(pd));
+    std::cout << "how\n";
+    std::cout << m_eq->grid("rho") << std::endl;
+    std::cout << "now\n";
     return 0;
 }
