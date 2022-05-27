@@ -27,15 +27,8 @@ void ThermalConduction::iterateModule(double dt){
     //Subcycle to simulate field-aligned thermal conduction
     Grid &m_thermal_energy = m_pd.m_grids[PlasmaDomain::thermal_energy], &m_temp = m_pd.m_grids[PlasmaDomain::temp];
     std::vector<Grid> b_hat = {m_pd.m_grids[PlasmaDomain::b_hat_x], m_pd.m_grids[PlasmaDomain::b_hat_y]};
-    // Grid nonthermal_energy = 0.5*(m_grids[mom_x]*m_grids[v_x] + m_grids[mom_y]*m_grids[v_y]) + m_grids[mag_press];
-    // Grid energy_floor = nonthermal_energy + thermal_energy_min; //To ensure non-negative thermal pressure
     Grid thermal_energy_next;
     for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
-        // Grid con_flux_x(m_pd.m_xdim,m_pd.m_ydim,0.0);
-        // Grid con_flux_y(m_pd.m_xdim,m_pd.m_ydim,0.0);
-        // fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_temp, m_pd.m_grids[PlasmaDomain::rho], m_pd.m_grids[PlasmaDomain::b_hat_x], m_pd.m_grids[PlasmaDomain::b_hat_y], KAPPA_0);
-        // if(flux_saturation) saturateConductiveFlux(con_flux_x, con_flux_y, m_pd.m_grids[PlasmaDomain::rho], m_temp);
-        // Grid result = (m_pd.derivative1D(con_flux_x,0)+m_pd.derivative1D(con_flux_y,1));
         Grid dtemp_dx = m_pd.derivative1D(m_temp,0);
         Grid dtemp_dy = m_pd.derivative1D(m_temp,1);
         std::vector<Grid> gradt = {dtemp_dx,dtemp_dy};
@@ -47,9 +40,12 @@ void ThermalConduction::iterateModule(double dt){
         std::vector<Grid> term3 = Grid::CrossProduct2DZ(gradt,m_pd.curl2D(b_hat[0],b_hat[1]));
         std::vector<Grid> term_total(2,Grid::Zero(1,1));
         for(int i : {0,1}) term_total[i] = 5.0/2.0*m_temp.pow(3.0/2.0)*gradt[i]*b_dot_gradt + m_temp.pow(5.0/2.0)*(term1[i] + term2[i] + term3[i]);
-        Grid result = -KAPPA_0*((m_temp.pow(5.0/2.0) * b_dot_gradt * m_pd.divergence2D(b_hat)) + Grid::DotProduct2D(b_hat,term_total));
-        if(flux_saturation) result = computeSaturationFactor()*result;
-        thermal_energy_next = m_thermal_energy - m_pd.m_ghost_zone_mask*(dt/(double)curr_num_subcycles)*result;
+        Grid result = KAPPA_0*((m_temp.pow(5.0/2.0) * b_dot_gradt * m_pd.divergence2D(b_hat)) + Grid::DotProduct2D(b_hat,term_total));
+        if(flux_saturation) {
+            std::vector<Grid> sat_terms = saturationTerms();
+            result = sat_terms[0]*result + sat_terms[1];
+        }
+        thermal_energy_next = m_thermal_energy + m_pd.m_ghost_zone_mask*(dt/(double)curr_num_subcycles)*result;
         m_thermal_energy = thermal_energy_next.max(m_pd.thermal_energy_min);
         m_pd.propagateChanges();
     }
@@ -63,9 +59,9 @@ int ThermalConduction::numberSubcycles(double dt){
     } else {
         Grid field_temp_gradient = m_pd.derivative1D(m_pd.m_grids[PlasmaDomain::temp],0)*m_pd.m_grids[PlasmaDomain::b_hat_x]
                                 + m_pd.derivative1D(m_pd.m_grids[PlasmaDomain::temp],1)*m_pd.m_grids[PlasmaDomain::b_hat_y];
-        Grid kappa_modified = computeSaturatedKappa();
         if(field_temp_gradient.abs().max() == 0.0) return 0;
-        else dt_subcycle = K_B/kappa_modified*(m_pd.m_grids[PlasmaDomain::rho]/m_pd.m_ion_mass)*m_pd.m_grids[PlasmaDomain::d_x]*m_pd.m_grids[PlasmaDomain::d_y];
+        Grid kappa_modified = saturatedKappa();
+        dt_subcycle = K_B/kappa_modified*(m_pd.m_grids[PlasmaDomain::rho]/m_pd.m_ion_mass)*m_pd.m_grids[PlasmaDomain::d_x]*m_pd.m_grids[PlasmaDomain::d_y];
     }
     double min_dt_subcycle = std::max(epsilon*dt_subcycle.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu),dt_subcycle_min);
     return (int)(dt/min_dt_subcycle) + 1;
@@ -112,7 +108,7 @@ void ThermalConduction::saturateConductiveFlux(Grid &flux_out_x, Grid &flux_out_
 
 //NOTE: This computes the temperature-dependent kappa factor, i.e. kappa_0*temp^5/2 in the unsaturated case
 //such that the heat flux is kappa * grad(T)
-Grid ThermalConduction::computeSaturatedKappa(){
+Grid ThermalConduction::saturatedKappa(){
     Grid kappa_modified(m_pd.m_xdim,m_pd.m_ydim,0.0);
     Grid con_flux_x(m_pd.m_xdim,m_pd.m_ydim,0.0);
     Grid con_flux_y(m_pd.m_xdim,m_pd.m_ydim,0.0);
@@ -127,7 +123,11 @@ Grid ThermalConduction::computeSaturatedKappa(){
 }
 
 //NOTE: This computes the multiplicative factor that is equivalent to applying flux saturation to the flux
-Grid ThermalConduction::computeSaturationFactor(){
+//Returns a vector containing {saturationCoefficient,saturationAdditiveFactor}
+//saturationCoefficient is the multiplicative factor to multiply into the computed energy ROC
+//saturationAdditiveFactor is the quantity to add to the compute energy ROC
+//Applying both of the above to the computed energy ROC is equivalent to applying flux saturation to the heat flux
+std::vector<Grid> ThermalConduction::saturationTerms(){
     Grid con_flux_x(m_pd.m_xdim,m_pd.m_ydim,0.0);
     Grid con_flux_y(m_pd.m_xdim,m_pd.m_ydim,0.0);
     Grid field_temp_gradient = m_pd.derivative1D(m_pd.m_grids[PlasmaDomain::temp],0)*m_pd.m_grids[PlasmaDomain::b_hat_x]
@@ -135,15 +135,19 @@ Grid ThermalConduction::computeSaturationFactor(){
     fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_pd.m_grids[PlasmaDomain::temp], m_pd.m_grids[PlasmaDomain::rho],
                                 m_pd.m_grids[PlasmaDomain::b_hat_x], m_pd.m_grids[PlasmaDomain::b_hat_y], KAPPA_0);
     Grid flux_mag = (con_flux_x.square() + con_flux_y.square()).sqrt();
+    std::vector<Grid> raw_flux = {con_flux_x,con_flux_y};
     saturateConductiveFlux(con_flux_x, con_flux_y, m_pd.m_grids[PlasmaDomain::rho], m_pd.m_grids[PlasmaDomain::temp]);
     Grid sat_flux_mag = (con_flux_x.square() + con_flux_y.square()).sqrt();
-    Grid result(m_pd.m_xdim,m_pd.m_ydim,0.0);
+    Grid coefficient(m_pd.m_xdim,m_pd.m_ydim,0.0);
     for(int i=0; i<m_pd.m_xdim; i++) for (int j=0; j<m_pd.m_ydim; j++){
-        if (flux_mag(i,j) != 0.0) result(i,j) = sat_flux_mag(i,j)/flux_mag(i,j);
-        else result(i,j) = 1.0;
+        if (flux_mag(i,j) != 0.0) coefficient(i,j) = sat_flux_mag(i,j)/flux_mag(i,j);
+        else coefficient(i,j) = 1.0;
     }
-    return result;
+    Grid additive_factor = -1.0*m_pd.m_ghost_zone_mask*Grid::DotProduct2D({m_pd.derivative1D(coefficient,0),m_pd.derivative1D(coefficient,1)},raw_flux);
+    return {coefficient,additive_factor};
 }
+
+
 
 std::string ThermalConduction::commandLineMessage() const
 {

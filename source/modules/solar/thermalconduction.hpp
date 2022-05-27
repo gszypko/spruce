@@ -28,8 +28,8 @@ class ThermalConduction : public Module {
         void fieldAlignedConductiveFlux(Grid &flux_out_x, Grid &flux_out_y, const Grid &temp, const Grid &rho,
                                             const Grid &b_hat_x, const Grid &b_hat_y, double k0);
         void saturateConductiveFlux(Grid &flux_out_x, Grid &flux_out_y, const Grid &rho, const Grid &temp);
-        Grid computeSaturatedKappa();
-        Grid computeSaturationFactor();
+        Grid saturatedKappa();
+        std::vector<Grid> saturationTerms();
 };
 
 #endif
