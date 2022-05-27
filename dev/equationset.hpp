@@ -66,7 +66,7 @@ class EquationSet {
     protected:
         PlasmaDomain& m_pd;
         std::vector<Grid> m_grids;
-        const std::vector<std::string> var_names;
+        const std::vector<std::string> m_var_names;
 };
 
 #endif

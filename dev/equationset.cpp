@@ -9,19 +9,19 @@ Grid& EquationSet::grid(int index) {
 }
 
 Grid& EquationSet::grid(std::string name) {
-    auto it = std::find(var_names.begin(),var_names.end(),name);
-    if(it == var_names.end()){
+    auto it = std::find(m_var_names.begin(),m_var_names.end(),name);
+    if(it == m_var_names.end()){
         std::cerr << "Variable name " << name << " not recognized\n";
         abort();
     }
-    auto index = std::distance(var_names.begin(),it);
+    auto index = std::distance(m_var_names.begin(),it);
     return grid(index);
 }
 
 std::string EquationSet::gridName(int index) {
-    return var_names[index];
+    return m_var_names[index];
 }
 
 int EquationSet::num_variables() {
-    return var_names.size();
+    return m_var_names.size();
 }
