@@ -49,8 +49,6 @@ void ThermalConduction::iterateModule(double dt){
         for(int i : {0,1}) term_total[i] = 5.0/2.0*m_temp.pow(3.0/2.0)*gradt[i]*b_dot_gradt + m_temp.pow(5.0/2.0)*(term1[i] + term2[i] + term3[i]);
         Grid result = -KAPPA_0*((m_temp.pow(5.0/2.0) * b_dot_gradt * m_pd.divergence2D(b_hat)) + Grid::DotProduct2D(b_hat,term_total));
         if(flux_saturation) result = computeSaturationFactor()*result;
-        std::cout << computeSaturationFactor() << std::endl;
-        std::cout << result << std::endl;
         thermal_energy_next = m_thermal_energy - m_pd.m_ghost_zone_mask*(dt/(double)curr_num_subcycles)*result;
         m_thermal_energy = thermal_energy_next.max(m_pd.thermal_energy_min);
         m_pd.propagateChanges();
