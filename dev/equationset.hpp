@@ -62,15 +62,12 @@ class EquationSet {
         virtual std::vector<int> thermal_energies() = 0;
         virtual std::vector<int> fields() = 0;
 
+        std::vector<Grid> computeTimeDerivatives(double visc_coeff) { return computeTimeDerivatives(m_grids,visc_coeff); }
         virtual std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff) = 0;
         virtual void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) = 0;
-        virtual Grid computeMagneticEnergyTerm() = 0;
-        virtual void computeConstantTerms() = 0;
-        virtual void recomputeDerivedVariables(std::vector<Grid> &grids) = 0;
-        virtual void recomputeTemperature(std::vector<Grid> &grids) = 0; //need to rethink this in the general case
-        virtual void catchUnderdensity(std::vector<Grid> &grids) = 0;
+        virtual void propagateChanges() = 0;
         virtual void recomputeDT() = 0;
-
+        virtual void computeConstantTerms() = 0;
 
     protected:
         PlasmaDomain& m_pd;

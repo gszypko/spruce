@@ -11,7 +11,7 @@ EquationSet::EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names):
 }
 
 Grid& EquationSet::grid(int index) {
-    assert(index > 0 && index < num_variables() && "Grid index must be within range of m_grids");
+    assert(index >= 0 && index < num_variables() && "Grid index must be within range of m_grids");
     return m_grids[index];
 }
 

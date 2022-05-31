@@ -70,6 +70,12 @@ private:
   friend class RadiativeLosses;
   friend class ThermalConduction;
 
+  //Friend class declarations (for EquationSets)
+  friend class EquationSet;
+  friend class IdealMHD;
+
+  Grid m_d_x,m_d_y,m_pos_x,m_pos_y,m_be_x,m_be_y;
+
   //Strings corresponding to variables, settings, boundary conditions for file I/O
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)
   Grid m_ghost_zone_mask; //Equals 0 inside ghost zones and 1 everywhere else; for multiplying to negate values in ghost zones

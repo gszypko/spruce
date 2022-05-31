@@ -45,14 +45,19 @@ class IdealMHD: public EquationSet {
         std::vector<int> thermal_energies() override { return {thermal_energy}; }
         std::vector<int> fields() override { return {bi_x,bi_y}; }
 
-        void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
-        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff) override;
-        Grid computeMagneticEnergyTerm() override;
         void computeConstantTerms() override;
-        void recomputeDerivedVariables(std::vector<Grid> &grids) override;
-        void recomputeTemperature(std::vector<Grid> &grids); //need to rethink this in the general case
-        void catchUnderdensity(std::vector<Grid> &grids) override;
+        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff) override;
+        void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
+        void propagateChanges() override;
         void recomputeDT() override;
+
+    private:
+        void propagateChanges(std::vector<Grid> &grids);
+        Grid computeMagneticEnergyTerm();
+        void recomputeDerivedVariables(std::vector<Grid> &grids);
+        void recomputeTemperature(std::vector<Grid> &grids); //need to rethink this in the general case
+        void catchUnderdensity(std::vector<Grid> &grids);
+
 };
 
 #endif
