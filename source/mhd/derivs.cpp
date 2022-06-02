@@ -74,7 +74,7 @@ Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, 
   Grid surf_quantity = upwindSurface(quantity, vel, index);
   int xdim = quantity.rows();
   int ydim = quantity.cols();
-  Grid denom = m_grids[d_x]*(double)(1-index) + m_grids[d_y]*(double)(index);
+  Grid denom = m_d_x*(double)(1-index) + m_d_y*(double)(index);
   Grid div = Grid::Zero(xdim,ydim);
   #pragma omp parallel
   {
@@ -120,7 +120,6 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
-  Grid &m_d_x = m_grids[d_x], &m_d_y = m_grids[d_y];
   #pragma omp parallel
   {
     #pragma omp for collapse(2)
@@ -166,23 +165,12 @@ Grid PlasmaDomain::divergence2D(const std::vector<Grid>& a){
   return divergence2D(a[0],a[1]);
 }
 
-// //Compute divergence term for simulation parameter "quantity"
-// //"quantity" used for transport term
-// //Non-transport terms contained in "nontransp_x", "nontransp_y"
-// //Grids of size() 1 can be passed in for non-transport terms if none apply
-// Grid PlasmaDomain::divergence(const Grid &quantity, const Grid &nontransp_x, const Grid &nontransp_y){
-//   Grid result = transportDerivative1D(quantity, m_grids[v_x], 0) + transportDerivative1D(quantity, m_grids[v_y], 1);
-//   if(nontransp_x.size() > 1) result += derivative1D(nontransp_x, 0);
-//   if(nontransp_y.size() > 1) result += derivative1D(nontransp_y, 1);
-//   return result;
-// }
-
 //Compute single-direction second derivative
 Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index){
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
-  Grid denom = (0.5*m_grids[d_x]*(double)(1-index) + 0.5*m_grids[d_y]*(double)(index)).square();
+  Grid denom = (0.5*m_d_x*(double)(1-index) + 0.5*m_d_y*(double)(index)).square();
   #pragma omp parallel
   {
     #pragma omp for collapse(2)
@@ -241,9 +229,9 @@ double PlasmaDomain::boundaryInterpolate(const Grid &quantity, int i1, int j1, i
   double a = quantity(i1,j1), b = quantity(i2,j2);
   double dist_a, dist_b;
   if(i1 == i2){
-    dist_a = 0.5*m_grids[d_y](i1,j1); dist_b = 0.5*m_grids[d_y](i2,j2);
+    dist_a = 0.5*m_d_y(i1,j1); dist_b = 0.5*m_d_y(i2,j2);
   } else { //j1 == j2
-    dist_a = 0.5*m_grids[d_x](i1,j1); dist_b = 0.5*m_grids[d_x](i2,j2);
+    dist_a = 0.5*m_d_x(i1,j1); dist_b = 0.5*m_d_x(i2,j2);
   }
   return (a*dist_b + b*dist_a)/(dist_b + dist_a);
 }
@@ -254,9 +242,9 @@ double PlasmaDomain::boundaryExtrapolate(const Grid &quantity, int i1, int j1, i
   double a = quantity(i1,j1), b = quantity(i2,j2);
   double dist_a, dist_b;
   if(i1 == i2){
-    dist_a = 0.5*m_grids[d_y](i1,j1); dist_b = 0.5*m_grids[d_y](i2,j2);
+    dist_a = 0.5*m_d_y(i1,j1); dist_b = 0.5*m_d_y(i2,j2);
   } else { //j1 == j2
-    dist_a = 0.5*m_grids[d_x](i1,j1); dist_b = 0.5*m_grids[d_x](i2,j2);
+    dist_a = 0.5*m_d_x(i1,j1); dist_b = 0.5*m_d_x(i2,j2);
   }
   return a + (b-a)*(dist_a + 2.0*dist_b)/(dist_a + dist_b);
 }

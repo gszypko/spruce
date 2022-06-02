@@ -8,37 +8,13 @@
 #include <cassert>
 #include <iostream>
 
-//Construction with newly constructed initial state (not continue mode)
-PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const std::vector<Grid>& input_vars,
-                          double ion_mass, double adiabatic_index) : m_module_handler(*this)
-{
-  m_overwrite_init = true;
-  m_ion_mass = ion_mass;
-  m_adiabatic_index = adiabatic_index;
-  m_xdim = input_vars[0].rows(); m_ydim = input_vars[0].cols();
-  for(int var=0; var<num_variables; var++){
-    m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
-  }
-  for(int i : state_vars)
-    m_grids[i] = input_vars[i];
-  m_time = 0.0;
-  m_duration = -1.0;
-  configureSimulation(config_path,out_path,false);
-}
-
 //Construction with initial state from state file (continue mode and custom input)
 PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file,
                           bool continue_mode, bool overwrite_init) : m_module_handler(*this)
 {
+  //DEFAULT VALUES, TO BE OVERWRITTEN BY readConfigFile
   m_overwrite_init = overwrite_init;
   m_duration = -1.0;
-  readStateFile(state_file,continue_mode);
-  configureSimulation(config_path,out_path,continue_mode);
-}
-
-void PlasmaDomain::configureSimulation(const fs::path &config_path, const fs::path &out_path, bool continue_mode)
-{
-  //DEFAULT VALUES, TO BE OVERWRITTEN BY readConfigFile
   open_boundary_strength = 1.0;
   time_integrator = TimeIntegrator::Euler;
   std_out_interval = 1;
@@ -46,9 +22,6 @@ void PlasmaDomain::configureSimulation(const fs::path &config_path, const fs::pa
   //***************************************************
   m_iter = 0;
   this->continue_mode = continue_mode;
-  for(int i=0; i<num_variables; i++){
-    m_output_flags.push_back(false);
-  }
   m_out_directory = out_path;
   fs::path out_filename("mhd.out");
   if(continue_mode){
@@ -64,16 +37,55 @@ void PlasmaDomain::configureSimulation(const fs::path &config_path, const fs::pa
     }
     else std::cout << config_path.string() << " already located in output directory.\n";
   }
-  assert(validateCellSizesAndPositions(m_grids[d_x],m_grids[pos_x],0) && validateCellSizesAndPositions(m_grids[d_y],m_grids[pos_y],1) && "Cell sizes and positions must correspond");
   readConfigFile(config_path);
+  readStateFile(state_file,continue_mode);
+  assert(validateCellSizesAndPositions(m_d_x,m_pos_x,0) && validateCellSizesAndPositions(m_d_y,m_pos_y,1) && "Cell sizes and positions must correspond");
+  assert(m_eqs->allStateGridsInitialized() && "All variables specified as state variables for the current EquationSet must be specified in the .state file");
   computeIterationBounds();
-  computeConstantTerms();
-  recomputeDerivedVariables();
+  m_eqs->computeConstantTerms();
+  m_eqs->propagateChanges();
   if(!continue_mode && m_overwrite_init){
     std::cout << "Writing out init.state...\n";
     writeStateFile("init");
   }
 }
+
+// void PlasmaDomain::configureSimulation(const fs::path &config_path, const fs::path &out_path, bool continue_mode)
+// {
+  // //DEFAULT VALUES, TO BE OVERWRITTEN BY readConfigFile
+  // open_boundary_strength = 1.0;
+  // time_integrator = TimeIntegrator::Euler;
+  // std_out_interval = 1;
+  // safe_state_mode = true;
+  // //***************************************************
+  // m_iter = 0;
+  // this->continue_mode = continue_mode;
+  // m_out_directory = out_path;
+  // fs::path out_filename("mhd.out");
+  // if(continue_mode){
+  //   m_out_file.open(m_out_directory/out_filename,std::ofstream::app);
+  // } else {
+  //   m_out_file.open(m_out_directory/out_filename);
+  //   fs::path new_config_path = m_out_directory/(config_path.filename());
+  //   fs::directory_entry new_config_dir(new_config_path);
+  //   if(!fs::equivalent(config_path,new_config_path)){
+  //     std::cout << "Copying " << config_path.string() << " into " << m_out_directory.string() << "...\n";
+  //     if(new_config_dir.exists()) fs::remove(new_config_path);
+  //     fs::copy(config_path, new_config_path, fs::copy_options::overwrite_existing);
+  //   }
+  //   else std::cout << config_path.string() << " already located in output directory.\n";
+  // }
+  // assert(validateCellSizesAndPositions(m_d_x,m_pos_x,0) && validateCellSizesAndPositions(m_d_y,m_pos_y,1) && "Cell sizes and positions must correspond");
+  // readConfigFile(config_path);
+  // assert(m_eqs->allStateGridsInitialized() && );
+  // computeIterationBounds();
+  // m_eqs->computeConstantTerms();
+  // m_eqs->propagateChanges();
+  // if(!continue_mode && m_overwrite_init){
+  //   std::cout << "Writing out init.state...\n";
+  //   writeStateFile("init");
+  // }
+// }
 
 //Compute lower and upper x- and y- indicies for differential operations
 //from boundary conditions, to exclude ghost zones. Results stored in m_xl, m_xu, m_yl, m_yu

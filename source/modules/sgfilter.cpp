@@ -1,6 +1,7 @@
 #include "sgfilter.hpp"
 #include "plasmadomain.hpp"
 #include "constants.hpp"
+#include "idealmhd.hpp"
 #include <iostream>
 
 SGFilter::SGFilter(PlasmaDomain &pd): Module(pd) {}
@@ -14,7 +15,7 @@ void SGFilter::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std:
 
 void SGFilter::postIterateModule(double dt){
     if(filter_interval > 0 && m_pd.m_iter != 0 && m_pd.m_iter%filter_interval == 0){
-        applyFilter(m_pd.m_grids);
+        applyFilter();
     }
 }
 
@@ -25,18 +26,16 @@ std::string SGFilter::commandLineMessage() const
 
 // Applies two-dimensional Sovitzky-Golay filter to given Grid vector
 // with 5x5 window and 3x3-order fitting polynomials
-void SGFilter::applyFilter(std::vector<Grid> &grids)
+void SGFilter::applyFilter()
 {
-  assert(grids.size() == m_pd.m_grids.size() && "This function designed to operate on full system vector<Grid>");
-  std::vector<Grid> filtered = grids;
   #pragma omp parallel
   {
     #pragma omp for
-    for(int varname : {PlasmaDomain::rho, PlasmaDomain::thermal_energy}){
-      singleVarSavitzkyGolay(grids[varname]);
+    for(int varname : {IdealMHD::rho, IdealMHD::thermal_energy}){
+      singleVarSavitzkyGolay(m_pd.grid(varname));
     }
   }
-  m_pd.propagateChanges(grids);
+  m_pd.m_eqs->propagateChanges();
 }
 
 void SGFilter::singleVarSavitzkyGolay(Grid &grid)

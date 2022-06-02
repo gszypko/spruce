@@ -1,5 +1,6 @@
 #include "ambientheating.hpp"
 #include "plasmadomain.hpp"
+#include "idealmhd.hpp"
 #include <iostream>
 
 AmbientHeating::AmbientHeating(PlasmaDomain &pd): Module(pd) {}
@@ -12,8 +13,8 @@ void AmbientHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vecto
 }
 
 void AmbientHeating::postIterateModule(double dt){
-    m_pd.m_grids[PlasmaDomain::thermal_energy] += m_pd.m_ghost_zone_mask*(dt*heating_rate);
-    m_pd.propagateChanges();
+    m_pd.grid(IdealMHD::thermal_energy) += m_pd.m_ghost_zone_mask*(dt*heating_rate);
+    m_pd.m_eqs->propagateChanges();
 }
 
 std::string AmbientHeating::commandLineMessage() const

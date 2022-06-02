@@ -1,6 +1,7 @@
 #include "module.hpp"
 #include "plasmadomain.hpp"
 #include "radiativelosses.hpp"
+#include "idealmhd.hpp"
 #include <cmath>
 #include <iostream>
 
@@ -29,8 +30,8 @@ void RadiativeLosses::iterateModule(double dt){
     for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
         computeLosses();
         if(output_to_file) avg_losses += next_losses/curr_num_subcycles;
-        m_pd.m_grids[PlasmaDomain::thermal_energy] = m_pd.m_grids[PlasmaDomain::thermal_energy] - m_pd.m_ghost_zone_mask*(dt/(double)curr_num_subcycles)*next_losses;
-        m_pd.propagateChanges();
+        m_pd.grid(IdealMHD::thermal_energy) = m_pd.grid(IdealMHD::thermal_energy) - m_pd.m_ghost_zone_mask*(dt/(double)curr_num_subcycles)*next_losses;
+        m_pd.m_eqs->propagateChanges();
     }
 }
 
@@ -42,10 +43,10 @@ void RadiativeLosses::computeLosses(){
     #pragma omp parallel for collapse(2)
     for (int i = m_pd.m_xl; i <= m_pd.m_xu; i++){
         for(int j = m_pd.m_yl; j <= m_pd.m_yu; j++){
-            if(m_pd.m_grids[PlasmaDomain::temp](i,j) < cutoff_temp) next_losses(i,j) = 0.0;
+            if(m_pd.grid(IdealMHD::temp)(i,j) < cutoff_temp) next_losses(i,j) = 0.0;
             else {
-                double logtemp = std::log10(m_pd.m_grids[PlasmaDomain::temp](i,j));
-                double n = m_pd.m_grids[PlasmaDomain::rho](i,j)/m_pd.m_ion_mass;
+                double logtemp = std::log10(m_pd.grid(IdealMHD::temp)(i,j));
+                double n = m_pd.grid(IdealMHD::rho)(i,j)/m_pd.m_ion_mass;
                 double chi, alpha;
                 if(logtemp <= 4.97){
                     chi = 1.09e-31; //also adjust chi to ensure continuity
@@ -71,9 +72,9 @@ void RadiativeLosses::computeLosses(){
                     chi = 1.96e-27;
                     alpha = 0.5;
                 }
-                next_losses(i,j) = n*n*chi*std::pow(m_pd.m_grids[PlasmaDomain::temp](i,j),alpha);
-                if(m_pd.m_grids[PlasmaDomain::temp](i,j) < cutoff_temp + cutoff_ramp){
-                    double ramp = (m_pd.m_grids[PlasmaDomain::temp](i,j) - cutoff_temp)/cutoff_ramp;
+                next_losses(i,j) = n*n*chi*std::pow(m_pd.grid(IdealMHD::temp)(i,j),alpha);
+                if(m_pd.grid(IdealMHD::temp)(i,j) < cutoff_temp + cutoff_ramp){
+                    double ramp = (m_pd.grid(IdealMHD::temp)(i,j) - cutoff_temp)/cutoff_ramp;
                     next_losses(i,j) *= ramp;
                 }
             }
@@ -85,7 +86,7 @@ void RadiativeLosses::computeLosses(){
 int RadiativeLosses::numberSubcycles(double dt){
     computeLosses();
     if(next_losses.max() == 0.0) return 0;
-    double subcycle_dt = epsilon*(m_pd.m_grids[PlasmaDomain::thermal_energy]/next_losses).abs().min();
+    double subcycle_dt = epsilon*(m_pd.grid(IdealMHD::thermal_energy)/next_losses).abs().min();
     return (int)(dt/subcycle_dt) + 1;
 }
 

@@ -1,6 +1,7 @@
 #include "localizedheating.hpp"
 #include "plasmadomain.hpp"
 #include "solarutils.hpp"
+#include "idealmhd.hpp"
 #include <sstream>
 #include <iostream>
 
@@ -39,8 +40,8 @@ void LocalizedHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vec
 
 void LocalizedHeating::postIterateModule(double dt){
     if(m_pd.m_time < start_time || m_pd.m_time > start_time+duration) return;
-    m_pd.m_grids[PlasmaDomain::thermal_energy] += m_pd.m_ghost_zone_mask*(dt*heating_template);
-    m_pd.propagateChanges();
+    m_pd.grid(IdealMHD::thermal_energy) += m_pd.m_ghost_zone_mask*(dt*heating_template);
+    m_pd.m_eqs->propagateChanges();
 }
 
 std::string LocalizedHeating::commandLineMessage() const

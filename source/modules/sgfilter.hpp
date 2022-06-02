@@ -19,7 +19,7 @@ class SGFilter : public Module {
         void postIterateModule(double dt) override;
         std::string commandLineMessage() const override;
     private:
-        void applyFilter(std::vector<Grid> &grids);
+        void applyFilter();
         void singleVarSavitzkyGolay(Grid &grid);
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
         int filter_interval;

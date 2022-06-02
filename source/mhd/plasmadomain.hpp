@@ -11,6 +11,7 @@ namespace fs = std::filesystem;
 #include <string>
 #include "grid.hpp"
 #include "modulehandler.hpp"
+#include "equationset.hpp"
 
 class PlasmaDomain
 {
@@ -24,23 +25,8 @@ public:
     "euler", "rk2", "rk4"
   };
 
-
-  //Remember: keep same ordering between Vars, m_var_names, and state_vars
-  //(with all elements of state_vars at the front of the former two)
-  enum Vars { d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,bi_x,bi_y,grav_x,grav_y,
-              press,thermal_energy,kinetic_energy,div_bi,
-              dt,v_x,v_y,n,
-              div_be,b_hat_x,b_hat_y,b_magnitude,v_a,
-              num_variables };
-  static inline std::vector<std::string> m_var_names = {
-    "d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","be_x","be_y","bi_x","bi_y","grav_x","grav_y",
-    "press","thermal_energy","kinetic_energy","div_bi","dt","v_x","v_y","n",
-    "div_be","b_hat_x","b_hat_y","b_magnitude","v_a"
-  };
-  static inline std::vector<int> state_vars = {d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,bi_x,bi_y,grav_x,grav_y};
-
   //Constructors and Initialization
-  PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const std::vector<Grid>& input_vars, double ion_mass, double adiabatic_index);
+  // PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const std::vector<Grid>& input_vars, double ion_mass, double adiabatic_index);
   PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file, bool continue_mode, bool overwrite_init);
   void readStateFile(const fs::path &state_file, bool continue_mode = true);
   void readConfigFile(const fs::path &config_file);
@@ -80,12 +66,13 @@ private:
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)
   Grid m_ghost_zone_mask; //Equals 0 inside ghost zones and 1 everywhere else; for multiplying to negate values in ghost zones
 
-  std::vector<Grid> m_grids;
+  Grid& grid(int var) { return m_eqs->grid(var); }
   std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
   double m_ion_mass; //in g
   double m_adiabatic_index; //aka gamma, unitless
 
   ModuleHandler m_module_handler;
+  std::unique_ptr<EquationSet> m_eqs;
 
   fs::path m_out_directory;
   std::ofstream m_out_file;
@@ -122,50 +109,34 @@ private:
     epsilon, epsilon_viscous, rho_min,
     temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
     output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode, safe_state_interval,
-    open_boundary_decay_base, x_origin, y_origin, time_integrator
+    open_boundary_decay_base, x_origin, y_origin, time_integrator, equation_set
   };
   static inline std::vector<std::string> m_config_names = {
     "x_bound_1","x_bound_2","y_bound_1","y_bound_2",
     "epsilon","epsilon_viscous","rho_min",
     "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
     "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode", "safe_state_interval",
-    "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator"
+    "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "equation_set"
   };
 
   /*********************************************************************/ 
 
-  void configureSimulation(const fs::path &config_path, const fs::path &out_path, bool continue_mode = false);
 
   void advanceTime(bool verbose = true);
 
-  void integrateEuler(std::vector<Grid> &grids, double time_step, double visc_coeff);
-  void integrateRK2(std::vector<Grid> &grids, double time_step, double visc_coeff);
-  void integrateRK4(std::vector<Grid> &grids, double time_step, double visc_coeff);
-  std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff);
-  void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step);
+  void integrateEuler(double time_step, double visc_coeff);
+  void integrateRK2(double time_step, double visc_coeff);
+  void integrateRK4(double time_step, double visc_coeff);
 
-  //Functions to be applied between time steps
-  void propagateChanges(); //Encapsulates all of the below, except SG filtering
-  void recomputeDerivedVariables();
-  void recomputeTemperature();
-  void catchUnderdensity();
   void updateGhostZones();
 
-  //Versions of the above for operating on intermediate states of the system
-  //i.e. for acting on Grid vectors other than m_grids
-  void propagateChanges(std::vector<Grid> &grids);
-  void recomputeDerivedVariables(std::vector<Grid> &grids);
-  void recomputeTemperature(std::vector<Grid> &grids);
-  void catchUnderdensity(std::vector<Grid> &grids);
-  void updateGhostZones(std::vector<Grid> &grids);
+  void openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
+  void reflectBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
+  void fixedBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
 
-  void openBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
-  void reflectBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
-  void fixedBoundaryExtrapolate(std::vector<Grid> &grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
+  // void recomputeDT();
 
-  void recomputeDT();
-
-  void computeConstantTerms();
+  // void computeConstantTerms();
   void computeIterationBounds();
 
   void outputPreamble();
@@ -175,7 +146,6 @@ private:
   void cleanUpStateFiles(std::string filename_stem = "end") const;
   void printUpdate(double dt) const;
 
-  void setOutputFlag(std::string var_name, bool new_flag);
   void setOutputFlags(const std::vector<std::string> var_names, bool new_flag);
 
   BoundaryCondition stringToBoundaryCondition(const std::string str) const;
@@ -217,9 +187,6 @@ private:
   //Computes curl of vector in xy-plane (result in z-direction)
   Grid curl2D(const Grid& x, const Grid& y);
   
-  //Compute (perturbation) magnetic field term on RHS of energy equation
-  Grid computeMagneticEnergyTerm();
-
   double boundaryInterpolate(const Grid &quantity, int i1, int j1, int i2, int j2);
   double boundaryExtrapolate(const Grid &quantity, int i1, int j1, int i2, int j2);
 

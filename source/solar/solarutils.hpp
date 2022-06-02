@@ -2,12 +2,10 @@
 #define SOLARUTILS_HPP
 
 #include "grid.hpp"
-#include "MhdInp.hpp"
 
 class PlasmaSettings;
 
 namespace SolarUtils {
-  MhdInp SolarMHDInput(const PlasmaSettings& pms);
 
   Grid SolarGravity(double base_gravity, double r_solar, const Grid& m_pos_y);
 

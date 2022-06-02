@@ -3,13 +3,6 @@
 #include <cassert>
 #include <string>
 
-void mhdSolve(std::vector<Grid> input_vars, double ion_mass, double adiabatic_index, double time_duration,
-              const fs::path &output_pathname, const fs::path &config_filename)
-{
-  PlasmaDomain simulation(output_pathname,config_filename,input_vars,ion_mass,adiabatic_index);
-  simulation.run(time_duration);
-}
-
 void mhdSolve(const fs::path &prev_run_directory, double time_duration)
 {
   fs::path state_filename, config_filename;

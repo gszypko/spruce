@@ -1,6 +1,7 @@
 #include "module.hpp"
 #include "plasmadomain.hpp"
 #include "fieldheating.hpp"
+#include "idealmhd.hpp"
 #include "constants.hpp"
 #include <iostream>
 
@@ -19,15 +20,15 @@ void FieldHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vector<
 }
 
 void FieldHeating::computeHeating(){
-    if(current_mode) heating = rate*C/(4.0*PI)*(m_pd.curl2D(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_grids[PlasmaDomain::bi_x],
-                                                            m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_grids[PlasmaDomain::bi_y])).abs();
-    else heating = rate*(m_pd.m_grids[PlasmaDomain::b_magnitude]).square()/(8.0*PI);
+    if(current_mode) heating = rate*C/(4.0*PI)*(m_pd.curl2D(m_pd.m_be_x+m_pd.grid(IdealMHD::bi_x),
+                                                            m_pd.m_be_y+m_pd.grid(IdealMHD::bi_y))).abs();
+    else heating = rate*(m_pd.grid(IdealMHD::b_magnitude)).square()/(8.0*PI);
 }
 
 void FieldHeating::postIterateModule(double dt){
     computeHeating();
-    m_pd.m_grids[PlasmaDomain::thermal_energy] += m_pd.m_ghost_zone_mask*(dt*heating);
-    m_pd.propagateChanges();
+    m_pd.grid(IdealMHD::thermal_energy) += m_pd.m_ghost_zone_mask*(dt*heating);
+    m_pd.m_eqs->propagateChanges();
 }
 
 std::string FieldHeating::commandLineMessage() const

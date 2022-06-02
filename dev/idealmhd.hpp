@@ -41,17 +41,18 @@ class IdealMHD: public EquationSet {
             return {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};
         }
         std::vector<int> densities() override { return {rho}; }
-        std::vector<int> momenta() override { return {mom_x,mom_y}; }
+        std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y}}; }
         std::vector<int> thermal_energies() override { return {thermal_energy}; }
-        std::vector<int> fields() override { return {bi_x,bi_y}; }
+        std::vector<std::vector<int>> fields() override { return {{bi_x,bi_y}}; }
 
         void computeConstantTerms() override;
         std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff) override;
         void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
         void propagateChanges() override;
-        void recomputeDT() override;
+        Grid getDT() override;
 
     private:
+        void recomputeDT();
         void propagateChanges(std::vector<Grid> &grids);
         Grid computeMagneticEnergyTerm();
         void recomputeDerivedVariables(std::vector<Grid> &grids);

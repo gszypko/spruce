@@ -30,7 +30,6 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
   m_xdim = std::stoi(element);
   std::getline(ss_dim,element,',');
   m_ydim = std::stoi(element);
-  for(int var=0; var<num_variables; var++) m_grids.push_back(Grid(m_xdim,m_ydim,0.0));
 
   getCleanedLine(in_file, line);
   assert(line == "ion_mass");
@@ -68,13 +67,7 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
       }
       first_loop = false;
     }
-    //Ensure that variable in file is valid
-    auto it = std::find(m_var_names.begin(),m_var_names.end(),line);
-    if(it == m_var_names.end()){
-      std::cerr << "Variable name " << line << " in state file not recognized\n";
-      abort();
-    }
-    auto index = std::distance(m_var_names.begin(),it);
+    std::string var_name = line;
     Grid curr_grid(m_xdim,m_ydim);
     //Read in Grid corresponding to variable
     int j;
@@ -91,7 +84,13 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
       }
     }
     assert(!std::isdigit(in_file.peek()) && !(in_file.peek()=='-') && "Encountered more rows in a .state file grid than expected");
-    m_grids[index] = curr_grid;
+    if(var_name == "d_x") m_d_x = curr_grid;
+    else if(var_name == "d_y") m_d_y = curr_grid;
+    else if(var_name == "pos_x") m_pos_x = curr_grid;
+    else if(var_name == "pos_y") m_pos_y = curr_grid;
+    else if(var_name == "be_x") m_be_x = curr_grid;
+    else if(var_name == "be_y") m_be_y = curr_grid;
+    else m_eqs->grid(var_name) = curr_grid;
   }
   in_file.close();
 }
@@ -134,17 +133,17 @@ void PlasmaDomain::outputPreamble()
   }
   m_out_file << "xdim,ydim" << std::endl;
   m_out_file << m_xdim << "," << m_ydim << std::endl;
-  writeGridToOutput(m_grids[pos_x],m_var_names[pos_x]);
-  writeGridToOutput(m_grids[pos_y],m_var_names[pos_y]);
-  writeGridToOutput(m_grids[be_x],m_var_names[be_x]);
-  writeGridToOutput(m_grids[be_y],m_var_names[be_y]);
+  writeGridToOutput(m_pos_x,"pos_x");
+  writeGridToOutput(m_pos_y,"pos_y");
+  writeGridToOutput(m_be_x,"be_x");
+  writeGridToOutput(m_be_y,"be_y");
 }
 
 void PlasmaDomain::outputCurrentState()
 {
   m_out_file << "t=" << m_time << std::endl;
-  for(int i=0; i<num_variables; i++){
-    if(m_output_flags[i]) writeGridToOutput(m_grids[i],m_var_names[i]);
+  for(int i=0; i<m_eqs->num_variables(); i++){
+    if(m_eqs->getOutputFlag(i)) writeGridToOutput(m_eqs->grid(i),m_eqs->nameFromIndex(i));
   }
   std::vector<std::string> module_varnames;
   std::vector<Grid> module_data;
@@ -183,9 +182,9 @@ void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
   state_file << "adiabatic_index\n";
   state_file << m_adiabatic_index << std::endl;
   state_file << "t=" << m_time << std::endl;
-  for(int i : state_vars){
-    state_file << m_var_names[i] << std::endl;
-    state_file << m_grids[i].format(',','\n',precision);
+  for(int i : m_eqs->state_variables()){
+    state_file << m_eqs->nameFromIndex(i) << std::endl;
+    state_file << m_eqs->grid(i).format(',','\n',precision);
   }
   state_file.close();
 }
@@ -244,7 +243,7 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::max_iterations): max_iterations = std::stoi(rhs); break;
   case static_cast<int>(Config::iter_output_interval): iter_output_interval = std::stoi(rhs); break;
   case static_cast<int>(Config::time_output_interval): time_output_interval = std::stod(rhs); break;
-  case static_cast<int>(Config::output_flags): setOutputFlag(rhs,true); break;
+  case static_cast<int>(Config::output_flags): assert(m_eqs.get() != nullptr && "equation_set must be defined in config file before output_flags"); m_eqs->setOutputFlag(rhs,true); break;
   case static_cast<int>(Config::xdim): m_xdim = std::stoi(rhs); break;
   case static_cast<int>(Config::ydim): m_ydim = std::stoi(rhs); break;
   case static_cast<int>(Config::open_boundary_strength): open_boundary_strength = std::stod(rhs); break;
@@ -253,6 +252,7 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::std_out_interval): std_out_interval = std::stoi(rhs); break;
   case static_cast<int>(Config::open_boundary_decay_base): open_boundary_decay_base = std::stod(rhs); break;
   case static_cast<int>(Config::time_integrator): time_integrator = stringToTimeIntegrator(rhs); break;
+  case static_cast<int>(Config::equation_set): m_eqs = EquationSet::spawnEquationSet((*this),rhs); break;
   default: break;
   }
 }
@@ -266,15 +266,8 @@ void PlasmaDomain::handleConfigList(int setting_index, std::vector<std::string> 
   else assert(false && "Only output_flags support list specifier");
 }
 
-void PlasmaDomain::setOutputFlag(std::string var_name, bool new_flag)
-{
-  auto it = std::find(m_var_names.begin(),m_var_names.end(),var_name);
-  assert(it != m_var_names.end());
-  auto index = std::distance(m_var_names.begin(),it);
-  m_output_flags[index] = new_flag;
-}
-
 void PlasmaDomain::setOutputFlags(const std::vector<std::string> var_names, bool new_flag)
 {
-  for(std::string var_name : var_names) setOutputFlag(var_name,new_flag);
+  assert(m_eqs.get() != nullptr && "equation_set must be defined in config file before output_flags");
+  for(std::string var_name : var_names) m_eqs->setOutputFlag(var_name,new_flag);
 }

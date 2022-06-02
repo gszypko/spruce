@@ -142,6 +142,10 @@ void IdealMHD::recomputeDT(){
     m_grids[dt] = diagonals/(c_s + v_alfven + v_fast + v_slow + vel_mag);
 }
 
+Grid IdealMHD::getDT(){
+    return m_grids[dt];
+}
+
 void IdealMHD::propagateChanges()
 {
   propagateChanges(m_grids);
@@ -150,7 +154,7 @@ void IdealMHD::propagateChanges()
 void IdealMHD::propagateChanges(std::vector<Grid> &grids)
 {
   catchUnderdensity(grids);
-  m_pd.updateGhostZones(grids);
+  m_pd.updateGhostZones();
   recomputeTemperature(grids);
   recomputeDerivedVariables(grids);
 }

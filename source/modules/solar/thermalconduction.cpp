@@ -2,6 +2,7 @@
 #include "plasmadomain.hpp"
 #include "thermalconduction.hpp"
 #include "constants.hpp"
+#include "idealmhd.hpp"
 #include <iostream>
 #include <cmath>
 #include <vector>
@@ -25,8 +26,8 @@ void ThermalConduction::preIterateModule(double dt){
 
 void ThermalConduction::iterateModule(double dt){
     //Subcycle to simulate field-aligned thermal conduction
-    Grid &m_thermal_energy = m_pd.m_grids[PlasmaDomain::thermal_energy], &m_temp = m_pd.m_grids[PlasmaDomain::temp];
-    std::vector<Grid> b_hat = {m_pd.m_grids[PlasmaDomain::b_hat_x], m_pd.m_grids[PlasmaDomain::b_hat_y]};
+    Grid &m_thermal_energy = m_pd.grid(IdealMHD::thermal_energy), &m_temp = m_pd.grid(IdealMHD::temp);
+    std::vector<Grid> b_hat = {m_pd.grid(IdealMHD::b_hat_x), m_pd.grid(IdealMHD::b_hat_y)};
     Grid thermal_energy_next;
     for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
         Grid dtemp_dx = m_pd.derivative1D(m_temp,0);
@@ -47,7 +48,7 @@ void ThermalConduction::iterateModule(double dt){
         }
         thermal_energy_next = m_thermal_energy + m_pd.m_ghost_zone_mask*(dt/(double)curr_num_subcycles)*result;
         m_thermal_energy = thermal_energy_next.max(m_pd.thermal_energy_min);
-        m_pd.propagateChanges();
+        m_pd.m_eqs->propagateChanges();
     }
 }
 
@@ -55,13 +56,13 @@ void ThermalConduction::iterateModule(double dt){
 int ThermalConduction::numberSubcycles(double dt){
     Grid dt_subcycle;
     if(!flux_saturation){
-        dt_subcycle = K_B/KAPPA_0*(m_pd.m_grids[PlasmaDomain::rho]/m_pd.m_ion_mass)*m_pd.m_grids[PlasmaDomain::d_x]*m_pd.m_grids[PlasmaDomain::d_y]/m_pd.m_grids[PlasmaDomain::temp].pow(2.5);
+        dt_subcycle = K_B/KAPPA_0*(m_pd.grid(IdealMHD::rho)/m_pd.m_ion_mass)*m_pd.m_d_x*m_pd.m_d_y/m_pd.grid(IdealMHD::temp).pow(2.5);
     } else {
-        Grid field_temp_gradient = m_pd.derivative1D(m_pd.m_grids[PlasmaDomain::temp],0)*m_pd.m_grids[PlasmaDomain::b_hat_x]
-                                + m_pd.derivative1D(m_pd.m_grids[PlasmaDomain::temp],1)*m_pd.m_grids[PlasmaDomain::b_hat_y];
+        Grid field_temp_gradient = m_pd.derivative1D(m_pd.grid(IdealMHD::temp),0)*m_pd.grid(IdealMHD::b_hat_x)
+                                + m_pd.derivative1D(m_pd.grid(IdealMHD::temp),1)*m_pd.grid(IdealMHD::b_hat_y);
         if(field_temp_gradient.abs().max() == 0.0) return 0;
         Grid kappa_modified = saturatedKappa();
-        dt_subcycle = K_B/kappa_modified*(m_pd.m_grids[PlasmaDomain::rho]/m_pd.m_ion_mass)*m_pd.m_grids[PlasmaDomain::d_x]*m_pd.m_grids[PlasmaDomain::d_y];
+        dt_subcycle = K_B/kappa_modified*(m_pd.grid(IdealMHD::rho)/m_pd.m_ion_mass)*m_pd.m_d_x*m_pd.m_d_y;
     }
     double min_dt_subcycle = std::max(epsilon*dt_subcycle.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu),dt_subcycle_min);
     return (int)(dt/min_dt_subcycle) + 1;
@@ -71,7 +72,7 @@ int ThermalConduction::numberSubcycles(double dt){
 //Flux computed in direction indicated by "index": 0 for x, 1 for y
 //k0 is conductive coefficient
 Grid ThermalConduction::oneDimConductiveFlux(const Grid &temp, const Grid &rho, double k0, int index){
-    Grid kappa_max = m_pd.m_grids[PlasmaDomain::d_x]*m_pd.m_grids[PlasmaDomain::d_y]*K_B*(rho/m_pd.m_ion_mass)/dt_subcycle_min;
+    Grid kappa_max = m_pd.m_d_x*m_pd.m_d_y*K_B*(rho/m_pd.m_ion_mass)/dt_subcycle_min;
     return -(k0*temp.pow(5.0/2.0)).min(kappa_max)*m_pd.derivative1D(temp,index);
 }
 
@@ -112,11 +113,11 @@ Grid ThermalConduction::saturatedKappa(){
     Grid kappa_modified(m_pd.m_xdim,m_pd.m_ydim,0.0);
     Grid con_flux_x(m_pd.m_xdim,m_pd.m_ydim,0.0);
     Grid con_flux_y(m_pd.m_xdim,m_pd.m_ydim,0.0);
-    Grid field_temp_gradient = m_pd.derivative1D(m_pd.m_grids[PlasmaDomain::temp],0)*m_pd.m_grids[PlasmaDomain::b_hat_x]
-                            + m_pd.derivative1D(m_pd.m_grids[PlasmaDomain::temp],1)*m_pd.m_grids[PlasmaDomain::b_hat_y];
-    fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_pd.m_grids[PlasmaDomain::temp], m_pd.m_grids[PlasmaDomain::rho],
-                                m_pd.m_grids[PlasmaDomain::b_hat_x], m_pd.m_grids[PlasmaDomain::b_hat_y], KAPPA_0);
-    saturateConductiveFlux(con_flux_x, con_flux_y, m_pd.m_grids[PlasmaDomain::rho], m_pd.m_grids[PlasmaDomain::temp]);
+    Grid field_temp_gradient = m_pd.derivative1D(m_pd.grid(IdealMHD::temp),0)*m_pd.grid(IdealMHD::b_hat_x)
+                            + m_pd.derivative1D(m_pd.grid(IdealMHD::temp),1)*m_pd.grid(IdealMHD::b_hat_y);
+    fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_pd.grid(IdealMHD::temp), m_pd.grid(IdealMHD::rho),
+                                m_pd.grid(IdealMHD::b_hat_x), m_pd.grid(IdealMHD::b_hat_y), KAPPA_0);
+    saturateConductiveFlux(con_flux_x, con_flux_y, m_pd.grid(IdealMHD::rho), m_pd.grid(IdealMHD::temp));
     Grid flux_mag = (con_flux_x.square() + con_flux_y.square()).sqrt();
     kappa_modified = (flux_mag/field_temp_gradient).abs();
     return kappa_modified;
@@ -130,13 +131,13 @@ Grid ThermalConduction::saturatedKappa(){
 std::vector<Grid> ThermalConduction::saturationTerms(){
     Grid con_flux_x(m_pd.m_xdim,m_pd.m_ydim,0.0);
     Grid con_flux_y(m_pd.m_xdim,m_pd.m_ydim,0.0);
-    Grid field_temp_gradient = m_pd.derivative1D(m_pd.m_grids[PlasmaDomain::temp],0)*m_pd.m_grids[PlasmaDomain::b_hat_x]
-                            + m_pd.derivative1D(m_pd.m_grids[PlasmaDomain::temp],1)*m_pd.m_grids[PlasmaDomain::b_hat_y];
-    fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_pd.m_grids[PlasmaDomain::temp], m_pd.m_grids[PlasmaDomain::rho],
-                                m_pd.m_grids[PlasmaDomain::b_hat_x], m_pd.m_grids[PlasmaDomain::b_hat_y], KAPPA_0);
+    Grid field_temp_gradient = m_pd.derivative1D(m_pd.grid(IdealMHD::temp),0)*m_pd.grid(IdealMHD::b_hat_x)
+                            + m_pd.derivative1D(m_pd.grid(IdealMHD::temp),1)*m_pd.grid(IdealMHD::b_hat_y);
+    fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_pd.grid(IdealMHD::temp), m_pd.grid(IdealMHD::rho),
+                                m_pd.grid(IdealMHD::b_hat_x), m_pd.grid(IdealMHD::b_hat_y), KAPPA_0);
     Grid flux_mag = (con_flux_x.square() + con_flux_y.square()).sqrt();
     std::vector<Grid> raw_flux = {con_flux_x,con_flux_y};
-    saturateConductiveFlux(con_flux_x, con_flux_y, m_pd.m_grids[PlasmaDomain::rho], m_pd.m_grids[PlasmaDomain::temp]);
+    saturateConductiveFlux(con_flux_x, con_flux_y, m_pd.grid(IdealMHD::rho), m_pd.grid(IdealMHD::temp));
     Grid sat_flux_mag = (con_flux_x.square() + con_flux_y.square()).sqrt();
     Grid coefficient(m_pd.m_xdim,m_pd.m_ydim,0.0);
     for(int i=0; i<m_pd.m_xdim; i++) for (int j=0; j<m_pd.m_ydim; j++){

@@ -5,7 +5,6 @@
 //      out_path: relative path to simulation save directory
 //      array_num: integer corresponding to row of unique combinations of plasma settings
 
-#include "MhdInp.hpp"
 #include "ui_utility.hpp"
 #include <filesystem>
 namespace fs = std::filesystem;
