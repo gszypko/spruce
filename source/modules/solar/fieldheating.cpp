@@ -16,7 +16,7 @@ void FieldHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vector<
         else if(this_lhs == "current_mode") current_mode = (this_rhs == "true");
         else std::cerr << this_lhs << " config not recognized.\n";
     }
-    heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    heating = Grid::Zero(1,1);
 }
 
 void FieldHeating::computeHeating(){
@@ -39,6 +39,7 @@ std::string FieldHeating::commandLineMessage() const
 void FieldHeating::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids)
 {
     if(output_to_file){
+        if(heating.size() == 1) heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
         var_names.push_back("field_heating");
         var_grids.push_back(heating);
     }
