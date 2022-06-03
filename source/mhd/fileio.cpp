@@ -182,6 +182,18 @@ void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
   state_file << "adiabatic_index\n";
   state_file << m_adiabatic_index << std::endl;
   state_file << "t=" << m_time << std::endl;
+  state_file << "d_x\n";
+  state_file << m_d_x.format(',','\n',precision);
+  state_file << "d_y\n";
+  state_file << m_d_y.format(',','\n',precision);
+  state_file << "pos_x\n";
+  state_file << m_pos_x.format(',','\n',precision);
+  state_file << "pos_y\n";
+  state_file << m_pos_y.format(',','\n',precision);
+  state_file << "be_x\n";
+  state_file << m_be_x.format(',','\n',precision);
+  state_file << "be_y\n";
+  state_file << m_be_y.format(',','\n',precision);
   for(int i : m_eqs->state_variables()){
     state_file << m_eqs->nameFromIndex(i) << std::endl;
     state_file << m_eqs->grid(i).format(',','\n',precision);

@@ -51,7 +51,7 @@ std::string Module::commandLineMessage() const
     return "";
 }
 
-void Module::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) const
+void Module::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids)
 {
     return;
 }

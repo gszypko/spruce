@@ -15,7 +15,7 @@ class FieldHeating : public Module {
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs);
         void postIterateModule(double dt) override;
         std::string commandLineMessage() const override;
-        void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) const override;
+        void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) override;
     private:
         double rate;
         bool output_to_file;

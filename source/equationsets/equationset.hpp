@@ -85,12 +85,15 @@ class EquationSet {
 
         std::vector<Grid> computeTimeDerivatives(double visc_coeff) { return computeTimeDerivatives(m_grids,visc_coeff); }
         void applyTimeDerivatives(const std::vector<Grid> &time_derivatives, double step) { applyTimeDerivatives(m_grids,time_derivatives,step); }
+        void propagateChanges() { propagateChanges(m_grids); }
+        void populateVariablesFromState() { populateVariablesFromState(m_grids); }
 
         virtual Grid getDT() = 0;
         virtual std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff) = 0;
         virtual void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) = 0;
-        virtual void propagateChanges() = 0;
-        virtual void computeConstantTerms() = 0;
+        virtual void propagateChanges(std::vector<Grid> &grids) = 0;
+        virtual void populateVariablesFromState(std::vector<Grid> &grids) = 0;
+        // virtual void computeConstantTerms() = 0;
 
     protected:
         PlasmaDomain& m_pd;

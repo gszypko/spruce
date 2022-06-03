@@ -36,7 +36,7 @@ std::string FieldHeating::commandLineMessage() const
     return (current_mode ? "Field Heating On (Current Mode)" : "Field Heating On");
 }
 
-void FieldHeating::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) const
+void FieldHeating::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids)
 {
     if(output_to_file){
         var_names.push_back("field_heating");

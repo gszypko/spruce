@@ -70,8 +70,8 @@ Grid IdealMHD::computeMagneticEnergyTerm(){
     return -1.0/(4.0*PI)*(m_pd.divergence2D(bg_field_flux) + m_pd.divergence2D(db_field_flux) + m_pd.divergence2D(crossterm_flux));
 }
 
-void IdealMHD::computeConstantTerms(){
-    m_grids[div_be] = m_pd.divergence2D(m_pd.m_be_x,m_pd.m_be_y);
+void IdealMHD::computeConstantTerms(std::vector<Grid> &grids){
+    grids[div_be] = m_pd.divergence2D(m_pd.m_be_x,m_pd.m_be_y);
 }
 
 void IdealMHD::recomputeDerivedVariables(std::vector<Grid> &grids){
@@ -146,16 +146,16 @@ Grid IdealMHD::getDT(){
     return m_grids[dt];
 }
 
-void IdealMHD::propagateChanges()
-{
-  propagateChanges(m_grids);
-}
-
 void IdealMHD::propagateChanges(std::vector<Grid> &grids)
 {
-  catchUnderdensity(grids);
-  m_pd.updateGhostZones();
-  recomputeTemperature(grids);
-  recomputeDerivedVariables(grids);
+    catchUnderdensity(grids);
+    m_pd.updateGhostZones();
+    recomputeTemperature(grids);
+    recomputeDerivedVariables(grids);
 }
 
+void IdealMHD::populateVariablesFromState(std::vector<Grid> &grids){
+    computeConstantTerms(grids);
+    recomputeDerivedVariables(grids);
+    m_pd.updateGhostZones();
+}

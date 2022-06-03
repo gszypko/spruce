@@ -37,13 +37,15 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
     }
     else std::cout << config_path.string() << " already located in output directory.\n";
   }
+  std::cout << "Reading config file...\n";
   readConfigFile(config_path);
+  std::cout << "Reading state file...\n";
   readStateFile(state_file,continue_mode);
+  std::cout << "Validating input data...\n";
   assert(validateCellSizesAndPositions(m_d_x,m_pos_x,0) && validateCellSizesAndPositions(m_d_y,m_pos_y,1) && "Cell sizes and positions must correspond");
   assert(m_eqs->allStateGridsInitialized() && "All variables specified as state variables for the current EquationSet must be specified in the .state file");
   computeIterationBounds();
-  m_eqs->computeConstantTerms();
-  m_eqs->propagateChanges();
+  m_eqs->populateVariablesFromState();
   if(!continue_mode && m_overwrite_init){
     std::cout << "Writing out init.state...\n";
     writeStateFile("init");

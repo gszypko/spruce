@@ -39,7 +39,7 @@ class Module {
         //Any variables to output must have their names appended to var_names
         //and the corresponding Grids appended to var_grids, in the same order. 
         //Default behavior is no data; override in derived Module classes to customize.
-        virtual void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) const;
+        virtual void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids);
     protected:
         PlasmaDomain& m_pd;
         //Apply the values (in rhs) to the appropriate Module configs (in lhs)

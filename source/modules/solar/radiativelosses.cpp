@@ -17,7 +17,7 @@ void RadiativeLosses::parseModuleConfigs(std::vector<std::string> lhs, std::vect
         else if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
         else std::cerr << this_lhs << " config not recognized.\n";
     }
-    avg_losses = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    avg_losses = Grid::Zero(1,1);
 }
 
 void RadiativeLosses::preIterateModule(double dt){
@@ -96,9 +96,10 @@ std::string RadiativeLosses::commandLineMessage() const
     return "Radiative Subcycles: " + std::to_string(curr_num_subcycles);
 }
 
-void RadiativeLosses::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) const
+void RadiativeLosses::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids)
 {
     if (output_to_file) {
+        if (avg_losses.size() == 1) avg_losses = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
         var_names.push_back("rad");
         var_grids.push_back(avg_losses);
     }

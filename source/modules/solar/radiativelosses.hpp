@@ -16,7 +16,7 @@ class RadiativeLosses : public Module {
         void preIterateModule(double dt) override;
         void iterateModule(double dt) override;
         std::string commandLineMessage() const override;
-        void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) const override;
+        void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) override;
     private:
         double cutoff_ramp;
         double cutoff_temp;
