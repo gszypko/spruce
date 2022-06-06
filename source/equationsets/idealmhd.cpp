@@ -20,7 +20,7 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
     //Advance time by min_dt
     const Grid &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y],
         &m_v_x = grids[v_x], &m_v_y = grids[v_y],
-        &m_be_x = m_pd.m_be_x, &m_be_y = m_pd.m_be_y,
+        &m_be_x = m_pd.m_internal_grids[PlasmaDomain::be_x], &m_be_y = m_pd.m_internal_grids[PlasmaDomain::be_y],
         &m_bi_x = grids[bi_x], &m_bi_y = grids[bi_y],
         &m_rho = grids[rho], &m_thermal_energy = grids[thermal_energy], &m_press = grids[press];
 
@@ -55,7 +55,7 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
 }
 
 Grid IdealMHD::computeMagneticEnergyTerm(){
-    Grid &m_b_x = m_pd.m_be_x, &m_b_y = m_pd.m_be_y,
+    Grid &m_b_x = m_pd.m_internal_grids[PlasmaDomain::be_x], &m_b_y = m_pd.m_internal_grids[PlasmaDomain::be_y],
         &m_db_x = m_grids[bi_x], &m_db_y = m_grids[bi_y],
         &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y];
     std::vector<Grid> m_b = {m_b_x,m_b_y}, m_db = {m_db_x,m_db_y}, m_v = {m_v_x,m_v_y};
@@ -71,7 +71,7 @@ Grid IdealMHD::computeMagneticEnergyTerm(){
 }
 
 void IdealMHD::computeConstantTerms(std::vector<Grid> &grids){
-    grids[div_be] = m_pd.divergence2D(m_pd.m_be_x,m_pd.m_be_y);
+    grids[div_be] = m_pd.divergence2D(m_pd.m_internal_grids[PlasmaDomain::be_x],m_pd.m_internal_grids[PlasmaDomain::be_y]);
 }
 
 void IdealMHD::recomputeDerivedVariables(std::vector<Grid> &grids){
@@ -83,7 +83,7 @@ void IdealMHD::recomputeDerivedVariables(std::vector<Grid> &grids){
     grids[v_y] = grids[mom_y]/grids[rho];
     grids[n] = grids[rho]/m_pd.m_ion_mass;
     grids[div_bi] = m_pd.divergence2D(grids[bi_x],grids[bi_y]);
-    Grid m_b_x = m_pd.m_be_x + grids[bi_x], m_b_y = m_pd.m_be_y + grids[bi_y];
+    Grid m_b_x = m_pd.m_internal_grids[PlasmaDomain::be_x] + grids[bi_x], m_b_y = m_pd.m_internal_grids[PlasmaDomain::be_y] + grids[bi_y];
     grids[b_magnitude] = (m_b_x.square() + m_b_y.square()).sqrt();
     //Need to ensure that b_hat is zero when b is zero
     Grid &b_h_x = grids[b_hat_x], &b_h_y = grids[b_hat_y], &b_mag = grids[b_magnitude];
@@ -136,7 +136,7 @@ void IdealMHD::recomputeDT(){
     Grid v_slow = (0.5*(c_s_sq + v_alfven_sq)*(one - delta)).sqrt();
 
     //Bulk velocity transit time
-    Grid diagonals = (m_pd.m_d_x.square() + m_pd.m_d_y.square()).sqrt();
+    Grid diagonals = (m_pd.m_internal_grids[PlasmaDomain::d_x].square() + m_pd.m_internal_grids[PlasmaDomain::d_y].square()).sqrt();
     Grid vel_mag = (m_grids[v_x].square() + m_grids[v_y].square()).sqrt();
 
     m_grids[dt] = diagonals/(c_s + v_alfven + v_fast + v_slow + vel_mag);

@@ -63,9 +63,6 @@ private:
   enum InternalVars {d_x,d_y,pos_x,pos_y,be_x,be_y};
   static const inline std::vector<std::string> m_internal_var_names = {"d_x","d_y","pos_x","pos_y","be_x","be_y"};
   std::vector<Grid> m_internal_grids{m_internal_var_names.size()};
-  Grid &m_d_x = m_internal_grids[d_x], &m_d_y = m_internal_grids[d_y],
-  &m_pos_x = m_internal_grids[pos_x], &m_pos_y  = m_internal_grids[pos_y],
-  &m_be_x = m_internal_grids[be_x], &m_be_y = m_internal_grids[be_y];
 
   //Strings corresponding to variables, settings, boundary conditions for file I/O
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)

@@ -84,14 +84,12 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
       }
     }
     assert(!std::isdigit(in_file.peek()) && !(in_file.peek()=='-') && "Encountered more rows in a .state file grid than expected");
-    if(var_name == "d_x"){
-      m_d_x = curr_grid;
-    }
-    else if(var_name == "d_y") m_d_y = curr_grid;
-    else if(var_name == "pos_x") m_pos_x = curr_grid;
-    else if(var_name == "pos_y") m_pos_y = curr_grid;
-    else if(var_name == "be_x") m_be_x = curr_grid;
-    else if(var_name == "be_y") m_be_y = curr_grid;
+    if(var_name == "d_x") m_internal_grids[d_x] = curr_grid;
+    else if(var_name == "d_y") m_internal_grids[d_y] = curr_grid;
+    else if(var_name == "pos_x") m_internal_grids[pos_x] = curr_grid;
+    else if(var_name == "pos_y") m_internal_grids[pos_y] = curr_grid;
+    else if(var_name == "be_x") m_internal_grids[be_x] = curr_grid;
+    else if(var_name == "be_y") m_internal_grids[be_y] = curr_grid;
     else m_eqs->grid(var_name) = curr_grid;
   }
   in_file.close();
@@ -135,10 +133,10 @@ void PlasmaDomain::outputPreamble()
   }
   m_out_file << "xdim,ydim" << std::endl;
   m_out_file << m_xdim << "," << m_ydim << std::endl;
-  writeGridToOutput(m_pos_x,"pos_x");
-  writeGridToOutput(m_pos_y,"pos_y");
-  writeGridToOutput(m_be_x,"be_x");
-  writeGridToOutput(m_be_y,"be_y");
+  writeGridToOutput(m_internal_grids[pos_x],"pos_x");
+  writeGridToOutput(m_internal_grids[pos_y],"pos_y");
+  writeGridToOutput(m_internal_grids[be_x],"be_x");
+  writeGridToOutput(m_internal_grids[be_y],"be_y");
 }
 
 void PlasmaDomain::outputCurrentState()
@@ -185,17 +183,17 @@ void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
   state_file << m_adiabatic_index << std::endl;
   state_file << "t=" << m_time << std::endl;
   state_file << "d_x\n";
-  state_file << m_d_x.format(',','\n',precision);
+  state_file << m_internal_grids[d_x].format(',','\n',precision);
   state_file << "d_y\n";
-  state_file << m_d_y.format(',','\n',precision);
+  state_file << m_internal_grids[d_y].format(',','\n',precision);
   state_file << "pos_x\n";
-  state_file << m_pos_x.format(',','\n',precision);
+  state_file << m_internal_grids[pos_x].format(',','\n',precision);
   state_file << "pos_y\n";
-  state_file << m_pos_y.format(',','\n',precision);
+  state_file << m_internal_grids[pos_y].format(',','\n',precision);
   state_file << "be_x\n";
-  state_file << m_be_x.format(',','\n',precision);
+  state_file << m_internal_grids[be_x].format(',','\n',precision);
   state_file << "be_y\n";
-  state_file << m_be_y.format(',','\n',precision);
+  state_file << m_internal_grids[be_y].format(',','\n',precision);
   for(int i : m_eqs->state_variables()){
     state_file << m_eqs->nameFromIndex(i) << std::endl;
     state_file << m_eqs->grid(i).format(',','\n',precision);
