@@ -31,7 +31,7 @@ public:
 
   //Constructors and Initialization
   PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file, bool continue_mode, bool overwrite_init);
-  PlasmaDomain() = default;
+  PlasmaDomain(): m_module_handler{*this} {};
   void readStateFile(const fs::path &state_file, bool continue_mode = true);
   void readConfigFile(const fs::path &config_file);
 

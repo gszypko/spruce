@@ -1,5 +1,5 @@
 // compile: g++ -I source -I source\mhd -I source\modules\solar -I source\modules -I source\solar -I source\ucnp -I source\user-interface -std=c++20 -fopenmp -O3 execs\gengrids.cpp source\mhd\*.cpp source\modules\*.cpp source\modules\solar\*.cpp source\solar\*.cpp source\ucnp\*.cpp source\user-interface\*.cpp -o execs\gengrids.exe -lm -lstdc++fs
-// run: execs\gengrids --path E:\Grant-Gorman\data-mhd\05.23.22 -s ucnp.settings -c ucnp.config --overwrite 0 --array 0
+// run: gengrids --path E:\Grant-Gorman\data-mhd\06.06.22 -s ucnp.settings -c ucnp.config --overwrite 0 --array 0
 #include <iostream>
 #include "utils.hpp"
 #include "settings.hpp"
