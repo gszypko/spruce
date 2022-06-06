@@ -18,7 +18,7 @@ std::unique_ptr<EquationSet> EquationSet::spawnEquationSet(PlasmaDomain &pd, std
     if(name == "ideal_mhd") return std::unique_ptr<EquationSet>(new IdealMHD(pd));
     else{
         std::cerr << "EquationSet name " << name << " not recognized\n";
-        abort();
+        assert(false);
     }
 }
 
@@ -46,11 +46,15 @@ Grid& EquationSet::grid(std::string name) {
     return grid(index);
 }
 
-std::vector<Grid>& EquationSet::allGrids() {
+std::vector<Grid> EquationSet::allGrids() const {
     return m_grids;
 }
 
-std::string EquationSet::nameFromIndex(int index) {
+std::vector<std::string> EquationSet::allNames() const {
+    return m_var_names;
+}
+
+std::string EquationSet::nameFromIndex(int index) const {
     return m_var_names[index];
 }
 
@@ -87,12 +91,5 @@ int EquationSet::indexFromName(std::string name){
         std::cerr << "Variable name " << name << " not recognized\n";
         assert(false && "Variable name was not recognized");
     }
-    // auto it = std::find(m_var_names.begin(),m_var_names.end(),name);
-    // if(it == m_var_names.end()){
-    //     std::cerr << "Variable name " << name << " not recognized\n";
-    //     abort();
-    // }
-    // auto index = std::distance(m_var_names.begin(),it);
-    // return index;
 }
 

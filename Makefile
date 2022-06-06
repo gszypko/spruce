@@ -27,9 +27,8 @@ EXEC = run
 
 CXX = g++
 CXXFLAGS = -fopenmp -std=c++17
-CPPFLAGS = -I./source -I./source/user-interface -I./source/mhd \
-	-I./source/modules -I./source/modules/solar -I./source/solar \
-	-I./source/ucnp -I./source/equationsets
+CPPFLAGS = -I./source -I./source/mhd -I./source/equationsets \
+	-I./source/modules -I./source/modules/solar -I./source/solar 
 
 COMPILE.c = $(CXX) $(DEPFLAGS) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
 
@@ -37,8 +36,8 @@ run: $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $(EXEC)
 
 clean:
-	rm $(EXEC)
-	rm -r obj/
+	rm -f $(EXEC)
+	rm -rf obj/
 
 $(OBJDIR)/%.o : %.cpp $(DEPDIR)/%.d | $(DEPDIR)
 	@mkdir -p $(dir $@)

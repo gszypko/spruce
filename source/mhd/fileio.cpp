@@ -84,7 +84,9 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
       }
     }
     assert(!std::isdigit(in_file.peek()) && !(in_file.peek()=='-') && "Encountered more rows in a .state file grid than expected");
-    if(var_name == "d_x") m_d_x = curr_grid;
+    if(var_name == "d_x"){
+      m_d_x = curr_grid;
+    }
     else if(var_name == "d_y") m_d_y = curr_grid;
     else if(var_name == "pos_x") m_pos_x = curr_grid;
     else if(var_name == "pos_y") m_pos_y = curr_grid;

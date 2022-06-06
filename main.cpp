@@ -5,15 +5,12 @@
 //      out_path: relative path to simulation save directory
 //      array_num: integer corresponding to row of unique combinations of plasma settings
 
-#include "ui_utility.hpp"
 #include <filesystem>
 namespace fs = std::filesystem;
-#include "PlasmaSettings.hpp"
+#include <iostream>
 #include "mhd.hpp"
-#include "utils.hpp"
 #include "plasmadomain.hpp"
-#include "solarutils.hpp"
-#include "ucnputils.hpp"
+#include "utils.hpp"
 
 int main(int argc, char *argv[])
 {

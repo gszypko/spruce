@@ -20,6 +20,7 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   std_out_interval = 1;
   safe_state_mode = true;
   //***************************************************
+  m_internal_grids = std::vector<Grid>(m_internal_var_names.size(),Grid::Zero(1,1));
   m_iter = 0;
   this->continue_mode = continue_mode;
   m_out_directory = out_path;
@@ -51,43 +52,6 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
     writeStateFile("init");
   }
 }
-
-// void PlasmaDomain::configureSimulation(const fs::path &config_path, const fs::path &out_path, bool continue_mode)
-// {
-  // //DEFAULT VALUES, TO BE OVERWRITTEN BY readConfigFile
-  // open_boundary_strength = 1.0;
-  // time_integrator = TimeIntegrator::Euler;
-  // std_out_interval = 1;
-  // safe_state_mode = true;
-  // //***************************************************
-  // m_iter = 0;
-  // this->continue_mode = continue_mode;
-  // m_out_directory = out_path;
-  // fs::path out_filename("mhd.out");
-  // if(continue_mode){
-  //   m_out_file.open(m_out_directory/out_filename,std::ofstream::app);
-  // } else {
-  //   m_out_file.open(m_out_directory/out_filename);
-  //   fs::path new_config_path = m_out_directory/(config_path.filename());
-  //   fs::directory_entry new_config_dir(new_config_path);
-  //   if(!fs::equivalent(config_path,new_config_path)){
-  //     std::cout << "Copying " << config_path.string() << " into " << m_out_directory.string() << "...\n";
-  //     if(new_config_dir.exists()) fs::remove(new_config_path);
-  //     fs::copy(config_path, new_config_path, fs::copy_options::overwrite_existing);
-  //   }
-  //   else std::cout << config_path.string() << " already located in output directory.\n";
-  // }
-  // assert(validateCellSizesAndPositions(m_d_x,m_pos_x,0) && validateCellSizesAndPositions(m_d_y,m_pos_y,1) && "Cell sizes and positions must correspond");
-  // readConfigFile(config_path);
-  // assert(m_eqs->allStateGridsInitialized() && );
-  // computeIterationBounds();
-  // m_eqs->computeConstantTerms();
-  // m_eqs->propagateChanges();
-  // if(!continue_mode && m_overwrite_init){
-  //   std::cout << "Writing out init.state...\n";
-  //   writeStateFile("init");
-  // }
-// }
 
 //Compute lower and upper x- and y- indicies for differential operations
 //from boundary conditions, to exclude ghost zones. Results stored in m_xl, m_xu, m_yl, m_yu

@@ -8,25 +8,13 @@
 #include "equationset.hpp"
 #include <vector>
 #include <string>
-// Leave BoundaryConditions inside of PlasmaDomain, include way for EquationSet to categorize quantities (as momenta, thermal energies, fields, etc.)
-// so that the boundary extrapolations can simply iterate over all of the quantities of a particular type
-
-// d_x,d_y and pos_x,pos_y should remain in the PlasmaDomain, not split out
-// Also leave be_x,be_y as part of the plasmadomain, bi_x,bi_y should be part of EquationSet
-
-// Make a getter for the m_grids, by Enum, by integer, or by name string
-// Make the Enum and variable names publicly accessible (Enum cannot be defined as "abstract" in the sense that definition is enforced; a redefined enum in a derived class is an entirely separate entity)
-// AND make getters for densities, momenta, energies, etc. (for purposes of boundary conditions)
-// Make num_variables into a function call
-
-//NOTE: NEED TO HANDLE recomputeTemperature, which refers to a specific variable by definition
-//Maybe should instead have a generic "makeVariablesConsistent" function, with recomputeTemperature as a function particular to IdealMHD
 
 class PlasmaDomain;
 
 class IdealMHD: public EquationSet {
     public:
         IdealMHD(PlasmaDomain &pd);
+        IdealMHD() = default;
         std::vector<std::string> def_var_names() const override{
             return {"rho","temp","mom_x","mom_y","bi_x","bi_y","grav_x","grav_y",
                 "press","thermal_energy","kinetic_energy","div_bi","dt","v_x","v_y","n",
@@ -37,7 +25,6 @@ class IdealMHD: public EquationSet {
                 div_be,b_hat_x,b_hat_y,b_magnitude,v_a };
 
         std::vector<int> state_variables() override {
-            // return {d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,bi_x,bi_y,grav_x,grav_y};
             return {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};
         }
         std::vector<int> densities() override { return {rho}; }
