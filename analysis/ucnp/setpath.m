@@ -7,7 +7,7 @@ function [gitdir] = setpath(opt)
     f = filesep;
     fullpath = mfilename('fullpath');
     gitdir = extractBefore(fullpath,[f mfilename]);
-    folders = {'','file-io','img-fits','other','plasma-quantities','color-maps'};
+    folders = {'','file-io','img-fits','other','plasma-quantities','color-maps','plotting'};
     if opt == true
         addpath(gitdir)
         for i = 1:length(folders)
