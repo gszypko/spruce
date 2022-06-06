@@ -25,6 +25,10 @@ public:
     "euler", "rk2", "rk4"
   };
 
+  enum InternalVars {d_x,d_y,pos_x,pos_y,be_x,be_y};
+  static const inline std::vector<std::string> m_internal_var_names = {"d_x","d_y","pos_x","pos_y","be_x","be_y"};
+  std::vector<Grid> m_internal_grids{m_internal_var_names.size()};
+
   //Constructors and Initialization
   PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file, bool continue_mode, bool overwrite_init);
   PlasmaDomain() = default;
@@ -59,10 +63,6 @@ private:
   //Friend class declarations (for EquationSets)
   friend class EquationSet;
   friend class IdealMHD;
-
-  enum InternalVars {d_x,d_y,pos_x,pos_y,be_x,be_y};
-  static const inline std::vector<std::string> m_internal_var_names = {"d_x","d_y","pos_x","pos_y","be_x","be_y"};
-  std::vector<Grid> m_internal_grids{m_internal_var_names.size()};
 
   //Strings corresponding to variables, settings, boundary conditions for file I/O
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)
@@ -136,10 +136,8 @@ private:
   void reflectBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
   void fixedBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
 
-  // void recomputeDT();
-
-  // void computeConstantTerms();
   void computeIterationBounds();
+  bool allInternalGridsInitialized();
 
   void outputPreamble();
   void outputCurrentState();

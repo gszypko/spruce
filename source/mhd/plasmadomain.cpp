@@ -43,6 +43,7 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   std::cout << "Reading state file...\n";
   readStateFile(state_file,continue_mode);
   std::cout << "Validating input data...\n";
+  assert(allInternalGridsInitialized() && "All internal grid quantities for PlasmaDomain must be initialized");
   assert(validateCellSizesAndPositions(m_internal_grids[d_x],m_internal_grids[pos_x],0) && validateCellSizesAndPositions(m_internal_grids[d_y],m_internal_grids[pos_y],1) && "Cell sizes and positions must correspond");
   assert(m_eqs->allStateGridsInitialized() && "All variables specified as state variables for the current EquationSet must be specified in the .state file");
   computeIterationBounds();
@@ -122,4 +123,12 @@ bool PlasmaDomain::validateCellSizesAndPositions(const Grid& d, const Grid& pos,
     }
   }
   return valid;
+}
+
+bool PlasmaDomain::allInternalGridsInitialized()
+{
+  for(Grid& g : m_internal_grids){
+    if(g.size() == 1) return false;
+  }
+  return true;
 }
