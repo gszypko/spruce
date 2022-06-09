@@ -5,7 +5,11 @@
 #include "constants.hpp"
 #include <iostream>
 
-FieldHeating::FieldHeating(PlasmaDomain &pd): Module(pd) {}
+FieldHeating::FieldHeating(PlasmaDomain &pd): Module(pd) {
+    assert(dynamic_cast<IdealMHD*>(m_pd.m_eqs.get()) && \
+        "Module designed for IdealMHD EquationSet (ensure that equation_set is set before modules in the config)");
+    heating = Grid::Zero(1,1);
+}
 
 void FieldHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){
     for(int i=0; i<lhs.size(); i++){
@@ -16,7 +20,6 @@ void FieldHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vector<
         else if(this_lhs == "current_mode") current_mode = (this_rhs == "true");
         else std::cerr << this_lhs << " config not recognized.\n";
     }
-    heating = Grid::Zero(1,1);
 }
 
 void FieldHeating::computeHeating(){

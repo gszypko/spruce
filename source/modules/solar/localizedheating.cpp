@@ -5,7 +5,11 @@
 #include <sstream>
 #include <iostream>
 
-LocalizedHeating::LocalizedHeating(PlasmaDomain &pd) : Module(pd) {}
+LocalizedHeating::LocalizedHeating(PlasmaDomain &pd) : Module(pd) {
+    assert(dynamic_cast<IdealMHD*>(m_pd.m_eqs.get()) && \
+        "Module designed for IdealMHD EquationSet (ensure that equation_set is set before modules in the config)");
+    heating_template = Grid::Zero(1,1);
+}
 
 void LocalizedHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){
     for(int i=0; i<lhs.size(); i++){
@@ -20,7 +24,6 @@ void LocalizedHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vec
         else if(this_lhs == "center_y") center_y = std::stod(this_rhs);
         else std::cerr << this_lhs << " config not recognized.\n";
     }
-    heating_template = Grid::Zero(1,1);
 }
 
 void LocalizedHeating::preIterateModule(double dt){

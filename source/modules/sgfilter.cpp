@@ -4,7 +4,10 @@
 #include "idealmhd.hpp"
 #include <iostream>
 
-SGFilter::SGFilter(PlasmaDomain &pd): Module(pd) {}
+SGFilter::SGFilter(PlasmaDomain &pd): Module(pd) {
+    assert(dynamic_cast<IdealMHD*>(m_pd.m_eqs.get()) && \
+        "Module designed for IdealMHD EquationSet (ensure that equation_set is set before modules in the config)");
+}
 
 void SGFilter::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){
     for(int i=0; i<lhs.size(); i++){

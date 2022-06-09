@@ -4,8 +4,14 @@
 #include "idealmhd.hpp"
 #include <cmath>
 #include <iostream>
+#include <memory>
+#include <cassert>
 
-RadiativeLosses::RadiativeLosses(PlasmaDomain &pd): Module(pd) {}
+RadiativeLosses::RadiativeLosses(PlasmaDomain &pd): Module(pd){
+    assert(dynamic_cast<IdealMHD*>(m_pd.m_eqs.get()) && \
+        "Module designed for IdealMHD EquationSet (ensure that equation_set is set before modules in the config)");
+    avg_losses = Grid::Zero(1,1);
+}
 
 void RadiativeLosses::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){
     for(int i=0; i<lhs.size(); i++){
@@ -17,7 +23,6 @@ void RadiativeLosses::parseModuleConfigs(std::vector<std::string> lhs, std::vect
         else if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
         else std::cerr << this_lhs << " config not recognized.\n";
     }
-    avg_losses = Grid::Zero(1,1);
 }
 
 void RadiativeLosses::preIterateModule(double dt){
