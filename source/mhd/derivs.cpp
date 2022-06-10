@@ -70,7 +70,9 @@ Grid PlasmaDomain::upwindSurface(const Grid &cell_center, const Grid &vel, const
   return cell_surface;
 }
 
-Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, const int index){
+Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, const int index, int xl, int yl, int xu, int yu){
+  if(index == 0) assert(xl>0 && xu<quantity.rows()-1 && "Must have at least one-cell border in direction of differentiation");
+  else if(index == 1) assert(yl>0 && yu<quantity.cols()-1 && "Must have at least one-cell border in direction of differentiation");
   Grid surf_quantity = upwindSurface(quantity, vel, index);
   int xdim = quantity.rows();
   int ydim = quantity.cols();
@@ -79,8 +81,8 @@ Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, 
   #pragma omp parallel
   {
     #pragma omp for collapse(2)
-    for (int i = m_xl; i <= m_xu; i++){
-      for(int j = m_yl; j <= m_yu; j++){
+    for (int i = xl; i <= xu; i++){
+      for(int j = yl; j <= yu; j++){
         int i0, i1, i2, j0, j1, j2;
         i1 = i; j1 = j;
         if(index == 0){
@@ -109,22 +111,25 @@ Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, 
   return div;
 }
 
-Grid PlasmaDomain::transportDivergence2D(const Grid &quantity, const std::vector<Grid> &vel)
+Grid PlasmaDomain::transportDivergence2D(const Grid &quantity, const std::vector<Grid> &vel, int xl, int yl, int xu, int yu)
 {
   assert(vel.size() == 2 && "this operator requires 2D velocity");
-  return transportDerivative1D(quantity,vel[0],0) + transportDerivative1D(quantity,vel[1],1);
+  return transportDerivative1D(quantity,vel[0],0, xl, yl, xu, yu) + transportDerivative1D(quantity,vel[1],1, xl, yl, xu, yu);
 }
 
 //Compute single-direction divergence term for non-transport term (central differencing)
-Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
+Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index, int xl, int yl, int xu, int yu){
+  if(index == 0) assert(xl>0 && xu<quantity.rows()-1 && "Must have at least one-cell border in direction of differentiation");
+  else if(index == 1) assert(yl>0 && yu<quantity.cols()-1 && "Must have at least one-cell border in direction of differentiation");
+  else assert(false && "This function assumes two dimensions");
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
   #pragma omp parallel
   {
     #pragma omp for collapse(2)
-    for (int i = m_xl; i <= m_xu; i++){
-      for(int j = m_yl; j <= m_yu; j++){
+    for (int i = xl; i <= xu; i++){
+      for(int j = yl; j <= yu; j++){
         int i0, i1, i2, j0, j1, j2;
         i1 = i; j1 = j;
         double denom;
@@ -156,17 +161,19 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index){
   return div;
 }
 
-Grid PlasmaDomain::divergence2D(const Grid& a_x, const Grid& a_y){
-  return derivative1D(a_x, 0) + derivative1D(a_y, 1);
+Grid PlasmaDomain::divergence2D(const Grid& a_x, const Grid& a_y, int xl, int yl, int xu, int yu){
+  return derivative1D(a_x, 0, xl, yl, xu, yu) + derivative1D(a_y, 1, xl, yl, xu, yu);
 }
 
-Grid PlasmaDomain::divergence2D(const std::vector<Grid>& a){
+Grid PlasmaDomain::divergence2D(const std::vector<Grid>& a, int xl, int yl, int xu, int yu){
   assert(a.size() == 2 && "divergence function assumes two vector components");
-  return divergence2D(a[0],a[1]);
+  return divergence2D(a[0],a[1], xl, yl, xu, yu);
 }
 
 //Compute single-direction second derivative
-Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index){
+Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index, int xl, int yl, int xu, int yu){
+  if(index == 0) assert(xl>0 && xu<quantity.rows()-1 && "Must have at least one-cell border in direction of differentiation");
+  else if(index == 1) assert(yl>0 && yu<quantity.cols()-1 && "Must have at least one-cell border in direction of differentiation");
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
@@ -174,8 +181,8 @@ Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index){
   #pragma omp parallel
   {
     #pragma omp for collapse(2)
-    for (int i = m_xl; i <= m_xu; i++){
-      for(int j = m_yl; j <= m_yu; j++){
+    for (int i = xl; i <= xu; i++){
+      for(int j = yl; j <= yu; j++){
         int i0, i1, i2, j0, j1, j2;
         i1 = i; j1 = j;
         if(index == 0){
@@ -205,22 +212,22 @@ Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index){
 }
 
 //Computes Laplacian (del squared) of "quantity"
-Grid PlasmaDomain::laplacian(const Grid &quantity){
-  Grid result_x = secondDerivative1D(quantity,0);
-  Grid result_y = secondDerivative1D(quantity,1);
+Grid PlasmaDomain::laplacian(const Grid &quantity, int xl, int yl, int xu, int yu){
+  Grid result_x = secondDerivative1D(quantity,0,xl,yl,xu,yu);
+  Grid result_y = secondDerivative1D(quantity,1,xl,yl,xu,yu);
   return result_x+result_y;
 }
 
 //Computes curl of vector in z-direction (result in xy-plane)
-std::vector<Grid> PlasmaDomain::curlZ(const Grid& z){
-  Grid result_x = derivative1D(z, 1);
-  Grid result_y = -derivative1D(z, 0);
+std::vector<Grid> PlasmaDomain::curlZ(const Grid& z, int xl, int yl, int xu, int yu){
+  Grid result_x = derivative1D(z,1,xl,yl,xu,yu);
+  Grid result_y = -derivative1D(z,0,xl,yl,xu,yu);
   return {result_x, result_y};
 }
 
 //Computes curl of vector in xy-plane (result in z-direction)
-Grid PlasmaDomain::curl2D(const Grid& x, const Grid& y){
-  return derivative1D(y, 0) - derivative1D(x, 1);
+Grid PlasmaDomain::curl2D(const Grid& x, const Grid& y, int xl, int yl, int xu, int yu){
+  return derivative1D(y, 0,xl,yl,xu,yu) - derivative1D(x, 1,xl,yl,xu,yu);
 }
 
 //Linearly interpolate value of quantity for boundary between (i1,j1) and (i2,j2)

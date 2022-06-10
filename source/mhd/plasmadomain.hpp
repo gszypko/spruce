@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 class PlasmaDomain
 {
 public:
-  enum class BoundaryCondition { Periodic, Open, Fixed, Reflect };
+  enum class BoundaryCondition { Periodic, Open, Fixed, Reflect, OpenMoC };
   static inline std::vector<std::string> m_boundary_condition_names = {
     "periodic", "open", "fixed", "reflect"
   };
@@ -163,29 +163,38 @@ private:
 
   //Compute divergence of scalar quantity times velocity using Barton's method
   //Meant for advection terms
-  Grid transportDivergence2D(const Grid &quantity, const std::vector<Grid> &vel);
+  Grid transportDivergence2D(const Grid &quantity, const std::vector<Grid> &vel) { return transportDivergence2D(quantity,vel,m_xl,m_yl,m_xu,m_yu); }
+  Grid transportDivergence2D(const Grid &quantity, const std::vector<Grid> &vel, int xl, int yl, int xu, int yu);
   //Compute 1D derivative using Barton's method, for transport terms
-  Grid transportDerivative1D(const Grid &quantity, const Grid &vel, const int index);
+  Grid transportDerivative1D(const Grid &quantity, const Grid &vel, const int index) { return transportDerivative1D(quantity,vel,index,m_xl,m_yl,m_xu,m_yu); }
+  Grid transportDerivative1D(const Grid &quantity, const Grid &vel, const int index, int xl, int yl, int xu, int yu);
 
   //Compute divergence of vector quantity a_x,a_y
-  Grid divergence2D(const Grid& a_x, const Grid& a_y);
-  //Compute single-direction divergence term for non-transport term (central differencing)
-  Grid derivative1D(const Grid &quantity, const int index);
-
+  Grid divergence2D(const Grid& a_x, const Grid& a_y){ return divergence2D(a_x, a_y, m_xl, m_yl, m_xu, m_yu); }
+  Grid divergence2D(const Grid& a_x, const Grid& a_y, int xl, int yl, int xu, int yu);
   //Compute divergence of vector quantity a[0],a[1]
-  Grid divergence2D(const std::vector<Grid>& a);
+  Grid divergence2D(const std::vector<Grid>& a) { return divergence2D(a,m_xl,m_yl,m_xu,m_yu); }
+  Grid divergence2D(const std::vector<Grid>& a, int xl, int yl, int xu, int yu);
+
+  //Compute single-direction divergence term for non-transport term (central differencing)
+  Grid derivative1D(const Grid &quantity, const int index){ return derivative1D(quantity,index, m_xl, m_yl, m_xu, m_yu); }
+  Grid derivative1D(const Grid &quantity, const int index, int xl, int yl, int xu, int yu);
 
   //Compute single-direction second derivative
-  Grid secondDerivative1D(const Grid &quantity, const int index);
+  Grid secondDerivative1D(const Grid &quantity, const int index) { return secondDerivative1D(quantity, index, m_xl, m_yl, m_xu, m_yu); }
+  Grid secondDerivative1D(const Grid &quantity, const int index, int xl, int yl, int xu, int yu);
 
   //Computes Laplacian (del squared) of "quantity"
-  Grid laplacian(const Grid &quantity);
+  Grid laplacian(const Grid &quantity) { return laplacian(quantity,m_xl,m_yl,m_xu,m_yu); }
+  Grid laplacian(const Grid &quantity, int xl, int yl, int xu, int yu);
 
   //Computes curl of vector in z-direction (result in xy-plane)
-  std::vector<Grid> curlZ(const Grid& z);
+  std::vector<Grid> curlZ(const Grid& z) { return curlZ(z,m_xl,m_yl,m_xu,m_yu); }
+  std::vector<Grid> curlZ(const Grid& z, int xl, int yl, int xu, int yu);
 
   //Computes curl of vector in xy-plane (result in z-direction)
-  Grid curl2D(const Grid& x, const Grid& y);
+  Grid curl2D(const Grid& x, const Grid& y) { return curl2D(x,y,m_xl,m_yl,m_xu,m_yu); }
+  Grid curl2D(const Grid& x, const Grid& y, int xl, int yl, int xu, int yu);
   
   double boundaryInterpolate(const Grid &quantity, int i1, int j1, int i2, int j2);
   double boundaryExtrapolate(const Grid &quantity, int i1, int j1, int i2, int j2);
