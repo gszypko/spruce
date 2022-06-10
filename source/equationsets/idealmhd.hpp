@@ -41,7 +41,6 @@ class IdealMHD: public EquationSet {
     private:
         void recomputeDT();
         void computeConstantTerms(std::vector<Grid> &grids);
-        Grid computeMagneticEnergyTerm();
         void recomputeDerivedVariables(std::vector<Grid> &grids);
         void recomputeTemperature(std::vector<Grid> &grids); //need to rethink this in the general case
         void catchUnderdensity(std::vector<Grid> &grids);

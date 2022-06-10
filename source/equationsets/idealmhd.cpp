@@ -54,22 +54,6 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
     return {d_rho_dt, d_mom_x_dt, d_mom_y_dt, d_bi_x_dt, d_bi_y_dt, d_thermal_energy_dt};
 }
 
-Grid IdealMHD::computeMagneticEnergyTerm(){
-    Grid &m_b_x = m_pd.m_internal_grids[PlasmaDomain::be_x], &m_b_y = m_pd.m_internal_grids[PlasmaDomain::be_y],
-        &m_db_x = m_grids[bi_x], &m_db_y = m_grids[bi_y],
-        &m_v_x = m_grids[v_x], &m_v_y = m_grids[v_y];
-    std::vector<Grid> m_b = {m_b_x,m_b_y}, m_db = {m_db_x,m_db_y}, m_v = {m_v_x,m_v_y};
-    Grid b_sq = Grid::DotProduct2D(m_b,m_b), db_sq = Grid::DotProduct2D(m_db,m_db),
-        b_dot_v = Grid::DotProduct2D(m_b,m_v), db_dot_v = Grid::DotProduct2D(m_db,m_v),
-        b_dot_db = Grid::DotProduct2D(m_b,m_db);
-
-    std::vector<Grid> bg_field_flux = {0.5*m_v_x*b_sq - m_b_x*b_dot_v, 0.5*m_v_y*b_sq - m_b_y*b_dot_v};
-    std::vector<Grid> db_field_flux = {0.5*m_v_x*db_sq - m_db_x*db_dot_v, 0.5*m_v_y*db_sq - m_db_y*db_dot_v}; //second order
-    std::vector<Grid> crossterm_flux = {m_v_x*b_dot_db - m_b_x*db_dot_v - m_db_x*b_dot_v, m_v_y*b_dot_db - m_b_y*db_dot_v - m_db_y*b_dot_v};
-
-    return -1.0/(4.0*PI)*(m_pd.divergence2D(bg_field_flux) + m_pd.divergence2D(db_field_flux) + m_pd.divergence2D(crossterm_flux));
-}
-
 void IdealMHD::computeConstantTerms(std::vector<Grid> &grids){
     grids[div_be] = m_pd.divergence2D(m_pd.m_internal_grids[PlasmaDomain::be_x],m_pd.m_internal_grids[PlasmaDomain::be_y]);
 }
