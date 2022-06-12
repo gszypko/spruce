@@ -22,7 +22,8 @@ MhdInp gen_inp_grids_ucnp(const Settings& pms)
     double tau { tau_exp(sig,pms.getvar("m_i"),2*pms.getvar("Te")) };
     grids.set_ion_mass(pms.getvar("m_i"));
     grids.set_adiabatic_index(pms.getvar("gam"));
-    grids.set_duration(pms.getvar("tmax/tau_exp")*tau);
+    grids.set_duration(pms.getvar("t_max/tau_exp")*tau);
+    grids.set_time_output_interval(pms.getvar("t_iter/tau_exp")*tau);
     grids.set_var("d_x",dx);
     grids.set_var("d_y",dy);
     grids.set_var("pos_x",x);

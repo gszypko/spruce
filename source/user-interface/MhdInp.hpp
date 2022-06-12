@@ -25,6 +25,7 @@ public:
     void set_ion_mass(double mass);
     void set_adiabatic_index(double index);
     void set_duration(double duration);
+    void set_time_output_interval(double duration);
     void set_time(double time);
     void all_initialized() const;
     std::vector<Grid> grids();
@@ -44,6 +45,7 @@ private:
     double m_ion_mass {};
     double m_adiabatic_index {};
     double m_duration {};
+    double m_time_output_interval {};
     double m_time {};
 };
 

@@ -50,9 +50,9 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
   if(continue_mode) m_time = std::stod(element);
   else m_time = 0.0;
 
-  bool first_loop = true;
+  bool ready_for_grids = true;
   while(getCleanedLine(in_file, line)){
-    if(first_loop){
+    if(ready_for_grids){
       if(line.find("duration")!=std::string::npos){
         std::istringstream ss_line(line);
         std::string el;
@@ -62,10 +62,20 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
         clearWhitespace(el);
         assert( (std::isdigit(el[0]) || el[0] == '.' || el[0] == '-') && "Encountered non-numerical value for duration from state file");
         m_duration = std::stod(el);
-        first_loop = false;
         continue;
       }
-      first_loop = false;
+      else if(line.find("time_output_interval")!=std::string::npos){
+        std::istringstream ss_line(line);
+        std::string el;
+        std::getline(ss_line,el,'=');
+        assert(el == "time_output_interval" && "time_output_interval specification must be formatted as time_output_interval=[time_output_interval]");
+        std::getline(ss_line,el);
+        clearWhitespace(el);
+        assert( (std::isdigit(el[0]) || el[0] == '.' || el[0] == '-') && "Encountered non-numerical value for time_output_interval from state file");
+        time_output_interval = std::stod(el);
+        continue;
+      }
+      else ready_for_grids = false;
     }
     std::string var_name = line;
     Grid curr_grid(m_xdim,m_ydim);
