@@ -6,7 +6,7 @@ MhdInp::MhdInp(size_t Nx,size_t Ny,PlasmaDomain& pd,std::string eqs_set):
 {  
     // collect full list of variable names - including plasma domain and equation set grids  
     for (const auto& name : PlasmaDomain::m_internal_var_names) m_grid_names.push_back(name);
-    for (const auto& name : m_eqs->allNames()) m_grid_names.push_back(name);    
+    for (const auto& ind : m_eqs->state_variables()) m_grid_names.push_back(m_eqs->nameFromIndex(ind));    
     // initialize grids for each variable and indicate they have not yet been initialized
     for (int i=0; i<m_grid_names.size(); i++){
         m_grid_indices[m_grid_names[i]] = i;

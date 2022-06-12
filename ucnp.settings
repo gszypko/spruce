@@ -17,9 +17,9 @@ sig_y = cgs = .1 % rms radius of plasma along y axis
 Ti = cgs = 1e-2 % initial ion temperature
 Te = cgs = 20 % initial electron temperature
 dBdx = cgs = 0 % gradient of quadrupole magnetic field along symmetry (x) axis
-tmax/tau_exp = cgs = 7.5 % end time for simulation
-x_lim = sig_x = 10 % simulation box size on x axis: from -x_lim to x_lim
-y_lim = sig_x = 10 % simulation box size on y axis: from -y_lim to y_lim   
+tmax/tau_exp = cgs = 2 % end time for simulation
+x_lim = sig_x = 5 % simulation box size on x axis: from -x_lim to x_lim
+y_lim = sig_x = 5 % simulation box size on y axis: from -y_lim to y_lim   
 grid_opt = opt = uniform % uniform or non-uniform
 Nx = cgs = 201 % number of cells on x axis
 Ny = cgs = 201 % number of cells on y axis                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   0 % simulation box size on y axis: from -y_lim to y_lim
