@@ -28,6 +28,7 @@ DOMAIN_WIDTH = 4.0
 DOMAIN_HEIGHT = 4.0
 X_DIM = 100
 Z_DIM = 100
+N_GHOST = 1
 
 X_1 = -0.25
 X_2 = 0.25
@@ -181,27 +182,12 @@ def precompute_f(t_bins,s_bins,a_ref):
             f2[i,j] = f(a0_2,a_ref,s_arg)*dt*ds/(t**2 * s**2)
     return f1,f2
 
-x = np.linspace(-DOMAIN_WIDTH/2.0,DOMAIN_WIDTH/2.0,X_DIM)
-z = np.linspace(0.0,DOMAIN_HEIGHT,Z_DIM)
+x = np.linspace(-DOMAIN_WIDTH*(1.0/2.0 + 1.0/X_DIM),DOMAIN_WIDTH*(1.0/2.0 + 1.0/X_DIM),X_DIM + 2*N_GHOST)
+z = np.linspace(-DOMAIN_HEIGHT/Z_DIM,DOMAIN_HEIGHT*(1.0 + 1.0/Z_DIM),Z_DIM + 2*N_GHOST)
 dx = (x[-1]-x[0])/(x.shape[0]-1)
 dz = (z[-1]-z[0])/(z.shape[0]-1)
 x_2d = np.outer(x,np.ones_like(z))
 z_2d = np.outer(np.ones_like(x),z)
-
-# zero = np.zeros_like(x_2d)
-# one = np.ones_like(x_2d)
-# with open(out_directory+"/normalized.txt", 'w', newline='') as f:
-#     writer = csv.writer(f)
-#     writer.writerow([str(X_DIM),str(Z_DIM)])
-#     names = ["d_x","d_y","pos_x","pos_y"]
-#     grids = [dx*one,dz*one,x_2d,z_2d]
-#     for i in range(len(names)):
-#         writer.writerow([names[i]])
-#         writer.writerows(grids[i])
-#     othernames = ["press","temp","b0_x","b0_y","b1_x","b1_y"]
-#     for i in range(len(othernames)):
-#         writer.writerow([othernames[i]])
-#         writer.writerows((i+1)*one)
 
 # Computing full-domain A and B from boundary
 full_a0 = compute_a0_from_boundary(x_2d,z_2d)
@@ -209,7 +195,6 @@ if ACTIVE_REGION:
     a_ref = np.max(full_a0)
 else:
     a_ref = np.min(full_a0)
-# plt.contour(np.transpose(full_a0),origin='lower',extent=(x[0]-0.5*dx,x[-1]+0.5*dx,z[0]-0.5*dz,z[-1]+0.5*dz),colors='k',levels=np.linspace(np.min(full_a0[:,0]),np.max(full_a0[:,0]),21),linestyles='solid')
 full_b0 = compute_b(full_a0,x,z)
 if ACTIVE_REGION: streamplot_pow = 1.5
 else: streamplot_pow = 2.0
@@ -237,24 +222,7 @@ for i in range(full_a1.shape[0]):
     for j in range(full_a1.shape[1]):
         print(str(i) + " " + str(j))
         full_a1[i,j] = compute_a1(precomps[0],precomps[1],t_bins,s_bins,x[i],z[j])
-# epsilon = BETA/2.0
 full_b1 = compute_b(full_a1,x,z)
-# full_a = full_a0 + epsilon*full_a1
-# full_b = full_b0 + epsilon*full_b1
-
-# full_b_pert_mag = np.sqrt(full_b[0][:,1]**2 + full_b[1][:,1]**2)**streamplot_pow
-# full_b_pert_mag_norm = full_b_pert_mag/np.trapz(full_b_pert_mag)
-# cdf_pert = [np.trapz(full_b_pert_mag_norm[:i]) for i in range(len(full_b_pert_mag_norm))]
-# plt.figure(4)
-# plt.imshow(np.transpose(full_a),origin='lower',extent=(x[0]-0.5*dx,x[-1]+0.5*dx,z[0]-0.5*dz,z[-1]+0.5*dz))
-# plt.colorbar(label=r'$A/B_0h$')
-# plt.streamplot(x,z,full_b0[0].transpose(),full_b0[1].transpose(),start_points=np.column_stack((stream_points,1*dz*np.ones_like(stream_points))),color=(0.0,0.0,0.0,0.2),density=100,linewidth=1.0,arrowstyle='->',maxlength=1000.0)
-# plt.streamplot(x,z,full_b[0].transpose(),full_b[1].transpose(),start_points=np.column_stack((stream_points,1*dz*np.ones_like(stream_points))),color=(0.0,0.0,0.0,1.0),density=100,linewidth=1.0,arrowstyle='->',maxlength=1000.0)
-# plt.title("Magnetic Field")
-# plt.xlabel(r'$x/h$')
-# plt.ylabel(r'$z/h$')
-# plt.tight_layout()
-# plt.savefig(out_directory+"/field.png")
 
 # Computing pressure and temperature according to Terradas profile
 plt.figure(1)
@@ -279,16 +247,6 @@ plt.ylabel(r'$z/h$')
 plt.colorbar(label=r'$p/p_{00}$')
 plt.tight_layout()
 plt.savefig(out_directory+"/pressure.png")
-
-# B_0 = 100.0 #G
-# T_C = 1.0e6 #K
-# PRESS_00 = BETA*B_0**2/(8.0*np.pi) #dyn cm^-2
-# G = 2.748e4 #cm s^-2
-# MU = 0.5*1.6726e-24 #g
-# K_B = 1.3807e-16 #erg K^-1
-# H = K_B*T_C/MU/G
-# GAMMA = 5.0/3.0
-# ION_MASS = 1.6726e-24 #g
 
 zero = np.zeros_like(x_2d)
 one = np.ones_like(x_2d)
@@ -320,21 +278,4 @@ with open(out_directory+"/normalized.txt", 'w', newline='') as f:
     grids = [dx*one,dz*one,x_2d,z_2d,press,temp,full_b0[0],full_b0[1],full_b1[0],full_b1[1]]
     for i in range(len(names)):
         writer.writerow([names[i]])
-        writer.writerows(grids[i])
-
-# zero = np.zeros_like(x_2d)
-# one = np.ones_like(x_2d)
-# with open(out_directory+"/mhs.state", 'w', newline='') as f:
-#     writer = csv.writer(f)
-#     writer.writerow(["xdim","ydim"])
-#     writer.writerow([str(X_DIM),str(Z_DIM)])
-#     writer.writerow(["ion_mass"])
-#     writer.writerow([str(ION_MASS)])
-#     writer.writerow(["adiabatic_index"])
-#     writer.writerow([str(GAMMA)])
-#     writer.writerow(["t=0"])
-#     names = ["d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","be_x","be_y","bi_x","bi_y","grav_x","grav_y"]
-#     grids = [H*dx*one,H*dz*one,H*x_2d,H*z_2d,PRESS_00*press*MU/K_B/(T_C*temp),T_C*temp,zero,zero,zero,zero,B_0*full_b[0],B_0*full_b[1],zero,-1.0*G*one]
-#     for i in range(len(names)):
-#         writer.writerow([names[i]])
-#         writer.writerows(grids[i])
+        writer.writerows(grids[i][N_GHOST:-N_GHOST,N_GHOST:-N_GHOST])
