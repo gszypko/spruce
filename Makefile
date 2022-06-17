@@ -1,5 +1,20 @@
 # Based on http:\\make.mad-scientist.net\papers\advanced-auto-dependency-generation
-# input argument 
+
+# Platform Independency
+#	The $(OS) statement below should be updated to include Mac and Linux
+#	The <path> command should be updated for each OS
+#	An overload for the OS-dependent command line functions such as rmdir, mkdir
+#	should be created to ensure syntax is correct
+
+# Notes:
+#	This file generates the dependencies and compiles each file within the CPP project.
+# 	Files are only recompiled if they or their dependencies have changed.
+#	The command <$(wildcard $(SRCDIR)/*.cpp)> must go as deep into source as there are files
+#		(i.e., $(wildcard $(SRCDIR)/*/*.cpp)) if necessary and so on
+#	Any additional source files not contained within source/ must be manually appended, as main.cpp is
+#	Any additional header folders not associated with .cpp files must also be manually appended
+
+# input arguments with default values
 MAINFILE ?= main
 FLAG ?= -O3
 # detect operating system and update path fixing variable 
@@ -7,51 +22,50 @@ ifeq ($(OS),Windows_NT)
 define path
 $(subst /,\,$1)
 endef
+makedir = mkdir
+removedir = rmdir /s /q
 endif
-# set up source, object, and dependent directories
+# define project directories
 SRCDIR := source
 OBJDIR := objects
 DEPDIR := $(OBJDIR)/.deps
+# obtain source files, include folders, and object and dependency names from source folder
 SRCS := $(wildcard $(SRCDIR)/*/*.cpp) $(wildcard $(SRCDIR)/*/*/*.cpp) $(MAINFILE).cpp
-HEADERS := source $(dir $(SRCS))
+HEADERS := $(sort $(dir $(SRCS))) source
 OBJS := $(SRCS:%.cpp=$(OBJDIR)/%.o)
-EXEC = $(OBJDIR)/run.exe
+DEPFILES = $(SRCS:%.cpp=$(DEPDIR)/%.d)
+EXEC := $(OBJDIR)/run.exe
 # define flags for compilation
 CXX = g++
-CXXFLAGS = -fopenmp -std=c++20 $(FLAG)
-CPPFLAGS := $(patsubst %,-I %,$(HEADERS))
-LNKFLAGS = -lm -larmadillo -lstdc++fs
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
-
+CXXFLAGS = -fopenmp -std=c++20 $(FLAG)
+CPPFLAGS = $(patsubst %,-I %,$(HEADERS))
+LNKFLAGS = -lm -lstdc++fs -larmadillo
+# define targets to be completed in order
 all : init run
-
+# print compilation data to command line
 init :
 	@echo -------
+	@echo File: $(MAINFILE).cpp
+	@echo Flags: $(CXXFLAGS)
+	@echo Linker: $(LNKFLAGS)
 	@echo Headers: $(CPPFLAGS)
 	@echo Sources: $(SRCS)
-	@echo File: $(MAINFILE).cpp
-
-# set the default goal by making the target of the first rule $(EXEC)
+# define compilation goal
 run : $(OBJS)
 	@$(CXX) $(CXXFLAGS) $(OBJS) -o $(EXEC) $(LNKFLAGS)
 	@echo Complete
-	@echo -------
-
-$(DEPDIR) : ; @mkdir $@
-
 # rule for making object files
 $(OBJDIR)/%.o : %.cpp $(DEPDIR)/%.d | $(DEPDIR)
 	@echo Compiling Object: $@ -- Dependencies: $<
-	@if not exist $(dir $@) @mkdir $(call path,$(dir $@))
+	@if not exist $(dir $@) @$(makedir) $(call path,$(dir $@))
 	@$(CXX) $(DEPFLAGS) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
-
-DEPFILES := $(SRCS:%.cpp=$(DEPDIR)/%.d)
+# rule for making dependency directories
+$(DEPDIR) : ; @$(makedir) $(call path,$(dir $@))
+# rule for making dependency files
 $(DEPFILES):
-	@if not exist $(dir $@) @mkdir $(call path,$(dir $@))
-
+	@if not exist $(dir $@) @$(makedir) $(call path,$(dir $@))
 include $(wildcard $(DEPFILES))
-
 # option to clean directories at the end
 clean :
-	if exist $(OBJDIR) rmdir /s /q $(OBJDIR)
-	
+	if exist $(OBJDIR) $(removedir) $(OBJDIR)
