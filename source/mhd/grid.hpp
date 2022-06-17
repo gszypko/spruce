@@ -10,19 +10,33 @@
 #include <cassert>
 #include <omp.h>
 #include <sstream>
+#include <iostream>
 
 class Grid
 {
 public:
+  // *** Construction
   Grid(size_t rows, size_t cols);
   Grid(size_t rows, size_t cols, double val);
   Grid(size_t rows, size_t cols, std::vector<double> data);
+  Grid(std::vector<double> vec);
   Grid();
   static Grid Zero(size_t rows, size_t cols);
   static Grid Ones(size_t rows, size_t cols);
-  double rows() const;
-  double cols() const;
-  double size() const;
+  static Grid Linspace(double start,double end,int num,int dim=1);
+  // *** Element Accession
+  double& operator()(size_t i, size_t j);
+  double operator()(size_t i, size_t j) const;
+  double& operator()(size_t el);
+  double operator()(size_t el) const;
+  // *** Basic Getters
+  int rows() const;
+  int cols() const;
+  int size() const;
+  std::vector<double> data() const;
+  Grid col(size_t ind) const;
+  Grid row(size_t ind) const;
+  // *** Other Usage
   double min() const;
   double min(int il, int jl, int iu, int ju) const;
   Grid min(double b) const;
@@ -35,21 +49,21 @@ public:
   Grid abs() const;
   Grid sqrt() const;
   Grid pow(double power) const;
-  std::string format(char element_delim = ',', char row_delim = '\n', int precision = 4, char end_delim = '\n') const;
-  //Dot product of two 2D vectors
-  static Grid DotProduct2D(const std::vector<Grid>& a, const std::vector<Grid>& b);
-  //Cross product of two vectors in xy-plane (result in z-direction)
-  static Grid CrossProduct2D(const std::vector<Grid>& a, const std::vector<Grid>& b);
-  //Cross product of vector in z-direction with vector in xy-plane (result in xy-plane)
-  static std::vector<Grid> CrossProductZ2D(const Grid& a_z, const std::vector<Grid>& b);
-  //Cross product of vector in xy-plane with vector in z-direction (result in xy-plane)
-  static std::vector<Grid> CrossProduct2DZ(const std::vector<Grid>& a, const Grid& b_z);
-  //General cross product between two 3D vector quantities
-  static std::vector<Grid> CrossProduct(const std::vector<Grid>& a, const std::vector<Grid>& b);
-
-  // OPERATOR OVERRIDES
-  double& operator()(size_t i, size_t j);
-  double operator()(size_t i, size_t j) const;
+  // *** New Math
+  Grid vectorise(const Grid& grid,int dim=1) const;
+  static Grid trapz(const Grid& x,const Grid& y);
+  static Grid trapz2D(const Grid& x,const Grid& y,const Grid& z);
+  static Grid trapzcum(const Grid& x, const Grid& y);
+  static Grid bin_as_list(const Grid& indep,const Grid& dep, const Grid& bin_edges);
+  static Grid bin_as_list(const Grid& indep,const Grid& dep, double N);
+  static Grid interp_as_list(const Grid& indep,const Grid& dep,const Grid& query);
+  // *** Vector Products
+  static Grid DotProduct2D(const std::vector<Grid>& a, const std::vector<Grid>& b);//Dot product of two 2D vectors
+  static Grid CrossProduct2D(const std::vector<Grid>& a, const std::vector<Grid>& b);//Cross product of two vectors in xy-plane (result in z-direction)
+  static std::vector<Grid> CrossProductZ2D(const Grid& a_z, const std::vector<Grid>& b);//Cross product of vector in z-direction with vector in xy-plane (result in xy-plane)
+  static std::vector<Grid> CrossProduct2DZ(const std::vector<Grid>& a, const Grid& b_z);//Cross product of vector in xy-plane with vector in z-direction (result in xy-plane)
+  static std::vector<Grid> CrossProduct(const std::vector<Grid>& a, const std::vector<Grid>& b); //General cross product between two 3D vector quantities
+  // *** OPERATOR OVERRIDES
   Grid& operator+=(const Grid& b);
   Grid& operator+=(double b);
   Grid& operator-=(const Grid& b);
@@ -72,7 +86,9 @@ public:
   friend Grid operator/(const Grid& a, const Grid& b);
   friend Grid operator/(const Grid& a, double b);
   friend Grid operator/(double a, const Grid& b);
-
+  // *** Printing
+  std::string format(char element_delim = ',', char row_delim = '\n', int precision = 4, char end_delim = '\n') const;
+  void print() const;
 private:
   size_t m_rows;
   size_t m_cols;
