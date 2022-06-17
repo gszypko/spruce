@@ -1,52 +1,57 @@
-# Based on http://make.mad-scientist.net/papers/advanced-auto-dependency-generation/
-OBJDIR := obj
-SRCS := source/solar/solarutils.cpp \
-	source/mhd/plasmadomain.cpp \
-	source/mhd/derivs.cpp \
-	source/mhd/utils.cpp \
-	source/mhd/mhd.cpp \
-	source/mhd/fileio.cpp \
-	source/mhd/grid.cpp \
-	source/mhd/evolution.cpp \
-	source/equationsets/equationset.cpp \
-	source/equationsets/idealmhd.cpp \
-	source/modules/solar/thermalconduction.cpp \
-	source/modules/solar/localizedheating.cpp \
-	source/modules/solar/fieldheating.cpp \
-	source/modules/solar/ambientheating.cpp \
-	source/modules/solar/radiativelosses.cpp \
-	source/modules/modulehandler.cpp \
-	source/modules/module.cpp \
-	source/modules/sgfilter.cpp \
-	main.cpp
-
-OBJS := $(SRCS:%.cpp=$(OBJDIR)/%.o)
+# Based on http:\\make.mad-scientist.net\papers\advanced-auto-dependency-generation
+# input argument 
+MAINFILE ?= main
+FLAG ?= -O3
+# detect operating system and update path fixing variable 
+ifeq ($(OS),Windows_NT)
+define path
+$(subst /,\,$1)
+endef
+endif
+# set up source, object, and dependent directories
+SRCDIR := source
+OBJDIR := objects
 DEPDIR := $(OBJDIR)/.deps
-DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
-EXEC = run
-
+SRCS := $(wildcard $(SRCDIR)/*/*.cpp) $(wildcard $(SRCDIR)/*/*/*.cpp) $(MAINFILE).cpp
+HEADERS := source $(dir $(SRCS))
+OBJS := $(SRCS:%.cpp=$(OBJDIR)/%.o)
+EXEC = $(OBJDIR)/run.exe
+# define flags for compilation
 CXX = g++
-CXXFLAGS = -fopenmp -std=c++17
-CPPFLAGS = -I./source -I./source/mhd -I./source/equationsets \
-	-I./source/modules -I./source/modules/solar -I./source/solar 
+CXXFLAGS = -fopenmp -std=c++20 $(FLAG)
+CPPFLAGS := $(patsubst %,-I %,$(HEADERS))
+LNKFLAGS = -lm -larmadillo -lstdc++fs
+DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 
-COMPILE.c = $(CXX) $(DEPFLAGS) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
+all : init run
 
-run: $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) -o $(EXEC)
+init :
+	@echo -------
+	@echo Headers: $(CPPFLAGS)
+	@echo Sources: $(SRCS)
+	@echo File: $(MAINFILE).cpp
 
-clean:
-	rm -f $(EXEC)
-	rm -rf obj/
+# set the default goal by making the target of the first rule $(EXEC)
+run : $(OBJS)
+	@$(CXX) $(CXXFLAGS) $(OBJS) -o $(EXEC) $(LNKFLAGS)
+	@echo Complete
+	@echo -------
 
+$(DEPDIR) : ; @mkdir $@
+
+# rule for making object files
 $(OBJDIR)/%.o : %.cpp $(DEPDIR)/%.d | $(DEPDIR)
-	@mkdir -p $(dir $@)
-	$(COMPILE.c) -o $@ $<
-
-$(DEPDIR): ; @mkdir -p $@
+	@echo Compiling Object: $@ -- Dependencies: $<
+	@if not exist $(dir $@) @mkdir $(call path,$(dir $@))
+	@$(CXX) $(DEPFLAGS) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 DEPFILES := $(SRCS:%.cpp=$(DEPDIR)/%.d)
 $(DEPFILES):
-	@mkdir -p $(dir $@)
+	@if not exist $(dir $@) @mkdir $(call path,$(dir $@))
 
 include $(wildcard $(DEPFILES))
+
+# option to clean directories at the end
+clean :
+	if exist $(OBJDIR) rmdir /s /q $(OBJDIR)
+	
