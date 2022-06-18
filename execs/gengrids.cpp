@@ -43,8 +43,6 @@ int main(int argc, char *argv[])
         fs::path new_config_path = set_path/config;
         if (new_config_path.extension().string()==".config" && fs::exists(new_config_path)) fs::remove(new_config_path);
         fs::copy_file(config,new_config_path);
-    }
-    
-    std::cout << "Complete." << std::endl;
+    }    
     return 0;
 }

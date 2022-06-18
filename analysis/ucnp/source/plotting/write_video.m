@@ -4,11 +4,11 @@ function [] = write_video(filepath,frames)
 
 vID = VideoWriter(filepath,'MPEG-4');
 
-min_duration = 10;
-min_framerate = length(frames)/min_duration;
-if min_framerate < vID.FrameRate
-    vID.FrameRate = min_framerate;
-end
+% min_duration = 5;
+% min_framerate = length(frames)/min_duration;
+% if min_framerate < vID.FrameRate
+%     vID.FrameRate = min_framerate;
+% end
 
 open(vID)
 for i = 1:length(frames)
