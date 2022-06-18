@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
         if (overwrite==0) assert(!fs::exists(set_path) && "Error: folder already exists and overwrite_flag=0");
         
         pms.choose_array(i);
-        pms.write_array_params(set_path);
+        pms.write_array_params(set_path,"plasma");
         
         MhdInp grids = gen_inp_grids_ucnp(pms);
         grids.write_state_file(set_path);
