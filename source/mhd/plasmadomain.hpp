@@ -59,6 +59,7 @@ private:
   friend class FieldHeating;
   friend class RadiativeLosses;
   friend class ThermalConduction;
+  friend class CoulombExplosion;
 
   //Friend class declarations (for EquationSets)
   friend class EquationSet;

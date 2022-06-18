@@ -17,6 +17,7 @@ class PlasmaDomain;
 class ModuleHandler {
     public:
         ModuleHandler(PlasmaDomain &pd);
+        void setupModules();
         void iterateModules(double dt);
         void preIterateModules(double dt);
         void postIterateModules(double dt);
@@ -29,7 +30,7 @@ class ModuleHandler {
         PlasmaDomain &m_pd;
         std::vector<std::unique_ptr<Module>> m_modules;
         static inline std::vector<std::string> m_module_names = {
-            "radiative_losses", "thermal_conduction", "ambient_heating", "localized_heating", "field_heating", "sg_filtering"
+            "radiative_losses", "thermal_conduction", "ambient_heating", "localized_heating", "field_heating", "sg_filtering","coulomb_explosion"
         };
 };
 

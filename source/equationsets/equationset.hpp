@@ -17,10 +17,12 @@ class PlasmaDomain;
 
 class EquationSet {
     public:
+        // *** Construction
         EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names);
         virtual ~EquationSet() {}
         static std::unique_ptr<EquationSet> spawnEquationSet(PlasmaDomain &pd, std::string name);
         static const inline std::vector<std::string> m_sets {"ideal_mhd"};
+        void init_all_grids(double xdim, double ydim);
         
         // Access internal Grid for the variable corresponding to index
         Grid& grid(int index);

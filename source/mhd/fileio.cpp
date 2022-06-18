@@ -50,6 +50,7 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
   if(continue_mode) m_time = std::stod(element);
   else m_time = 0.0;
 
+  m_eqs->init_all_grids(m_xdim,m_ydim);
   bool ready_for_grids = true;
   while(getCleanedLine(in_file, line)){
     if(ready_for_grids){

@@ -17,6 +17,9 @@ class Module {
         Module(PlasmaDomain &pd);
         virtual ~Module() {}
         void configureModule(std::ifstream &in_file);
+        //setupModule is called after instantiation by configureModule but after
+        //loading of the .config and .state files
+        virtual void setupModule();
         //Evolve the system in time by dt according to the Module
         //Note that m_pd.propagateChanges() is NOT automatically applied;
         //this must be done manually such that all variables remains consistent
