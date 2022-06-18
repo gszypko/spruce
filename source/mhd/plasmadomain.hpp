@@ -159,7 +159,8 @@ private:
   //Meant to be used for transport terms only
   //Result indexed s.t. element i,j indicates surface between i,j and i-1,j
   //if "index"==0, or i,j and i,j-1 if "index"==1
-  Grid upwindSurface(const Grid &cell_center, const Grid &vel, const int index);
+  Grid upwindSurface(const Grid &cell_center, const Grid &vel, const int index) { return upwindSurface(cell_center, vel, index, m_xl, m_yl, m_xu, m_yu); }
+  Grid upwindSurface(const Grid &cell_center, const Grid &vel, const int index, int xl, int yl, int xu, int yu);
 
   //Compute divergence of scalar quantity times velocity using Barton's method
   //Meant for advection terms
@@ -176,9 +177,15 @@ private:
   Grid divergence2D(const std::vector<Grid>& a) { return divergence2D(a,m_xl,m_yl,m_xu,m_yu); }
   Grid divergence2D(const std::vector<Grid>& a, int xl, int yl, int xu, int yu);
 
-  //Compute single-direction divergence term for non-transport term (central differencing)
+  //Compute single-direction first derivative for non-transport term (central differencing)
   Grid derivative1D(const Grid &quantity, const int index){ return derivative1D(quantity,index, m_xl, m_yl, m_xu, m_yu); }
   Grid derivative1D(const Grid &quantity, const int index, int xl, int yl, int xu, int yu);
+
+  //Compute single-direction first derivative for non-transport term (backward differencing)
+  //When positive_forward is true, 'backward' is taken to mean 'in the direction of decreasing indices'
+  //When false, 'backward' is taken to mean 'in the direction of increasing indices'
+  Grid derivative1DBackward(const Grid &quantity, bool positive_forward, const int index){ return derivative1DBackward(quantity,positive_forward,index, m_xl, m_yl, m_xu, m_yu); }
+  Grid derivative1DBackward(const Grid &quantity, bool positive_forward, const int index, int xl, int yl, int xu, int yu);
 
   //Compute single-direction second derivative
   Grid secondDerivative1D(const Grid &quantity, const int index) { return secondDerivative1D(quantity, index, m_xl, m_yl, m_xu, m_yu); }

@@ -7,15 +7,17 @@
 //Meant to be used for transport terms only
 //Result indexed s.t. element i,j indicates surface between i,j and i-1,j
 //if "index"==0, or i,j and i,j-1 if "index"==1
-Grid PlasmaDomain::upwindSurface(const Grid &cell_center, const Grid &vel, const int index){
+Grid PlasmaDomain::upwindSurface(const Grid &cell_center, const Grid &vel, const int index, int xl, int yl, int xu, int yu){
+  // if(index == 0) assert(xl>1 && xu<cell_center.rows()-2 && "Must have at least two-cell border in direction of differentiation for Barton's method");
+  // else if(index == 1) assert(yl>1 && yu<cell_center.cols()-2 && "Must have at least two-cell border in direction of differentiation for Barton's method");
   int xdim = m_xdim+1-index;
   int ydim = m_ydim+index;
   Grid cell_surface = Grid::Zero(xdim,ydim);
   #pragma omp parallel
   {
     #pragma omp for collapse(2)
-    for (int i = m_xl; i <= m_xu+1-index; i++){
-      for(int j = m_yl; j <= m_yu+index; j++){
+    for (int i = xl; i <= xu+1-index; i++){
+      for(int j = yl; j <= yu+index; j++){
         //Handle direction of cell_center being considered (i.e. index for differencing)
         int i2 = i, j2 = j;
         int i0, i1, i3, j0, j1, j3;
@@ -71,9 +73,9 @@ Grid PlasmaDomain::upwindSurface(const Grid &cell_center, const Grid &vel, const
 }
 
 Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, const int index, int xl, int yl, int xu, int yu){
-  if(index == 0) assert(xl>0 && xu<quantity.rows()-1 && "Must have at least one-cell border in direction of differentiation");
-  else if(index == 1) assert(yl>0 && yu<quantity.cols()-1 && "Must have at least one-cell border in direction of differentiation");
-  Grid surf_quantity = upwindSurface(quantity, vel, index);
+  // if(index == 0) assert(xl>0 && xu<quantity.rows()-1 && "Must have at least one-cell border in direction of differentiation");
+  // else if(index == 1) assert(yl>0 && yu<quantity.cols()-1 && "Must have at least one-cell border in direction of differentiation");
+  Grid surf_quantity = upwindSurface(quantity, vel, index, xl, yl, xu, yu);
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid denom = m_internal_grids[d_x]*(double)(1-index) + m_internal_grids[d_y]*(double)(index);
@@ -119,9 +121,9 @@ Grid PlasmaDomain::transportDivergence2D(const Grid &quantity, const std::vector
 
 //Compute single-direction divergence term for non-transport term (central differencing)
 Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index, int xl, int yl, int xu, int yu){
-  if(index == 0) assert(xl>0 && xu<quantity.rows()-1 && "Must have at least one-cell border in direction of differentiation");
-  else if(index == 1) assert(yl>0 && yu<quantity.cols()-1 && "Must have at least one-cell border in direction of differentiation");
-  else assert(false && "This function assumes two dimensions");
+  // if(index == 0) assert(xl>0 && xu<quantity.rows()-1 && "Must have at least one-cell border in direction of differentiation");
+  // else if(index == 1) assert(yl>0 && yu<quantity.cols()-1 && "Must have at least one-cell border in direction of differentiation");
+  // else assert(false && "This function assumes two dimensions");
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
@@ -161,6 +163,49 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index, int xl, i
   return div;
 }
 
+Grid PlasmaDomain::derivative1DBackward(const Grid &quantity, bool positive_forward, const int index, int xl, int yl, int xu, int yu){
+  // if(index == 0) assert((!positive_forward || xl>0) && (positive_forward || xu<quantity.rows()-1) && "Must have at least one-cell border in backward direction");
+  // else if(index == 1) assert((!positive_forward || yl>0) && (positive_forward || yu<quantity.cols()-1) && "Must have at least one-cell border in direction of differentiation");
+  // else assert(false && "This function assumes two dimensions");
+  int xdim = quantity.rows();
+  int ydim = quantity.cols();
+  Grid div = Grid::Zero(xdim,ydim);
+  #pragma omp parallel
+  {
+    #pragma omp for collapse(2)
+    for (int i = xl; i <= xu; i++){
+      for(int j = yl; j <= yu; j++){
+        int i0, i1, j0, j1;
+        i1 = i; j1 = j;
+        double denom;
+        if(index == 0){
+          //Handle X boundary conditions
+          j0 = j1;
+          i0 = positive_forward ? i1-1 : i1+1;
+          //ENFORCES PERIODIC X-BOUNDARIES
+          if(x_bound_1 == BoundaryCondition::Periodic && x_bound_2 == BoundaryCondition::Periodic){
+            i0 = (i0+xdim)%xdim;
+          }
+          denom = 0.5*(m_internal_grids[d_x](i1,j1) + m_internal_grids[d_x](i0,j0));
+        }
+        else{
+          //Handle Y boundary conditions
+          i0 = i1;
+          j0 = positive_forward ? j1-1 : j1+1;
+          if(y_bound_1 == BoundaryCondition::Periodic && y_bound_2 == BoundaryCondition::Periodic){
+            j0 = (j0+ydim)%ydim;
+          }
+          denom = 0.5*(m_internal_grids[d_y](i1,j1) + m_internal_grids[d_y](i0,j0));
+        }
+        div(i1,j1) = (quantity(i1,j1) - quantity(i0,j0)) / denom;
+      }
+    }
+  }
+  
+  return div;
+}
+
+
 Grid PlasmaDomain::divergence2D(const Grid& a_x, const Grid& a_y, int xl, int yl, int xu, int yu){
   return derivative1D(a_x, 0, xl, yl, xu, yu) + derivative1D(a_y, 1, xl, yl, xu, yu);
 }
@@ -172,8 +217,8 @@ Grid PlasmaDomain::divergence2D(const std::vector<Grid>& a, int xl, int yl, int 
 
 //Compute single-direction second derivative
 Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index, int xl, int yl, int xu, int yu){
-  if(index == 0) assert(xl>0 && xu<quantity.rows()-1 && "Must have at least one-cell border in direction of differentiation");
-  else if(index == 1) assert(yl>0 && yu<quantity.cols()-1 && "Must have at least one-cell border in direction of differentiation");
+  // if(index == 0) assert(xl>0 && xu<quantity.rows()-1 && "Must have at least one-cell border in direction of differentiation");
+  // else if(index == 1) assert(yl>0 && yu<quantity.cols()-1 && "Must have at least one-cell border in direction of differentiation");
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
