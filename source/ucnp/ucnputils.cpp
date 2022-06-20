@@ -48,7 +48,7 @@ MhdInp gen_inp_grids_ucnp(const Settings& pms)
 
     std::vector<Grid> B(2.);
     for (int i = 0; i < B.size(); i++){ // for each B-field component (x and y)
-        B[i] = Grid(Nx,Ny); // initialize that component
+        B[i] = Grid::Zero(Nx,Ny); // initialize that component
         for (int j = 0; j < B[i].rows(); j++){
             for (int k = 0; k < B[i].cols(); k++){
                 std::vector<long double> Bquad = quad.get_field({x(j,k),y(j,k),0.});

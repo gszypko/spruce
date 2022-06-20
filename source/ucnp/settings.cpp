@@ -81,6 +81,7 @@ void Settings::process_runs()
 void Settings::choose_array(const int& ind)
 {
     assert(ind>=0 && ind<m_unique.size() && "<array> is out of bounds for <m_unique>");
+    m_current_array = ind;
     m_array = m_unique[ind];
     m_array_chosen = true;
 }
@@ -113,6 +114,11 @@ size_t Settings::name2ind(const std::string& name) const
     return std::distance(m_names.begin(),it);
 }
 
+void Settings::print_task_array_range() const
+{
+    std::cout << task_array_range() << std::endl;
+}
+
 // return valid task array values
 std::string Settings::task_array_range() const
 {
@@ -139,6 +145,8 @@ int Settings::runs() const
     assert(m_runs_found && "<runs> was not found in the .settings file.");
     return m_runs;
 }
+
+Settings::str_vec Settings::names() const {return m_names;}
 
 // return numeric variable with m_unit_str units
 double Settings::getvar(const std::string& name) const
@@ -177,6 +185,30 @@ std::string Settings::getopt(const std::string& name) const
     bool is_opt = m_units[loc] == "opt";
     assert(is_opt && "Requested variable is not of type <opt>");
     return m_array[loc];
+}
+
+std::string Settings::getval(const std::string& name) const
+{
+    assert(m_array_chosen);
+    size_t loc = name2ind(name);
+    return m_array[loc];
+}
+
+fs::path Settings::set_path(int offset)
+{
+    assert(m_array_chosen);
+    int set_num{};
+    fs::path result{};
+    if (m_runs_found){
+        set_num = m_current_array/m_runs+offset;
+        result = "set_" + num2str(set_num);
+        result/= "run_" + num2str(getvar("runs"));
+    } 
+    else{
+        set_num = m_current_array+offset;
+        result = "set_" + num2str(set_num);
+    } 
+    return result;
 }
 
 // write plasma settings for specified m_vals value (i.e., the corresponding row of m_unique)
@@ -280,10 +312,3 @@ Settings::str_mat Settings::read_file(fs::path filePath)
     return data;
 }
 
-template <typename T> std::string Settings::num2str(T num,int prec) const
-{
-    std::stringstream ss;
-    ss.precision(prec);
-    ss << num;
-    return ss.str();
-}

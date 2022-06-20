@@ -45,6 +45,7 @@ LNKFLAGS = -lm -lstdc++fs -larmadillo
 all : init run
 # print compilation data to command line
 init :
+	@if exist $(EXEC) del /f $(call path,$(EXEC))
 	@echo -------
 	@echo File: $(MAINFILE).cpp
 	@echo Flags: $(CXXFLAGS)

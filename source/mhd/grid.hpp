@@ -49,13 +49,15 @@ public:
   Grid abs() const;
   Grid sqrt() const;
   Grid pow(double power) const;
+  Grid for_each(const Grid& grid,const std::function<double(double,double)>& fun) const;
+  Grid for_each(double a,const std::function<double(double,double)>& fun) const;
   // *** New Math
   Grid vectorise(const Grid& grid,int dim=1) const;
   static Grid trapz(const Grid& x,const Grid& y);
   static Grid trapz2D(const Grid& x,const Grid& y,const Grid& z);
   static Grid trapzcum(const Grid& x, const Grid& y);
   static Grid bin_as_list(const Grid& indep,const Grid& dep, const Grid& bin_edges);
-  static Grid bin_as_list(const Grid& indep,const Grid& dep, double N);
+  static Grid bin_as_list(const Grid& indep,const Grid& dep, double N, Grid& bins);
   static Grid interp_as_list(const Grid& indep,const Grid& dep,const Grid& query);
   // *** Vector Products
   static Grid DotProduct2D(const std::vector<Grid>& a, const std::vector<Grid>& b);//Dot product of two 2D vectors

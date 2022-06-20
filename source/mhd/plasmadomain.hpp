@@ -29,6 +29,21 @@ public:
   static const inline std::vector<std::string> m_internal_var_names = {"d_x","d_y","pos_x","pos_y","be_x","be_y"};
   std::vector<Grid> m_internal_grids{m_internal_var_names.size()};
 
+  enum class Config {
+    x_bound_1, x_bound_2, y_bound_1, y_bound_2,
+    epsilon, epsilon_viscous, rho_min,
+    temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
+    output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode, safe_state_interval,
+    open_boundary_decay_base, x_origin, y_origin, time_integrator, equation_set
+  };
+  static inline std::vector<std::string> m_config_names = {
+    "x_bound_1","x_bound_2","y_bound_1","y_bound_2",
+    "epsilon","epsilon_viscous","rho_min",
+    "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
+    "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode", "safe_state_interval",
+    "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "equation_set"
+  };
+
   //Constructors and Initialization
   PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file, bool continue_mode, bool overwrite_init);
   PlasmaDomain(): m_module_handler{*this} {};
@@ -106,21 +121,6 @@ private:
   bool safe_state_mode; //when true, outputs a state file for every iteration; when false, only outputs a state when the run completes without issue
   int safe_state_interval; //when safe_state_mode == true, number of iterations between .state files written out during run
   bool continue_mode; //true when continuing previous run; appends results to mhd.out and replaces mhd.state
- 
-  enum class Config {
-    x_bound_1, x_bound_2, y_bound_1, y_bound_2,
-    epsilon, epsilon_viscous, rho_min,
-    temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
-    output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode, safe_state_interval,
-    open_boundary_decay_base, x_origin, y_origin, time_integrator, equation_set
-  };
-  static inline std::vector<std::string> m_config_names = {
-    "x_bound_1","x_bound_2","y_bound_1","y_bound_2",
-    "epsilon","epsilon_viscous","rho_min",
-    "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
-    "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode", "safe_state_interval",
-    "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "equation_set"
-  };
 
   /*********************************************************************/ 
 

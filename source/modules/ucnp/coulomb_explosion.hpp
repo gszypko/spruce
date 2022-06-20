@@ -17,7 +17,9 @@ class CoulombExplosion : public Module {
         // *** Construction
         CoulombExplosion(PlasmaDomain &pd);
         // *** Usage
-        Grid compute_charge_density(const Grid& r);
+        Grid compute_charge_density(const Grid& r,const Grid& n) const;
+        Grid compute_total_charge(const Grid& r,const Grid& rho_c) const;
+        void setupModule() override;
         void postIterateModule(double dt) override;
         std::string commandLineMessage() const override;
     private:

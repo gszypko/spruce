@@ -24,13 +24,6 @@ std::unique_ptr<EquationSet> EquationSet::spawnEquationSet(PlasmaDomain &pd, std
     return ptr;
 }
 
-// initialize all grid elements to zeros at the appropriate size
-// is to be used before state variables are loaded
-void EquationSet::init_all_grids(double xdim, double ydim)
-{
-    for (auto& g : m_grids) g = Grid::Zero(xdim,ydim);
-}
-
 Grid& EquationSet::grid(int index) {
     assert(index >= 0 && index < num_variables() && "Grid index must be within range of m_grids");
     return m_grids[index];
@@ -95,7 +88,7 @@ bool EquationSet::getOutputFlag(std::string name){
 }
 
 int EquationSet::indexFromName(std::string name){
-    int ind;
+    int ind{};
     try { ind = m_var_indices.at(name); }
     catch (const std::out_of_range& e) {
         std::cerr << "Variable name " << name << " not recognized\n";

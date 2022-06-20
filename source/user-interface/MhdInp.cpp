@@ -10,7 +10,7 @@ MhdInp::MhdInp(size_t Nx,size_t Ny,PlasmaDomain& pd,std::string eqs_set):
     // initialize grids for each variable and indicate they have not yet been initialized
     for (int i=0; i<m_grid_names.size(); i++){
         m_grid_indices[m_grid_names[i]] = i;
-        m_grids.push_back(Grid(m_Nx,m_Ny,0.0));
+        m_grids.push_back(Grid::Zero(1,1));
         m_initialized.push_back(false);
     }
 }
@@ -131,6 +131,57 @@ void MhdInp::write_state_file(const fs::path& directory) const
     }
 }
 
+void MhdInp::read_config(const fs::path& filepath)
+{
+    assert(filepath.extension().string()==".config");
+    assert(fs::exists(filepath) && !fs::is_empty(filepath) && "File must exist and not be empty.");
+    m_config_data.reserve(100);
+    std::ifstream fileStream(filepath);
+    while (fileStream.good()){
+        std::string currLine;
+        std::getline(fileStream,currLine);
+        m_config_data.push_back(currLine);
+        if (m_config_data.size() == m_config_data.capacity()) 
+            m_config_data.reserve(2*m_config_data.capacity());
+    }
+    fileStream.close();
+    m_config_data.shrink_to_fit();
+}
+
+void MhdInp::update_config(std::string name,std::string val)
+{
+    // ensure that input is a config name
+    auto it = std::find(m_config_names.begin(),m_config_names.end(),name);
+    assert(it!=m_config_names.end());
+    // find the line in config data that starts with this value
+    bool config_found{false};
+    for (int i=0; i<m_config_data.size(); i++){
+        std::string curr_line = m_config_data[i];
+        std::string lhs,rhs;
+        std::istringstream ss(curr_line);
+        std::getline(ss,lhs,'=');
+        std::getline(ss,rhs);
+        std::string lhs_cleared = lhs; lhs_cleared.erase(std::remove(lhs_cleared.begin(),lhs_cleared.end(),' '),lhs_cleared.end());
+        if (lhs_cleared.compare(name)==0){
+             m_config_data[i] = lhs + " = " + val;
+             config_found = true;
+        }
+    }
+    if (!config_found) m_config_data.push_back(name + " = " + val);
+    
+}
+
+void MhdInp::write_config_file(const fs::path& directory) const
+{
+    if (!fs::exists(directory)) fs::create_directories(directory);
+    fs::path filename = "ucnp.config";
+    std::ofstream outfile(directory/filename);
+    for (const auto& curr_line : m_config_data){
+        outfile << curr_line << std::endl;
+    }
+    outfile.close();
+}
+
 // check if all elements of <m_grids> were initialized
 void MhdInp::all_initialized() const
 {
@@ -140,6 +191,12 @@ void MhdInp::all_initialized() const
             assert(false);
         }
     } 
+}
+
+bool MhdInp::is_config(const std::string& name) const
+{
+    auto it = std::find(m_config_names.begin(),m_config_names.end(),name);
+    return it != m_config_names.end();
 }
 
 // return all of the input grids, but first check that they were all initialized
