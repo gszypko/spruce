@@ -11,8 +11,8 @@ filepath = [data.folder f 'grid-evol'];
 row = 2; 
 col = 4; 
 num = row*col;
-[fig,ax,an] = open_subplot(row,col,num);
-fig.Position = [2.042000000000000e+02,3.314000000000000e+02,1240,5.023999999999999e+02];
+[fig,ax,an] = open_subplot(row,col,num,'Visible','off');
+fig.Position = [73.400000000000000,205,1.264400000000000e+03,4.692000000000001e+02];
 move_ax(ax(1,:),0,.05)
 an.Position = [0.1595    0.9084    0.7230    0.0801];
 

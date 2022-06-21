@@ -26,6 +26,6 @@ Nx = cgs = 101 % number of cells on x axis
 Ny = cgs = 101 % number of cells on y axis                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   0 % simulation box size on y axis: from -y_lim to y_lim
 m_i = cgs = 1.455e-22 % Sr ion mass
 gam = cgs = 2 % adiabatic index for Sr+ - valid for two-dimensional monatomic systems
-timescale = cgs = 0.125e-5, 0.25e-5, 0.5e-5
-lengthscale = sig_x = 0.25, 0.5, 1
-strength = cgs = .01, .02, .04, .08
+timescale = cgs = 0.0625
+lengthscale = sig_x = 0.25, 1
+strength = cgs = .08, .16, .32

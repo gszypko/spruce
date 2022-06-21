@@ -40,7 +40,7 @@ Grid CoulombExplosion::compute_total_charge(const Grid& r,const Grid& rho_c) con
 
 void CoulombExplosion::postIterateModule(double dt)
 {
-    // references to grids
+    // references to 2D grids
     const Grid& x {m_pd.m_internal_grids[PlasmaDomain::pos_x]};
     const Grid& y {m_pd.m_internal_grids[PlasmaDomain::pos_y]};
     const Grid& n {m_pd.grid(IdealMHD::n)};
