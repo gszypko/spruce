@@ -22,6 +22,7 @@ public:
     Settings(fs::path settings_path,std::string unit = "cgs");
     // *** Initialization
     void load_settings(const fs::path& settings_path);
+    virtual void define_possible_units();
     void check_units() const;
     void process_runs();
     void choose_array(const int& array);
@@ -30,27 +31,27 @@ public:
     bool is_name(const std::string& name) const;
     size_t name2ind(const std::string& name) const;
     // *** Getters
-    void print_task_array_range() const;
-    std::string task_array_range() const;
     std::vector<int> task_array() const;
     int array_size() const;
     int runs() const;
     str_vec names() const;
-    double getvar(const std::string& name) const; 
+    std::string getvar(const std::string& name) const; 
+    double getval(const std::string& name) const;
     std::string getopt(const std::string& name) const;
-    std::string getval(const std::string& name) const;
     fs::path set_path(int offset);
     // *** File I/O
     void write_array_params(const fs::path& path,const std::string& name = "file") const;
+    std::string task_array_range() const;
+    void print_task_array_range() const;
     template <typename T> static std::string num2str(T num,int prec=6)
-{
-    std::stringstream ss;
-    ss.precision(prec);
-    ss << num;
-    return ss.str();
-};
-private:
-    // *** Members Instantiated with Constructor
+    {
+        std::stringstream ss;
+        ss.precision(prec);
+        ss << num;
+        return ss.str();
+    };
+protected:
+    // *** Members Instantiated at Construction
     const std::string m_unit_str;
     str_vec m_names, m_units;
     str_mat m_vals;
@@ -58,8 +59,10 @@ private:
     bool m_runs_found; // indicates whether <runs> was given in the .settings 
     int m_runs; // number of runs for each unique set of conditions
     bool m_array_chosen{false}; // must be set to true by <choose_array> before calling <getvar> or <getopt>
-    int m_current_array;
-    str_vec m_array; // m_array[i] is the value correponding to m_names[i] and m_units[i]
+    str_vec m_possible_units;
+    // *** Members Handled after Construction
+    int m_array;
+    str_vec m_array_vals; // m_array_vals[i] is the value correponding to m_names[i] and m_units[i]
     str_mat unique_comb(const str_mat& mat_in,const str_vec& vec_2) const;
     str_mat unique_comb(const str_vec& vec_in,const str_vec& vec_2) const;
     str_mat read_file(fs::path filePath);

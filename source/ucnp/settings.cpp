@@ -4,6 +4,7 @@
 Settings::Settings(fs::path settings_path,std::string unit): m_unit_str{unit}   
 {
     load_settings(settings_path);
+    define_possible_units();
     check_units();
     if (m_runs_found) process_runs();
 }
@@ -41,24 +42,10 @@ void Settings::load_settings(const fs::path& settings_path)
 
 // verify that all variable units are specified correctly: either <m_unit_str>, <opt>, or another variable name
 void Settings::check_units(void) const{
-    // check that specified units are possible
-    for (const auto& unit : m_units){
-        if (!is_unit(unit)){
-            std::cerr << "Unit <" << unit << "> is not a valid unit type." << std::endl;
-            assert(false);
-        }
-    } 
-    // for variables with non-m_unit_str units, check that their dependencies are in m_unit_str
-    for (const auto& unit : m_units){
-        if (unit!=m_unit_str && unit!="opt"){
-            size_t loc = name2ind(unit);
-            bool valid_dependency = m_units[loc]==m_unit_str;
-            if (!valid_dependency){
-                std::cerr << "Cannot express variables with units <" << m_names[loc] << "> because this variables units are not <m_units_str>." << std::endl;
-                assert(false);
-            }
-        }
-    }    
+    for (int i=0; i<m_units.size(); i++){
+        if (!is_unit(m_units[i]))
+            std::cerr << "The units for variable <" + m_names[i] + "> are not valid." << std::endl;
+    }
 }
 
 void Settings::process_runs()
@@ -81,19 +68,26 @@ void Settings::process_runs()
 void Settings::choose_array(const int& ind)
 {
     assert(ind>=0 && ind<m_unique.size() && "<array> is out of bounds for <m_unique>");
-    m_current_array = ind;
-    m_array = m_unique[ind];
+    m_array = ind;
+    m_array_vals = m_unique[ind];
     m_array_chosen = true;
+}
+
+// determine which units are possible for numeric quantities
+void Settings::define_possible_units()
+{
+    m_possible_units = {m_unit_str,"opt"};
+    for (int i=0; i<m_names.size(); i++){
+        if (m_units[i]==m_unit_str)
+            m_possible_units.push_back(m_names[i]);
+    }
 }
 
 // check whether <name> is <opt>, m_unit_str, or found within m_unames
 bool Settings::is_unit(const std::string& name) const
 {
-    auto it = std::find(m_names.begin(),m_names.end(),name);
-    bool cond1 = it != m_names.end();
-    bool cond2 = name == "opt";
-    bool cond3 = name == m_unit_str;
-    return (cond1 || cond2 || cond3);
+    auto it = std::find(m_possible_units.begin(),m_possible_units.end(),name);
+    return it != m_names.end();
 }
 
 // returns true if <name> is found within <m_names>, otherwise false
@@ -148,50 +142,48 @@ int Settings::runs() const
 
 Settings::str_vec Settings::names() const {return m_names;}
 
-// return numeric variable with m_unit_str units
-double Settings::getvar(const std::string& name) const
+// return the 
+std::string Settings::getvar(const std::string& name) const
 {
-    // identify which variable corresponds to <name>
-    assert(m_array_chosen && "Set <m_array> using <choose_array> before calling variables with <getvar>.");
-    auto it = std::find(m_names.begin(),m_names.end(),name);
-    bool found = it != m_names.end();
-    assert(found && "Requested name does not correspond to a variable name.");
-    size_t loc = std::distance(m_names.begin(),it);
-    bool is_opt = m_names[loc] == "opt";
-    assert(!is_opt && "Requested variable is of type <opt>, use <getopt> instead.");
-    
-    // obtain value associated with <name> and convert units if necessary
-    double val = stod(m_array[loc]);
-    if (m_units[loc]!=m_unit_str){ // if variable units are not "m_unit_str" (i.e., expressed in terms of another variable)
-        auto it = std::find(m_names.begin(),m_names.end(),m_units[loc]);
-        assert(it!=m_names.end());
-        size_t loc2 = std::distance(m_names.begin(),it);
-        bool is_numeric = m_units[loc2]==m_unit_str;
-        assert(is_numeric && "Variable units can only be expressed in terms of another variable that is expressed in <m_unit_str> units.");
-        val *= stod(m_array[loc2]);
+    assert(m_array_chosen);
+    size_t loc,loc2;
+    loc = name2ind(name);
+    std::string result;
+    if (m_units[loc]=="opt") result = getopt(name);
+    else {
+        result = num2str(getval(name));
     }
-
-    return val;
+    return result;
 }
 
 // return option variable as a string
 std::string Settings::getopt(const std::string& name) const
 {
-    assert(m_array_chosen && "Set <m_array> using <choose_array> before calling variables with <getvar>.");
-    auto it = std::find(m_names.begin(),m_names.end(),name);
-    bool found = it != m_names.end();
-    assert(found && "Requested name does not correspond to a variable name");
-    size_t loc = std::distance(m_names.begin(),it);
+    assert(m_array_chosen && "Set <m_array_vals> using <choose_array> before calling variables with <getopt>.");
+    size_t loc = name2ind(name);
     bool is_opt = m_units[loc] == "opt";
     assert(is_opt && "Requested variable is not of type <opt>");
-    return m_array[loc];
+    return m_array_vals[loc];
 }
 
-std::string Settings::getval(const std::string& name) const
+// return numeric value of the variable associated with <name>
+double Settings::getval(const std::string& name) const
 {
-    assert(m_array_chosen);
+    // identify which variable corresponds to <name>
+    assert(m_array_chosen && "Set <m_array_vals> using <choose_array> before calling variables with <getval>.");
     size_t loc = name2ind(name);
-    return m_array[loc];
+    bool is_opt = m_names[loc] == "opt";
+    assert(!is_opt && "Requested variable is of type <opt>, use <getopt> instead.");
+    
+    // obtain value associated with <name> and convert units if necessary
+    double val = stod(m_array_vals[loc]);
+    if (m_units[loc]!=m_unit_str){ // if variable units are not "m_unit_str" (i.e., expressed in terms of another variable)
+        size_t loc2 = name2ind(m_units[loc]);
+        bool is_numeric = m_units[loc2]==m_unit_str;
+        assert(is_numeric && "Variable units can only be expressed in terms of another variable that is expressed in <m_unit_str> units.");
+        val *= stod(m_array_vals[loc2]);
+    }
+    return val;
 }
 
 fs::path Settings::set_path(int offset)
@@ -200,12 +192,12 @@ fs::path Settings::set_path(int offset)
     int set_num{};
     fs::path result{};
     if (m_runs_found){
-        set_num = m_current_array/m_runs+offset;
+        set_num = m_array/m_runs+offset;
         result = "set_" + num2str(set_num);
         result/= "run_" + num2str(getvar("runs"));
     } 
     else{
-        set_num = m_current_array+offset;
+        set_num = m_array+offset;
         result = "set_" + num2str(set_num);
     } 
     return result;
@@ -219,7 +211,7 @@ void Settings::write_array_params(const fs::path& path,const std::string& name) 
     fs::path file_path{path/file_name};
     std::ofstream out_file(file_path);
     for (int i=0; i<m_names.size(); i++){
-        out_file << m_names[i] << " = " << m_units[i] << " = " << m_array[i];
+        out_file << m_names[i] << " = " << m_units[i] << " = " << m_array_vals[i];
         if (i != (m_names.size()-1)) out_file << std::endl;
     }
 }
