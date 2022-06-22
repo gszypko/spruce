@@ -46,7 +46,7 @@ endef
 define removefile
 rm -f $(call path,$1)
 endef
-extension=.exe
+extension=
 endif
 # define project directories
 SRCDIR := source
@@ -57,7 +57,7 @@ SRCS := $(wildcard $(SRCDIR)/*/*.cpp) $(wildcard $(SRCDIR)/*/*/*.cpp) $(file).cp
 HEADERS := $(sort $(dir $(SRCS))) source
 OBJS := $(SRCS:%.cpp=$(OBJDIR)/%.o)
 DEPFILES = $(SRCS:%.cpp=$(DEPDIR)/%.d)
-EXEC := $(OBJDIR)/run.extension
+EXEC := $(OBJDIR)/run$(extension)
 # define flags for compilation
 CXX = g++
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d

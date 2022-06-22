@@ -7,7 +7,7 @@ if ~exist('inp','var')
     openvar('inp')
 end
 fields = {'date','phase','fields','Te','n_dist','n_max','n_min','sigx','sigy','grid_opt','xlim','ylim','tmax','Nx',...
-    'Ny','bound_strength','bound_decay','visc_strength','folder'};
+    'Ny','bound_strength','bound_decay','visc_strength','set','folder'};
 if size(inp,2) ~= length(fields), error('The number of columns in ''inp'' must match the length of ''fields''.'); end
 s = cell2struct(inp,fields,2);
 
