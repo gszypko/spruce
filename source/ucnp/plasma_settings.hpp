@@ -2,6 +2,7 @@
 #define PLASMA_SETTINGS_HPP
 
 #include "settings.hpp"
+#include <unordered_map>
 
 class PlasmaSettings : public Settings
 {
@@ -13,7 +14,7 @@ public:
 private:
     // *** Members
     const str_vec m_plasma_characteristics {"w_pi","w_pe","l_deb","sig","tau_exp"};
-    const std::unordered_map<std::string,int> m_ind;
+    std::unordered_map<std::string,int> m_ind;
 };
 
 #endif

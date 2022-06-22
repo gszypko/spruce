@@ -15,5 +15,5 @@ void PlasmaSettings::update_possible_units()
 std::string PlasmaSettings::dependencies(std::string characteristic)
 {
     // switch (m_ind.at(characteristic))
-    
+    return ";";
 }
