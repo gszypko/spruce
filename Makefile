@@ -18,36 +18,6 @@
 file ?= main
 flag ?= -O3
 version ?= -std=c++20
-# detect operating system and update path fixing variable 
-ifeq ($(OS),Windows_NT)
-define path
-$(subst /,\,$1)
-endef
-define makedir
-if not exist $1 mkdir $(call path,$1)
-endef
-define removedir
-if exist $1 rmdir /s /q $(call path,$1)
-endef
-define removefile
-if exist $1 del /f $(call path,$1)
-endef
-extension=.exe
-else
-define path
-$(subst /,/,$1)
-endef
-define makedir
-mkdir -p $(call path,$1)
-endef
-define removedir
-rm -r $(call path,$1)
-endef
-define removefile
-rm -f $(call path,$1)
-endef
-extension=
-endif
 # define project directories
 SRCDIR := source
 OBJDIR := objects
@@ -64,6 +34,37 @@ DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 CXXFLAGS = -fopenmp $(version) $(flag)
 CPPFLAGS = $(patsubst %,-I %,$(HEADERS))
 LNKFLAGS = -lm -lstdc++fs -larmadillo
+# detect operating system and define shell commands accordingly
+# each of path, makedir, removedir, removefile, and extension must defined for your operatings sytem
+ifeq ($(OS),Windows_NT)
+define path
+$(subst /,\,$1)
+endef
+define makedir
+if not exist $1 mkdir $(call path,$1)
+endef
+define removedir
+if exist $1 rmdir /s /q $(call path,$1)
+endef
+define removefile
+if exist $1 del /f $(call path,$1)
+endef
+extension=.exe
+else # Linux
+define path
+$(subst /,/,$1)
+endef
+define makedir
+mkdir -p $(call path,$1)
+endef
+define removedir
+rm -r $(call path,$1)
+endef
+define removefile
+rm -f $(call path,$1)
+endef
+extension=
+endif
 # define targets to be completed in order
 all : init run
 # print compilation data to command line
