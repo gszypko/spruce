@@ -17,6 +17,6 @@ end
 
 Te = data.settings.Te;
 data.sig0 = (data.settings.sigx*data.settings.sigy^2)^(1/3);
-data.tau = getTauExp(data.sig0,Te,Te);
+data.tau = getTauExp(data.sig0,Te+Te);
 
 end

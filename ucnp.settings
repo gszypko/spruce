@@ -11,14 +11,14 @@
 
 n = cgs = 1e8 % peak plasma number density
 n_min = cgs = 1e3 % minimum plasma density - too low of density leads to numerical errors
-n_dist = opt = exponential % plasma density distribution
+n_dist = opt = gaussian % plasma density distribution
 sig_x = cgs = .1 % rms radius of plasma along x axis
 sig_y = cgs = .1 % rms radius of plasma along y axis
-Ti = cgs = 1e-2 % initial ion temperature
+Ti = Te = 1 % initial ion temperature
 Te = cgs = 20 % initial electron temperature
 dBdx = cgs = 0 % gradient of quadrupole magnetic field along symmetry (x) axis
-t_max/tau_exp = cgs = 1 % end time for simulation with units tau
-t_iter/tau_exp = cgs = 0.025 % how often to write to .out file with units tau
+t_max = tau_exp = 1 % end time for simulation with units tau
+t_iter = tau_exp = 0.025 % how often to write to .out file with units tau
 x_lim = sig_x = 5 % simulation box size on x axis: from -x_lim to x_lim
 y_lim = sig_x = 5 % simulation box size on y axis: from -y_lim to y_lim   
 grid_opt = opt = uniform % uniform or non-uniform
@@ -26,6 +26,6 @@ Nx = cgs = 101 % number of cells on x axis
 Ny = cgs = 101 % number of cells on y axis                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   0 % simulation box size on y axis: from -y_lim to y_lim
 m_i = cgs = 1.455e-22 % Sr ion mass
 gam = cgs = 2 % adiabatic index for Sr+ - valid for two-dimensional monatomic systems
-timescale = cgs = 0.0625
-lengthscale = sig_x = 0.25, 1
-strength = cgs = .08, .16, .32
+timescale = tau_exp = 0.1
+lengthscale = sig_x = 1
+strength = cgs = .01
