@@ -30,7 +30,7 @@ Grid& EquationSet::grid(int index) {
 }
 
 bool EquationSet::allGridsInitialized() {
-    for(Grid g : m_grids){
+    for(const Grid& g : m_grids){
         if(g.size() == 1) return false;
     }
     return true;
@@ -88,7 +88,7 @@ bool EquationSet::getOutputFlag(std::string name){
 }
 
 int EquationSet::indexFromName(std::string name){
-    int ind;
+    int ind{};
     try { ind = m_var_indices.at(name); }
     catch (const std::out_of_range& e) {
         std::cerr << "Variable name " << name << " not recognized\n";

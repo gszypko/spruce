@@ -18,11 +18,11 @@ class IdealMHD: public EquationSet {
         std::vector<std::string> def_var_names() const override{
             return {"rho","temp","mom_x","mom_y","bi_x","bi_y","grav_x","grav_y",
                 "press","thermal_energy","kinetic_energy","div_bi","dt","v_x","v_y","n",
-                "div_be","b_hat_x","b_hat_y","b_magnitude","v_a"};
+                "div_be","b_hat_x","b_hat_y","b_magnitude","dPx","dPy","Fcx","Fcy"};
         }
-        enum Vars { rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y,
+        enum Vars {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y,
                 press,thermal_energy,kinetic_energy,div_bi,dt,v_x,v_y,n,
-                div_be,b_hat_x,b_hat_y,b_magnitude,v_a };
+                div_be,b_hat_x,b_hat_y,b_magnitude,dPx,dPy,Fcx,Fcy};
 
         std::vector<int> state_variables() override {
             return {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};

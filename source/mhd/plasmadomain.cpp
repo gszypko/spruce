@@ -52,6 +52,7 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
     std::cout << "Writing out init.state...\n";
     writeStateFile("init");
   }
+  m_module_handler.setupModules();
 }
 
 //Compute lower and upper x- and y- indicies for differential operations
@@ -127,7 +128,7 @@ bool PlasmaDomain::validateCellSizesAndPositions(const Grid& d, const Grid& pos,
 
 bool PlasmaDomain::allInternalGridsInitialized()
 {
-  for(Grid& g : m_internal_grids){
+  for(const Grid& g : m_internal_grids){
     if(g.size() == 1) return false;
   }
   return true;

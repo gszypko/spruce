@@ -50,9 +50,9 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
   if(continue_mode) m_time = std::stod(element);
   else m_time = 0.0;
 
-  bool ready_for_grids = true;
+  bool ready_for_grids = false;
   while(getCleanedLine(in_file, line)){
-    if(ready_for_grids){
+    if(!ready_for_grids){
       if(line.find("duration")!=std::string::npos){
         std::istringstream ss_line(line);
         std::string el;
@@ -75,7 +75,7 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
         time_output_interval = std::stod(el);
         continue;
       }
-      else ready_for_grids = false;
+      else ready_for_grids = true;
     }
     std::string var_name = line;
     Grid curr_grid(m_xdim,m_ydim);

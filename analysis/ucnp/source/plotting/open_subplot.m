@@ -1,10 +1,13 @@
-function [fig,ax,an] = open_subplot(row,col,num)
+function [fig,ax,an] = open_subplot(row,col,num,name,value)
 
 if nargin < 3, num = row*col; end
 if num > row*col, error('<num> must be smaller than <row>*<col>.'); end
 
 % open figure
-fig = figure;
+if nargin == 5, fig = figure(name,value);
+else fig = figure;
+end
+
 fig.Position = [471.6667  251.6667  970.0000  672.0000];
 fig.Color = [1 1 1];
 

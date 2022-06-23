@@ -31,6 +31,11 @@ void Module::configureModule(std::ifstream &in_file)
     parseModuleConfigs(lhs_strings,rhs_strings);
 }
 
+void Module::setupModule()
+{
+    return;
+}
+
 void Module::iterateModule(double dt)
 {
     return;

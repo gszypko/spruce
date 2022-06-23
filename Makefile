@@ -15,38 +15,63 @@
 #	Any additional header folders not associated with .cpp files must also be manually appended
 
 # input arguments with default values
-MAINFILE ?= main
-FLAG ?= -O3
-# detect operating system and update path fixing variable 
-ifeq ($(OS),Windows_NT)
-define path
-$(subst /,\,$1)
-endef
-makedir = mkdir
-removedir = rmdir /s /q
-endif
+file ?= main
+flag ?= -O3
+version ?= -std=c++20
 # define project directories
 SRCDIR := source
 OBJDIR := objects
 DEPDIR := $(OBJDIR)/.deps
 # obtain source files, include folders, and object and dependency names from source folder
-SRCS := $(wildcard $(SRCDIR)/*/*.cpp) $(wildcard $(SRCDIR)/*/*/*.cpp) $(MAINFILE).cpp
+SRCS := $(wildcard $(SRCDIR)/*/*.cpp) $(wildcard $(SRCDIR)/*/*/*.cpp) $(file).cpp
 HEADERS := $(sort $(dir $(SRCS))) source
 OBJS := $(SRCS:%.cpp=$(OBJDIR)/%.o)
 DEPFILES = $(SRCS:%.cpp=$(DEPDIR)/%.d)
-EXEC := $(OBJDIR)/run.exe
+EXEC := $(OBJDIR)/run$(extension)
 # define flags for compilation
 CXX = g++
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
-CXXFLAGS = -fopenmp -std=c++20 $(FLAG)
+CXXFLAGS = -fopenmp $(version) $(flag)
 CPPFLAGS = $(patsubst %,-I %,$(HEADERS))
 LNKFLAGS = -lm -lstdc++fs -larmadillo
+# detect operating system and define shell commands accordingly
+# each of path, makedir, removedir, removefile, and extension must defined for your operatings sytem
+ifeq ($(OS),Windows_NT)
+define path
+$(subst /,\,$1)
+endef
+define makedir
+if not exist $1 mkdir $(call path,$1)
+endef
+define removedir
+if exist $1 rmdir /s /q $(call path,$1)
+endef
+define removefile
+if exist $1 del /f $(call path,$1)
+endef
+extension=.exe
+else # Linux
+define path
+$(subst /,/,$1)
+endef
+define makedir
+mkdir -p $(call path,$1)
+endef
+define removedir
+rm -r $(call path,$1)
+endef
+define removefile
+rm -f $(call path,$1)
+endef
+extension=
+endif
 # define targets to be completed in order
 all : init run
 # print compilation data to command line
 init :
+	@$(call removefile,$(EXEC))
 	@echo -------
-	@echo File: $(MAINFILE).cpp
+	@echo File: $(file).cpp
 	@echo Flags: $(CXXFLAGS)
 	@echo Linker: $(LNKFLAGS)
 	@echo Headers: $(CPPFLAGS)
@@ -58,14 +83,14 @@ run : $(OBJS)
 # rule for making object files
 $(OBJDIR)/%.o : %.cpp $(DEPDIR)/%.d | $(DEPDIR)
 	@echo Compiling Object: $@ -- Dependencies: $<
-	@if not exist $(dir $@) @$(makedir) $(call path,$(dir $@))
+	@$(call makedir,$(dir $@))
 	@$(CXX) $(DEPFLAGS) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 # rule for making dependency directories
-$(DEPDIR) : ; @$(makedir) $(call path,$(dir $@))
+$(DEPDIR) : ; @$(call makedir,$(dir $@))
 # rule for making dependency files
 $(DEPFILES):
-	@if not exist $(dir $@) @$(makedir) $(call path,$(dir $@))
+	@$(call makedir,$(dir $@))
 include $(wildcard $(DEPFILES))
 # option to clean directories at the end
 clean :
-	if exist $(OBJDIR) $(removedir) $(OBJDIR)
+	@$(call removedir, $(OBJDIR))

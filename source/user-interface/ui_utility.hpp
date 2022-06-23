@@ -17,7 +17,7 @@ namespace fs = std::filesystem;
 
 //*** GENERAL FUNCTIONS ***//
 
-int round2int(const double& a);
+int round2int(double a);
 bool strcmp(std::string str1, std::string str2);
 std::vector<double> bin_vector(const std::vector<double>& vec_in,const std::vector<double>& bins);
 double euclidean_norm(const std::vector<double>& vec_in);
@@ -78,15 +78,17 @@ template <typename T> void append_row_to_csv(const fs::path file_path, const std
 }
 
 //*** PHYSICS FORMULAS - all use cgs units ***//
-
-double coulomb_coupling(const double& n,const double& T);
-double wigner_seitz_radius(const double& n);
-double plasma_freq(const double& n,const double& m);
-double einstein_freq(const double& n,const double& m);
-double nearest_coulomb_pot(const double& n);
-double debye_length(const double& n,const double& T);
-double screening_parameter(const double& n, const double& Te);
-double dih_temp(const double& n,const double& Te);
-double tau_exp(const double& sig,const double& m, const double& Te);
+namespace phys
+{
+    double coulomb_coupling(double n,double T);
+    double wigner_seitz_radius(double n);
+    double plasma_freq(double n,double m);
+    double einstein_freq(double n,double m);
+    double nearest_coulomb_pot(double n);
+    double debye_length(double n,double T);
+    double screening_parameter(double n, double Te);
+    double dih_temp(double n,double Te);
+    double tau_exp(double sig,double m, double Te);
+}
 
 #endif

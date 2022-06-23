@@ -9,8 +9,16 @@
 #include "thermalconduction.hpp"
 #include "radiativelosses.hpp"
 #include "sgfilter.hpp"
+#include "coulomb_explosion.hpp"
 
 ModuleHandler::ModuleHandler(PlasmaDomain &pd): m_pd(pd) {}
+
+void ModuleHandler::setupModules()
+{
+    for(int i=0; i<m_modules.size(); i++){
+        m_modules[i]->setupModule();
+    }
+}
 
 void ModuleHandler::iterateModules(double dt)
 {
@@ -64,6 +72,7 @@ void ModuleHandler::instantiateModule(const std::string &module_name, std::ifstr
     else if(module_name == "localized_heating") m_modules.push_back(std::unique_ptr<Module>(new LocalizedHeating(m_pd)));
     else if(module_name == "field_heating") m_modules.push_back(std::unique_ptr<Module>(new FieldHeating(m_pd)));
     else if(module_name == "sg_filtering") m_modules.push_back(std::unique_ptr<Module>(new SGFilter(m_pd)));
+    else if(module_name == "coulomb_explosion") m_modules.push_back(std::unique_ptr<Module>(new CoulombExplosion(m_pd)));
     else assert(false && "Module name was not recognized");
     m_modules.back()->configureModule(in_file);
 }

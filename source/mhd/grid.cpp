@@ -122,6 +122,10 @@ Grid Grid::pow(double power) const { return UnaryOperation( UNARY_LAMBDA(std::po
 
 Grid Grid::sqrt() const { return UnaryOperation( UNARY_LAMBDA(std::sqrt(this_comp)) ); }
 
+Grid Grid::for_each(const Grid& grid,const std::function<double(double,double)>& fun) const {return ComponentWiseOperation(grid,fun);}
+
+Grid Grid::for_each(double a,const std::function<double(double,double)>& fun) const {return ScalarOperation(a,fun);}
+
 // compresses a 2D Grid into a Grid with stacked rows (dim=1) or columns (dim=0)
 Grid Grid::vectorise(const Grid& grid,int dim) const
 {
@@ -252,16 +256,16 @@ Grid Grid::bin_as_list(const Grid& indep,const Grid& dep, const Grid& bin_edges)
     }
   }
   result/=num_in_bin;
-  result.m_data.erase(std::remove_if(result.m_data.begin(),result.m_data.end(),[](double x){return std::isfinite(x);}),result.m_data.end());
+  result.m_data.erase(std::remove_if(result.m_data.begin(),result.m_data.end(),[](double x){return !std::isfinite(x);}),result.m_data.end());
   result.m_rows = 1;
   result.m_cols = result.m_data.size();
   result.m_size = result.m_data.size();
   return result;
 }
 
-Grid Grid::bin_as_list(const Grid& indep,const Grid& dep, double N)
+Grid Grid::bin_as_list(const Grid& indep,const Grid& dep, double N, Grid& bins)
 {
-  Grid bins = Linspace(indep.min(),indep.max(),N);
+  bins = Linspace(indep.min(),indep.max(),N);
   double dr = bins(1)-bins(0);
   Grid edges = Linspace(bins.min()-dr/2.,bins.max()+dr/2.,N+1);
   return bin_as_list(indep,dep,edges);
@@ -270,9 +274,9 @@ Grid Grid::bin_as_list(const Grid& indep,const Grid& dep, double N)
 Grid Grid::interp_as_list(const Grid& indep,const Grid& dep,const Grid& query)
 {
   assert(indep.size()==dep.size());
-  for (auto& val : query.m_data) assert(val>indep.min() && val<indep.max());
+  for (auto& val : query.m_data) assert(val>=indep.min() && val<=indep.max());
   Grid result = Zero(query.rows(),query.cols());
-  // #pragma omp parallel for
+  #pragma omp parallel for
   for (int i=0; i<query.size(); i++){
     double curr_min = -std::numeric_limits<double>::max();
     double curr_max = std::numeric_limits<double>::max();
