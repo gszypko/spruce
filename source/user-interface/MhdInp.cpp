@@ -123,8 +123,6 @@ void MhdInp::write_state_file(const fs::path& directory) const
     outfile << "adiabatic_index" << std::endl;
     outfile << m_adiabatic_index << std::endl;
     outfile << "t=" << m_time << std::endl;
-    outfile << "duration=" << m_duration << std::endl;
-    outfile << "time_output_interval=" << m_time_output_interval << std::endl;
     for (int i=0; i<m_grids.size(); i++){
         outfile << m_grid_names[i] << std::endl;
         outfile << m_grids[i].format(',','\n',-1);

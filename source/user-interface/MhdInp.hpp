@@ -20,7 +20,7 @@ namespace fs = std::filesystem;
 class MhdInp
 {
 public:
-    std::vector<std::string> m_config_names {"timescale","lengthscale","strength"};
+    std::vector<std::string> m_config_names {"timescale","lengthscale","strength","time_output_interval","duration"};
     // MhdInp& operator=(const MhdInp& other);
     MhdInp(size_t Nx,size_t Ny,PlasmaDomain& pd,std::string eqs_set);
     int name2index(std::string name) const;

@@ -17,8 +17,8 @@ sig_y = cgs = .1 % rms radius of plasma along y axis
 Ti = Te = 1 % initial ion temperature
 Te = cgs = 20 % initial electron temperature
 dBdx = cgs = 0 % gradient of quadrupole magnetic field along symmetry (x) axis
-t_max = tau_exp = 1 % end time for simulation with units tau
-t_iter = tau_exp = 0.025 % how often to write to .out file with units tau
+duration = tau_exp = 1 % end time for simulation with units tau
+time_output_interval = tau_exp = 0.025 % how often to write to .out file with units tau
 x_lim = sig_x = 5 % simulation box size on x axis: from -x_lim to x_lim
 y_lim = sig_x = 5 % simulation box size on y axis: from -y_lim to y_lim   
 grid_opt = opt = uniform % uniform or non-uniform

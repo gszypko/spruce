@@ -50,33 +50,7 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
   if(continue_mode) m_time = std::stod(element);
   else m_time = 0.0;
 
-  bool ready_for_grids = false;
   while(getCleanedLine(in_file, line)){
-    if(!ready_for_grids){
-      if(line.find("duration")!=std::string::npos){
-        std::istringstream ss_line(line);
-        std::string el;
-        std::getline(ss_line,el,'=');
-        assert(el == "duration" && "Duration specification must be formatted as duration=[duration]");
-        std::getline(ss_line,el);
-        clearWhitespace(el);
-        assert( (std::isdigit(el[0]) || el[0] == '.' || el[0] == '-') && "Encountered non-numerical value for duration from state file");
-        m_duration = std::stod(el);
-        continue;
-      }
-      else if(line.find("time_output_interval")!=std::string::npos){
-        std::istringstream ss_line(line);
-        std::string el;
-        std::getline(ss_line,el,'=');
-        assert(el == "time_output_interval" && "time_output_interval specification must be formatted as time_output_interval=[time_output_interval]");
-        std::getline(ss_line,el);
-        clearWhitespace(el);
-        assert( (std::isdigit(el[0]) || el[0] == '.' || el[0] == '-') && "Encountered non-numerical value for time_output_interval from state file");
-        time_output_interval = std::stod(el);
-        continue;
-      }
-      else ready_for_grids = true;
-    }
     std::string var_name = line;
     Grid curr_grid(m_xdim,m_ydim);
     //Read in Grid corresponding to variable
@@ -265,6 +239,7 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::open_boundary_decay_base): open_boundary_decay_base = std::stod(rhs); break;
   case static_cast<int>(Config::time_integrator): time_integrator = stringToTimeIntegrator(rhs); break;
   case static_cast<int>(Config::equation_set): m_eqs = EquationSet::spawnEquationSet((*this),rhs); break;
+  case static_cast<int>(Config::duration): m_duration = std::stod(rhs); break;
   default: break;
   }
 }

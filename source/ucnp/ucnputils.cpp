@@ -20,8 +20,8 @@ MhdInp gen_inp_grids_ucnp(const std::unique_ptr<Settings>& pms)
     MhdInp grids(Nx,Ny,pd,"ideal_mhd");
     grids.set_ion_mass(pms->getval("m_i"));
     grids.set_adiabatic_index(pms->getval("gam"));
-    grids.set_duration(pms->getval("t_max"));
-    grids.set_time_output_interval(pms->getval("t_iter"));
+    grids.set_duration(pms->getval("duration"));
+    grids.set_time_output_interval(pms->getval("time_output_interval"));
     grids.set_var("d_x",dx);
     grids.set_var("d_y",dy);
     grids.set_var("pos_x",x);
