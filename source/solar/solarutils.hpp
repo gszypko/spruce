@@ -3,8 +3,6 @@
 
 #include "grid.hpp"
 
-class PlasmaSettings;
-
 namespace SolarUtils {
 
   Grid SolarGravity(double base_gravity, double r_solar, const Grid& m_pos_y);
