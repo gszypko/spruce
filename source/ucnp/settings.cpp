@@ -1,12 +1,26 @@
 #include "settings.hpp"
+#include "ucnp.hpp"
 
 // class constructor
 Settings::Settings(fs::path settings_path,std::string unit): m_unit_str{unit}   
 {
     load_settings(settings_path);
-    define_possible_units();
-    check_units();
     if (m_runs_found) process_runs();
+    m_possible_units = get_units_from_vars();
+    check_units();
+    choose_array();
+}
+
+// option for constructing a derived class using Settings:: as base
+std::unique_ptr<Settings> Settings::spawn_settings(std::string name,fs::path settings_path)
+{
+    std::unique_ptr<Settings> ptr;
+    if (name == "ucnp") 
+        ptr = std::unique_ptr<Settings>(new UCNP(settings_path));
+    else {
+        ptr = std::unique_ptr<Settings>(new Settings(settings_path));
+    }
+    return ptr;
 }
 
 // load .settings file that defines plasma characteristics for MHD simulation
@@ -40,11 +54,26 @@ void Settings::load_settings(const fs::path& settings_path)
     for (int i = 2; i < m_vals.size(); i++) m_unique = unique_comb(m_unique,m_vals[i]);
 }
 
+// get units
+Settings::str_vec Settings::get_units_from_vars() const
+{
+    str_vec units = {m_unit_str,"opt"};
+    for (int i=0; i<m_names.size(); i++){
+        if (m_units[i]==m_unit_str)
+            units.push_back(m_names[i]);
+    }
+    return units;
+}
+
 // verify that all variable units are specified correctly: either <m_unit_str>, <opt>, or another variable name
-void Settings::check_units(void) const{
-    for (int i=0; i<m_units.size(); i++){
-        if (!is_unit(m_units[i]))
+void Settings::check_units(void) const
+{
+    // for each variable, ensure its unit is one of the possible units
+    for (int i=0; i<m_names.size(); i++){
+        if (!is_unit(m_units[i])){
             std::cerr << "The units for variable <" + m_names[i] + "> are not valid." << std::endl;
+            assert(false);
+        }
     }
 }
 
@@ -65,7 +94,7 @@ void Settings::process_runs()
 }
 
 // choose which set of unique conditions to use
-void Settings::choose_array(const int& ind)
+void Settings::choose_array(int ind)
 {
     assert(ind>=0 && ind<m_unique.size() && "<array> is out of bounds for <m_unique>");
     m_array = ind;
@@ -73,27 +102,17 @@ void Settings::choose_array(const int& ind)
     m_array_chosen = true;
 }
 
-// determine which units are possible for numeric quantities
-void Settings::define_possible_units()
+// check whether <name> is <opt>, m_unit_str, or found within m_names
+bool Settings::is_unit(const std::string& str) const
 {
-    m_possible_units = {m_unit_str,"opt"};
-    for (int i=0; i<m_names.size(); i++){
-        if (m_units[i]==m_unit_str)
-            m_possible_units.push_back(m_names[i]);
-    }
-}
-
-// check whether <name> is <opt>, m_unit_str, or found within m_unames
-bool Settings::is_unit(const std::string& name) const
-{
-    auto it = std::find(m_possible_units.begin(),m_possible_units.end(),name);
-    return it != m_names.end();
+    auto it = std::find(m_possible_units.begin(),m_possible_units.end(),str);
+    return it != m_possible_units.end();
 }
 
 // returns true if <name> is found within <m_names>, otherwise false
-bool Settings::is_name(const std::string& name) const
+bool Settings::is_name(const std::string& str) const
 {
-    auto it = std::find(m_names.begin(),m_names.end(),name);
+    auto it = std::find(m_names.begin(),m_names.end(),str);
     return it != m_names.end();
 }
 

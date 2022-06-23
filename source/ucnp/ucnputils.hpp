@@ -12,7 +12,7 @@ namespace fs = std::filesystem;
 #include "plasmadomain.hpp"
 #include "antihelmholtz.hpp"
 
-MhdInp gen_inp_grids_ucnp(const Settings& pms);
+MhdInp gen_inp_grids_ucnp(const std::unique_ptr<Settings>& pms);
 void genNonUniformGrids(double r_max, int Nr,std::vector<double>& dr,std::string opt);
 
 #endif

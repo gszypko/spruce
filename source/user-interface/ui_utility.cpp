@@ -1,7 +1,7 @@
 #include "ui_utility.hpp"
 
 // round double to int
-int round2int(const double& a) { return static_cast<int>(a < 0 ? a - 0.5 : a + 0.5); }
+int round2int(double a) { return static_cast<int>(a < 0 ? a - 0.5 : a + 0.5); }
 
 // bin <vec_in> into <num_bins> linearly spaced bins between min and max
 std::vector<double> bin_vector(const std::vector<double>& vec_in,const std::vector<double>& bins)
@@ -225,57 +225,60 @@ std::vector<double> quadrupole_field(double x,double y,double z,double dBdx)
     return B;
 }
 
+namespace phys
+{
 // ratio between average Coulomb interaction energy and thermal energy (inputs in cgs)
-double coulomb_coupling(const double& n,const double& T)
+double coulomb_coupling(double n,double T)
 // n: plasma density (cm^-3)
 // T: temperature (K) of a particular species (i.e., electron or ion)
 { return nearest_coulomb_pot(n)/(K_B*T); }
 
 // average interparticle spacing of gas with density n (SI units)
-double wigner_seitz_radius(const double& n) 
+double wigner_seitz_radius(double n) 
 // n: plasma density (cm^-3)
 { return pow(3./(4.*PI*n),1./3.); } 
 
 // plasma oscillation frequency (rad/s, inputs cgs)
-double plasma_freq(const double& n,const double& m) 
+double plasma_freq(double n,double m) 
 // n: plasma density (cm^-3)
 // m: particle mass (g)
 { return sqrt(4*PI*n*pow(E,2.)/m); }
 
 // einsten frequency (rad/s, inputs cgs)
-double einstein_freq(const double& n,const double& m)
+double einstein_freq(double n,double m)
 // n: plasma density (cm^-3)
 // m: particle mass (g)
 { return plasma_freq(n,m)/sqrt(3.); }
 
 // average Coulomb potential between nearest neighbors, cgs units
-double nearest_coulomb_pot(const double& n) 
+double nearest_coulomb_pot(double n) 
 // n: plasma density (cm^-3)
 { return E*E/wigner_seitz_radius(n); } 
 
 // debye length of a particular plasma species, cgs units
-double debye_length(const double& n,const double& T) 
+double debye_length(double n,double T) 
 // n: plasma density (cm^-3)
 // T: temperature (K) of a particular plasma species
 { return sqrt(K_B*T/(4*PI*n*E*E));}
 
 // plasma screening parameter for electrons, dimensionless, inputs cgs
-double screening_parameter(const double& n, const double& Te)
+double screening_parameter(double n, double Te)
 // n: plasma density (cm^-3)
 // Te: electron temperature (K)
 { return wigner_seitz_radius(n)/debye_length(n,Te); } 
 
 // equilibrium plasma temperature due to disorder-induced heating, inputs cgs
-double dih_temp(const double& n,const double& Te) 
+double dih_temp(double n,double Te) 
 // n: plasma density (cm^-3)
 // Te: electron temperature (K)
 { return 2.*nearest_coulomb_pot(n)/3./K_B*(1.+screening_parameter(n,Te)/2.); }
 
 // timescale for a Gaussian UCNP expansion into vacuum, cgs units
-double tau_exp(const double& sig,const double& m, const double& Te)
+double tau_exp(double sig,double m, double Te)
 // n: plasma density (cm^-3)
 // m: ion mass (g)
 // Te: electron temperature (K)
 {
     return sqrt(m*pow(sig,2.)/(K_B*Te));
+}
 }

@@ -27,23 +27,23 @@ int main(int argc, char *argv[])
     // create output directory structure
     std::filesystem::create_directories(output);
     // load the settings file
-    Settings pms(settings);
-    pms.print_task_array_range();
+    std::unique_ptr<Settings> pms = Settings::spawn_settings("ucnp",settings);
+    pms->print_task_array_range();
     // for each unique set of conditions, generate the grids and write them to file
-    for (auto i : pms.task_array()){
+    for (auto i : pms->task_array()){
         // choose array and write array parameters to output directory
-        pms.choose_array(i);
-        fs::path set_path = output/pms.set_path(array);
+        pms->choose_array(i);
+        fs::path set_path = output/pms->set_path(array);
         if (overwrite==0) assert(!fs::exists(set_path) && "Error: folder already exists and overwrite_flag=0");
-        pms.write_array_params(set_path,"plasma");
+        pms->write_array_params(set_path,"plasma");
         // create grids and write to .state file
         MhdInp grids = gen_inp_grids_ucnp(pms);
         grids.write_state_file(set_path);
         // handle .config file
         grids.read_config(config);
-        for (const auto& name : pms.names()){
+        for (const auto& name : pms->names()){
             if (grids.is_config(name)){
-                grids.update_config(name,Settings::num2str(pms.getvar(name)));
+                grids.update_config(name,Settings::num2str(pms->getvar(name)));
             }
         }
         grids.write_config_file(set_path);

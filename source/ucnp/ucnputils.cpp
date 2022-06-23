@@ -1,15 +1,15 @@
 #include "ucnputils.hpp"
-MhdInp gen_inp_grids_ucnp(const Settings& pms)
+MhdInp gen_inp_grids_ucnp(const std::unique_ptr<Settings>& pms)
 {
     // set up position grids
     Grid x, y, dx, dy;
     int Nx, Ny;
     std::vector<double> dx_vec, dy_vec;
     
-    Nx = 2*floor(pms.getval("Nx")/2)+1; // ensure number of grids is odd so that there is a 'center' pixel
-    Ny = 2*floor(pms.getval("Ny")/2)+1; // ensure number of grids is odd so that there is a 'center' pixel
-    genNonUniformGrids(pms.getval("x_lim"),Nx,dx_vec,pms.getopt("grid_opt"));
-    genNonUniformGrids(pms.getval("y_lim"),Ny,dy_vec,pms.getopt("grid_opt"));
+    Nx = 2*floor(pms->getval("Nx")/2)+1; // ensure number of grids is odd so that there is a 'center' pixel
+    Ny = 2*floor(pms->getval("Ny")/2)+1; // ensure number of grids is odd so that there is a 'center' pixel
+    genNonUniformGrids(pms->getval("x_lim"),Nx,dx_vec,pms->getopt("grid_opt"));
+    genNonUniformGrids(pms->getval("y_lim"),Ny,dy_vec,pms->getopt("grid_opt"));
 
     meshgrid(dx_vec,dy_vec,dx,dy);
     std::string center_opt = "center";
@@ -18,33 +18,31 @@ MhdInp gen_inp_grids_ucnp(const Settings& pms)
 
     PlasmaDomain pd {};
     MhdInp grids(Nx,Ny,pd,"ideal_mhd");
-    double sig = pow(pms.getval("sig_x")*pow(pms.getval("sig_y"),2.),1./3.); // geometric mean of plasma size
-    double tau { tau_exp(sig,pms.getval("m_i"),2*pms.getval("Te")) };
-    grids.set_ion_mass(pms.getval("m_i"));
-    grids.set_adiabatic_index(pms.getval("gam"));
-    grids.set_duration(pms.getval("t_max/tau_exp")*tau);
-    grids.set_time_output_interval(pms.getval("t_iter/tau_exp")*tau);
+    grids.set_ion_mass(pms->getval("m_i"));
+    grids.set_adiabatic_index(pms->getval("gam"));
+    grids.set_duration(pms->getval("t_max"));
+    grids.set_time_output_interval(pms->getval("t_iter"));
     grids.set_var("d_x",dx);
     grids.set_var("d_y",dy);
     grids.set_var("pos_x",x);
     grids.set_var("pos_y",y);
 
-    double rho_max { pms.getval("n")*pms.getval("m_i") };
-    double rho_min { pms.getval("n_min")*pms.getval("m_i") };
-    if (strcmp(pms.getopt("n_dist"),"gaussian")){
-        grids.set_var("rho",gaussian2D(x,y,rho_max,rho_min,pms.getval("sig_x"),pms.getval("sig_y"),0,0));
+    double rho_max { pms->getval("n")*pms->getval("m_i") };
+    double rho_min { pms->getval("n_min")*pms->getval("m_i") };
+    if (strcmp(pms->getopt("n_dist"),"gaussian")){
+        grids.set_var("rho",gaussian2D(x,y,rho_max,rho_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0));
     }
-    else if (strcmp(pms.getopt("n_dist"),"exponential")){
-        grids.set_var("rho",exponential2D(x,y,rho_max,rho_min,pms.getval("sig_x"),pms.getval("sig_y"),0,0));
+    else if (strcmp(pms->getopt("n_dist"),"exponential")){
+        grids.set_var("rho",exponential2D(x,y,rho_max,rho_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0));
     }
     else std::cerr << "<n_dist> must be specified as <gaussian> or <exponential>";
 
-    grids.set_var("temp",Grid(Nx,Ny,pms.getval("Te")));
+    grids.set_var("temp",Grid(Nx,Ny,pms->getval("Te")));
     grids.set_var("mom_x",Grid(Nx,Ny,0));
     grids.set_var("mom_y",Grid(Nx,Ny,0));
 
     // initialize quadrupole magnetic fields
-    AntiHelmholtz quad(30.,120.,pms.getval("dBdx"),CurrentLoop::ax_x);
+    AntiHelmholtz quad(30.,120.,pms->getval("dBdx"),CurrentLoop::ax_x);
 
     std::vector<Grid> B(2.);
     for (int i = 0; i < B.size(); i++){ // for each B-field component (x and y)

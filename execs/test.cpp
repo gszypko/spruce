@@ -3,7 +3,7 @@
 #include <iostream>
 #include "utils.hpp"
 #include "settings.hpp"
-#include "plasma_settings.hpp"
+#include "ucnp.hpp"
 #include "ucnputils.hpp"
 #include "MhdInp.hpp"
 
@@ -11,7 +11,6 @@ namespace fs = std::filesystem;
 
 int main(int argc, char *argv[])
 {
-    PlasmaSettings test("ucnp.settings");
-    std::cout << "Complete." << std::endl;
+    std::unique_ptr<Settings> ptr = Settings::spawn_settings("ucnp","ucnp.settings");
     return 0;
 }

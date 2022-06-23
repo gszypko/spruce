@@ -19,16 +19,19 @@ public:
     using str_vec = std::vector<std::string>;
     using str_mat = std::vector<std::vector<std::string>>;
     // *** Constructor
+    Settings(std::string unit = "cgs"): m_unit_str{unit} {};
     Settings(fs::path settings_path,std::string unit = "cgs");
+    static std::unique_ptr<Settings> spawn_settings(std::string name,fs::path settings_path);
     // *** Initialization
     void load_settings(const fs::path& settings_path);
-    virtual void define_possible_units();
+    str_vec get_units_from_vars() const;
+    virtual void update_possible_units(){return;}
     void check_units() const;
     void process_runs();
-    void choose_array(const int& array);
+    void choose_array(int array = 0);
     // *** Other Usage
-    bool is_unit(const std::string& name) const;
-    bool is_name(const std::string& name) const;
+    bool is_unit(const std::string& str) const;
+    bool is_name(const std::string& str) const;
     size_t name2ind(const std::string& name) const;
     // *** Getters
     std::vector<int> task_array() const;
@@ -57,11 +60,11 @@ protected:
     str_mat m_vals;
     str_mat m_unique;
     bool m_runs_found; // indicates whether <runs> was given in the .settings 
-    int m_runs; // number of runs for each unique set of conditions
+    int m_runs{-1}; // number of runs for each unique set of conditions
     bool m_array_chosen{false}; // must be set to true by <choose_array> before calling <getvar> or <getopt>
     str_vec m_possible_units;
     // *** Members Handled after Construction
-    int m_array;
+    int m_array{-1};
     str_vec m_array_vals; // m_array_vals[i] is the value correponding to m_names[i] and m_units[i]
     str_mat unique_comb(const str_mat& mat_in,const str_vec& vec_2) const;
     str_mat unique_comb(const str_vec& vec_in,const str_vec& vec_2) const;
