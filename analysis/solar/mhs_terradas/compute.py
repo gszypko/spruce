@@ -182,8 +182,8 @@ def precompute_f(t_bins,s_bins,a_ref):
             f2[i,j] = f(a0_2,a_ref,s_arg)*dt*ds/(t**2 * s**2)
     return f1,f2
 
-x = np.linspace(-DOMAIN_WIDTH*(1.0/2.0 + 1.0/X_DIM),DOMAIN_WIDTH*(1.0/2.0 + 1.0/X_DIM),X_DIM + 2*N_GHOST)
-z = np.linspace(-DOMAIN_HEIGHT/Z_DIM,DOMAIN_HEIGHT*(1.0 + 1.0/Z_DIM),Z_DIM + 2*N_GHOST)
+x = np.linspace(-DOMAIN_WIDTH*(1.0/2.0 + N_GHOST/X_DIM),DOMAIN_WIDTH*(1.0/2.0 + N_GHOST/X_DIM),X_DIM + 2*N_GHOST)
+z = np.linspace(-N_GHOST*DOMAIN_HEIGHT/Z_DIM,DOMAIN_HEIGHT*(1.0 + N_GHOST/Z_DIM),Z_DIM + 2*N_GHOST)
 dx = (x[-1]-x[0])/(x.shape[0]-1)
 dz = (z[-1]-z[0])/(z.shape[0]-1)
 x_2d = np.outer(x,np.ones_like(z))
