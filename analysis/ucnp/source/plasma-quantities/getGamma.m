@@ -5,6 +5,6 @@ function [Gam] = getGamma(n,T)
 
 a = getWignerSeitzRadius(n); % average interparticle spacing (cm)
 c = defineConstants(); % get constants in CGS
-Gam = c.e^2/(c.kB.*T.*a); % calculate Coulomb coupling parameter
+Gam = c.e^2./(c.kB.*T.*a); % calculate Coulomb coupling parameter
 
 end
