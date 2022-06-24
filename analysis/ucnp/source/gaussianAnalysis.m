@@ -8,6 +8,7 @@ s.t = data.grids.time;
 s.x = data.grids.x_vec;
 s.y = data.grids.y_vec;
 s.Te0 = data.settings.Te;
+s.Ti0 = data.settings.Ti;
 s.sig0 = data.sig0;
 s.tau = data.tau;
 
@@ -119,16 +120,18 @@ for i = 1:length(s.t)
     s.data(i).n = fit(i).amp;
     [~,indx] = min(abs(data.grids.x_vec));
     [~,indy] = min(abs(data.grids.y_vec));
-    s.data(i).Te = data.grids.vars(i).temp(indy,indx);
+    s.data(i).Ti = data.grids.vars(i).temp_i(indy,indx);
+    s.data(i).Te = data.grids.vars(i).temp_e(indy,indx);
     s.data(i).vx = data.grids.vars(i).v_x(indy,:);
     s.data(i).vy = data.grids.vars(i).v_y(:,indx)';
 end
 
 s.theory = struct;
-[sig,Te,v] = getUCNPExpansion(s.t,s.sig0,s.Te0,s.x,s.y);
+[sig,Ti,Te,v] = getUCNPExpansion(s.t,s.sig0,s.Ti0,s.Te0,s.x,s.y);
 for i = 1:length(s.t)
     s.theory(i).sigx = sig(i);
     s.theory(i).sigy = sig(i);
+    s.theory(i).Ti = Ti(i);
     s.theory(i).Te = Te(i);
     s.theory(i).vx = v(i).vx;
     s.theory(i).vy = v(i).vy;
@@ -142,12 +145,12 @@ fig.Color = [1 1 1];
 
 q = {'data','theory'};
 qstr = {'MHD','Vlasov'};
-colvar = {'sigx','sigy','Te'};
-colstr = {'\sigma_x (cm)','\sigma_y (cm)','T_e (K)'};
+colvar = {'sigx','sigy','Ti','Te'};
+colstr = {'\sigma_x (cm)','\sigma_y (cm)','T_i (K)','T_e (K)'};
 rowvar = {''};
-row = 1;
-col = length(colvar);
-num = row*col;
+row = 2;
+col = 2;
+num = length(colvar);
 
 ax = cell(row,col);
 iter = 0;
@@ -178,7 +181,7 @@ end
 
 % add legend
 lgd = legend(lgdstr);
-lgd.Position = [0.7824    0.6379    0.1021    0.1092];
+lgd.Position = [0.777965695280062,0.604462568894955,0.206112384107097,0.086259707997385];
 
 frame = getframe(fig);
 writeVideo(vid,frame);
@@ -186,7 +189,7 @@ close(fig)
 
 %% Plot Velocity Transects
 
-fig = figure('Visible','on');
+fig = figure('Visible','off');
 fig.Position = [195         259        1027         491];
 fig.Color = [1 1 1];
 q = {'data','theory'};

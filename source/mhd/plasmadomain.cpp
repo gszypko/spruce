@@ -48,11 +48,11 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   assert(m_eqs->allStateGridsInitialized() && "All variables specified as state variables for the current EquationSet must be specified in the .state file");
   computeIterationBounds();
   m_eqs->populateVariablesFromState();
+  m_module_handler.setupModules();
   if(!continue_mode && m_overwrite_init){
     std::cout << "Writing out init.state...\n";
     writeStateFile("init");
   }
-  m_module_handler.setupModules();
 }
 
 //Compute lower and upper x- and y- indicies for differential operations

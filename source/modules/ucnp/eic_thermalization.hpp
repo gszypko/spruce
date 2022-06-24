@@ -1,10 +1,9 @@
-#ifndef COULOMB_EXPLOSION_HPP
-#define COULOMB_EXPLOSION_HPP
+#ifndef EIC_THERMALIZATION_HPP
+#define EIC_THERMALIZATION_HPP
 
 #include "module.hpp"
 #include "grid.hpp"
 #include "plasmadomain.hpp"
-#include "idealmhd.hpp"
 #include "idealmhd2E.hpp"
 #include <iostream>
 #include <functional>
@@ -14,10 +13,10 @@
 
 class PlasmaDomain;
 
-class CoulombExplosion : public Module {
+class EICThermalization : public Module {
     public:
         // *** Construction
-        CoulombExplosion(PlasmaDomain &pd);
+        EICThermalization(PlasmaDomain &pd);
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
         // *** Usage
         void setupModule() override;

@@ -1,8 +1,8 @@
 //idealmhd.hpp
-//Defines IdealMHD EquationSet
+//Defines IdealMHD2E EquationSet
 
-#ifndef IDEALMHD_HPP
-#define IDEALMHD_HPP
+#ifndef IDEALMHD_2E_HPP
+#define IDEALMHD_2E_HPP
 
 #include "grid.hpp"
 #include "equationset.hpp"
@@ -11,26 +11,26 @@
 
 class PlasmaDomain;
 
-class IdealMHD: public EquationSet {
+class IdealMHD2E: public EquationSet {
     public:
-        IdealMHD(PlasmaDomain &pd);
-        IdealMHD() = default;
+        IdealMHD2E(PlasmaDomain &pd);
+        IdealMHD2E() = default;
         std::vector<std::string> def_var_names() const override{
-            return {"rho","temp","mom_x","mom_y","bi_x","bi_y","grav_x","grav_y",
-                "press","thermal_energy","kinetic_energy","div_bi","dt","v_x","v_y","n",
-                "div_be","b_hat_x","b_hat_y","b_magnitude"};
+            return {"rho","temp_i","temp_e","mom_x","mom_y","bi_x","bi_y","grav_x","grav_y",
+                "press_i","press_e","press","thermal_energy_i","thermal_energy_e","kinetic_energy",
+                "div_bi","dt","v_x","v_y","n","div_be","b_hat_x","b_hat_y","b_magnitude"};
         }
-        enum Vars {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y,
-                press,thermal_energy,kinetic_energy,div_bi,dt,v_x,v_y,n,
-                div_be,b_hat_x,b_hat_y,b_magnitude};
+        enum Vars {rho,temp_i,temp_e,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y,
+                press_i,press_e,press,thermal_energy_i,thermal_energy_e,kinetic_energy,
+                div_bi,dt,v_x,v_y,n,div_be,b_hat_x,b_hat_y,b_magnitude};
 
         std::vector<int> state_variables() override {
-            return {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};
+            return {rho,temp_i,temp_e,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};
         }
-        std::vector<int> densities() override { return {rho}; }
-        std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y}}; }
-        std::vector<int> thermal_energies() override { return {thermal_energy}; }
-        std::vector<std::vector<int>> fields() override { return {{bi_x,bi_y}}; }
+        std::vector<int> densities() override { return {rho,rho}; }
+        std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y},{mom_x,mom_y}}; }
+        std::vector<int> thermal_energies() override { return {thermal_energy_i,thermal_energy_e}; }
+        std::vector<std::vector<int>> fields() override { return {{bi_x,bi_y},{bi_x,bi_y}}; }
 
         void populateVariablesFromState(std::vector<Grid> &grids) override;
         Grid getDT() override;

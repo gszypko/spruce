@@ -14,7 +14,7 @@ n_min = cgs = 1e3 % minimum plasma density - too low of density leads to numeric
 n_dist = opt = gaussian % plasma density distribution
 sig_x = cgs = .1 % rms radius of plasma along x axis
 sig_y = cgs = .1 % rms radius of plasma along y axis
-Ti = Te = 1 % initial ion temperature
+Ti = cgs = 20 % initial ion temperature
 Te = cgs = 20 % initial electron temperature
 dBdx = cgs = 0 % gradient of quadrupole magnetic field along symmetry (x) axis
 duration = tau_exp = 1 % end time for simulation with units tau
@@ -28,4 +28,4 @@ m_i = cgs = 1.455e-22 % Sr ion mass
 gam = cgs = 2 % adiabatic index for Sr+ - valid for two-dimensional monatomic systems
 timescale = tau_exp = 0.1
 lengthscale = sig_x = 1
-strength = cgs = .01
+strength = cgs = 1e-10

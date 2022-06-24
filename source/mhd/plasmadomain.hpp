@@ -75,10 +75,12 @@ private:
   friend class RadiativeLosses;
   friend class ThermalConduction;
   friend class CoulombExplosion;
+  friend class EICThermalization;
 
   //Friend class declarations (for EquationSets)
   friend class EquationSet;
   friend class IdealMHD;
+  friend class IdealMHD2E;
 
   //Strings corresponding to variables, settings, boundary conditions for file I/O
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)

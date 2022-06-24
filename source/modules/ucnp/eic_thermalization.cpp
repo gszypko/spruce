@@ -1,10 +1,10 @@
-#include "coulomb_explosion.hpp"
+#include "eic_thermalization.hpp"
 
 #define LENGTH_DECAY [](double r,double l){return exp(-r/l);} 
 
-CoulombExplosion::CoulombExplosion(PlasmaDomain &pd): Module(pd) {}
+EICThermalization::EICThermalization(PlasmaDomain &pd): Module(pd) {}
 
-void CoulombExplosion::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){
+void EICThermalization::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){
     for(int i=0; i<lhs.size(); i++){
         if(lhs[i] == "timescale") m_timescale = std::stod(rhs[i]);
         else if(lhs[i] == "lengthscale") m_lengthscale = std::stod(rhs[i]);
@@ -14,7 +14,7 @@ void CoulombExplosion::parseModuleConfigs(std::vector<std::string> lhs, std::vec
     }
 }
 
-void CoulombExplosion::setupModule()
+void EICThermalization::setupModule()
 {
     // ensure that grid dependencies exist within EquationSet
     std::vector<std::string> grid_names = m_pd.m_eqs->def_var_names();
@@ -35,7 +35,7 @@ void CoulombExplosion::setupModule()
 }
 
 // returns rho_c values in cgs at each distance in <r>
-Grid CoulombExplosion::compute_charge_density(const Grid& r, const Grid& n) const
+Grid EICThermalization::compute_charge_density(const Grid& r, const Grid& n) const
 {
     double time_decay = exp(-m_pd.m_time/m_timescale);
     Grid length_decay = r.for_each(m_lengthscale,[](double a,double b){return exp(-a/b);});
@@ -43,12 +43,12 @@ Grid CoulombExplosion::compute_charge_density(const Grid& r, const Grid& n) cons
     return rho_c;
 }
 
-Grid CoulombExplosion::compute_total_charge(const Grid& r,const Grid& rho_c) const
+Grid EICThermalization::compute_total_charge(const Grid& r,const Grid& rho_c) const
 {
     return (4.*PI)*Grid::trapzcum(r,r.square()*rho_c);
 }
 
-void CoulombExplosion::postIterateModule(double dt)
+void EICThermalization::postIterateModule(double dt)
 {
     if (m_pd.m_time < 3*m_timescale){
     // references to 2D grids
@@ -84,12 +84,12 @@ void CoulombExplosion::postIterateModule(double dt)
     }
 }
 
-std::string CoulombExplosion::commandLineMessage() const
+std::string EICThermalization::commandLineMessage() const
 {
     return "Coulomb Explosion On";
 }
 
-void CoulombExplosion::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids)
+void EICThermalization::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids)
 {
     if (output_to_file) {
         var_names.push_back("Fcx");
