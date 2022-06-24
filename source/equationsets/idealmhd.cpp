@@ -9,18 +9,18 @@ IdealMHD::IdealMHD(PlasmaDomain &pd): EquationSet(pd,def_var_names()) {}
 
 void IdealMHD::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    grids[rho] += step*m_pd.m_ghost_zone_mask*time_derivatives[0];
-    grids[mom_x] += step*m_pd.m_ghost_zone_mask*time_derivatives[1];
-    grids[mom_y] += step*m_pd.m_ghost_zone_mask*time_derivatives[2];
-    grids[bi_x] += step*m_pd.m_ghost_zone_mask*time_derivatives[3];
-    grids[bi_y] += step*m_pd.m_ghost_zone_mask*time_derivatives[4];
-    grids[thermal_energy] += step*m_pd.m_ghost_zone_mask*time_derivatives[5];
+    std::vector<Grid> char_evolution = computeTimeDerivativesCharacteristicBoundary(grids,
+                                                m_pd.x_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC,
+                                                m_pd.x_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC,
+                                                m_pd.y_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC,
+                                                m_pd.y_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC);
+    grids[rho] += step*(m_pd.m_ghost_zone_mask*time_derivatives[0] + char_evolution[0]);
+    grids[mom_x] += step*(m_pd.m_ghost_zone_mask*time_derivatives[1] + char_evolution[1]);
+    grids[mom_y] += step*(m_pd.m_ghost_zone_mask*time_derivatives[2] + char_evolution[2]);
+    grids[bi_x] += step*(m_pd.m_ghost_zone_mask*time_derivatives[3] + char_evolution[3]);
+    grids[bi_y] += step*(m_pd.m_ghost_zone_mask*time_derivatives[4] + char_evolution[4]);
+    grids[thermal_energy] += step*(m_pd.m_ghost_zone_mask*time_derivatives[5] + char_evolution[5]);
     propagateChanges(grids);
-    // if(m_pd.m_iter == 10){
-    //     std::cout << m_pd.m_ghost_zone_mask*time_derivatives[0] << std::endl;
-    //     std::cout << computeTimeDerivativesCharacteristicBoundary(grids, true, true, true, true)[0] << std::endl;
-    //     abort();
-    // }
 }
 
 std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff){
@@ -152,7 +152,7 @@ void IdealMHD::populateVariablesFromState(std::vector<Grid> &grids){
 }
 
 std::vector<Grid> IdealMHD::computeTimeDerivativesCharacteristicBoundary(const std::vector<Grid> &grids, bool x_bound_1, bool x_bound_2, bool y_bound_1, bool y_bound_2){
-    std::vector<std::vector<Grid> > results(4,std::vector<Grid>(3,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim)));
+    std::vector<std::vector<Grid> > results(4, std::vector<Grid>(4,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim)));
     if(x_bound_1) results[0] = singleBoundaryTermsMOC(grids, 0, true);
     if(x_bound_2) results[1] = singleBoundaryTermsMOC(grids, 0, false);
     if(y_bound_1) results[2] = singleBoundaryTermsMOC(grids, 1, true);

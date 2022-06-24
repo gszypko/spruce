@@ -18,7 +18,7 @@ class PlasmaDomain
 public:
   enum class BoundaryCondition { Periodic, Open, Fixed, Reflect, OpenMoC };
   static inline std::vector<std::string> m_boundary_condition_names = {
-    "periodic", "open", "fixed", "reflect"
+    "periodic", "open", "fixed", "reflect", "open_moc"
   };
   enum class TimeIntegrator { Euler, RK2, RK4 };
   static inline std::vector<std::string> m_time_integrator_names = {

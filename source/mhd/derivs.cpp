@@ -197,7 +197,7 @@ Grid PlasmaDomain::derivative1DBackward(const Grid &quantity, bool positive_forw
           }
           denom = 0.5*(m_internal_grids[d_y](i1,j1) + m_internal_grids[d_y](i0,j0));
         }
-        div(i1,j1) = (quantity(i1,j1) - quantity(i0,j0)) / denom;
+        div(i1,j1) = (quantity(std::max(i1,i0),std::max(j1,j0)) - quantity(std::min(i1,i0),std::min(j1,j0))) / denom;
       }
     }
   }
