@@ -3,13 +3,11 @@ clc, clearvars -except inp, close all, f = filesep; setpath;
 
 if ~exist('inp','var')
     %% Generate Input Cell
-    inp = {};
+    inp = {'27-Jun-2022'	'phase'	'fields'	'Ti'	'Te'	'n_dist'	'n_max'	'n_min'	'sigx'	'sigy'	'grid_opt'	'x_lim'	'y_lim'	't_max'	'Nx'	'Ny'	'set'	'folder'};
     openvar('inp')
 end
-fields = {'date','phase','fields','Te','n_dist','n_max','n_min','sigx','sigy','grid_opt','xlim','ylim','tmax','Nx',...
-    'Ny','bound_strength','bound_decay','visc_strength','set','folder'};
-if size(inp,2) ~= length(fields), error('The number of columns in ''inp'' must match the length of ''fields''.'); end
-s = cell2struct(inp,fields,2);
+fields = {'n_max','Ti','Te','folder'};
+s = spreadsheet2struct(inp,fields);
 
 % user controls
 plotGridTimeEvol = true;

@@ -127,19 +127,19 @@ for i = 1:length(s.t)
 end
 
 s.theory = struct;
-[sig,Ti,Te,v] = getUCNPExpansion(s.t,s.sig0,s.Ti0,s.Te0,s.x,s.y);
+[~,sig,gam,Ti,Te,~] = kinetic_model(s.t,s.sig0,s.Ti0,s.Te0,s.data(1).n);
 for i = 1:length(s.t)
     s.theory(i).sigx = sig(i);
     s.theory(i).sigy = sig(i);
     s.theory(i).Ti = Ti(i);
     s.theory(i).Te = Te(i);
-    s.theory(i).vx = v(i).vx;
-    s.theory(i).vy = v(i).vy;
+    s.theory(i).vx = gam(i).*s.x;
+    s.theory(i).vy = gam(i).*s.y;
 end
 
 %% Plot Summary of Expansion for MHD Sims Against Vlasov Theory
 
-fig = figure('Visible','on');
+fig = figure('Visible','off');
 fig.Position = [195         259        1027         491];
 fig.Color = [1 1 1];
 
@@ -165,7 +165,7 @@ for i = 1:row
         
         for k = 1:length(q)
             xdata = [s.t]./s.tau;
-            ydata = [s.(q{k}).(colvar{j})];
+            ydata = [s.(q{k}).(colvar{iter})];
             lp = l(k);
             plot(xdata,ydata,lp.style,'LineWidth',2,'MarkerSize',4,'Color',lp.col,'MarkerFaceColor',lp.col,'MarkerEdgeColor',lp.col)
         end
@@ -173,7 +173,7 @@ for i = 1:row
         ax{i,j}.FontSize = 12;
 
         if i == row, xlabel('t / \tau_{exp}'), end
-        ylabel(colstr{j})
+        ylabel(colstr{iter})
 %         title('title')
 
     end
