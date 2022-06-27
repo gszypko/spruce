@@ -16,22 +16,17 @@ void CoulombExplosion::parseModuleConfigs(std::vector<std::string> lhs, std::vec
 
 void CoulombExplosion::setupModule()
 {
+    // initialize internal grids
+    m_vars.resize(num_vars,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
     // ensure that grid dependencies exist within EquationSet
-    std::vector<std::string> grid_names = m_pd.m_eqs->def_var_names();
-    for (auto grid : m_required_grids){
-        auto it = std::find(grid_names.begin(),grid_names.end(),grid);
+    std::vector<std::string> grid_names = m_pd.m_eqs->allNames();
+    for (auto name : m_eqset_grids){
+        auto it = std::find(grid_names.begin(),grid_names.end(),name);
         if (it==grid_names.end()){
-            std::cerr << "Grid <" << grid << "> was not found within the EquationSet." << std::endl;
+            std::cerr << "Grid <" << name << "> was not found within the EquationSet." << std::endl;
             assert(false);
         }
-        int loc = std::distance(grid_names.begin(),it);
-        m_grid_ind[grid] = loc;
     }
-    // initialize grids
-    m_Fcx = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    m_Fcy = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    m_dPx = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    m_dPy = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
 }
 
 // returns rho_c values in cgs at each distance in <r>
@@ -54,10 +49,10 @@ void CoulombExplosion::postIterateModule(double dt)
     // references to 2D grids
     const Grid& x {m_pd.m_internal_grids[PlasmaDomain::pos_x]};
     const Grid& y {m_pd.m_internal_grids[PlasmaDomain::pos_y]};
-    const Grid& n {m_pd.grid(m_grid_ind.at("n"))};
-    const Grid& press {m_pd.grid(m_grid_ind.at("press"))};
-    Grid& mom_x {m_pd.grid(m_grid_ind.at("mom_x"))};
-    Grid& mom_y {m_pd.grid(m_grid_ind.at("mom_y"))};
+    const Grid& n {m_pd.grid("n")};
+    const Grid& press {m_pd.grid("press")};
+    Grid& mom_x {m_pd.grid("mom_x")};
+    Grid& mom_y {m_pd.grid("mom_y")};
     // compute distance from plasma center
     Grid r_sq = x.square()+y.square();
     Grid r = r_sq.sqrt();
@@ -92,13 +87,9 @@ std::string CoulombExplosion::commandLineMessage() const
 void CoulombExplosion::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids)
 {
     if (output_to_file) {
-        var_names.push_back("Fcx");
-        var_grids.push_back(m_Fcx);
-        var_names.push_back("Fcy");
-        var_grids.push_back(m_Fcy);
-        var_names.push_back("dPx");
-        var_grids.push_back(m_dPx);
-        var_names.push_back("dPy");
-        var_grids.push_back(m_dPy);
+        for (int i=0; i<num_vars; i++){
+            var_names.push_back(m_var_names[i]);
+            var_grids.push_back(m_vars[i]);
+        }
     }
 }

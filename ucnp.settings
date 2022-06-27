@@ -9,15 +9,15 @@
 %       If numeric, use either <cgs> units or in terms of another variable name
 %       If not numeric, use <opt>, which will be treated as std::string for comparison
 
-n = cgs = 1e8 % peak plasma number density
+n = cgs = 2.7e9 % peak plasma number density
 n_min = cgs = 1e3 % minimum plasma density - too low of density leads to numerical errors
 n_dist = opt = gaussian % plasma density distribution
 sig_x = cgs = .1 % rms radius of plasma along x axis
 sig_y = cgs = .1 % rms radius of plasma along y axis
-Ti = cgs = 20 % initial ion temperature
-Te = cgs = 20 % initial electron temperature
+Ti = cgs = 1.35 % initial ion temperature
+Te = cgs = 80 % initial electron temperature
 dBdx = cgs = 0 % gradient of quadrupole magnetic field along symmetry (x) axis
-duration = tau_exp = 1 % end time for simulation with units tau
+duration = tau_exp = 2.8 % end time for simulation with units tau
 time_output_interval = tau_exp = 0.025 % how often to write to .out file with units tau
 x_lim = sig_x = 5 % simulation box size on x axis: from -x_lim to x_lim
 y_lim = sig_x = 5 % simulation box size on y axis: from -y_lim to y_lim   

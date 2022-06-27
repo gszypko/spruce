@@ -87,6 +87,7 @@ private:
   Grid m_ghost_zone_mask; //Equals 0 inside ghost zones and 1 everywhere else; for multiplying to negate values in ghost zones
 
   Grid& grid(int var) { return m_eqs->grid(var); }
+  Grid& grid(std::string name) { return m_eqs->grid(name); }
   // std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
   double m_ion_mass; //in g
   double m_adiabatic_index; //aka gamma, unitless

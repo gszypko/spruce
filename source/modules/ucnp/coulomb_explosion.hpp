@@ -32,9 +32,11 @@ class CoulombExplosion : public Module {
         double m_lengthscale; // length scale of Gaussian non-neutrality function
         double m_strength; // level of non-neutrality at the center
         bool output_to_file{};
-        std::vector<std::string> m_required_grids {"press","n","mom_x","mom_y"};
-        std::unordered_map<std::string,int> m_grid_ind;
+        std::vector<std::string> m_eqset_grids {"press","n","mom_x","mom_y"};
         Grid m_Fcx, m_Fcy, m_dPx, m_dPy;
+        std::vector<std::string> m_var_names {"F_x","F_y","dP_x","dP_y"};
+        enum Vars {F_x,F_y,dP_x,dP_y,num_vars};
+        std::vector<Grid> m_vars;
 };
 
 #endif

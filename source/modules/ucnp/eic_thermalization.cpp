@@ -4,101 +4,53 @@
 
 EICThermalization::EICThermalization(PlasmaDomain &pd): Module(pd) {}
 
-void EICThermalization::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){
+void EICThermalization::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs)
+{
     for(int i=0; i<lhs.size(); i++){
-        if(lhs[i] == "timescale") m_timescale = std::stod(rhs[i]);
-        else if(lhs[i] == "lengthscale") m_lengthscale = std::stod(rhs[i]);
-        else if(lhs[i] == "strength") m_strength = std::stod(rhs[i]);
-        else if(lhs[i] == "output_to_file") output_to_file = (rhs[i] == "true");
+        if(lhs[i] == "eic_output_to_file") m_output_to_file = (rhs[i] == "true");
         else std::cerr << lhs[i] << " config not recognized.\n";
     }
 }
 
 void EICThermalization::setupModule()
 {
+    // initialize grids for module
+    m_vars.resize(num_vars,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
     // ensure that grid dependencies exist within EquationSet
-    std::vector<std::string> grid_names = m_pd.m_eqs->def_var_names();
-    for (auto grid : m_required_grids){
-        auto it = std::find(grid_names.begin(),grid_names.end(),grid);
+    std::vector<std::string> grid_names = m_pd.m_eqs->allNames();
+    for (auto name : m_eqset_grids){
+        auto it = std::find(grid_names.begin(),grid_names.end(),name);
         if (it==grid_names.end()){
-            std::cerr << "Grid <" << grid << "> was not found within the EquationSet." << std::endl;
+            std::cerr << "Grid <" << name << "> was not found within the EquationSet." << std::endl;
             assert(false);
         }
-        int loc = std::distance(grid_names.begin(),it);
-        m_grid_ind[grid] = loc;
     }
-    // initialize grids
-    m_Fcx = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    m_Fcy = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    m_dPx = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    m_dPy = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-}
-
-// returns rho_c values in cgs at each distance in <r>
-Grid EICThermalization::compute_charge_density(const Grid& r, const Grid& n) const
-{
-    double time_decay = exp(-m_pd.m_time/m_timescale);
-    Grid length_decay = r.for_each(m_lengthscale,[](double a,double b){return exp(-a/b);});
-    Grid rho_c = (m_strength*time_decay*E)*n*length_decay;
-    return rho_c;
-}
-
-Grid EICThermalization::compute_total_charge(const Grid& r,const Grid& rho_c) const
-{
-    return (4.*PI)*Grid::trapzcum(r,r.square()*rho_c);
 }
 
 void EICThermalization::postIterateModule(double dt)
 {
-    if (m_pd.m_time < 3*m_timescale){
-    // references to 2D grids
-    const Grid& x {m_pd.m_internal_grids[PlasmaDomain::pos_x]};
-    const Grid& y {m_pd.m_internal_grids[PlasmaDomain::pos_y]};
-    const Grid& n {m_pd.grid(m_grid_ind.at("n"))};
-    const Grid& press {m_pd.grid(m_grid_ind.at("press"))};
-    Grid& mom_x {m_pd.grid(m_grid_ind.at("mom_x"))};
-    Grid& mom_y {m_pd.grid(m_grid_ind.at("mom_y"))};
-    // compute distance from plasma center
-    Grid r_sq = x.square()+y.square();
-    Grid r = r_sq.sqrt();
-    // bin the distances and densities
-    Grid r_bin;
-    Grid n_bin = Grid::bin_as_list(r,n,101,r_bin);
-    // compute the charge density
-    m_dPx = m_pd.derivative1D(press, 0);
-    m_dPy = m_pd.derivative1D(press, 1);
-    Grid rho_c = compute_charge_density(r_bin,n_bin);
-    Grid Q_vec = compute_total_charge(r_bin,rho_c);
-    // compute electric field
-    Grid Q = Grid::interp_as_list(r_bin,Q_vec,r);
-    Grid r_cubed = r_sq*r;
-    Grid Ex = x*Q/r_cubed;
-    Grid Ey = y*Q/r_cubed;
-    // compute force profile
-    m_Fcx = E*n*Ex;
-    m_Fcy = E*n*Ey;
-    // add forces
-    mom_x += m_Fcx*dt;
-    mom_y += m_Fcy*dt;
-    m_pd.m_eqs->propagateChanges();
-    }
-}
+    const Grid& n = m_pd.grid("n");
+    const Grid& Te = m_pd.grid("temp_e");
+    Grid& eps_e = m_pd.grid("thermal_energy_e");
+    Grid& eps_i = m_pd.grid("thermal_energy_i");
 
-std::string EICThermalization::commandLineMessage() const
-{
-    return "Coulomb Explosion On";
+    m_vars[a] = ((3./4./PI)/n).pow(1./3.);
+    m_vars[w_pe] = ((4.*PI*E*E/M_ELECTRON)*n).sqrt();
+    m_vars[Gam_e] = (E*E/K_B)/Te/m_vars[a];
+    m_vars[Lam_e] = (1./sqrt(3.))/m_vars[Gam_e].pow(3./2.);
+    m_vars[gam_ei] = sqrt(2./3./PI)*m_vars[Gam_e].pow(3./2.)*m_vars[w_pe]*m_vars[Lam_e].log();
+    m_vars[nu_ei] = (2.*M_ELECTRON/m_pd.m_ion_mass)*m_vars[gam_ei];
+    m_vars[dEdt] = m_vars[nu_ei]*(eps_e-eps_i);
+    m_vars[dEdEi] = m_vars[dEdt]*dt/eps_i;
+    eps_e += -m_vars[dEdt]*dt;
+    eps_i += m_vars[dEdt]*dt;
+    m_pd.m_eqs->propagateChanges();
 }
 
 void EICThermalization::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids)
 {
-    if (output_to_file) {
-        var_names.push_back("Fcx");
-        var_grids.push_back(m_Fcx);
-        var_names.push_back("Fcy");
-        var_grids.push_back(m_Fcy);
-        var_names.push_back("dPx");
-        var_grids.push_back(m_dPx);
-        var_names.push_back("dPy");
-        var_grids.push_back(m_dPy);
+    if (m_output_to_file) {
+        var_names.push_back(m_var_names[dEdEi]);
+        var_grids.push_back(m_vars[dEdEi]);
     }
 }

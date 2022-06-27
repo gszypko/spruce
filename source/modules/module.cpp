@@ -31,6 +31,8 @@ void Module::configureModule(std::ifstream &in_file)
     parseModuleConfigs(lhs_strings,rhs_strings);
 }
 
+// any steps required for setup after instantiation of module but before iteration of grids
+// typical use is to instantiate sizes of internal grids and compute any grids that are constant in time
 void Module::setupModule()
 {
     return;
