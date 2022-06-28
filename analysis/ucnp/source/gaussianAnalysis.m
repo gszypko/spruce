@@ -1,4 +1,4 @@
-function [] = gaussianAnalysis(data)
+function [] = gaussianAnalysis(data,eic_opt)
 
 % set up save directories
 f = filesep;
@@ -13,7 +13,6 @@ s.sig0 = data.sig0;
 s.tau = data.tau;
 
 %% Fit Density Distribution with 2D Gaussian to Extract RMS Width
-
 file_path = [data.folder f 'gauss-fits'];
 vid = VideoWriter(file_path,'MPEG-4');
 vid.FrameRate = 10;
@@ -127,7 +126,7 @@ for i = 1:length(s.t)
 end
 
 s.theory = struct;
-[~,sig,gam,Ti,Te,~] = kinetic_model(s.t,s.sig0,s.Ti0,s.Te0,s.data(1).n);
+[~,sig,gam,Ti,Te,~] = kinetic_model(s.t,s.sig0,s.Ti0,s.Te0,s.data(1).n,eic_opt);
 for i = 1:length(s.t)
     s.theory(i).sigx = sig(i);
     s.theory(i).sigy = sig(i);
@@ -144,7 +143,9 @@ fig.Position = [195         259        1027         491];
 fig.Color = [1 1 1];
 
 q = {'data','theory'};
-qstr = {'MHD','Vlasov'};
+qstr{1} = 'MHD';
+if eic_opt, qstr{2} = 'Vlasov';
+else, qstr{2} = 'Vlasov w/EIC'; end
 colvar = {'sigx','sigy','Ti','Te'};
 colstr = {'\sigma_x (cm)','\sigma_y (cm)','T_i (K)','T_e (K)'};
 rowvar = {''};
@@ -186,6 +187,7 @@ lgd.Position = [0.777965695280062,0.604462568894955,0.206112384107097,0.08625970
 frame = getframe(fig);
 writeVideo(vid,frame);
 close(fig)
+
 
 %% Plot Velocity Transects
 

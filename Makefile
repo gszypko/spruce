@@ -33,9 +33,10 @@ CXX = g++
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 CXXFLAGS = -fopenmp $(version) $(flag)
 CPPFLAGS = $(patsubst %,-I %,$(HEADERS))
-LNKFLAGS = -lm -lstdc++fs -larmadillo
+LNKFLAGS = -lm -lstdc++fs
 # detect operating system and define shell commands accordingly
-# each of path, makedir, removedir, removefile, and extension must defined for your operatings sytem
+# each of path, makedir, removedir, removefile, and extension must defined for your operatings sytem 
+
 ifeq ($(OS),Windows_NT)
 define path
 $(subst /,\,$1)
