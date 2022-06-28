@@ -17,7 +17,7 @@ out.Ny = str2double(temp{2}) - 2*Ng;
 out.mI = str2double(C{4});
 out.index = str2double(C{6});
 
-q = {'d_x','d_y','pos_x','pos_y','rho','temp','mom_x','mom_y','be_x','be_y'};
+q = {'d_x','d_y','pos_x','pos_y','rho','temp_i','temp_e','mom_x','mom_y','be_x','be_y'};
 qind = zeros(size(q));
 for i = 1:length(C)
     ind = find(strcmp(C{i},q));

@@ -1,6 +1,5 @@
-function [lambda] = getCoulombLogarithm(n,T)
+function [lnLambda] = getCoulombLogarithm(n,T)
 
-Gam_e = getGamma(n,T);
-lambda = 1./sqrt(3.*Gam_e.^3);
+lnLambda = log(getPlasmaParameter(n,T));
 
 end

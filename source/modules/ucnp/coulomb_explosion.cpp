@@ -2,26 +2,31 @@
 
 #define LENGTH_DECAY [](double r,double l){return exp(-r/l);} 
 
-CoulombExplosion::CoulombExplosion(PlasmaDomain &pd): Module(pd) {
-    assert(dynamic_cast<IdealMHD*>(m_pd.m_eqs.get()) && \
-        "Module designed for IdealMHD EquationSet (ensure that equation_set is set before modules in the config)");
-}
+CoulombExplosion::CoulombExplosion(PlasmaDomain &pd): Module(pd) {}
 
 void CoulombExplosion::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){
     for(int i=0; i<lhs.size(); i++){
         if(lhs[i] == "timescale") m_timescale = std::stod(rhs[i]);
         else if(lhs[i] == "lengthscale") m_lengthscale = std::stod(rhs[i]);
         else if(lhs[i] == "strength") m_strength = std::stod(rhs[i]);
+        else if(lhs[i] == "output_to_file") output_to_file = (rhs[i] == "true");
         else std::cerr << lhs[i] << " config not recognized.\n";
     }
 }
 
 void CoulombExplosion::setupModule()
 {
-    m_pd.grid(IdealMHD::Fcx) = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    m_pd.grid(IdealMHD::Fcy) = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    m_pd.grid(IdealMHD::dPx) = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    m_pd.grid(IdealMHD::dPy) = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    // initialize internal grids
+    m_vars.resize(num_vars,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
+    // ensure that grid dependencies exist within EquationSet
+    std::vector<std::string> grid_names = m_pd.m_eqs->allNames();
+    for (auto name : m_eqset_grids){
+        auto it = std::find(grid_names.begin(),grid_names.end(),name);
+        if (it==grid_names.end()){
+            std::cerr << "Grid <" << name << "> was not found within the EquationSet." << std::endl;
+            assert(false);
+        }
+    }
 }
 
 // returns rho_c values in cgs at each distance in <r>
@@ -40,10 +45,14 @@ Grid CoulombExplosion::compute_total_charge(const Grid& r,const Grid& rho_c) con
 
 void CoulombExplosion::postIterateModule(double dt)
 {
+    if (m_pd.m_time < 3*m_timescale){
     // references to 2D grids
     const Grid& x {m_pd.m_internal_grids[PlasmaDomain::pos_x]};
     const Grid& y {m_pd.m_internal_grids[PlasmaDomain::pos_y]};
-    const Grid& n {m_pd.grid(IdealMHD::n)};
+    const Grid& n {m_pd.grid("n")};
+    const Grid& press {m_pd.grid("press")};
+    Grid& mom_x {m_pd.grid("mom_x")};
+    Grid& mom_y {m_pd.grid("mom_y")};
     // compute distance from plasma center
     Grid r_sq = x.square()+y.square();
     Grid r = r_sq.sqrt();
@@ -51,8 +60,8 @@ void CoulombExplosion::postIterateModule(double dt)
     Grid r_bin;
     Grid n_bin = Grid::bin_as_list(r,n,101,r_bin);
     // compute the charge density
-    m_pd.grid(IdealMHD::dPx) = m_pd.derivative1D(m_pd.grid(IdealMHD::press), 0);
-    m_pd.grid(IdealMHD::dPy) = m_pd.derivative1D(m_pd.grid(IdealMHD::press), 1);
+    m_dPx = m_pd.derivative1D(press, 0);
+    m_dPy = m_pd.derivative1D(press, 1);
     Grid rho_c = compute_charge_density(r_bin,n_bin);
     Grid Q_vec = compute_total_charge(r_bin,rho_c);
     // compute electric field
@@ -61,15 +70,26 @@ void CoulombExplosion::postIterateModule(double dt)
     Grid Ex = x*Q/r_cubed;
     Grid Ey = y*Q/r_cubed;
     // compute force profile
-    m_pd.grid(IdealMHD::Fcx) = E*n*Ex;
-    m_pd.grid(IdealMHD::Fcy) = E*n*Ey;
+    m_Fcx = E*n*Ex;
+    m_Fcy = E*n*Ey;
     // add forces
-    m_pd.grid(IdealMHD::mom_x) += m_pd.grid(IdealMHD::Fcx)*dt;
-    m_pd.grid(IdealMHD::mom_y) += m_pd.grid(IdealMHD::Fcy)*dt;
+    mom_x += m_Fcx*dt;
+    mom_y += m_Fcy*dt;
     m_pd.m_eqs->propagateChanges();
+    }
 }
 
 std::string CoulombExplosion::commandLineMessage() const
 {
     return "Coulomb Explosion On";
+}
+
+void CoulombExplosion::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids)
+{
+    if (output_to_file) {
+        for (int i=0; i<num_vars; i++){
+            var_names.push_back(m_var_names[i]);
+            var_grids.push_back(m_vars[i]);
+        }
+    }
 }

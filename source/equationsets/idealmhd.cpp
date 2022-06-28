@@ -68,12 +68,12 @@ void IdealMHD::computeConstantTerms(std::vector<Grid> &grids){
 
 void IdealMHD::recomputeDerivedVariables(std::vector<Grid> &grids){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    grids[press] = 2.0*K_B*grids[rho]*grids[temp]/m_pd.m_ion_mass;
+    grids[n] = grids[rho]/m_pd.m_ion_mass;
+    grids[press] = 2.0*K_B*grids[n]*grids[temp];
     grids[thermal_energy] = grids[press]/(m_pd.m_adiabatic_index - 1.0);
     grids[kinetic_energy] = 0.5*(grids[mom_x].square() + grids[mom_y].square())/grids[rho];
     grids[v_x] = grids[mom_x]/grids[rho];
     grids[v_y] = grids[mom_y]/grids[rho];
-    grids[n] = grids[rho]/m_pd.m_ion_mass;
     grids[div_bi] = m_pd.divergence2D(grids[bi_x],grids[bi_y]);
     Grid m_b_x = m_pd.m_internal_grids[PlasmaDomain::be_x] + grids[bi_x], m_b_y = m_pd.m_internal_grids[PlasmaDomain::be_y] + grids[bi_y];
     grids[b_magnitude] = (m_b_x.square() + m_b_y.square()).sqrt();

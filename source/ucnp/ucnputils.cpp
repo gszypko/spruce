@@ -17,7 +17,7 @@ MhdInp gen_inp_grids_ucnp(const std::unique_ptr<Settings>& pms)
     y = PlasmaDomain::convertCellSizesToCellPositions(dy,1,center_opt);
 
     PlasmaDomain pd {};
-    MhdInp grids(Nx,Ny,pd,"ideal_mhd");
+    MhdInp grids(Nx,Ny,pd,"ideal_mhd_2E");
     grids.set_ion_mass(pms->getval("m_i"));
     grids.set_adiabatic_index(pms->getval("gam"));
     grids.set_duration(pms->getval("duration"));
@@ -37,7 +37,8 @@ MhdInp gen_inp_grids_ucnp(const std::unique_ptr<Settings>& pms)
     }
     else std::cerr << "<n_dist> must be specified as <gaussian> or <exponential>";
 
-    grids.set_var("temp",Grid(Nx,Ny,pms->getval("Te")));
+    grids.set_var("temp_i",Grid(Nx,Ny,pms->getval("Ti")));
+    grids.set_var("temp_e",Grid(Nx,Ny,pms->getval("Te")));
     grids.set_var("mom_x",Grid(Nx,Ny,0));
     grids.set_var("mom_y",Grid(Nx,Ny,0));
 

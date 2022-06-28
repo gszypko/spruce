@@ -10,6 +10,7 @@
 #include "radiativelosses.hpp"
 #include "sgfilter.hpp"
 #include "coulomb_explosion.hpp"
+#include "eic_thermalization.hpp"
 
 ModuleHandler::ModuleHandler(PlasmaDomain &pd): m_pd(pd) {}
 
@@ -73,6 +74,7 @@ void ModuleHandler::instantiateModule(const std::string &module_name, std::ifstr
     else if(module_name == "field_heating") m_modules.push_back(std::unique_ptr<Module>(new FieldHeating(m_pd)));
     else if(module_name == "sg_filtering") m_modules.push_back(std::unique_ptr<Module>(new SGFilter(m_pd)));
     else if(module_name == "coulomb_explosion") m_modules.push_back(std::unique_ptr<Module>(new CoulombExplosion(m_pd)));
+    else if(module_name == "eic_thermalization") m_modules.push_back(std::unique_ptr<Module>(new EICThermalization(m_pd)));
     else assert(false && "Module name was not recognized");
     m_modules.back()->configureModule(in_file);
 }

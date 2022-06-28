@@ -120,6 +120,8 @@ Grid Grid::abs() const { return UnaryOperation( UNARY_LAMBDA(std::abs(this_comp)
 
 Grid Grid::pow(double power) const { return UnaryOperation( UNARY_LAMBDA(std::pow(this_comp, power)) ); }
 
+Grid Grid::log() const {return UnaryOperation(UNARY_LAMBDA(std::log(this_comp)));}
+
 Grid Grid::sqrt() const { return UnaryOperation( UNARY_LAMBDA(std::sqrt(this_comp)) ); }
 
 Grid Grid::for_each(const Grid& grid,const std::function<double(double,double)>& fun) const {return ComponentWiseOperation(grid,fun);}

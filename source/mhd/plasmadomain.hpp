@@ -75,16 +75,19 @@ private:
   friend class RadiativeLosses;
   friend class ThermalConduction;
   friend class CoulombExplosion;
+  friend class EICThermalization;
 
   //Friend class declarations (for EquationSets)
   friend class EquationSet;
   friend class IdealMHD;
+  friend class IdealMHD2E;
 
   //Strings corresponding to variables, settings, boundary conditions for file I/O
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)
   Grid m_ghost_zone_mask; //Equals 0 inside ghost zones and 1 everywhere else; for multiplying to negate values in ghost zones
 
   Grid& grid(int var) { return m_eqs->grid(var); }
+  Grid& grid(std::string name) { return m_eqs->grid(name); }
   // std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
   double m_ion_mass; //in g
   double m_adiabatic_index; //aka gamma, unitless
