@@ -5,6 +5,7 @@
 #include "settings.hpp"
 #include "ucnputils.hpp"
 #include "MhdInp.hpp"
+#include "ConfigUI.hpp"
 
 namespace fs = std::filesystem;
 
@@ -36,17 +37,19 @@ int main(int argc, char *argv[])
         fs::path set_path = output/pms->set_path(array);
         if (overwrite==0) assert(!fs::exists(set_path) && "Error: folder already exists and overwrite_flag=0");
         pms->write_array_params(set_path,"plasma");
+        // handle .config file
+        PlasmaDomain pd {};
+        ConfigUI cui(pd,config);
+        for (const auto& name : pms->names()){
+            if (cui.is_config(name)){
+                cui.update_config(name,Settings::num2str(pms->getvar(name)));
+            }
+        }
+        cui.write_config_file(set_path);
         // create grids and write to .state file
         MhdInp grids = gen_inp_grids_ucnp(pms);
         grids.write_state_file(set_path);
-        // handle .config file
-        grids.read_config(config);
-        for (const auto& name : pms->names()){
-            if (grids.is_config(name)){
-                grids.update_config(name,Settings::num2str(pms->getvar(name)));
-            }
-        }
-        grids.write_config_file(set_path);
+        
     }    
     return 0;
 }

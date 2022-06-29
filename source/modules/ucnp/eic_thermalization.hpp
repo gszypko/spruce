@@ -22,6 +22,7 @@ class EICThermalization : public Module {
         void setupModule() override;
         void postIterateModule(double dt) override;
         void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) override;
+        std::vector<std::string> config_names() const override {return {"eic_output_to_file"};};
     private:
         // *** Members
         std::vector<std::string> m_eqset_grids {"thermal_energy_i","thermal_energy_e","n","temp_e"};
