@@ -13,7 +13,7 @@ else, eic_fac = 0; end
 if nu_ei(n0,Te0) < 0, error("Electrons are strongly coupled."); end
 
 % define rate equations for ode45 solver
-    function [dydt] = rate_equations(t,y)
+    function [dydt] = rate_equations(~,y)
         % y = [sig^2; gam; Ti; Te]
         n = n0*(sig0/sqrt(y(1)))^2;
         dydt = [0; 0; 0; 0];

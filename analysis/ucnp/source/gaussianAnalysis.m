@@ -7,8 +7,8 @@ s = struct;
 s.t = data.grids.time;
 s.x = data.grids.x_vec;
 s.y = data.grids.y_vec;
-s.Te0 = data.settings.Te;
-s.Ti0 = data.settings.Ti;
+s.Te0 = data.Te;
+s.Ti0 = data.Ti;
 s.sig0 = data.sig0;
 s.tau = data.tau;
 
@@ -119,8 +119,15 @@ for i = 1:length(s.t)
     s.data(i).n = fit(i).amp;
     [~,indx] = min(abs(data.grids.x_vec));
     [~,indy] = min(abs(data.grids.y_vec));
-    s.data(i).Ti = data.grids.vars(i).temp_i(indy,indx);
-    s.data(i).Te = data.grids.vars(i).temp_e(indy,indx);
+    if strcmp(data.config.eq_set,'ideal_mhd')
+        s.data(i).Ti = data.grids.vars(i).temp(indy,indx);
+        s.data(i).Te = data.grids.vars(i).temp(indy,indx);
+    elseif strcmp(data.config.eq_set,'ideal_mhd_2E')
+        s.data(i).Ti = data.grids.vars(i).temp_i(indy,indx);
+        s.data(i).Te = data.grids.vars(i).temp_e(indy,indx);
+    else
+        error('Error: equation set is not valid.')
+    end
     s.data(i).vx = data.grids.vars(i).v_x(indy,:);
     s.data(i).vy = data.grids.vars(i).v_y(:,indx)';
 end
