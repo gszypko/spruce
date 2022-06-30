@@ -1,19 +1,19 @@
-#include "ConfigUI.hpp"
+#include "ConfigHandler.hpp"
 #include <fstream>
 #include <cassert>
 #include "eic_thermalization.hpp"
 #include "coulomb_explosion.hpp"
 #include <sstream>
 
-ConfigUI::ConfigUI(PlasmaDomain& pd, fs::path config_path): 
-    m_config_path{config_path}, m_pd{pd}
+ConfigHandler::ConfigHandler(fs::path config_path): 
+    m_pd{}, m_config_path{config_path}
 {
     instantiate_modules();
     define_config_names();
     read_config();
 }
 
-void ConfigUI::read_config()
+void ConfigHandler::read_config()
 {
     assert(m_config_path.extension().string()==".config");
     assert(fs::exists(m_config_path) && !fs::is_empty(m_config_path) && "File must exist and not be empty.");
@@ -30,7 +30,7 @@ void ConfigUI::read_config()
     m_config_data.shrink_to_fit();
 }
 
-void ConfigUI::define_config_names()
+void ConfigHandler::define_config_names()
 {
     for (auto i : m_additional_configs)
         m_config_names.push_back(i);
@@ -39,21 +39,27 @@ void ConfigUI::define_config_names()
             m_config_names.push_back(i);
 }
 
-std::string ConfigUI::get_eqnset_name() const
+std::string ConfigHandler::get_eqset_name() const
 {
     for (auto line : m_config_data){
         std::string lhs,rhs;
-        std::istringstream ss(line);
-        std::getline(ss,lhs,'=');
-        std::getline(ss,rhs);
-        std::string lhs_cleared = lhs; lhs_cleared.erase(std::remove(lhs_cleared.begin(),lhs_cleared.end(),' '),lhs_cleared.end());
-        if (lhs_cleared == "equation_set") return rhs;
+        parse_config_line(line,lhs,rhs);
+        if (lhs == "equation_set") return rhs;
     }
     assert(false && "Equation set not found in .config file.");
     return "";
 }
 
-void ConfigUI::instantiate_modules()
+void ConfigHandler::parse_config_line(const std::string& line,std::string& lhs,std::string& rhs) const
+{
+    std::istringstream ss(line);
+    std::getline(ss,lhs,'=');
+    std::getline(ss,rhs);
+    lhs.erase(std::remove(lhs.begin(),lhs.end(),' '),lhs.end());
+    rhs.erase(std::remove(rhs.begin(),rhs.end(),' '),rhs.end());
+}
+
+void ConfigHandler::instantiate_modules()
 {
     for (auto name : module_names){
         if (name == "eic_thermalization") m_modules.push_back(std::unique_ptr<Module>(new EICThermalization(m_pd)));
@@ -62,36 +68,31 @@ void ConfigUI::instantiate_modules()
     }
 }
 
-void ConfigUI::update_config(std::string name,std::string val)
+void ConfigHandler::update_config(std::string name,std::string val)
 {
     // ensure that input is a config name
     auto it = std::find(m_config_names.begin(),m_config_names.end(),name);
     assert(it!=m_config_names.end());
     // find the line in config data that starts with this value
     bool config_found{false};
-    for (int i=0; i<m_config_data.size(); i++){
-        std::string curr_line = m_config_data[i];
+    for (auto& line : m_config_data){
         std::string lhs,rhs;
-        std::istringstream ss(curr_line);
-        std::getline(ss,lhs,'=');
-        std::getline(ss,rhs);
-        std::string lhs_cleared = lhs; lhs_cleared.erase(std::remove(lhs_cleared.begin(),lhs_cleared.end(),' '),lhs_cleared.end());
-        if (lhs_cleared.compare(name)==0){
-             m_config_data[i] = lhs + " = " + val;
+        parse_config_line(line,lhs,rhs);
+        if (lhs.compare(name)==0){
+             line = lhs + " = " + val;
              config_found = true;
         }
     }
     if (!config_found) m_config_data.push_back(name + " = " + val);
-    
 }
 
-bool ConfigUI::is_config(std::string name) const
+bool ConfigHandler::is_config(std::string name) const
 {
     auto it = std::find(m_config_names.begin(),m_config_names.end(),name);
     return it != m_config_names.end();
 }
 
-void ConfigUI::write_config_file(const fs::path& directory) const
+void ConfigHandler::write_config_file(const fs::path& directory) const
 {
     if (!fs::exists(directory)) fs::create_directories(directory);
     fs::path filename = "ucnp.config";

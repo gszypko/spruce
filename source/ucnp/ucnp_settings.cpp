@@ -1,5 +1,7 @@
-#include "ucnp.hpp"
+#include "ucnp_settings.hpp"
 #include "ucnputils.hpp"
+#include <cmath>
+#include "constants.hpp"
 
 UCNP::UCNP(fs::path settings_path,std::string unit): Settings(unit)
 {

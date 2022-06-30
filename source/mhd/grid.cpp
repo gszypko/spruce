@@ -156,7 +156,7 @@ Grid Grid::vectorise(const Grid& grid,int dim) const
 }
 
 // 1D integration using the trapezoidal method
-Grid Grid::trapz(const Grid& x,const Grid& y)
+Grid Grid::Trapz(const Grid& x,const Grid& y)
 {
   // determine which dimension is being integrated by inspecting dimensions of <x>
   bool int_row{false},int_col{false};
@@ -191,16 +191,16 @@ Grid Grid::trapz(const Grid& x,const Grid& y)
   return result;
 }
 
-Grid Grid::trapz2D(const Grid& x,const Grid& y,const Grid& z)
+Grid Grid::Trapz2D(const Grid& x,const Grid& y,const Grid& z)
 {
   assert(x.rows()==z.rows() && x.cols()==1);
   assert(y.cols()==z.cols() && y.rows()==1);
-  Grid z_int_x = trapz(x,z);
-  Grid z_int_xy = trapz(y,z_int_x);
+  Grid z_int_x = Trapz(x,z);
+  Grid z_int_xy = Trapz(y,z_int_x);
   return z_int_xy;
 }
 
-Grid Grid::trapzcum(const Grid& x, const Grid& y)
+Grid Grid::TrapzCum(const Grid& x, const Grid& y)
 {
     // determine which dimension is being integrated by inspecting dimensions of <x>
   bool int_row{false},int_col{false};
@@ -240,7 +240,7 @@ Grid Grid::trapzcum(const Grid& x, const Grid& y)
   return result;
 }
 
-Grid Grid::bin_as_list(const Grid& indep,const Grid& dep, const Grid& bin_edges)
+Grid Grid::Bin1D(const Grid& indep,const Grid& dep, const Grid& bin_edges)
 {
   assert(bin_edges.size()<dep.size());
   assert(indep.rows()==dep.rows());
@@ -265,15 +265,15 @@ Grid Grid::bin_as_list(const Grid& indep,const Grid& dep, const Grid& bin_edges)
   return result;
 }
 
-Grid Grid::bin_as_list(const Grid& indep,const Grid& dep, double N, Grid& bins)
+Grid Grid::Bin1D(const Grid& indep,const Grid& dep, double N, Grid& bins)
 {
   bins = Linspace(indep.min(),indep.max(),N);
   double dr = bins(1)-bins(0);
   Grid edges = Linspace(bins.min()-dr/2.,bins.max()+dr/2.,N+1);
-  return bin_as_list(indep,dep,edges);
+  return Bin1D(indep,dep,edges);
 }
 
-Grid Grid::interp_as_list(const Grid& indep,const Grid& dep,const Grid& query)
+Grid Grid::Interp1D(const Grid& indep,const Grid& dep,const Grid& query)
 {
   assert(indep.size()==dep.size());
   for (auto& val : query.m_data) assert(val>=indep.min() && val<=indep.max());
@@ -311,6 +311,41 @@ Grid Grid::interp_as_list(const Grid& indep,const Grid& dep,const Grid& query)
       for (auto& val : max_vals) max+=val/max_vals.size();
       result(i) = min + (query(i)-curr_min)*(max-min)/(curr_max-curr_min);
     }
+  }
+  return result;
+}
+
+void Grid::MeshGrid(const Grid& a,const Grid& b,Grid& A,Grid& B)
+{
+  A = Zero(a.size(),b.size());
+  B = Zero(a.size(),b.size());
+  for (int i=0; i<a.size(); i++){
+    for (int j=0; j<b.size(); j++){
+      A(i,j) = a(i);
+      B(i,j) = b(j);
+    }
+  }
+}
+
+Grid Grid::Gaussian2D(const Grid& x,const Grid& y,double amp,double min,double sig_x,double sig_y,double x_cen,double y_cen)
+{
+  assert(x.rows()==y.rows() && x.cols()==y.cols());
+  Grid result = Zero(x.rows(),x.cols());
+  for (int i = 0; i < result.rows(); i++){
+      for (int j = 0; j < result.cols(); j++){
+          result(i,j) = min+amp*exp(-0.5*std::pow((x(i,j)-x_cen)/std::abs(sig_x),2))*exp(-0.5*std::pow((y(i,j)-y_cen)/std::abs(sig_y),2));
+      }
+  }
+  return result;
+}
+Grid Grid::Exp2D(const Grid& x,const Grid& y,double amp,double min,double sig_x,double sig_y,double x_cen,double y_cen)
+{
+  assert(x.rows()==y.rows() && x.cols()==y.cols());
+  Grid result = Zero(x.rows(),x.cols());
+  for (int i = 0; i < result.rows(); i++){
+      for (int j = 0; j < result.cols(); j++){
+          result(i,j) = min+amp*exp(-std::abs(x(i,j)-x_cen)/std::abs(sig_x))*exp(-std::abs(y(i,j)-y_cen)/std::abs(sig_y));
+      }
   }
   return result;
 }
