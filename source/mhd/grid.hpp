@@ -54,12 +54,15 @@ public:
   Grid for_each(double a,const std::function<double(double,double)>& fun) const;
   // *** New Math
   Grid vectorise(const Grid& grid,int dim=1) const;
-  static Grid trapz(const Grid& x,const Grid& y);
-  static Grid trapz2D(const Grid& x,const Grid& y,const Grid& z);
-  static Grid trapzcum(const Grid& x, const Grid& y);
-  static Grid bin_as_list(const Grid& indep,const Grid& dep, const Grid& bin_edges);
-  static Grid bin_as_list(const Grid& indep,const Grid& dep, double N, Grid& bins);
-  static Grid interp_as_list(const Grid& indep,const Grid& dep,const Grid& query);
+  static Grid Trapz(const Grid& x,const Grid& y);
+  static Grid Trapz2D(const Grid& x,const Grid& y,const Grid& z);
+  static Grid TrapzCum(const Grid& x, const Grid& y);
+  static Grid Bin1D(const Grid& indep,const Grid& dep, const Grid& bin_edges);
+  static Grid Bin1D(const Grid& indep,const Grid& dep, double N, Grid& bins);
+  static Grid Interp1D(const Grid& indep,const Grid& dep,const Grid& query);
+  static void MeshGrid(const Grid& a,const Grid& b,Grid& A,Grid& B);
+  static Grid Gaussian2D(const Grid& x,const Grid& y,double amp,double min,double sig_x,double sig_y,double x_cen,double y_cen);
+  static Grid Exp2D(const Grid& x,const Grid& y,double amp,double min,double sig_x,double sig_y,double x_cen,double y_cen);
   // *** Vector Products
   static Grid DotProduct2D(const std::vector<Grid>& a, const std::vector<Grid>& b);//Dot product of two 2D vectors
   static Grid CrossProduct2D(const std::vector<Grid>& a, const std::vector<Grid>& b);//Cross product of two vectors in xy-plane (result in z-direction)

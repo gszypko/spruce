@@ -26,6 +26,7 @@ class CoulombExplosion : public Module {
         Grid compute_total_charge(const Grid& r,const Grid& rho_c) const;
         std::string commandLineMessage() const override;
         void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) override;
+        std::vector<std::string> config_names() const override {return {"timescale","lengthscale","strength"};};
     private:
         // *** Members
         double m_timescale; // strength of non-neutrality decays exponentially with time

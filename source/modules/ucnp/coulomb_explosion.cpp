@@ -40,7 +40,7 @@ Grid CoulombExplosion::compute_charge_density(const Grid& r, const Grid& n) cons
 
 Grid CoulombExplosion::compute_total_charge(const Grid& r,const Grid& rho_c) const
 {
-    return (4.*PI)*Grid::trapzcum(r,r.square()*rho_c);
+    return (4.*PI)*Grid::TrapzCum(r,r.square()*rho_c);
 }
 
 void CoulombExplosion::postIterateModule(double dt)
@@ -58,23 +58,23 @@ void CoulombExplosion::postIterateModule(double dt)
     Grid r = r_sq.sqrt();
     // bin the distances and densities
     Grid r_bin;
-    Grid n_bin = Grid::bin_as_list(r,n,101,r_bin);
+    Grid n_bin = Grid::Bin1D(r,n,101,r_bin);
     // compute the charge density
-    m_dPx = m_pd.derivative1D(press, 0);
-    m_dPy = m_pd.derivative1D(press, 1);
+    m_vars[dP_x] = m_pd.derivative1D(press, 0);
+    m_vars[dP_y] = m_pd.derivative1D(press, 1);
     Grid rho_c = compute_charge_density(r_bin,n_bin);
     Grid Q_vec = compute_total_charge(r_bin,rho_c);
     // compute electric field
-    Grid Q = Grid::interp_as_list(r_bin,Q_vec,r);
+    Grid Q = Grid::Interp1D(r_bin,Q_vec,r);
     Grid r_cubed = r_sq*r;
     Grid Ex = x*Q/r_cubed;
     Grid Ey = y*Q/r_cubed;
     // compute force profile
-    m_Fcx = E*n*Ex;
-    m_Fcy = E*n*Ey;
+    m_vars[F_x] = E*n*Ex;
+    m_vars[F_y] = E*n*Ey;
     // add forces
-    mom_x += m_Fcx*dt;
-    mom_y += m_Fcy*dt;
+    mom_x += m_vars[F_x]*dt;
+    mom_y += m_vars[F_y]*dt;
     m_pd.m_eqs->propagateChanges();
     }
 }

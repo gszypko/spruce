@@ -1,5 +1,5 @@
 #include "settings.hpp"
-#include "ucnp.hpp"
+#include "ucnp_settings.hpp"
 
 // class constructor
 Settings::Settings(fs::path settings_path,std::string unit): m_unit_str{unit}   
