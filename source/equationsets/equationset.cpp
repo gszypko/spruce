@@ -33,6 +33,11 @@ Grid& EquationSet::grid(int index) {
     return m_grids[index];
 }
 
+Grid& EquationSet::grid(const std::string& name) {
+    int index = indexFromName(name);
+    return grid(index);
+}
+
 bool EquationSet::allGridsInitialized() {
     for(const Grid& g : m_grids){
         if(g.size() == 1) return false;
@@ -45,11 +50,6 @@ bool EquationSet::allStateGridsInitialized() {
         if(grid(i).size() == 1) return false;
     }
     return true;
-}
-
-Grid& EquationSet::grid(std::string name) {
-    int index = indexFromName(name);
-    return grid(index);
 }
 
 std::vector<Grid> EquationSet::allGrids() const {
@@ -69,8 +69,7 @@ int EquationSet::num_variables() {
 }
 
 int EquationSet::num_species() {
-    assert(densities().size() == momenta().size() && momenta().size() == thermal_energies().size() \
-            && thermal_energies().size() == fields().size() && \
+    assert(densities().size() == momenta().size() && momenta().size() == thermal_energies().size() && \
             "Each species must have an entry each in densities, momenta, thermal_energies, and fields");
     return densities().size();
 }

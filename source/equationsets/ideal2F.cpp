@@ -25,8 +25,8 @@ void Ideal2F::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<G
 std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     // PlasmaDomain grid references for more concise notation
-    Grid& be_x = m_pd.m_internal_grids[PlasmaDomain::be_x];
-    Grid& be_y = m_pd.m_internal_grids[PlasmaDomain::be_y];
+    Grid& be_x = m_pd.m_grids[PlasmaDomain::be_x];
+    Grid& be_y = m_pd.m_grids[PlasmaDomain::be_y];
     // continuity equations
     std::vector<Grid> v_i = {grids[i_v_x],grids[i_v_y]};
     std::vector<Grid> v_e = {grids[e_v_x],grids[e_v_y]};
@@ -124,8 +124,8 @@ void Ideal2F::recomputeNumberDensity(std::vector<Grid> &grids){
 }
 
 void Ideal2F::recomputeMagneticFields(std::vector<Grid> &grids){
-    grids[b_x] = m_pd.m_internal_grids[PlasmaDomain::be_x] + grids[bi_x];
-    grids[b_y] = m_pd.m_internal_grids[PlasmaDomain::be_y] + grids[bi_y];
+    grids[b_x] = m_pd.m_grids[PlasmaDomain::be_x] + grids[bi_x];
+    grids[b_y] = m_pd.m_grids[PlasmaDomain::be_y] + grids[bi_y];
     grids[b_mag] = (grids[b_x].square() + grids[b_y].square()).sqrt();
     grids[b_hat_x] = grids[b_x]/grids[b_mag];
     grids[b_hat_y] = grids[b_y]/grids[b_mag];
@@ -176,7 +176,7 @@ void Ideal2F::recomputeDT(){
     // velocity magnitude
     Grid vel_mag = (m_grids[e_v_x].square() + m_grids[e_v_y].square()).sqrt();
     // get timestep
-    Grid diagonals = (m_pd.m_internal_grids[PlasmaDomain::d_x].square() + m_pd.m_internal_grids[PlasmaDomain::d_y].square()).sqrt();
+    Grid diagonals = (m_pd.m_grids[PlasmaDomain::d_x].square() + m_pd.m_grids[PlasmaDomain::d_y].square()).sqrt();
     m_grids[dt] = diagonals/(c_s + v_alfven + v_fast + v_slow + vel_mag);
 }
 

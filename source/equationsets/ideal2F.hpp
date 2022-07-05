@@ -32,7 +32,6 @@ class Ideal2F: public EquationSet {
         std::vector<int> densities() override { return {i_rho,e_rho}; }
         std::vector<std::vector<int>> momenta() override { return {{i_mom_x,i_mom_y},{e_mom_x,e_mom_y}}; }
         std::vector<int> thermal_energies() override { return {i_thermal,e_thermal}; }
-        std::vector<std::vector<int>> fields() override { return {{bi_x,bi_y},{bi_x,bi_y}}; }
 
         void populateVariablesFromState(std::vector<Grid> &grids) override;
         Grid getDT() override;

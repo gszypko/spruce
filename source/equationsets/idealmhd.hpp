@@ -30,7 +30,6 @@ class IdealMHD: public EquationSet {
         std::vector<int> densities() override { return {rho}; }
         std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y}}; }
         std::vector<int> thermal_energies() override { return {thermal_energy}; }
-        std::vector<std::vector<int>> fields() override { return {{bi_x,bi_y}}; }
 
         void populateVariablesFromState(std::vector<Grid> &grids) override;
         Grid getDT() override;

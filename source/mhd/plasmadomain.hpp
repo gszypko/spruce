@@ -25,9 +25,9 @@ public:
     "euler", "rk2", "rk4"
   };
 
-  enum InternalVars {d_x,d_y,pos_x,pos_y,be_x,be_y};
-  static const inline std::vector<std::string> m_internal_var_names = {"d_x","d_y","pos_x","pos_y","be_x","be_y"};
-  std::vector<Grid> m_internal_grids{m_internal_var_names.size()};
+  enum Grids {d_x,d_y,pos_x,pos_y,be_x,be_y};
+  static const inline std::vector<std::string> m_gridnames = {"d_x","d_y","pos_x","pos_y","be_x","be_y"};
+  std::vector<Grid> m_grids{m_gridnames.size()};
 
   enum class Config {
     x_bound_1, x_bound_2, y_bound_1, y_bound_2,
@@ -87,8 +87,11 @@ private:
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)
   Grid m_ghost_zone_mask; //Equals 0 inside ghost zones and 1 everywhere else; for multiplying to negate values in ghost zones
 
-  Grid& grid(int var) { return m_eqs->grid(var); }
-  Grid& grid(std::string name) { return m_eqs->grid(name); }
+  Grid& grid(int index);
+  Grid& grid(const std::string& name);
+  int gridname2index(const std::string& name) const;
+  bool is_grid(const std::string& name) const;
+  
   // std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
   double m_ion_mass; //in g
   double m_adiabatic_index; //aka gamma, unitless

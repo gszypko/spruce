@@ -7,6 +7,7 @@
 #include <fstream>
 #include <cassert>
 #include <iostream>
+#include <algorithm>
 
 //Construction with initial state from state file (continue mode and custom input)
 PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file,
@@ -20,7 +21,7 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   std_out_interval = 1;
   safe_state_mode = true;
   //***************************************************
-  m_internal_grids = std::vector<Grid>(m_internal_var_names.size(),Grid::Zero(1,1));
+  m_grids = std::vector<Grid>(m_gridnames.size(),Grid::Zero(1,1));
   m_iter = 0;
   this->continue_mode = continue_mode;
   m_out_directory = out_path;
@@ -44,7 +45,7 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   readStateFile(state_file,continue_mode);
   std::cout << "Validating input data...\n";
   assert(allInternalGridsInitialized() && "All internal grid quantities for PlasmaDomain must be initialized");
-  assert(validateCellSizesAndPositions(m_internal_grids[d_x],m_internal_grids[pos_x],0) && validateCellSizesAndPositions(m_internal_grids[d_y],m_internal_grids[pos_y],1) && "Cell sizes and positions must correspond");
+  assert(validateCellSizesAndPositions(m_grids[d_x],m_grids[pos_x],0) && validateCellSizesAndPositions(m_grids[d_y],m_grids[pos_y],1) && "Cell sizes and positions must correspond");
   assert(m_eqs->allStateGridsInitialized() && "All variables specified as state variables for the current EquationSet must be specified in the .state file");
   computeIterationBounds();
   m_eqs->populateVariablesFromState();
@@ -53,6 +54,34 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
     std::cout << "Writing out init.state...\n";
     writeStateFile("init");
   }
+}
+
+int PlasmaDomain::gridname2index(const std::string& name) const
+{
+  auto it = std::find(m_gridnames.begin(),m_gridnames.end(),name);
+  if (it==m_gridnames.end()){
+    std::cerr << "<" << name << "> is not a valid grid name." << std::endl;
+    assert(false);
+  }
+  return it - m_gridnames.begin();
+}
+
+bool PlasmaDomain::is_grid(const std::string& name) const
+{
+  auto it = std::find(m_gridnames.begin(),m_gridnames.end(),name);
+  return it != m_gridnames.end();
+}
+
+Grid& PlasmaDomain::grid(int index)
+{
+  assert(index>=0 && index<m_gridnames.size());
+  return m_grids[index];
+}
+
+Grid& PlasmaDomain::grid(const std::string& name)
+{
+  int index = gridname2index(name);
+  return m_grids[index];
 }
 
 //Compute lower and upper x- and y- indicies for differential operations
@@ -128,7 +157,7 @@ bool PlasmaDomain::validateCellSizesAndPositions(const Grid& d, const Grid& pos,
 
 bool PlasmaDomain::allInternalGridsInitialized()
 {
-  for(const Grid& g : m_internal_grids){
+  for(const Grid& g : m_grids){
     if(g.size() == 1) return false;
   }
   return true;

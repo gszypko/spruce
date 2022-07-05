@@ -44,7 +44,7 @@ void PlasmaDomain::advanceTime(bool verbose)
   m_module_handler.preIterateModules(min_dt);
   m_module_handler.iterateModules(min_dt);
 
-  double visc_coeff = epsilon_viscous*0.5*((m_internal_grids[d_x].square() + m_internal_grids[d_y].square())/dt_raw).min();
+  double visc_coeff = epsilon_viscous*0.5*((m_grids[d_x].square() + m_grids[d_y].square())/dt_raw).min();
 
   if(time_integrator == TimeIntegrator::RK2) integrateRK2(min_dt, visc_coeff);
   else if(time_integrator == TimeIntegrator::RK4) integrateRK4(min_dt, visc_coeff);
@@ -134,31 +134,31 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
 
   // Grid &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y], &m_rho = grids[rho], &m_thermal_energy = grids[thermal_energy];
 
-  double delta_last = x_boundary ? m_internal_grids[d_x](i3,j3) : m_internal_grids[d_y](i3,j3);
-  double dist23 = x_boundary ? 0.5*(m_internal_grids[d_x](i2,j2) + m_internal_grids[d_x](i3,j3)) : 0.5*(m_internal_grids[d_y](i2,j2) + m_internal_grids[d_y](i3,j3));
-  double dist12 = x_boundary ? 0.5*(m_internal_grids[d_x](i1,j1) + m_internal_grids[d_x](i2,j2)) : 0.5*(m_internal_grids[d_y](i1,j1) + m_internal_grids[d_y](i2,j2));
+  double delta_last = x_boundary ? m_grids[d_x](i3,j3) : m_grids[d_y](i3,j3);
+  double dist23 = x_boundary ? 0.5*(m_grids[d_x](i2,j2) + m_grids[d_x](i3,j3)) : 0.5*(m_grids[d_y](i2,j2) + m_grids[d_y](i3,j3));
+  double dist12 = x_boundary ? 0.5*(m_grids[d_x](i1,j1) + m_grids[d_x](i2,j2)) : 0.5*(m_grids[d_y](i1,j1) + m_grids[d_y](i2,j2));
   double scale_2 = std::pow(open_boundary_decay_base,dist23/delta_last);
   double scale_1 = std::pow(open_boundary_decay_base,dist12/delta_last);
   for(int v : m_eqs->densities()){
-    Grid& rho = grid(v);
+    Grid& rho = m_eqs->grid(v);
     rho(i1,j1) = scale_1*rho(i3,j3);
     rho(i2,j2) = scale_2*rho(i3,j3);
   }
   for(int v : m_eqs->thermal_energies()){
-    Grid& energy = grid(v);
+    Grid& energy = m_eqs->grid(v);
     energy(i1,j1) = scale_1*energy(i3,j3);
     energy(i2,j2) = scale_2*energy(i3,j3);
   }
 
   for(int species = 0; species < m_eqs->num_species(); species++){
-    Grid& m_mom_x = grid(m_eqs->momenta()[species][0]);
-    Grid& m_mom_y = grid(m_eqs->momenta()[species][1]);
-    Grid& m_rho = grid(m_eqs->densities()[species]);
+    Grid& m_mom_x = m_eqs->grid(m_eqs->momenta()[species][0]);
+    Grid& m_mom_y = m_eqs->grid(m_eqs->momenta()[species][1]);
+    Grid& m_rho = m_eqs->grid(m_eqs->densities()[species]);
 
     double vel_x = m_mom_x(i3,j3)/m_rho(i3,j3);
     double vel_y = m_mom_y(i3,j3)/m_rho(i3,j3);
 
-    Grid m_press = (m_adiabatic_index - 1.0)*grid(m_eqs->thermal_energies()[species]);
+    Grid m_press = (m_adiabatic_index - 1.0)*m_eqs->grid(m_eqs->thermal_energies()[species]);
 
     double c_s = std::sqrt(m_adiabatic_index*m_press(i3,j3)/m_rho(i3,j3));
     double boost_vel = open_boundary_strength*c_s;
@@ -170,7 +170,7 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
       double boundary_vel;
       if(i1 > i2) boundary_vel = std::max(0.0, vel_x + boost_vel);
       else { assert(i2 > i1); boundary_vel = std::min(0.0, vel_x + boost_vel); }
-      double ghost_vel = (dist*(boundary_vel) - 0.5*m_internal_grids[d_x](i2,j2)*vel_x)/(0.5*m_internal_grids[d_x](i3,j3));
+      double ghost_vel = (dist*(boundary_vel) - 0.5*m_grids[d_x](i2,j2)*vel_x)/(0.5*m_grids[d_x](i3,j3));
       m_mom_x(i1,j1) = m_rho(i1,j1)*ghost_vel;
       m_mom_x(i2,j2) = m_rho(i2,j2)*ghost_vel;
       m_mom_y(i1,j1) = m_rho(i1,j1)*vel_y;
@@ -180,7 +180,7 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
       double boundary_vel;
       if(j1 > j2) boundary_vel = std::max(0.0, vel_y + boost_vel);
       else { assert(j2 > j1); boundary_vel = std::min(0.0, vel_y + boost_vel); }
-      double ghost_vel = (dist*(boundary_vel) - 0.5*m_internal_grids[d_y](i2,j2)*vel_y)/(0.5*m_internal_grids[d_y](i3,j3)); //add vel_y to c_s? sound speed relative to current bulk velocity?
+      double ghost_vel = (dist*(boundary_vel) - 0.5*m_grids[d_y](i2,j2)*vel_y)/(0.5*m_grids[d_y](i3,j3)); //add vel_y to c_s? sound speed relative to current bulk velocity?
       m_mom_x(i1,j1) = m_rho(i1,j1)*vel_x;
       m_mom_x(i2,j2) = m_rho(i2,j2)*vel_x;
       m_mom_y(i1,j1) = m_rho(i1,j1)*ghost_vel;
@@ -201,20 +201,20 @@ void PlasmaDomain::reflectBoundaryExtrapolate(int i1, int i2, int i3, int i4, in
   // m_rho(i1,j1) = m_rho(i3,j3); m_rho(i2,j2) = m_rho(i3,j3); //Match density of nearest interior cell
   // m_thermal_energy(i1,j1) = m_thermal_energy(i3,j3); m_thermal_energy(i2,j2) = m_thermal_energy(i3,j3); //Match temperature of nearest interior cell
   for(int v : m_eqs->thermal_energies()){
-    grid(v)(i1,j1) = grid(v)(i3,j3);
-    grid(v)(i2,j2) = grid(v)(i3,j3); //Match thermal energy of nearest interior cell
+    m_eqs->grid(v)(i1,j1) = m_eqs->grid(v)(i3,j3);
+    m_eqs->grid(v)(i2,j2) = m_eqs->grid(v)(i3,j3); //Match thermal energy of nearest interior cell
   }
   for(int v : m_eqs->densities()){
-    grid(v)(i1,j1) = grid(v)(i3,j3);
-    grid(v)(i2,j2) = grid(v)(i3,j3); //Match density of nearest interior cell
+    m_eqs->grid(v)(i1,j1) = m_eqs->grid(v)(i3,j3);
+    m_eqs->grid(v)(i2,j2) = m_eqs->grid(v)(i3,j3); //Match density of nearest interior cell
   }
   // m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0;
   // m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
   for(std::vector<int> mom : m_eqs->momenta()){
     for(int v : mom){
-      grid(v)(i1,j1) = 0.0;
-      grid(v)(i2,j2) = 0.0;
-      grid(v)(i3,j3) = 0.0;
+      m_eqs->grid(v)(i1,j1) = 0.0;
+      m_eqs->grid(v)(i2,j2) = 0.0;
+      m_eqs->grid(v)(i3,j3) = 0.0;
     }
   }
 }
@@ -231,9 +231,9 @@ void PlasmaDomain::fixedBoundaryExtrapolate(int i1, int i2, int i3, int i4, int 
   // m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
   for(std::vector<int> mom : m_eqs->momenta()){
     for(int v : mom){
-      grid(v)(i1,j1) = 0.0;
-      grid(v)(i2,j2) = 0.0;
-      grid(v)(i3,j3) = 0.0;
+      m_eqs->grid(v)(i1,j1) = 0.0;
+      m_eqs->grid(v)(i2,j2) = 0.0;
+      m_eqs->grid(v)(i3,j3) = 0.0;
     }
   }
 }

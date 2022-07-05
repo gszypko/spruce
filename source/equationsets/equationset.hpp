@@ -24,7 +24,7 @@ class EquationSet {
         static const inline std::vector<std::string> m_sets {"ideal_mhd","ideal_mhd_2E","ideal_mhd_2F"};
         // ** Getters
         Grid& grid(int index);
-        Grid& grid(std::string name);
+        Grid& grid(const std::string& name);
         std::vector<Grid> allGrids() const;
         std::vector<std::string> allNames() const;
         std::string nameFromIndex(int index) const;
@@ -70,7 +70,6 @@ class EquationSet {
         virtual std::vector<int> densities() = 0;
         virtual std::vector<std::vector<int>> momenta() = 0;
         virtual std::vector<int> thermal_energies() = 0;
-        virtual std::vector<std::vector<int>> fields() = 0;
 
         std::vector<Grid> computeTimeDerivatives(double visc_coeff) { return computeTimeDerivatives(m_grids,visc_coeff); }
         void applyTimeDerivatives(const std::vector<Grid> &time_derivatives, double step) { applyTimeDerivatives(m_grids,time_derivatives,step); }

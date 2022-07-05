@@ -35,7 +35,7 @@ void SGFilter::applyFilter()
   {
     #pragma omp for
     for(int varname : {IdealMHD::rho, IdealMHD::thermal_energy}){
-      singleVarSavitzkyGolay(m_pd.grid(varname));
+      singleVarSavitzkyGolay(m_pd.m_eqs->grid(varname));
     }
   }
   m_pd.m_eqs->propagateChanges();

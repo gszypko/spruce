@@ -16,7 +16,7 @@ void AmbientHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vecto
 }
 
 void AmbientHeating::postIterateModule(double dt){
-    m_pd.grid(IdealMHD::thermal_energy) += m_pd.m_ghost_zone_mask*(dt*heating_rate);
+    m_pd.m_eqs->grid(IdealMHD::thermal_energy) += m_pd.m_ghost_zone_mask*(dt*heating_rate);
     m_pd.m_eqs->propagateChanges();
 }
 

@@ -48,7 +48,7 @@ void LocalizedHeating::preIterateModule(double dt){
 
 void LocalizedHeating::postIterateModule(double dt){
     if(m_pd.m_time < start_time || m_pd.m_time > start_time+duration) return;
-    m_pd.grid(IdealMHD::thermal_energy) += m_pd.m_ghost_zone_mask*(dt*heating_template);
+    m_pd.m_eqs->grid(IdealMHD::thermal_energy) += m_pd.m_ghost_zone_mask*(dt*heating_template);
     m_pd.m_eqs->propagateChanges();
 }
 

@@ -8,7 +8,7 @@ StateHandler::StateHandler(const std::string& eqs_name):
     m_eqs_name{eqs_name}
 {
     m_eqs = EquationSet::spawnEquationSet(m_pd, m_eqs_name);
-    for (const auto& name : PlasmaDomain::m_internal_var_names) m_gridnames.push_back(name);
+    for (const auto& name : PlasmaDomain::m_gridnames) m_gridnames.push_back(name);
     for (const auto& ind : m_eqs->state_variables()) m_gridnames.push_back(m_eqs->nameFromIndex(ind));
     m_grids.resize(m_gridnames.size(),Grid::Zero(1,1));
     m_grids_initialized.resize(m_gridnames.size(),false);
