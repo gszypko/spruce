@@ -44,9 +44,6 @@ class IdealMHD2E: public EquationSet {
         void recomputeDerivedVariables(std::vector<Grid> &grids);
         void recomputeTemperature(std::vector<Grid> &grids); //need to rethink this in the general case
         void catchUnderdensity(std::vector<Grid> &grids);
-        std::vector<Grid> computeTimeDerivativesCharacteristicBoundary(const std::vector<Grid> &grids, bool x_bound_1, bool x_bound_2, bool y_bound_1, bool y_bound_2);
-        std::vector<Grid> singleBoundaryTermsMOC(const std::vector<Grid> &grids, int boundary_index, bool boundary_lower);
-
 };
 
 #endif

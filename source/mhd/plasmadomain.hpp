@@ -81,6 +81,7 @@ private:
   friend class EquationSet;
   friend class IdealMHD;
   friend class IdealMHD2E;
+  friend class Ideal2F;
 
   //Strings corresponding to variables, settings, boundary conditions for file I/O
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)

@@ -5,6 +5,7 @@
 #include "grid.hpp"
 #include "plasmadomain.hpp"
 #include "idealmhd2E.hpp"
+#include "ideal2F.hpp"
 #include <iostream>
 #include <functional>
 #include <cmath>
