@@ -64,10 +64,9 @@ std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids
     Grid e_d_thermal_dt =  - m_pd.transportDivergence2D(grids[e_thermal],v_e)
                                     - grids[e_press]*m_pd.divergence2D(v_e);
     // induction equations
-    std::vector<Grid> induction_rhs_b0 = m_pd.curlZ(Grid::CrossProduct2D({m_v_x,m_v_y},{m_be_x,m_be_y}));
-    std::vector<Grid> induction_rhs_db = m_pd.curlZ(Grid::CrossProduct2D({m_v_x,m_v_y},{m_bi_x,m_bi_y}));
-    Grid d_bi_x_dt = induction_rhs_b0[0] + induction_rhs_db[0];
-    Grid d_bi_y_dt = induction_rhs_b0[1] + induction_rhs_db[1];
+    std::vector<Grid> curl_E = m_pd.curlZ(grids[E_z]);
+    Grid d_bi_x_dt = -curl_E[0];
+    Grid d_bi_y_dt = -curl_E[1];
     // return time derivatives
     return {i_d_rho_dt,e_d_rho_dt,i_d_mom_x_dt,i_d_mom_y_dt,e_d_mom_x_dt,e_d_mom_y_dt,i_d_thermal_dt,e_d_thermal_dt,d_bi_x_dt,d_bi_y_dt};
 }
@@ -167,7 +166,7 @@ void Ideal2F::recomputeDT(){
     Grid c_s = (m_pd.m_adiabatic_index*m_grids[press]/m_grids[i_rho]).sqrt();
     Grid c_s_sq = c_s.square();
     // alfen speed for ion component
-    Grid v_alfven = m_grids[b_magnitude]/(4.0*PI*m_grids[i_rho]).sqrt();
+    Grid v_alfven = m_grids[b_mag]/(4.0*PI*m_grids[i_rho]).sqrt();
     Grid v_alfven_sq = v_alfven.square();
     // magnetoacoustic modes
     Grid one = Grid::Ones(m_pd.m_xdim,m_pd.m_ydim);
