@@ -12,10 +12,10 @@ void IdealMHD2E::applyTimeDerivatives(std::vector<Grid> &grids, const std::vecto
     grids[rho] += step*m_pd.m_ghost_zone_mask*time_derivatives[0];
     grids[mom_x] += step*m_pd.m_ghost_zone_mask*time_derivatives[1];
     grids[mom_y] += step*m_pd.m_ghost_zone_mask*time_derivatives[2];
-    grids[i_thermal_energy] += step*m_pd.m_ghost_zone_mask*time_derivatives[4];
-    grids[e_thermal_energy] += step*m_pd.m_ghost_zone_mask*time_derivatives[5];
-    grids[bi_x] += step*m_pd.m_ghost_zone_mask*time_derivatives[6];
-    grids[bi_y] += step*m_pd.m_ghost_zone_mask*time_derivatives[7];
+    grids[i_thermal_energy] += step*m_pd.m_ghost_zone_mask*time_derivatives[3];
+    grids[e_thermal_energy] += step*m_pd.m_ghost_zone_mask*time_derivatives[4];
+    grids[bi_x] += step*m_pd.m_ghost_zone_mask*time_derivatives[5];
+    grids[bi_y] += step*m_pd.m_ghost_zone_mask*time_derivatives[6];
     propagateChanges(grids);
 }
 

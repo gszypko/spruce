@@ -123,8 +123,8 @@ for i = 1:length(s.t)
         s.data(i).Ti = data.grids.vars(i).temp(indy,indx);
         s.data(i).Te = data.grids.vars(i).temp(indy,indx);
     elseif strcmp(data.config.eq_set,'ideal_mhd_2E')
-        s.data(i).Ti = data.grids.vars(i).temp_i(indy,indx);
-        s.data(i).Te = data.grids.vars(i).temp_e(indy,indx);
+        s.data(i).Ti = data.grids.vars(i).i_temp(indy,indx);
+        s.data(i).Te = data.grids.vars(i).e_temp(indy,indx);
     else
         error('Error: equation set is not valid.')
     end

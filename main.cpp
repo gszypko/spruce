@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
             fs::directory_entry grid_path_dir(grid_path);
             assert(grid_path_dir.exists() && grid_path_dir.is_regular_file() && "Given state file must exist and be a file");
             if(time_duration_str.empty()){
-                std::cout << "Running in Input Mode from the state file " << grid_path.string() << " for duration specified in file...\n";
+                std::cout << "Running in Input Mode from the state file " << grid_path.string() << " for duration specified in .config file." << std::endl;
             }
             else {
                 std::cout << "Running in Input Mode from the state file " << grid_path.string() << " for " << time_duration << " s...\n";
