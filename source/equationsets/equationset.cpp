@@ -1,6 +1,7 @@
 #include "equationset.hpp"
 #include "idealmhd.hpp"
 #include "idealmhd2E.hpp"
+#include "ideal2F.hpp"
 #include <iostream>
 #include <algorithm>
 #include <cassert>
@@ -19,6 +20,7 @@ std::unique_ptr<EquationSet> EquationSet::spawnEquationSet(PlasmaDomain &pd, std
     std::unique_ptr<EquationSet> ptr;
     if (name == "ideal_mhd") ptr = std::unique_ptr<EquationSet>(new IdealMHD(pd));
     else if (name == "ideal_mhd_2E") ptr = std::unique_ptr<EquationSet>(new IdealMHD2E(pd));
+    else if (name == "ideal_mhd_2F") ptr = std::unique_ptr<EquationSet>(new Ideal2F(pd));
     else{
         std::cerr << "EquationSet name " << name << " not recognized" << std::endl;
         assert(false);
@@ -29,6 +31,11 @@ std::unique_ptr<EquationSet> EquationSet::spawnEquationSet(PlasmaDomain &pd, std
 Grid& EquationSet::grid(int index) {
     assert(index >= 0 && index < num_variables() && "Grid index must be within range of m_grids");
     return m_grids[index];
+}
+
+Grid& EquationSet::grid(const std::string& name) {
+    int index = indexFromName(name);
+    return grid(index);
 }
 
 bool EquationSet::allGridsInitialized() {
@@ -43,11 +50,6 @@ bool EquationSet::allStateGridsInitialized() {
         if(grid(i).size() == 1) return false;
     }
     return true;
-}
-
-Grid& EquationSet::grid(std::string name) {
-    int index = indexFromName(name);
-    return grid(index);
 }
 
 std::vector<Grid> EquationSet::allGrids() const {
@@ -67,8 +69,7 @@ int EquationSet::num_variables() {
 }
 
 int EquationSet::num_species() {
-    assert(densities().size() == momenta().size() && momenta().size() == thermal_energies().size() \
-            && thermal_energies().size() == fields().size() && \
+    assert(densities().size() == momenta().size() && momenta().size() == thermal_energies().size() && \
             "Each species must have an entry each in densities, momenta, thermal_energies, and fields");
     return densities().size();
 }

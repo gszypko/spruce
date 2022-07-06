@@ -68,10 +68,10 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
       }
     }
     assert(!std::isdigit(in_file.peek()) && !(in_file.peek()=='-') && "Encountered more rows in a .state file grid than expected");
-    auto it = std::find(m_internal_var_names.begin(),m_internal_var_names.end(),var_name);
-    if(it != m_internal_var_names.end()){
-      auto index = std::distance(m_internal_var_names.begin(),it);
-      m_internal_grids[index] = curr_grid;
+    auto it = std::find(m_gridnames.begin(),m_gridnames.end(),var_name);
+    if(it != m_gridnames.end()){
+      auto index = std::distance(m_gridnames.begin(),it);
+      m_grids[index] = curr_grid;
     }
     else m_eqs->grid(var_name) = curr_grid;
   }
@@ -117,7 +117,7 @@ void PlasmaDomain::outputPreamble()
   m_out_file << "xdim,ydim" << std::endl;
   m_out_file << m_xdim << "," << m_ydim << std::endl;
   for(int v : {pos_x,pos_y,be_x,be_y}){
-    writeGridToOutput(m_internal_grids[v],m_internal_var_names[v]);  
+    writeGridToOutput(m_grids[v],m_gridnames[v]);  
   }
 }
 
@@ -164,9 +164,9 @@ void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
   state_file << "adiabatic_index\n";
   state_file << m_adiabatic_index << std::endl;
   state_file << "t=" << m_time << std::endl;
-  for(int i=0; i<m_internal_var_names.size(); i++){
-    state_file << m_internal_var_names[i] << std::endl;
-    state_file << m_internal_grids[i].format(',','\n',precision);
+  for(int i=0; i<m_gridnames.size(); i++){
+    state_file << m_gridnames[i] << std::endl;
+    state_file << m_grids[i].format(',','\n',precision);
   }
   for(int i : m_eqs->state_variables()){
     state_file << m_eqs->nameFromIndex(i) << std::endl;

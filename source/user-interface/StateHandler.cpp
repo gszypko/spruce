@@ -8,7 +8,7 @@ StateHandler::StateHandler(const std::string& eqs_name):
     m_eqs_name{eqs_name}
 {
     m_eqs = EquationSet::spawnEquationSet(m_pd, m_eqs_name);
-    for (const auto& name : PlasmaDomain::m_internal_var_names) m_gridnames.push_back(name);
+    for (const auto& name : PlasmaDomain::m_gridnames) m_gridnames.push_back(name);
     for (const auto& ind : m_eqs->state_variables()) m_gridnames.push_back(m_eqs->nameFromIndex(ind));
     m_grids.resize(m_gridnames.size(),Grid::Zero(1,1));
     m_grids_initialized.resize(m_gridnames.size(),false);
@@ -136,6 +136,7 @@ void StateHandler::setup(const std::unique_ptr<Settings>& pms)
     //*** initialize grids for equation set
     if (m_eqs_name == "ideal_mhd") setup_idealmhd(pms);
     else if (m_eqs_name == "ideal_mhd_2E") setup_idealmhd2e(pms);
+    else if (m_eqs_name == "ideal_mhd_2F") setup_ideal2F(pms);
     else assert(false && "Equation set not recognized.");
 }
 
@@ -168,8 +169,28 @@ void StateHandler::setup_idealmhd2e(const std::unique_ptr<Settings>& pms)
         setgrid("rho",Grid::Exp2D(getgrid("pos_x"),getgrid("pos_y"),rho_max,rho_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0));
     else assert(false && "Density distribution options are: <gaussian> and <exponential>.");
     Grid zeros = Grid::Zero(getvar("xdim"),getvar("ydim"));
-    setgrid("temp_e",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Te")));
-    setgrid("temp_i",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Ti")));
+    setgrid("e_temp",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Te")));
+    setgrid("i_temp",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Ti")));
+    setgrid("mom_x",zeros);
+    setgrid("mom_y",zeros);
+    setgrid("bi_x",zeros);
+    setgrid("bi_y",zeros);
+    setgrid("grav_x",zeros);
+    setgrid("grav_y",zeros);
+}
+
+void StateHandler::setup_ideal2F(const std::unique_ptr<Settings>& pms)
+{
+    double rho_max { pms->getval("n")*getvar("ion_mass") };
+    double rho_min { pms->getval("n_min")*getvar("ion_mass") };
+    if (pms->getopt("n_dist") == "gaussian") 
+        setgrid("rho",Grid::Gaussian2D(getgrid("pos_x"),getgrid("pos_y"),rho_max,rho_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0));
+    else if (pms->getopt("n_dist")=="exponential") 
+        setgrid("rho",Grid::Exp2D(getgrid("pos_x"),getgrid("pos_y"),rho_max,rho_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0));
+    else assert(false && "Density distribution options are: <gaussian> and <exponential>.");
+    Grid zeros = Grid::Zero(getvar("xdim"),getvar("ydim"));
+    setgrid("i_temp",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Ti")));
+    setgrid("e_temp",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Te")));
     setgrid("mom_x",zeros);
     setgrid("mom_y",zeros);
     setgrid("bi_x",zeros);

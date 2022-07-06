@@ -78,7 +78,7 @@ Grid PlasmaDomain::transportDerivative1D(const Grid &quantity, const Grid &vel, 
   Grid surf_quantity = upwindSurface(quantity, vel, index, xl, yl, xu, yu);
   int xdim = quantity.rows();
   int ydim = quantity.cols();
-  Grid denom = m_internal_grids[d_x]*(double)(1-index) + m_internal_grids[d_y]*(double)(index);
+  Grid denom = m_grids[d_x]*(double)(1-index) + m_grids[d_y]*(double)(index);
   Grid div = Grid::Zero(xdim,ydim);
   #pragma omp parallel
   {
@@ -144,7 +144,7 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index, int xl, i
             i0 = (i0+xdim)%xdim;
             i2 = (i2+xdim)%xdim;
           }
-          denom = m_internal_grids[d_x](i1,j1);
+          denom = m_grids[d_x](i1,j1);
         }
         else{
           //Handle Y boundary conditions
@@ -154,7 +154,7 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index, int xl, i
             j0 = (j0+ydim)%ydim;
             j2 = (j2+ydim)%ydim;
           }
-          denom = m_internal_grids[d_y](i1,j1);
+          denom = m_grids[d_y](i1,j1);
         }
         div(i1,j1) = (boundaryInterpolate(quantity,i1,j1,i2,j2) - boundaryInterpolate(quantity,i0,j0,i1,j1)) / denom;
       }
@@ -186,7 +186,7 @@ Grid PlasmaDomain::derivative1DBackward(const Grid &quantity, bool positive_forw
           if(x_bound_1 == BoundaryCondition::Periodic && x_bound_2 == BoundaryCondition::Periodic){
             i0 = (i0+xdim)%xdim;
           }
-          denom = 0.5*(m_internal_grids[d_x](i1,j1) + m_internal_grids[d_x](i0,j0));
+          denom = 0.5*(m_grids[d_x](i1,j1) + m_grids[d_x](i0,j0));
         }
         else{
           //Handle Y boundary conditions
@@ -195,7 +195,7 @@ Grid PlasmaDomain::derivative1DBackward(const Grid &quantity, bool positive_forw
           if(y_bound_1 == BoundaryCondition::Periodic && y_bound_2 == BoundaryCondition::Periodic){
             j0 = (j0+ydim)%ydim;
           }
-          denom = 0.5*(m_internal_grids[d_y](i1,j1) + m_internal_grids[d_y](i0,j0));
+          denom = 0.5*(m_grids[d_y](i1,j1) + m_grids[d_y](i0,j0));
         }
         div(i1,j1) = (quantity(std::max(i1,i0),std::max(j1,j0)) - quantity(std::min(i1,i0),std::min(j1,j0))) / denom;
       }
@@ -222,7 +222,7 @@ Grid PlasmaDomain::secondDerivative1D(const Grid &quantity, const int index, int
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
-  Grid denom = (0.5*m_internal_grids[d_x]*(double)(1-index) + 0.5*m_internal_grids[d_y]*(double)(index)).square();
+  Grid denom = (0.5*m_grids[d_x]*(double)(1-index) + 0.5*m_grids[d_y]*(double)(index)).square();
   #pragma omp parallel
   {
     #pragma omp for collapse(2)
@@ -281,9 +281,9 @@ double PlasmaDomain::boundaryInterpolate(const Grid &quantity, int i1, int j1, i
   double a = quantity(i1,j1), b = quantity(i2,j2);
   double dist_a, dist_b;
   if(i1 == i2){
-    dist_a = 0.5*m_internal_grids[d_y](i1,j1); dist_b = 0.5*m_internal_grids[d_y](i2,j2);
+    dist_a = 0.5*m_grids[d_y](i1,j1); dist_b = 0.5*m_grids[d_y](i2,j2);
   } else { //j1 == j2
-    dist_a = 0.5*m_internal_grids[d_x](i1,j1); dist_b = 0.5*m_internal_grids[d_x](i2,j2);
+    dist_a = 0.5*m_grids[d_x](i1,j1); dist_b = 0.5*m_grids[d_x](i2,j2);
   }
   return (a*dist_b + b*dist_a)/(dist_b + dist_a);
 }
@@ -294,9 +294,9 @@ double PlasmaDomain::boundaryExtrapolate(const Grid &quantity, int i1, int j1, i
   double a = quantity(i1,j1), b = quantity(i2,j2);
   double dist_a, dist_b;
   if(i1 == i2){
-    dist_a = 0.5*m_internal_grids[d_y](i1,j1); dist_b = 0.5*m_internal_grids[d_y](i2,j2);
+    dist_a = 0.5*m_grids[d_y](i1,j1); dist_b = 0.5*m_grids[d_y](i2,j2);
   } else { //j1 == j2
-    dist_a = 0.5*m_internal_grids[d_x](i1,j1); dist_b = 0.5*m_internal_grids[d_x](i2,j2);
+    dist_a = 0.5*m_grids[d_x](i1,j1); dist_b = 0.5*m_grids[d_x](i2,j2);
   }
   return a + (b-a)*(dist_a + 2.0*dist_b)/(dist_a + dist_b);
 }

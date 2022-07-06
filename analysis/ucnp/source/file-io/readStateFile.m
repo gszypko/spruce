@@ -19,7 +19,7 @@ out.index = str2double(C{6});
 if strcmp(eq_set,'ideal_mhd')
     q = {'d_x','d_y','pos_x','pos_y','rho','temp','mom_x','mom_y','be_x','be_y'};
 elseif strcmp(eq_set,'ideal_mhd_2E')
-    q = {'d_x','d_y','pos_x','pos_y','rho','temp_i','temp_e','mom_x','mom_y','be_x','be_y'};
+    q = {'d_x','d_y','pos_x','pos_y','rho','i_temp','e_temp','mom_x','mom_y','be_x','be_y'};
 else
     error('Error: equation set is not valid.')
 end

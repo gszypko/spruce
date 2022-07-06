@@ -31,6 +31,7 @@ public:
     void setup(const std::unique_ptr<Settings>& pms);
     void setup_idealmhd(const std::unique_ptr<Settings>& pms);
     void setup_idealmhd2e(const std::unique_ptr<Settings>& pms);
+    void setup_ideal2F(const std::unique_ptr<Settings>& pms);
 private:
     // *** Members - Equation Set
     PlasmaDomain m_pd{};

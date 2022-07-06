@@ -29,10 +29,10 @@ void EICThermalization::setupModule()
 
 void EICThermalization::postIterateModule(double dt)
 {
-    const Grid& n = m_pd.grid("n");
-    const Grid& Te = m_pd.grid("temp_e");
-    Grid& eps_e = m_pd.grid("thermal_energy_e");
-    Grid& eps_i = m_pd.grid("thermal_energy_i");
+    const Grid& n = m_pd.m_eqs->grid("n");
+    const Grid& Te = m_pd.m_eqs->grid("e_temp");
+    Grid& eps_e = m_pd.m_eqs->grid("e_thermal_energy");
+    Grid& eps_i = m_pd.m_eqs->grid("i_thermal_energy");
 
     m_vars[a] = ((3./4./PI)/n).pow(1./3.);
     m_vars[w_pe] = ((4.*PI*E*E/M_ELECTRON)*n).sqrt();

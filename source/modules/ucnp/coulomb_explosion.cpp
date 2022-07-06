@@ -47,12 +47,12 @@ void CoulombExplosion::postIterateModule(double dt)
 {
     if (m_pd.m_time < 3*m_timescale){
     // references to 2D grids
-    const Grid& x {m_pd.m_internal_grids[PlasmaDomain::pos_x]};
-    const Grid& y {m_pd.m_internal_grids[PlasmaDomain::pos_y]};
-    const Grid& n {m_pd.grid("n")};
-    const Grid& press {m_pd.grid("press")};
-    Grid& mom_x {m_pd.grid("mom_x")};
-    Grid& mom_y {m_pd.grid("mom_y")};
+    const Grid& x {m_pd.m_grids[PlasmaDomain::pos_x]};
+    const Grid& y {m_pd.m_grids[PlasmaDomain::pos_y]};
+    const Grid& n {m_pd.m_eqs->grid("n")};
+    const Grid& press {m_pd.m_eqs->grid("press")};
+    Grid& mom_x {m_pd.m_eqs->grid("mom_x")};
+    Grid& mom_y {m_pd.m_eqs->grid("mom_y")};
     // compute distance from plasma center
     Grid r_sq = x.square()+y.square();
     Grid r = r_sq.sqrt();

@@ -3,14 +3,15 @@
 #include <iostream>
 #include "utils.hpp"
 #include "settings.hpp"
-#include "ucnp.hpp"
+#include "ucnp_settings.hpp"
 #include "ucnputils.hpp"
 #include "MhdInp.hpp"
+#include "ideal2F.hpp"
 
 namespace fs = std::filesystem;
 
 int main(int argc, char *argv[])
 {
-    std::unique_ptr<Settings> ptr = Settings::spawn_settings("ucnp","ucnp.settings");
+    
     return 0;
 }
