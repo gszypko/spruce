@@ -26,7 +26,7 @@ class EICThermalization : public Module {
         std::vector<std::string> config_names() const override {return {"eic_output_to_file"};};
     private:
         // *** Members
-        std::vector<std::string> m_eqset_grids {"thermal_energy_i","thermal_energy_e","n","e_temp"};
+        std::vector<std::string> m_eqset_grids {"i_thermal_energy","e_thermal_energy","n","e_temp"};
         std::vector<std::string> m_var_names {"a","w_pe","Gam_e","Lam_e","gam_ei","nu_ei","dEdt","dEdEi"};
         enum Vars {a,w_pe,Gam_e,Lam_e,gam_ei,nu_ei,dEdt,dEdEi,num_vars};
         std::vector<Grid> m_vars;
