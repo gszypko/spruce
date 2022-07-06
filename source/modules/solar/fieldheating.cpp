@@ -25,7 +25,7 @@ void FieldHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vector<
 void FieldHeating::computeHeating(){
     if(current_mode) heating = rate*C/(4.0*PI)*(m_pd.curl2D(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_eqs->grid(IdealMHD::bi_x),
                                                             m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_eqs->grid(IdealMHD::bi_y))).abs();
-    else heating = rate*(m_pd.m_eqs->grid(IdealMHD::b_magnitude)).square()/(8.0*PI);
+    else heating = rate*(m_pd.m_eqs->grid(IdealMHD::b_mag)).square()/(8.0*PI);
 }
 
 void FieldHeating::postIterateModule(double dt){

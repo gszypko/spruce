@@ -15,8 +15,8 @@ void Ideal2F::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<G
     grids[i_mom_y] += step*m_pd.m_ghost_zone_mask*time_derivatives[3];
     grids[e_mom_x] += step*m_pd.m_ghost_zone_mask*time_derivatives[4];
     grids[e_mom_y] += step*m_pd.m_ghost_zone_mask*time_derivatives[5];
-    grids[i_thermal] += step*m_pd.m_ghost_zone_mask*time_derivatives[6];
-    grids[e_thermal] += step*m_pd.m_ghost_zone_mask*time_derivatives[7];
+    grids[i_thermal_energy] += step*m_pd.m_ghost_zone_mask*time_derivatives[6];
+    grids[e_thermal_energy] += step*m_pd.m_ghost_zone_mask*time_derivatives[7];
     grids[bi_x] += step*m_pd.m_ghost_zone_mask*time_derivatives[8];
     grids[bi_y] += step*m_pd.m_ghost_zone_mask*time_derivatives[9];
     propagateChanges(grids);
@@ -24,9 +24,6 @@ void Ideal2F::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<G
 
 std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    // PlasmaDomain grid references for more concise notation
-    Grid& be_x = m_pd.m_grids[PlasmaDomain::be_x];
-    Grid& be_y = m_pd.m_grids[PlasmaDomain::be_y];
     // continuity equations
     std::vector<Grid> v_i = {grids[i_v_x],grids[i_v_y]};
     std::vector<Grid> v_e = {grids[e_v_x],grids[e_v_y]};
@@ -59,9 +56,9 @@ std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids
                         - m_pd.derivative1D(grids[e_press], 1)
                         + m_pd.m_ghost_zone_mask * (grids[e_rho]*grids[grav_y] + e_viscous_force_y + e_F_y);
     // energy equations
-    Grid i_d_thermal_dt =  - m_pd.transportDivergence2D(grids[i_thermal],v_i)
+    Grid i_d_thermal_dt =  - m_pd.transportDivergence2D(grids[i_thermal_energy],v_i)
                                     - grids[i_press]*m_pd.divergence2D(v_i);
-    Grid e_d_thermal_dt =  - m_pd.transportDivergence2D(grids[e_thermal],v_e)
+    Grid e_d_thermal_dt =  - m_pd.transportDivergence2D(grids[e_thermal_energy],v_e)
                                     - grids[e_press]*m_pd.divergence2D(v_e);
     // induction equations
     std::vector<Grid> curl_E = m_pd.curlZ(grids[E_z]);
@@ -88,11 +85,11 @@ void Ideal2F::recomputeTemperature(std::vector<Grid> &grids){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     recomputeNumberDensity(grids);
     // enforce minimum on thermal energies
-    grids[i_thermal] = grids[i_thermal].max(m_pd.thermal_energy_min);
-    grids[e_thermal] = grids[e_thermal].max(m_pd.thermal_energy_min);
+    grids[i_thermal_energy] = grids[i_thermal_energy].max(m_pd.thermal_energy_min);
+    grids[e_thermal_energy] = grids[e_thermal_energy].max(m_pd.thermal_energy_min);
     // recompute pressures
-    grids[i_press] = (m_pd.m_adiabatic_index - 1.0)*grids[i_thermal];
-    grids[e_press] = (m_pd.m_adiabatic_index - 1.0)*grids[e_thermal];
+    grids[i_press] = (m_pd.m_adiabatic_index - 1.0)*grids[i_thermal_energy];
+    grids[e_press] = (m_pd.m_adiabatic_index - 1.0)*grids[e_thermal_energy];
     grids[press] = grids[i_press] + grids[e_press];
     // recompute temperatures and enforce minimum
     grids[i_temp] = (grids[i_press]/(K_B*grids[i_n])).max(m_pd.temp_min);
@@ -105,8 +102,8 @@ void Ideal2F::recomputeThermalEnergy(std::vector<Grid> &grids){
     grids[i_press] = K_B*grids[i_n]*grids[i_temp];
     grids[e_press] = K_B*grids[e_n]*grids[e_temp];
     grids[press] = grids[i_press] + grids[e_press];
-    grids[i_thermal] = grids[i_press]/(m_pd.m_adiabatic_index - 1.0);
-    grids[e_thermal] = grids[e_press]/(m_pd.m_adiabatic_index - 1.0);
+    grids[i_thermal_energy] = grids[i_press]/(m_pd.m_adiabatic_index - 1.0);
+    grids[e_thermal_energy] = grids[e_press]/(m_pd.m_adiabatic_index - 1.0);
 }
 
 void Ideal2F::recomputeKineticEnergy(std::vector<Grid> &grids){
@@ -114,8 +111,8 @@ void Ideal2F::recomputeKineticEnergy(std::vector<Grid> &grids){
     grids[i_v_y] = grids[i_mom_y]/grids[i_rho];
     grids[e_v_x] = grids[e_mom_x]/grids[e_rho];
     grids[e_v_y] = grids[e_mom_y]/grids[e_rho];
-    grids[i_kinetic] = 0.5*grids[i_rho]*(grids[i_v_x].square()+grids[i_v_y].square());
-    grids[e_kinetic] = 0.5*grids[e_rho]*(grids[e_v_x].square()+grids[e_v_y].square());
+    grids[i_kinetic_energy] = 0.5*grids[i_rho]*(grids[i_v_x].square()+grids[i_v_y].square());
+    grids[e_kinetic_energy] = 0.5*grids[e_rho]*(grids[e_v_x].square()+grids[e_v_y].square());
 }
 
 void Ideal2F::recomputeNumberDensity(std::vector<Grid> &grids){

@@ -30,7 +30,7 @@ void EICThermalization::setupModule()
 void EICThermalization::postIterateModule(double dt)
 {
     const Grid& n = m_pd.m_eqs->grid("n");
-    const Grid& Te = m_pd.m_eqs->grid("temp_e");
+    const Grid& Te = m_pd.m_eqs->grid("e_temp");
     Grid& eps_e = m_pd.m_eqs->grid("thermal_energy_e");
     Grid& eps_i = m_pd.m_eqs->grid("thermal_energy_i");
 

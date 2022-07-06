@@ -169,8 +169,8 @@ void StateHandler::setup_idealmhd2e(const std::unique_ptr<Settings>& pms)
         setgrid("rho",Grid::Exp2D(getgrid("pos_x"),getgrid("pos_y"),rho_max,rho_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0));
     else assert(false && "Density distribution options are: <gaussian> and <exponential>.");
     Grid zeros = Grid::Zero(getvar("xdim"),getvar("ydim"));
-    setgrid("temp_e",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Te")));
-    setgrid("temp_i",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Ti")));
+    setgrid("e_temp",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Te")));
+    setgrid("i_temp",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Ti")));
     setgrid("mom_x",zeros);
     setgrid("mom_y",zeros);
     setgrid("bi_x",zeros);
@@ -189,8 +189,8 @@ void StateHandler::setup_ideal2F(const std::unique_ptr<Settings>& pms)
         setgrid("rho",Grid::Exp2D(getgrid("pos_x"),getgrid("pos_y"),rho_max,rho_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0));
     else assert(false && "Density distribution options are: <gaussian> and <exponential>.");
     Grid zeros = Grid::Zero(getvar("xdim"),getvar("ydim"));
-    setgrid("temp_e",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Te")));
-    setgrid("temp_i",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Ti")));
+    setgrid("i_temp",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Ti")));
+    setgrid("e_temp",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Te")));
     setgrid("mom_x",zeros);
     setgrid("mom_y",zeros);
     setgrid("bi_x",zeros);
