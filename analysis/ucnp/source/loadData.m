@@ -17,7 +17,7 @@ if max(strcmp(fields,'rho'))
 end
 
 data.Te = data.settings.Te;
-if strcmp(data.config.eq_set,'ideal_mhd')
+if strcmp(data.config.eq_set,'ideal_mhd') || strcmp(data.config.eq_set,'ideal_mhd_cons')
     data.Ti = data.settings.Te;
 elseif strcmp(data.config.eq_set,'ideal_mhd_2E')
     data.Ti = data.settings.Ti;

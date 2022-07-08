@@ -80,6 +80,7 @@ private:
   //Friend class declarations (for EquationSets)
   friend class EquationSet;
   friend class IdealMHD;
+  friend class IdealMHDCons;
   friend class IdealMHD2E;
   friend class Ideal2F;
 

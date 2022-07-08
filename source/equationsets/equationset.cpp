@@ -1,5 +1,6 @@
 #include "equationset.hpp"
 #include "idealmhd.hpp"
+#include "idealmhdcons.hpp"
 #include "idealmhd2E.hpp"
 #include "ideal2F.hpp"
 #include <iostream>
@@ -19,6 +20,7 @@ EquationSet::EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names):
 std::unique_ptr<EquationSet> EquationSet::spawnEquationSet(PlasmaDomain &pd, std::string name){
     std::unique_ptr<EquationSet> ptr;
     if (name == "ideal_mhd") ptr = std::unique_ptr<EquationSet>(new IdealMHD(pd));
+    else if (name == "ideal_mhd_cons") ptr = std::unique_ptr<EquationSet>(new IdealMHDCons(pd));
     else if (name == "ideal_mhd_2E") ptr = std::unique_ptr<EquationSet>(new IdealMHD2E(pd));
     else if (name == "ideal_mhd_2F") ptr = std::unique_ptr<EquationSet>(new Ideal2F(pd));
     else{

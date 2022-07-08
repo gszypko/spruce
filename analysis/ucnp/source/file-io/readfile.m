@@ -11,5 +11,6 @@ while ~feof(fid)
     if length(C) == line_num, C{length(C)*2} = []; end
 end
 C(line_num+1:end) = [];
+fclose(fid);
 
 end

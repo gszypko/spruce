@@ -135,6 +135,7 @@ void StateHandler::setup(const std::unique_ptr<Settings>& pms)
     setgrid("be_y",B[1]);
     //*** initialize grids for equation set
     if (m_eqs_name == "ideal_mhd") setup_idealmhd(pms);
+    else if (m_eqs_name == "ideal_mhd_cons") setup_idealmhdcons(pms);
     else if (m_eqs_name == "ideal_mhd_2E") setup_idealmhd2e(pms);
     else if (m_eqs_name == "ideal_mhd_2F") setup_ideal2F(pms);
     else assert(false && "Equation set not recognized.");
@@ -157,6 +158,11 @@ void StateHandler::setup_idealmhd(const std::unique_ptr<Settings>& pms)
     setgrid("bi_y",zeros);
     setgrid("grav_x",zeros);
     setgrid("grav_y",zeros);
+}
+
+void StateHandler::setup_idealmhdcons(const std::unique_ptr<Settings>& pms)
+{
+    setup_idealmhd(pms);
 }
 
 void StateHandler::setup_idealmhd2e(const std::unique_ptr<Settings>& pms)

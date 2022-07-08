@@ -119,7 +119,7 @@ for i = 1:length(s.t)
     s.data(i).n = fit(i).amp;
     [~,indx] = min(abs(data.grids.x_vec));
     [~,indy] = min(abs(data.grids.y_vec));
-    if strcmp(data.config.eq_set,'ideal_mhd')
+    if strcmp(data.config.eq_set,'ideal_mhd') || strcmp(data.config.eq_set,'ideal_mhd_cons')
         s.data(i).Ti = data.grids.vars(i).temp(indy,indx);
         s.data(i).Te = data.grids.vars(i).temp(indy,indx);
     elseif strcmp(data.config.eq_set,'ideal_mhd_2E')

@@ -10,7 +10,7 @@ fields = {'n_max','Ti','Te','folder'};
 s = spreadsheet2struct(inp,fields);
 
 % user controls
-plotGridTimeEvol = false;
+plotGridTimeEvol = true;
 doGaussianAnalysis = true;
 removeGhostCells = true;
 numGhostCells = 2;

@@ -37,7 +37,7 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
     // magnetic forces
     Grid curl_db = m_pd.curl2D(grids[bi_x],grids[bi_y])/(4.0*PI);
     std::vector<Grid> external_mag_force = Grid::CrossProductZ2D(curl_db,{be_x,be_y});
-    std::vector<Grid> internal_mag_force = Grid::CrossProductZ2D(curl_db,{grids[bi_x],grids[bi_y]}); //second order terms
+    std::vector<Grid> internal_mag_force = Grid::CrossProductZ2D(curl_db,{grids[bi_x],grids[bi_y]});
     // momentum equations   
     Grid d_mom_x_dt =   - m_pd.transportDivergence2D(grids[mom_x], v)
                         - m_pd.derivative1D(grids[press], 0)

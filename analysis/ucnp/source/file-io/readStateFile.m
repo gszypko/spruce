@@ -16,7 +16,7 @@ out.Nx = str2double(temp{1}) - 2*Ng;
 out.Ny = str2double(temp{2}) - 2*Ng;
 out.mI = str2double(C{4});
 out.index = str2double(C{6});
-if strcmp(eq_set,'ideal_mhd')
+if strcmp(eq_set,'ideal_mhd') || strcmp(eq_set,'ideal_mhd_cons')
     q = {'d_x','d_y','pos_x','pos_y','rho','temp','mom_x','mom_y','be_x','be_y'};
 elseif strcmp(eq_set,'ideal_mhd_2E')
     q = {'d_x','d_y','pos_x','pos_y','rho','i_temp','e_temp','mom_x','mom_y','be_x','be_y'};

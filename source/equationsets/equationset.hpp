@@ -21,7 +21,7 @@ class EquationSet {
         EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names);
         virtual ~EquationSet() {}
         static std::unique_ptr<EquationSet> spawnEquationSet(PlasmaDomain &pd, std::string name);
-        static const inline std::vector<std::string> m_sets {"ideal_mhd","ideal_mhd_2E","ideal_mhd_2F"};
+        static const inline std::vector<std::string> m_sets {"ideal_mhd","ideal_mhd_cons","ideal_mhd_2E","ideal_mhd_2F"};
         // ** Getters
         Grid& grid(int index);
         Grid& grid(const std::string& name);
