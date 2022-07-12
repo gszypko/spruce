@@ -62,16 +62,17 @@ void CoulombExplosion::postIterateModule(double dt)
     // compute the charge density
     m_vars[dP_x] = m_pd.derivative1D(press, 0);
     m_vars[dP_y] = m_pd.derivative1D(press, 1);
-    Grid rho_c = compute_charge_density(r_bin,n_bin);
-    Grid Q_vec = compute_total_charge(r_bin,rho_c);
+    Grid rho_c_vec = compute_charge_density(r_bin,n_bin);
+    Grid Q_vec = compute_total_charge(r_bin,rho_c_vec);
     // compute electric field
     Grid Q = Grid::Interp1D(r_bin,Q_vec,r);
+    Grid rho_c = Grid::Interp1D(r_bin,rho_c_vec,r);
     Grid r_cubed = r_sq*r;
     Grid Ex = x*Q/r_cubed;
     Grid Ey = y*Q/r_cubed;
     // compute force profile
-    m_vars[F_x] = E*n*Ex;
-    m_vars[F_y] = E*n*Ey;
+    m_vars[F_x] = rho_c*Ex;
+    m_vars[F_y] = rho_c*Ey;
     // add forces
     mom_x += m_vars[F_x]*dt;
     mom_y += m_vars[F_y]*dt;

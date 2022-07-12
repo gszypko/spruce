@@ -3,7 +3,7 @@ clc, clearvars -except inp, close all, f = filesep; setpath;
 
 if ~exist('inp','var')
     %% Generate Input Cell
-    inp = {'06-Jul-2022'	'phase'	'fields'	'Ti'	'Te'	'n_dist'	'n_max'	'sigx'	'sigy'	't_max'	'set'	'folder'	'comment'};
+    inp = {'12-Jul-2022'	'phase'	'fields'	'Ti'	'Te'	'n_dist'	'n_max'	'sigx'	'sigy'	'x_lim'	'y_lim'	'tmax'	'timescale'	'lengthscale'	'strength'	'set'	'folder'	'comment'};
     openvar('inp')
 end
 fields = {'n_max','Ti','Te','folder'};

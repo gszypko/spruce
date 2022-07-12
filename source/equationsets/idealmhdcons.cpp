@@ -41,10 +41,10 @@ std::vector<Grid> IdealMHDCons::computeTimeDerivatives(const std::vector<Grid> &
                         + m_pd.m_ghost_zone_mask * (grids[rho]*grids[grav_y] + viscous_force_y - m_pd.divergence2D({Txy,Tyy}));
     // energy equations
     Grid v_dot_B = Grid::DotProduct2D(v,{grids[b_x],grids[b_y]});
-    Grid Ux = grids[press_tot]*grids[v_x]-v_dot_B*grids[b_x]/(4.*PI);
-    Grid Uy = grids[press_tot]*grids[v_y]-v_dot_B*grids[b_y]/(4.*PI);
+    Grid Ux = v_dot_B*grids[b_x]/(4.*PI)-grids[press_tot]*grids[v_x];
+    Grid Uy = v_dot_B*grids[b_y]/(4.*PI)-grids[press_tot]*grids[v_y];
     Grid d_energy_dt =  - m_pd.transportDivergence2D(grids[energy],v)
-                        - m_pd.divergence2D({Ux,Uy});
+                        + m_pd.divergence2D({Ux,Uy});
     // induction equations
     Grid Yxx = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     Grid Yyy = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);

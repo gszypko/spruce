@@ -2,14 +2,14 @@ function [] = plotGridEvol(data)
 % os (struct): contains grid info from 'os.grids.out' file
 
 % for each time point, plot 2D grids from MHD simulation
-gridnames = {'n','temp','v_x','v_y'};
-gridstr = {'n','T_e','v_x','v_y'};
+gridnames = {'n','temp','v_x','v_y','dP_x','dP_y','F_x','F_y'};
+gridstr = {'n','T_e','v_x','v_y','dP_x','dP_y','F_x','F_y'};
 
 % generate figure
 f = filesep;
 filepath = [data.folder f 'grid-evol'];
 row = 2; 
-col = 3; 
+col = 4; 
 num = length(gridnames);
 [fig,ax,an] = open_subplot(row,col,num,'Visible','off');
 fig.Position = [73.400000000000000,205,1.264400000000000e+03,4.692000000000001e+02];

@@ -1,10 +1,13 @@
-n0 = 1e9;
-Ti0 = 1;
-Te0 = 20;
-sig0 = .1;
-tau = getTauExp(sig0,Te0+Ti0);
-t = linspace(0,2*tau,101);
-[t,sig,gam,Ti,Te,n0] = kinetic_model(t,sig0,Ti0,Te0,n0);
-
-figure
-plot(t./tau,Ti)
+clearvars
+datadir = 'C:\Users\grant\Documents\GitHub\mhd\output';
+f = filesep;
+folders = dir(datadir);
+folders(1:2) = [];
+for i = 1:length(folders)
+    tok_before = extractBefore(folders(i).name,'_');
+    tok_after = extractAfter(folders(i).name,'_');
+    num = str2double(tok_after);
+    num = num + 27;
+    new_name = [tok_before '_' num2str(num)];
+    movefile([folders(i).folder f folders(i).name],[folders(i).folder f new_name]);
+end
