@@ -165,11 +165,6 @@ void StateHandler::setup_idealmhdcons(const std::unique_ptr<Settings>& pms)
     setup_idealmhd(pms);
 }
 
-void StateHandler::setup_quasimhd(const std::unique_ptr<Settings>& pms)
-{
-    setup_idealmhd(pms);
-}
-
 void StateHandler::setup_idealmhd2e(const std::unique_ptr<Settings>& pms)
 {
     double rho_max { pms->getval("n")*getvar("ion_mass") };
