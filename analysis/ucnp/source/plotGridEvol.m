@@ -2,8 +2,11 @@ function [] = plotGridEvol(data)
 % os (struct): contains grid info from 'os.grids.out' file
 
 % for each time point, plot 2D grids from MHD simulation
-gridnames = {'n','temp','v_x','v_y','dP_x','dP_y','F_x','F_y'};
-gridstr = {'n','T_e','v_x','v_y','dP_x','dP_y','F_x','F_y'};
+gridnames = {'i_n','e_n','dn','divEcond','i_v_x','e_v_x','j_x','E_x'};
+gridstr = {'n_i','n_e','n_i-n_e','divEcond','v_i_x','v_e_x','j_x','E_x'};
+
+% define variable types
+densities = {'i_n','e_n','n'};
 
 % generate figure
 f = filesep;
@@ -39,6 +42,9 @@ for k = 1:length([data.grids.vars.time])
             if i == size(ax,1), xlabel('x (cm)'), end
             if j == 1, ylabel('y (cm)'), end
             title(gridstr{iter},'FontWeight','normal')
+            if max(strcmp(gridnames{iter},densities))
+                cax.CLim(1) = 0;
+            end
         end
     end
 

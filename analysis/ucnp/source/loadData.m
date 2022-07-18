@@ -17,9 +17,9 @@ if max(strcmp(fields,'rho'))
 end
 
 data.Te = data.settings.Te;
-if strcmp(data.config.eq_set,'ideal_mhd') || strcmp(data.config.eq_set,'ideal_mhd_cons')
+if max(strcmp({'ideal_mhd','ideal_mhd_cons'},data.config.eq_set))
     data.Ti = data.settings.Te;
-elseif strcmp(data.config.eq_set,'ideal_mhd_2E')
+elseif max(strcmp({'ideal_2F','ideal_mhd_2E'},data.config.eq_set))
     data.Ti = data.settings.Ti;
 else
     error('Error: equation set is not valid.')

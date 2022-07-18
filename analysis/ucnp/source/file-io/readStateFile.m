@@ -20,6 +20,8 @@ if strcmp(eq_set,'ideal_mhd') || strcmp(eq_set,'ideal_mhd_cons')
     q = {'d_x','d_y','pos_x','pos_y','rho','temp','mom_x','mom_y','be_x','be_y'};
 elseif strcmp(eq_set,'ideal_mhd_2E')
     q = {'d_x','d_y','pos_x','pos_y','rho','i_temp','e_temp','mom_x','mom_y','be_x','be_y'};
+elseif strcmp(eq_set,'ideal_2F')
+    q = {'d_x','d_y','pos_x','pos_y','i_rho','e_rho','i_mom_x','i_mom_y','e_mom_x','e_mom_y','i_temp','e_temp','be_x','be_y'};
 else
     error('Error: equation set is not valid.')
 end

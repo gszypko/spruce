@@ -22,7 +22,8 @@ std::unique_ptr<EquationSet> EquationSet::spawnEquationSet(PlasmaDomain &pd, std
     if (name == "ideal_mhd") ptr = std::unique_ptr<EquationSet>(new IdealMHD(pd));
     else if (name == "ideal_mhd_cons") ptr = std::unique_ptr<EquationSet>(new IdealMHDCons(pd));
     else if (name == "ideal_mhd_2E") ptr = std::unique_ptr<EquationSet>(new IdealMHD2E(pd));
-    else if (name == "ideal_mhd_2F") ptr = std::unique_ptr<EquationSet>(new Ideal2F(pd));
+    else if (name == "ideal_2F") ptr = std::unique_ptr<EquationSet>(new Ideal2F(pd));
+    else if (name == "quasi_mhd") ptr = std::unique_ptr<EquationSet>(new QuasiMHD(pd));
     else{
         std::cerr << "EquationSet name " << name << " not recognized" << std::endl;
         assert(false);

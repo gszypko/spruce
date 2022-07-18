@@ -1,13 +1,11 @@
 clearvars
-datadir = 'C:\Users\grant\Documents\GitHub\mhd\output';
-f = filesep;
-folders = dir(datadir);
-folders(1:2) = [];
-for i = 1:length(folders)
-    tok_before = extractBefore(folders(i).name,'_');
-    tok_after = extractAfter(folders(i).name,'_');
-    num = str2double(tok_after);
-    num = num + 27;
-    new_name = [tok_before '_' num2str(num)];
-    movefile([folders(i).folder f folders(i).name],[folders(i).folder f new_name]);
-end
+setpath;
+c = defineConstants();
+n = 1e9;
+Te = 20;
+v_th = sqrt(c.kB*Te/c.mE);
+total_width = .6;
+cell_width = total_width/101;
+tau = cell_width/(3*v_th);
+w_pe = getPlasmaFreq(n,c.mE);
+tau_pe = 1/w_pe;
