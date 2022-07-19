@@ -28,6 +28,9 @@ fullnames = {
   'thermal_energy': "Energy Density",
   'be': "Background Magnetic Field",
   'bi': "Induced Magnetic Field",
+  'bi_x': "X Induced Magnetic Field",
+  'bi_y': "Y Induced Magnetic Field",
+  'b': "Magnetic Field",
   'v': "Velocity",
   'v_x': "X Velocity",
   'v_y': "Y Velocity",
@@ -49,6 +52,9 @@ fullunits = {
   'thermal_energy': r'erg cm$^{-3}$',
   'be': r'G',
   'bi': r'G',
+  'bi_x': r'G',
+  'bi_y': r'G',
+  'b': r'G',
   'v': r'cm s$^{-1}$',
   'v_x': r'cm s$^{-1}$',
   'v_y': r'cm s$^{-1}$',
@@ -69,9 +75,10 @@ for key in fullunits.keys():
 parser = argparse.ArgumentParser(description='View the output from mhdtoy.')
 parser.add_argument('filename', help="the name of the file output from mhdtoy")
 parser.add_argument('timestep', type=float, help="the interval (in simulation time units) between frames of output animation")
-parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', \
-  'thermal_energy', 'v_x', 'v_y', 'dt', 'dt_thermal', 'dt_rad', 'n', 'beta', 'div_be', 'div_bi', 'b_mag', 'field_heating'])
-parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['be','v','bi'])
+# parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', \
+#   'thermal_energy', 'v_x', 'v_y', 'dt', 'dt_thermal', 'dt_rad', 'n', 'beta', 'div_be', 'div_bi', 'b_mag', 'field_heating'])
+parser.add_argument('contourvar', help="the simulation variable to display as a contour plot")
+parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['b','v','be','bi'])
 parser.add_argument('-V', '--vecmode', help="designates mode of display for the chosen vector quantity", choices=['quiver','stream'], default='quiver')
 parser.add_argument('--density', metavar="vec_display_density", type=int, help="set the interval between displayed vectors", default=25)
 # parser.add_argument('-d', '--diff', metavar='diff_filename', help="filename to difference with original file")
@@ -90,6 +97,9 @@ if output_var == "beta":
 if output_var == "b_mag":
   file_var_names = np.array(["bi_x","bi_y"])
 vec_var = args.vector
+file_vec_name = vec_var
+if vec_var == "b":
+  file_vec_name = "bi"
 
 line = input_file.readline()
 while line[0] == '#' or len(line) == 0:
@@ -100,10 +110,10 @@ dim = input_file.readline().split(',')
 xdim = int(dim[0])
 ydim = int(dim[1])
 
-xl_ghost = 2
-xu_ghost = 2
-yl_ghost = 2
-yu_ghost = 2
+xl_ghost = 0
+xu_ghost = 0
+yl_ghost = 0
+yu_ghost = 0
 
 xdim_view = xdim - (xl_ghost + xu_ghost)
 ydim_view = ydim - (yl_ghost + yu_ghost)
@@ -148,12 +158,12 @@ while True:
 
   # var_found = False
   vars_found = np.array([ False for v in file_var_names ]) #all set to false initially
-  vec_x_found = (vec_var == None or vec_var == "be")
-  vec_y_found = (vec_var == None or vec_var == "be")
+  vec_x_found = (file_vec_name == None or file_vec_name == "be")
+  vec_y_found = (file_vec_name == None or file_vec_name == "be")
   # collect all necessary data at the current time step
   while not (np.all(vars_found) and vec_x_found and vec_y_found):
     line = input_file.readline()
-    while line and not (np.any(line.rstrip() == file_var_names) or line.rstrip() == (str(vec_var)+"_x") or line.rstrip() == (str(vec_var)+"_y")):
+    while line and not (np.any(line.rstrip() == file_var_names) or line.rstrip() == (str(file_vec_name)+"_x") or line.rstrip() == (str(file_vec_name)+"_y")):
       if line[0:2] == "t=" and not np.all(vars_found):
         sys.exit("Specified output variable(s) not found in file")
       if line[0:2] == "t=" and not (vec_x_found and vec_y_found):
@@ -170,10 +180,10 @@ while True:
       var_index = var_location[0][0]
       assert vars_found[var_index] == False
       vars_found[var_index] = True
-    if line.rstrip() == (str(vec_var)+"_x"): 
+    if line.rstrip() == (str(file_vec_name)+"_x"): 
       curr_data.append("vec_x")
       vec_x_found = True
-    if line.rstrip() == (str(vec_var)+"_y"): 
+    if line.rstrip() == (str(file_vec_name)+"_y"): 
       curr_data.append("vec_y")
       vec_y_found = True
     
@@ -206,18 +216,20 @@ elif output_var == "b_mag":
 else:
   var = file_vars[0]
 
+if vec_var == "b":
+  for i in range(len(vec_x)):
+    vec_x[i] = bx + vec_x[i]
+    vec_y[i] = by + vec_y[i]
+
 if vec_var != None and vec_var != "be" and len(var) > len(vec_x):
   print("pop!")
   var.pop()
 
-if output_var == "rho":
+if output_var in ["rho","b_mag"]:
   for i in range(len(var)):
     var[i] = np.ma.masked_where(var[i]<=1.0e-30, var[i])
 
 fig, ax = plt.subplots()
-# if (vec_var != None and vec_var != "bi" and vec_var != "be") or output_var == "temp":
-#   fig.set_figwidth(7.0/6.0*fig.get_size_inches()[0])
-
 frame = 0
 x = X[:,0]
 y = Y[0,:]
@@ -232,9 +244,9 @@ max_v = np.finfo(np.float_).min
 min_v = np.finfo(np.float_).max
 for i in range(len(var)):
   curr_max = np.nanmax(var[i][xl:xu,yl:yu])
-  max_v = np.fmax(max_v,curr_max)
+  if np.isfinite(curr_max): max_v = np.fmax(max_v,curr_max)
   curr_min = np.nanmin(var[i][xl:xu,yl:yu])
-  min_v = np.fmin(min_v,curr_min)
+  if np.isfinite(curr_min): min_v = np.fmin(min_v,curr_min)
 
 if vec_var != None:
   max_v_vec = np.finfo(np.float_).min
@@ -247,21 +259,21 @@ if vec_var != None:
     for i in range(len(var)):
       magnitude = np.sqrt(vec_x[i][xl:xu,yl:yu]**2 + vec_y[i][xl:xu,yl:yu]**2)
       curr_max = np.nanmax(magnitude,where=magnitude>0,initial=max_v_vec)
-      max_v_vec = np.fmax(max_v_vec,curr_max)
+      if np.isfinite(curr_max): max_v_vec = np.fmax(max_v_vec,curr_max)
       curr_min = np.nanmin(magnitude,where=magnitude>0,initial=min_v_vec)
-      min_v_vec = np.fmin(min_v_vec,curr_min)
+      if np.isfinite(curr_min): min_v_vec = np.fmin(min_v_vec,curr_min)
   if max_v_vec == np.finfo(np.float_).min:
     max_v_vec = 1.0
   if min_v_vec == np.finfo(np.float_).max:
     min_v_vec = 0.0
 
-if output_var in ["rad","beta","dt","dt_thermal","dt_rad","field_heating"]: #variables that can go to zero
+if output_var in ["rad","beta","dt","dt_thermal","dt_rad","field_heating","b_mag"]: #variables that can go to zero
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-8, base=10))
 elif output_var in ["div_bi","div_be"]:
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-22, base=10))
-elif output_var in ["vel_x","vel_y"]: #variables with negative and positive values
+elif output_var in ["v_x","v_y","bi_x","bi_y"]: #variables with negative and positive values
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-2, base=10))
 else:
@@ -354,7 +366,7 @@ if vec_var != None:
     print(stream_points)
     stream = ax.streamplot(x_eq,y_eq,this_vec_x.transpose(),this_vec_y.transpose(),\
       start_points=np.column_stack((stream_points,y_eq[0]*np.ones_like(stream_points))),\
-        color=(0.0,0.0,0.0),density=100,linewidth=1.0,arrowstyle='->',maxlength=1000.0)
+        color=(0.0,0.0,0.0),density=100,linewidth=1.0,arrowstyle='->',maxlength=10.0)
   else:
     assert vec_mode == "quiver"
     quiv = ax.quiver(X[x_vec_indices, y_vec_indices], Y[x_vec_indices, y_vec_indices], \
@@ -401,6 +413,7 @@ def updatefig(*args):
         stream = ax.streamplot(x_eq,y_eq,this_vec_x.transpose(),this_vec_y.transpose(),\
           start_points=np.column_stack((stream_points,y_eq[0]*np.ones_like(stream_points))),\
             color=(0.0,0.0,0.0),density=100,linewidth=1.0,arrowstyle='->',maxlength=1000.0)
+        print("frame " + str(frame) + " plotted")
     plt.tight_layout()
     return im, ax
 
