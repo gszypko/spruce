@@ -116,19 +116,6 @@ void IdealMHD::recomputeMagneticFields(std::vector<Grid> &grids){
     }
 }
 
-void IdealMHD::catchUnderdensity(std::vector<Grid> &grids){
-    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    for(int i=0; i<m_pd.m_xdim; i++){
-        for(int j=0; j<m_pd.m_ydim; j++){
-            if(grids[rho](i,j) < m_pd.rho_min){
-                // if(i >= m_pd.m_xl && i <= m_pd.m_xu && j >= m_pd.m_yl && j <= m_pd.m_yu){
-                    grids[rho](i,j) = m_pd.rho_min;
-                // }
-            }
-        }
-    }
-}
-
 void IdealMHD::recomputeDT(){
     Grid c_s = (m_pd.m_adiabatic_index*m_grids[press]/m_grids[rho]).sqrt();
     Grid c_s_sq = c_s.square();
@@ -154,9 +141,16 @@ Grid IdealMHD::getDT(){
     return m_grids[dt];
 }
 
+void IdealMHD::enforceMinimums(std::vector<Grid>& grids)
+{
+    grids[n] = (grids[rho]/m_pd.m_ion_mass).max(m_pd.density_min);
+    grids[rho] = grids[n]*m_pd.m_ion_mass;
+    grids[thermal_energy] = grids[thermal_energy].max(m_pd.thermal_energy_min);
+}
+
 void IdealMHD::propagateChanges(std::vector<Grid> &grids)
 {
-    catchUnderdensity(grids);
+    enforceMinimums(grids);
     m_pd.updateGhostZones();
     recomputeDerivedVariables(grids);
 }

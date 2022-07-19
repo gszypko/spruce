@@ -150,6 +150,15 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
     energy(i2,j2) = scale_2*energy(i3,j3);
   }
 
+  // get maximum c_s
+  double c_s{0.};
+  for(int species = 0; species < m_eqs->num_species(); species++){
+    Grid m_press = (m_adiabatic_index - 1.0)*m_eqs->grid(m_eqs->thermal_energies()[species]);
+    Grid& m_rho = m_eqs->grid(m_eqs->densities()[species]);
+    double c_s_new = std::sqrt(m_adiabatic_index*m_press(i3,j3)/m_rho(i3,j3));
+    if (c_s_new > c_s) c_s = c_s_new;
+  }
+
   for(int species = 0; species < m_eqs->num_species(); species++){
     Grid& m_mom_x = m_eqs->grid(m_eqs->momenta()[species][0]);
     Grid& m_mom_y = m_eqs->grid(m_eqs->momenta()[species][1]);
@@ -160,7 +169,6 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
 
     Grid m_press = (m_adiabatic_index - 1.0)*m_eqs->grid(m_eqs->thermal_energies()[species]);
 
-    double c_s = std::sqrt(m_adiabatic_index*m_press(i3,j3)/m_rho(i3,j3));
     double boost_vel = open_boundary_strength*c_s;
     if(i2 > i1 || j2 > j1) boost_vel *= -1.0;
     
