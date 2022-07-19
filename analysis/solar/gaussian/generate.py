@@ -8,10 +8,11 @@ import sys
 import os
 import csv
 
-if len(sys.argv) != 2:
-    print("Need to specify output directory")
+if len(sys.argv) != 3:
+    print("Need to specify output directory and filename")
     exit()
 out_directory = sys.argv[1]
+filename = sys.argv[2]
 
 if not os.path.exists(out_directory):
     os.makedirs(out_directory)
@@ -25,8 +26,14 @@ GAMMA = 5.0/3.0
 ION_MASS = 1.6726e-24 #g
 
 MAX_TEMP = 1.0e6
-MAX_RHO = 1.0e12
-MIN_RHO = 1.0e8
+MAX_RHO = 1.0e-14
+MIN_RHO = 1.0e-18
+
+B_X = 0.0
+B_Y = -1.0
+
+G = 0
+#G = -5.0e4
 
 x = np.linspace(-DOMAIN_WIDTH/2.0,DOMAIN_WIDTH/2.0,X_DIM)
 z = np.linspace(-DOMAIN_HEIGHT/2.0,DOMAIN_HEIGHT/2.0,Z_DIM)
@@ -41,7 +48,7 @@ rho = (MAX_RHO-MIN_RHO)*np.outer(gaussian_1d,gaussian_1d) + MIN_RHO
 
 zero = np.zeros_like(x_2d)
 one = np.ones_like(x_2d)
-with open(out_directory+"/gaussian.state", 'w', newline='') as f:
+with open(out_directory+"/"+filename, 'w', newline='') as f:
     writer = csv.writer(f)
     writer.writerow(["#SIMPLE IOSOTHERMAL GAUSSIAN DENSITY"])
     writer.writerow(["#TEMP",str(MAX_TEMP)])
@@ -56,7 +63,7 @@ with open(out_directory+"/gaussian.state", 'w', newline='') as f:
     writer.writerow([str(GAMMA)])
     writer.writerow(["t=0"])
     names = ["d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","be_x","be_y","bi_x","bi_y","grav_x","grav_y"]
-    vars = [dx*one,dz*one,x_2d,z_2d,rho,MAX_TEMP*one,zero,zero,1000.0*one,1000.0*one,zero,zero,zero,zero]
+    vars = [dx*one,dz*one,x_2d,z_2d,rho,MAX_TEMP*one,zero,zero,B_X*one,B_Y*one,zero,zero,zero,G*one]
     for i in range(len(names)):
         writer.writerow([names[i]])
         writer.writerows(vars[i])
