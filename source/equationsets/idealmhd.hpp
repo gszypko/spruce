@@ -48,8 +48,7 @@ class IdealMHD: public EquationSet {
         void recomputeMagneticFields(std::vector<Grid> &grids);
         void catchUnderdensity(std::vector<Grid> &grids);
         std::vector<Grid> computeTimeDerivativesCharacteristicBoundary(const std::vector<Grid> &grids, bool x_bound_1, bool x_bound_2, bool y_bound_1, bool y_bound_2);
-        std::vector<Grid> singleBoundaryTermsMOC(const std::vector<Grid> &grids, int boundary_index, bool boundary_lower);
-
+        std::vector<std::vector<Grid>> singleBoundaryTermsMOC(const std::vector<Grid> &grids, int boundary_index, bool boundary_lower);
 };
 
 #endif

@@ -200,6 +200,9 @@ private:
   Grid secondDerivative1D(const Grid &quantity, const int index) { return secondDerivative1D(quantity, index, m_xl, m_yl, m_xu, m_yu); }
   Grid secondDerivative1D(const Grid &quantity, const int index, int xl, int yl, int xu, int yu);
 
+  Grid secondDerivative1DBackward(const Grid &quantity, bool positive_forward, const int index) { return secondDerivative1DBackward(quantity,positive_forward,index, m_xl, m_yl, m_xu, m_yu); }
+  Grid secondDerivative1DBackward(const Grid &quantity, bool positive_forward, const int index, int xl, int yl, int xu, int yu);
+
   //Computes Laplacian (del squared) of "quantity"
   Grid laplacian(const Grid &quantity) { return laplacian(quantity,m_xl,m_yl,m_xu,m_yu); }
   Grid laplacian(const Grid &quantity, int xl, int yl, int xu, int yu);

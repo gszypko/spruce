@@ -21,10 +21,10 @@ void PlasmaDomain::run(double time_duration)
   while( m_time < max_time && (max_iterations < 0 || m_iter < max_iterations)){
     if(safe_state_mode && m_iter%safe_state_interval == 0) writeStateFile();
     double old_time = m_time;
+    m_iter++;
     advanceTime();
     if((iter_output_interval > 0 && m_iter%iter_output_interval == 0) || (time_output_interval > 0.0
         && (int)(m_time/time_output_interval) > (int)(old_time/time_output_interval))) outputCurrentState();
-    m_iter++;
   }
   
   if(safe_state_mode){
@@ -52,8 +52,8 @@ void PlasmaDomain::advanceTime(bool verbose)
 
   m_module_handler.postIterateModules(min_dt);
 
-  if(std_out_interval > 0 && m_iter%std_out_interval == 0) printUpdate(min_dt);
   m_time += min_dt;
+  if(std_out_interval > 0 && m_iter%std_out_interval == 0) printUpdate(min_dt);
 }
 
 void PlasmaDomain::integrateEuler(double time_step, double visc_coeff)

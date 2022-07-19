@@ -164,9 +164,6 @@ Grid PlasmaDomain::derivative1D(const Grid &quantity, const int index, int xl, i
 }
 
 Grid PlasmaDomain::derivative1DBackward(const Grid &quantity, bool positive_forward, const int index, int xl, int yl, int xu, int yu){
-  // if(index == 0) assert((!positive_forward || xl>0) && (positive_forward || xu<quantity.rows()-1) && "Must have at least one-cell border in backward direction");
-  // else if(index == 1) assert((!positive_forward || yl>0) && (positive_forward || yu<quantity.cols()-1) && "Must have at least one-cell border in direction of differentiation");
-  // else assert(false && "This function assumes two dimensions");
   int xdim = quantity.rows();
   int ydim = quantity.cols();
   Grid div = Grid::Zero(xdim,ydim);
@@ -198,6 +195,54 @@ Grid PlasmaDomain::derivative1DBackward(const Grid &quantity, bool positive_forw
           denom = 0.5*(m_grids[d_y](i1,j1) + m_grids[d_y](i0,j0));
         }
         div(i1,j1) = (quantity(std::max(i1,i0),std::max(j1,j0)) - quantity(std::min(i1,i0),std::min(j1,j0))) / denom;
+      }
+    }
+  }
+  
+  return div;
+}
+
+Grid PlasmaDomain::secondDerivative1DBackward(const Grid &quantity, bool positive_forward, const int index, int xl, int yl, int xu, int yu){
+  int xdim = quantity.rows();
+  int ydim = quantity.cols();
+  Grid div = Grid::Zero(xdim,ydim);
+  #pragma omp parallel
+  {
+    #pragma omp for collapse(2)
+    for (int i = xl; i <= xu; i++){
+      for(int j = yl; j <= yu; j++){
+        int i0, i1, i2, j0, j1, j2;
+        i2 = i; j2 = j;
+        double denom01, denom12;
+        if(index == 0){
+          //Handle X boundary conditions
+          j0 = j2; j1 = j2;
+          i1 = positive_forward ? i2-1 : i2+1;
+          i0 = positive_forward ? i1-1 : i1+1;
+          //ENFORCES PERIODIC X-BOUNDARIES
+          if(x_bound_1 == BoundaryCondition::Periodic && x_bound_2 == BoundaryCondition::Periodic){
+            i0 = (i0+xdim)%xdim;
+            i1 = (i1+xdim)%xdim;
+          }
+          denom01 = 0.5*(m_grids[d_x](i1,j1) + m_grids[d_x](i0,j0));
+          denom12 = 0.5*(m_grids[d_x](i1,j1) + m_grids[d_x](i2,j2));
+        }
+        else{
+          //Handle Y boundary conditions
+          i0 = i2; i1 = i2;
+          j1 = positive_forward ? j2-1 : j2+1;
+          j0 = positive_forward ? j1-1 : j1+1;
+          if(y_bound_1 == BoundaryCondition::Periodic && y_bound_2 == BoundaryCondition::Periodic){
+            j0 = (j0+ydim)%ydim;
+            j1 = (j1+ydim)%ydim;
+          }
+          denom01 = 0.5*(m_grids[d_y](i1,j1) + m_grids[d_y](i0,j0));
+          denom12 = 0.5*(m_grids[d_y](i1,j1) + m_grids[d_y](i2,j2));
+        }
+        // div(i1,j1) = (quantity(std::max(i1,i0),std::max(j1,j0)) - quantity(std::min(i1,i0),std::min(j1,j0))) / denom;
+        div(i2,j2) = (positive_forward ? 1.0 : -1.0)*(
+                        (quantity(std::max(i1,i2),std::max(j1,j2)) - quantity(std::min(i1,i2),std::min(j1,j2))) / denom12
+                      - (quantity(std::max(i1,i0),std::max(j1,j0)) - quantity(std::min(i1,i0),std::min(j1,j0))) / denom01) / denom12;
       }
     }
   }
