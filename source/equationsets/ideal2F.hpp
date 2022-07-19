@@ -49,8 +49,8 @@ class Ideal2F: public EquationSet {
 
     private:
         void recomputeDT();
-        void catchUnderdensity(std::vector<Grid> &grids);
         void catchNullFieldDirection(std::vector<Grid> &grids);
+        void enforceMinimums(std::vector<Grid>& grids);
         void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids);
         void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids);
 };

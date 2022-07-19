@@ -39,6 +39,7 @@ class IdealMHD: public EquationSet {
 
     private:
         void recomputeDT();
+        void enforceMinimums(std::vector<Grid> &grids);
         void computeConstantTerms(std::vector<Grid> &grids);
         void recomputeDerivedVariables(std::vector<Grid> &grids);
         void recomputeTemperature(std::vector<Grid> &grids);
@@ -46,7 +47,6 @@ class IdealMHD: public EquationSet {
         void recomputeKineticEnergy(std::vector<Grid> &grids);
         void recomputeNumberDensity(std::vector<Grid> &grids);
         void recomputeMagneticFields(std::vector<Grid> &grids);
-        void catchUnderdensity(std::vector<Grid> &grids);
         std::vector<Grid> computeTimeDerivativesCharacteristicBoundary(const std::vector<Grid> &grids, bool x_bound_1, bool x_bound_2, bool y_bound_1, bool y_bound_2);
         std::vector<Grid> singleBoundaryTermsMOC(const std::vector<Grid> &grids, int boundary_index, bool boundary_lower);
 

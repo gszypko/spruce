@@ -75,22 +75,9 @@ void IdealMHDCons::computeConstantTerms(std::vector<Grid> &grids){
 
 void IdealMHDCons::propagateChanges(std::vector<Grid> &grids)
 {
-    catchUnderdensity(grids);
+    enforceMinimums(grids);
     m_pd.updateGhostZones();
     recomputeDerivedVariables(grids);
-}
-
-void IdealMHDCons::catchUnderdensity(std::vector<Grid> &grids){
-    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    for(int i=0; i<m_pd.m_xdim; i++){
-        for(int j=0; j<m_pd.m_ydim; j++){
-            if(grids[rho](i,j) < m_pd.rho_min){
-                if(i >= m_pd.m_xl && i <= m_pd.m_xu && j >= m_pd.m_yl && j <= m_pd.m_yu){
-                    grids[rho](i,j) = m_pd.rho_min;
-                }
-            }
-        }
-    }
 }
 
 void IdealMHDCons::recomputeDerivedVariables(std::vector<Grid> &grids){
@@ -173,4 +160,11 @@ void IdealMHDCons::recomputeDT(){
     Grid vel_mag = (m_grids[v_x].square() + m_grids[v_y].square()).sqrt();
 
     m_grids[dt] = diagonals/(c_s + v_alfven + v_fast + v_slow + vel_mag);
+}
+
+void IdealMHDCons::enforceMinimums(std::vector<Grid>& grids)
+{
+    grids[n] = (grids[rho]/m_pd.m_ion_mass).max(m_pd.density_min);
+    grids[rho] = grids[n]*m_pd.m_ion_mass;
+    grids[thermal_energy] = grids[thermal_energy].max(m_pd.thermal_energy_min);
 }

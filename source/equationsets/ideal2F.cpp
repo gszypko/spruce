@@ -92,12 +92,20 @@ void Ideal2F::populateVariablesFromState(std::vector<Grid> &grids){
 void Ideal2F::propagateChanges(std::vector<Grid> &grids)
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    catchUnderdensity(grids);
-    grids[i_thermal_energy] = grids[i_thermal_energy].max(m_pd.thermal_energy_min);
-    grids[e_thermal_energy] = grids[e_thermal_energy].max(m_pd.thermal_energy_min);
+    enforceMinimums(grids);
     m_pd.updateGhostZones();
     recomputeDerivedVarsFromEvolvedVars(grids);
     recomputeDT();
+}
+
+void Ideal2F::enforceMinimums(std::vector<Grid>& grids)
+{
+    grids[i_n] = (grids[i_rho]/m_pd.m_ion_mass).max(m_pd.density_min);
+    grids[e_n] = (grids[e_rho]/M_ELECTRON).max(m_pd.density_min);
+    grids[i_rho] = grids[i_n]*m_pd.m_ion_mass;
+    grids[e_rho] = grids[e_n]*M_ELECTRON;
+    grids[i_thermal_energy] = grids[i_thermal_energy].max(m_pd.thermal_energy_min);
+    grids[e_thermal_energy] = grids[e_thermal_energy].max(m_pd.thermal_energy_min);
 }
 
 void Ideal2F::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids)
@@ -105,6 +113,7 @@ void Ideal2F::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids)
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     grids[i_n] = grids[i_rho]/m_pd.m_ion_mass;
     grids[e_n] = grids[e_rho]/M_ELECTRON;
+    
     grids[i_press] = grids[i_n]*K_B*grids[i_temp];
     grids[e_press] = grids[e_n]*K_B*grids[e_temp];
     grids[press] = grids[i_press] + grids[e_press];
@@ -144,21 +153,6 @@ void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids){
     grids[dn] = grids[i_n] - grids[e_n];
     grids[divBcond] = m_pd.divergence2D(grids[b_x],grids[b_y]);
     grids[divEcond] = m_pd.divergence2D(grids[E_x],grids[E_y]) - 4*PI*grids[rho_c];
-}
-
-void Ideal2F::catchUnderdensity(std::vector<Grid> &grids){
-    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    for (int ind : densities()){
-        for(int i=0; i<m_pd.m_xdim; i++){
-            for(int j=0; j<m_pd.m_ydim; j++){
-                if(grids[ind](i,j) < m_pd.rho_min){
-                    if(i >= m_pd.m_xl && i <= m_pd.m_xu && j >= m_pd.m_yl && j <= m_pd.m_yu){
-                        grids[ind](i,j) = m_pd.rho_min;
-                    }
-                }
-            }
-        }
-    }
 }
 
 void Ideal2F::catchNullFieldDirection(std::vector<Grid> &grids)

@@ -38,7 +38,7 @@ class IdealMHDCons: public EquationSet {
         void propagateChanges(std::vector<Grid> &grids) override;
 
     private:
-        void catchUnderdensity(std::vector<Grid> &grids);
+        void enforceMinimums(std::vector<Grid>& grids);
         void recomputeDT();
         void computeConstantTerms(std::vector<Grid> &grids);
         void recomputeDerivedVariables(std::vector<Grid> &grids);

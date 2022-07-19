@@ -46,7 +46,7 @@ class IdealMHD2E: public EquationSet {
         void recomputeKineticEnergy(std::vector<Grid> &grids);
         void recomputeNumberDensity(std::vector<Grid> &grids);
         void recomputeMagneticFields(std::vector<Grid> &grids);
-        void catchUnderdensity(std::vector<Grid> &grids);
+        void enforceMinimums(std::vector<Grid>& grids);
 };
 
 #endif

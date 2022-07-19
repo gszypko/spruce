@@ -31,14 +31,14 @@ public:
 
   enum class Config {
     x_bound_1, x_bound_2, y_bound_1, y_bound_2,
-    epsilon, epsilon_viscous, rho_min,
+    epsilon, epsilon_viscous, density_min,
     temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
     output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode, safe_state_interval,
     open_boundary_decay_base, x_origin, y_origin, time_integrator, equation_set, duration
   };
   static inline std::vector<std::string> m_config_names = {
     "x_bound_1","x_bound_2","y_bound_1","y_bound_2",
-    "epsilon","epsilon_viscous","rho_min",
+    "epsilon","epsilon_viscous","density_min",
     "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
     "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode", "safe_state_interval",
     "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "equation_set", "duration"
@@ -120,7 +120,7 @@ private:
   //Safety factors
   double epsilon; //Time step calculation
   double epsilon_viscous; //Prefactor for artificial viscosity
-  double rho_min, temp_min, thermal_energy_min; //Lower bounds for mass density and thermal energy density
+  double density_min, temp_min, thermal_energy_min; //Lower bounds for mass density and thermal energy density
   TimeIntegrator time_integrator; //indicates time integration scheme to use
   //Output settings
   int iter_output_interval;
