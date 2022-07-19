@@ -79,8 +79,10 @@ for name in ["press","b0_x","b0_y","b1_x","b1_y"]:
 
 with open(out_path+"/"+out_filename, 'w', newline='') as f:
     writer = csv.writer(f)
-    for comment in comments:
-        writer.writerows(comments)
+    writer.writerows(comments)
+    writer.writerow(["#","DENORMALIZATION FACTORS:"])
+    writer.writerow(["#","BETA","B_0","T_C","G","MU","K_B","GAMMA","ION_MASS"])
+    writer.writerow(["#",str(BETA),str(B_0),str(T_C),str(G),str(MU),str(K_B),str(GAMMA),str(ION_MASS)])
     writer.writerow(["xdim","ydim"])
     writer.writerow([str(xdim),str(ydim)])
     writer.writerow(["ion_mass"])

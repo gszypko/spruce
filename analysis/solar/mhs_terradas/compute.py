@@ -26,9 +26,9 @@ if not os.path.exists(out_directory):
 
 DOMAIN_WIDTH = 4.0
 DOMAIN_HEIGHT = 4.0
-X_DIM = 100
-Z_DIM = 100
-N_GHOST = 1
+X_DIM = 102
+Z_DIM = 102
+# N_GHOST = 1
 
 X_1 = -0.25
 X_2 = 0.25
@@ -182,8 +182,10 @@ def precompute_f(t_bins,s_bins,a_ref):
             f2[i,j] = f(a0_2,a_ref,s_arg)*dt*ds/(t**2 * s**2)
     return f1,f2
 
-x = np.linspace(-DOMAIN_WIDTH*(1.0/2.0 + N_GHOST/X_DIM),DOMAIN_WIDTH*(1.0/2.0 + N_GHOST/X_DIM),X_DIM + 2*N_GHOST)
-z = np.linspace(-N_GHOST*DOMAIN_HEIGHT/Z_DIM,DOMAIN_HEIGHT*(1.0 + N_GHOST/Z_DIM),Z_DIM + 2*N_GHOST)
+# x = np.linspace(-DOMAIN_WIDTH*(1.0/2.0 + N_GHOST/X_DIM),DOMAIN_WIDTH*(1.0/2.0 + N_GHOST/X_DIM),X_DIM + 2*N_GHOST)
+# z = np.linspace(-N_GHOST*DOMAIN_HEIGHT/Z_DIM,DOMAIN_HEIGHT*(1.0 + N_GHOST/Z_DIM),Z_DIM + 2*N_GHOST)
+x = np.linspace(-DOMAIN_WIDTH/2.0,DOMAIN_WIDTH/2.0,X_DIM)
+z = np.linspace(0.0,DOMAIN_HEIGHT,Z_DIM)
 dx = (x[-1]-x[0])/(x.shape[0]-1)
 dz = (z[-1]-z[0])/(z.shape[0]-1)
 x_2d = np.outer(x,np.ones_like(z))
@@ -207,7 +209,7 @@ else: stream_points = np.interp(np.linspace(0.05,0.95,num=17),cdf,x)
 plt.figure(3)
 plt.imshow(np.transpose(full_a0),origin='lower',extent=(x[0]-0.5*dx,x[-1]+0.5*dx,z[0]-0.5*dz,z[-1]+0.5*dz))
 plt.colorbar(label=r'$A/B_0h$')
-plt.streamplot(x,z,full_b0[0].transpose(),full_b0[1].transpose(),start_points=np.column_stack((stream_points,np.zeros_like(stream_points))),color=(0.0,0.0,0.0,0.2),density=100,linewidth=1.0,arrowstyle='->',maxlength=1000.0)
+plt.streamplot(x,z,full_b0[0].transpose(),full_b0[1].transpose(),start_points=np.column_stack((stream_points,np.zeros_like(stream_points))),color=(0.0,0.0,0.0,0.2),density=100,linewidth=1.0,arrowstyle='->',maxlength=100.0)
 plt.title("Potential Field")
 plt.xlabel(r'$x/h$')
 plt.ylabel(r'$z/h$')
@@ -273,9 +275,10 @@ with open(out_directory+"/normalized.txt", 'w', newline='') as f:
     writer.writerow(labels)
     writer.writerow(values)
 
-    writer.writerow([str(X_DIM),str(Z_DIM)])
+    writer.writerow([str(X_DIM-2),str(Z_DIM-2)])
     names = ["d_x","d_y","pos_x","pos_y","press","temp","b0_x","b0_y","b1_x","b1_y"]
     grids = [dx*one,dz*one,x_2d,z_2d,press,temp,full_b0[0],full_b0[1],full_b1[0],full_b1[1]]
     for i in range(len(names)):
         writer.writerow([names[i]])
-        writer.writerows(grids[i][N_GHOST:-N_GHOST,N_GHOST:-N_GHOST])
+        writer.writerows(grids[i][1:-1,1:-1])
+        # writer.writerows(grids[i][N_GHOST:-N_GHOST,N_GHOST:-N_GHOST])
