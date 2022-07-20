@@ -60,7 +60,8 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
       j=0;
       getCleanedLine(in_file,row);
       std::istringstream ss_row(row);
-      assert((std::isdigit(ss_row.peek()) || (ss_row.peek()=='-') || (ss_row.peek()=='.')) && "Encountered non-numerical row in .state file sooner than expected");
+      assert((std::isdigit(ss_row.peek()) || (ss_row.peek()=='-') || (ss_row.peek()=='.') || (ss_row.peek()=='n') || (ss_row.peek()=='i'))
+              && "Encountered non-numerical row in .state file sooner than expected");
       while(std::getline(ss_row,el,',')){
         assert(j < m_ydim && "Row in .state file is too long (greater than ydim)");
         curr_grid(i,j) = std::stod(el);
