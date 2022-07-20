@@ -34,10 +34,10 @@ std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids
     Grid i_d_rho_dt = -m_pd.transportDivergence2D(grids[i_rho],v_i);
     Grid e_d_rho_dt = -m_pd.transportDivergence2D(grids[e_rho],v_e);
     // viscous forces
-    Grid i_viscous_force_x = visc_coeff*m_pd.laplacian(grids[i_mom_x]);
-    Grid i_viscous_force_y = visc_coeff*m_pd.laplacian(grids[i_mom_y]);
-    Grid e_viscous_force_x = visc_coeff*m_pd.laplacian(grids[e_mom_x]);
-    Grid e_viscous_force_y = visc_coeff*m_pd.laplacian(grids[e_mom_y]);
+    Grid i_viscous_force_x = visc_coeff*grids[i_rho]*m_pd.laplacian(grids[i_v_x]);
+    Grid i_viscous_force_y = visc_coeff*grids[i_rho]*m_pd.laplacian(grids[i_v_y]);
+    Grid e_viscous_force_x = visc_coeff*grids[e_rho]*m_pd.laplacian(grids[e_v_x]);
+    Grid e_viscous_force_y = visc_coeff*grids[e_rho]*m_pd.laplacian(grids[e_v_y]);
     // lorentz forces
     std::vector<Grid> b = {grids[b_x],grids[b_y]};
     std::vector<Grid> i_v_cross_B(2,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));

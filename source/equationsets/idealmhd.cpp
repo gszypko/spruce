@@ -32,8 +32,8 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
     std::vector<Grid> v = {grids[v_x],grids[v_y]};
     Grid d_rho_dt = -m_pd.transportDivergence2D(grids[rho],v);
     // viscous forces
-    Grid viscous_force_x = visc_coeff*m_pd.laplacian(grids[mom_x]);
-    Grid viscous_force_y = visc_coeff*m_pd.laplacian(grids[mom_y]);
+    Grid viscous_force_x = visc_coeff*grids[rho]*m_pd.laplacian(grids[v_x]);
+    Grid viscous_force_y = visc_coeff*grids[rho]*m_pd.laplacian(grids[v_y]);
     // magnetic forces
     Grid curl_db = m_pd.curl2D(grids[bi_x],grids[bi_y])/(4.0*PI);
     std::vector<Grid> external_mag_force = Grid::CrossProductZ2D(curl_db,{be_x,be_y});
@@ -357,11 +357,9 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
     double visc_coeff = 0.0;
     rho_terms.push_back(-((m_pd.m_adiabatic_index/grids[rho])*d_2 + 0.5*grids[rho]*alpha_plus*(d_5+d_6) + 0.5*grids[rho]*alpha_minus*(d_7+d_8))/c_s_sq);
     v_para_terms.push_back(-0.5*s_perp*(c_minus*alpha_minus/c_s_sq*R_para*(-d_5 + d_6) + c_plus*alpha_plus/c_s_sq*R_para*(d_7 - d_8))
-                            + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_para],positive_forward,boundary_index,x_idx[0],y_idx[0],x_idx.back(),y_idx.back())
-                            + visc_coeff/grids[rho]*grids[v_para]*m_pd.secondDerivative1DBackward(grids[rho],positive_forward,boundary_index,x_idx[0],y_idx[0],x_idx.back(),y_idx.back()));
+                            + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_para],positive_forward,boundary_index,x_idx[0],y_idx[0],x_idx.back(),y_idx.back()));
     v_perp_terms.push_back(-0.5/c_s_sq*(c_plus*alpha_plus*(d_5 - d_6) + c_minus*alpha_minus*(d_7 - d_8))
-                            + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_perp],positive_forward,boundary_index,x_idx[0],y_idx[0],x_idx.back(),y_idx.back())
-                            + visc_coeff/grids[rho]*grids[v_perp]*m_pd.secondDerivative1DBackward(grids[rho],positive_forward,boundary_index,x_idx[0],y_idx[0],x_idx.back(),y_idx.back()));
+                            + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_perp],positive_forward,boundary_index,x_idx[0],y_idx[0],x_idx.back(),y_idx.back()));
     thermal_energy_terms.push_back(-(0.5*(grids[thermal_energy]+grids[press])*alpha_plus*(d_5+d_6) + 0.5*(grids[thermal_energy]+grids[press])*alpha_minus*(d_7+d_8))/c_s_sq);
     b_para_terms.push_back(-(PI*grids[rho]).sqrt()*( alpha_minus/c_s*R_para*(d_5 + d_6) - alpha_plus/c_s*R_para*(d_7 + d_8) ));
     b_perp_terms.push_back(-d_1);
@@ -375,13 +373,11 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
                         -grids[v_para]*m_pd.derivative1D(grids[v_para],para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
                         +m_b_para/(4.0*PI*grids[rho])*m_pd.derivative1D(m_b_para,para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
                         +interior_mask*grids[grav_para]
-                        + visc_coeff*m_pd.secondDerivative1D(grids[v_para],para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
-                        + visc_coeff/grids[rho]*grids[v_para]*m_pd.secondDerivative1D(grids[rho],para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1]));
+                        + visc_coeff*m_pd.secondDerivative1D(grids[v_para],para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1]));
     v_perp_terms.push_back(-grids[v_para]*m_pd.derivative1D(grids[v_perp],para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
                         +m_b_para/(4.0*PI*grids[rho])*m_pd.derivative1D(m_b_perp,para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
                         +interior_mask*grids[grav_perp]
-                        + visc_coeff*m_pd.secondDerivative1D(grids[v_perp],para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
-                        + visc_coeff/grids[rho]*grids[v_perp]*m_pd.secondDerivative1D(grids[rho],para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1]));
+                        + visc_coeff*m_pd.secondDerivative1D(grids[v_perp],para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1]));
     thermal_energy_terms.push_back(-m_pd.derivative1D(grids[thermal_energy]*grids[v_para],para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
                                 -grids[press]*m_pd.derivative1D(grids[v_para],para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1]));
     b_para_terms.push_back(-grids[v_para]*m_pd.derivative1D(m_b_para,para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
@@ -400,13 +396,11 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
                         -grids[v_para]*m_pd.derivative1DBackward(grids[v_para],false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
                         +m_b_para/(4.0*PI*grids[rho])*m_pd.derivative1DBackward(m_b_para,false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
                         +lower_corner_mask*grids[grav_para]
-                        + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_para],false,para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
-                        + visc_coeff/grids[rho]*grids[v_para]*m_pd.secondDerivative1DBackward(grids[rho],false,para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1]));
+                        + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_para],false,para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1]));
     v_perp_terms.push_back(-grids[v_para]*m_pd.derivative1DBackward(grids[v_perp],false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
                         +m_b_para/(4.0*PI*grids[rho])*m_pd.derivative1DBackward(m_b_perp,false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
                         +lower_corner_mask*grids[grav_perp]
-                        + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_perp],false,para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
-                        + visc_coeff/grids[rho]*grids[v_perp]*m_pd.secondDerivative1DBackward(grids[rho],false,para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1]));
+                        + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_perp],false,para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1]));
     thermal_energy_terms.push_back(-m_pd.derivative1DBackward(grids[thermal_energy]*grids[v_para],false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
                                 -grids[press]*m_pd.derivative1DBackward(grids[v_para],false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1]));
     b_para_terms.push_back(-grids[v_para]*m_pd.derivative1DBackward(m_b_para,false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
@@ -425,13 +419,11 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
                         -grids[v_para]*m_pd.derivative1DBackward(grids[v_para],true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
                         +m_b_para/(4.0*PI*grids[rho])*m_pd.derivative1DBackward(m_b_para,true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
                         +upper_corner_mask*grids[grav_para]
-                        + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_para],true,para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
-                        + visc_coeff/grids[rho]*grids[v_para]*m_pd.secondDerivative1DBackward(grids[rho],true,para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1]));
+                        + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_para],true,para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1]));
     v_perp_terms.push_back(-grids[v_para]*m_pd.derivative1DBackward(grids[v_perp],true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
                         +m_b_para/(4.0*PI*grids[rho])*m_pd.derivative1DBackward(m_b_perp,true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
                         +upper_corner_mask*grids[grav_perp]
-                        + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_perp],true,para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
-                        + visc_coeff/grids[rho]*grids[v_perp]*m_pd.secondDerivative1DBackward(grids[rho],true,para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1]));
+                        + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_perp],true,para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1]));
     thermal_energy_terms.push_back(-m_pd.derivative1DBackward(grids[thermal_energy]*grids[v_para],true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
                                 -grids[press]*m_pd.derivative1DBackward(grids[v_para],true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1]));
     b_para_terms.push_back(-grids[v_para]*m_pd.derivative1DBackward(m_b_para,true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])

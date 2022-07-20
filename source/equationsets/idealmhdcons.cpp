@@ -27,8 +27,8 @@ std::vector<Grid> IdealMHDCons::computeTimeDerivatives(const std::vector<Grid> &
     std::vector<Grid> v = {grids[v_x],grids[v_y]};
     Grid d_rho_dt = -m_pd.transportDivergence2D(grids[rho],v);
     // viscous forces
-    Grid viscous_force_x = visc_coeff*m_pd.laplacian(grids[mom_x]);
-    Grid viscous_force_y = visc_coeff*m_pd.laplacian(grids[mom_y]);
+    Grid viscous_force_x = visc_coeff*grids[rho]*m_pd.laplacian(grids[v_x]);
+    Grid viscous_force_y = visc_coeff*grids[rho]*m_pd.laplacian(grids[v_y]);
     // tensor for momentum equation
     Grid Txx = grids[press_tot] + grids[b_x]*grids[b_x]/(4.*PI);
     Grid Tyy = grids[press_tot] + grids[b_y]*grids[b_y]/(4.*PI);
