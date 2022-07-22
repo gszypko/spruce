@@ -1,9 +1,7 @@
-function [out] = readOutFile(path,removeGhostCells,Ng)
+function [out] = readOutFile(path,Ng)
 % directory (string): full path to directory containing 'plasma.settings'
 % opt (bool): (true) trim ghost cells from matrices (false) do not
 % out (struct): fields of <out> contain plasma quantities in cgs units, see below
-
-if ~removeGhostCells, Ng = 0; end
 
 % ensure that plasma.settings file exists
 if ~endsWith(path,'.out'), error('File extension must be .out'); end

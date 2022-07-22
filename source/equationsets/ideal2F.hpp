@@ -23,7 +23,7 @@ class Ideal2F: public EquationSet {
                 "i_n","e_n","i_v_x","i_v_y","e_v_x","e_v_y","j_x","j_y",
                 "i_press","e_press","press",
                 "b_x","b_y","b_z","b_mag","b_mag_xy","b_hat_x","b_hat_y",
-                "rho","rho_c","n","dn","divBcond","divEcond","dt"};
+                "rho","rho_c","n","dn","divB","divE","divEcond","phi","psi","dt"};
         }
         enum Vars {i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,
                 i_temp,e_temp,bi_x,bi_y,bi_z,grav_x,grav_y,
@@ -31,7 +31,7 @@ class Ideal2F: public EquationSet {
                 i_n,e_n,i_v_x,i_v_y,e_v_x,e_v_y,j_x,j_y,
                 i_press,e_press,press,
                 b_x,b_y,b_z,b_mag,b_mag_xy,b_hat_x,b_hat_y,
-                rho,rho_c,n,dn,divBcond,divEcond,dt};
+                rho,rho_c,n,dn,divB,divE,divEcond,phi,psi,dt};
 
         std::vector<int> state_variables() override {
             return {i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,i_temp,e_temp,bi_x,bi_y,bi_z,grav_x,grav_y};

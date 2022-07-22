@@ -23,6 +23,8 @@ void Ideal2F::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<G
     grids[E_x] += step*m_pd.m_ghost_zone_mask*time_derivatives[11];
     grids[E_y] += step*m_pd.m_ghost_zone_mask*time_derivatives[12];
     grids[E_z] += step*m_pd.m_ghost_zone_mask*time_derivatives[13];
+    grids[phi] += step*m_pd.m_ghost_zone_mask*time_derivatives[14];
+    grids[psi] += step*m_pd.m_ghost_zone_mask*time_derivatives[15];
     propagateChanges(grids);
 }
 
@@ -46,10 +48,10 @@ std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids
     std::vector<Grid> e_v_cross_B(2,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
     e_v_cross_B[0] = grids[e_v_y]*grids[b_z];
     e_v_cross_B[1] = -grids[e_v_x]*grids[b_z];
-    Grid i_F_x =  E*grids[i_n]*(grids[E_x] + i_v_cross_B[0]);
-    Grid i_F_y =  E*grids[i_n]*(grids[E_y] + i_v_cross_B[1]);
-    Grid e_F_x = -E*grids[e_n]*(grids[E_x] + e_v_cross_B[0]);
-    Grid e_F_y = -E*grids[e_n]*(grids[E_y] + e_v_cross_B[1]); 
+    Grid i_F_x =  E*grids[i_n]*(grids[E_x] + i_v_cross_B[0]/C);
+    Grid i_F_y =  E*grids[i_n]*(grids[E_y] + i_v_cross_B[1]/C);
+    Grid e_F_x = -E*grids[e_n]*(grids[E_x] + e_v_cross_B[0]/C);
+    Grid e_F_y = -E*grids[e_n]*(grids[E_y] + e_v_cross_B[1]/C); 
     // momentum equations   
     Grid i_d_mom_x_dt = - m_pd.transportDivergence2D(grids[i_mom_x], v_i)
                         - m_pd.derivative1D(grids[i_press], 0)
@@ -69,20 +71,25 @@ std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids
     Grid e_d_thermal_dt =   - m_pd.transportDivergence2D(grids[e_thermal_energy],v_e)
                             - grids[e_press]*m_pd.divergence2D(v_e);
     // magnetic field propagation
-    Grid d_bi_x_dt = -m_pd.derivative1D(grids[E_z],1);
-    Grid d_bi_y_dt =  m_pd.derivative1D(grids[E_z],0);
-    Grid d_bi_z_dt = m_pd.derivative1D(grids[E_x],1) - m_pd.derivative1D(grids[E_y],0);
+    Grid d_bi_x_dt = -C*m_pd.derivative1D(grids[E_z],1);
+    Grid d_bi_y_dt =  C*m_pd.derivative1D(grids[E_z],0);
+    Grid d_bi_z_dt = C*(m_pd.derivative1D(grids[E_x],1) - m_pd.derivative1D(grids[E_y],0));
     // electric field propagation
     Grid d_E_x_dt =  C*m_pd.derivative1D(grids[b_z],1) - 4*PI*grids[j_x];
     Grid d_E_y_dt = -C*m_pd.derivative1D(grids[b_z],0) - 4*PI*grids[j_y];
     Grid d_E_z_dt =  C*(m_pd.derivative1D(grids[b_y],0) - m_pd.derivative1D(grids[b_x],1));
+    // correction potentials for E and B
+    Grid d_phi_dt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    Grid d_psi_dt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     // return time derivatives
     return {i_d_rho_dt,e_d_rho_dt,i_d_mom_x_dt,i_d_mom_y_dt,e_d_mom_x_dt,e_d_mom_y_dt,i_d_thermal_dt,e_d_thermal_dt,
-        d_bi_x_dt,d_bi_y_dt,d_bi_z_dt,d_E_x_dt,d_E_y_dt,d_E_z_dt};
+        d_bi_x_dt,d_bi_y_dt,d_bi_z_dt,d_E_x_dt,d_E_y_dt,d_E_z_dt,d_phi_dt,d_psi_dt};
 }
 
 void Ideal2F::populateVariablesFromState(std::vector<Grid> &grids){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    grids[phi] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    grids[psi] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     recomputeEvolvedVarsFromStateVars(grids);
     m_pd.updateGhostZones();
     recomputeDerivedVarsFromEvolvedVars(grids);
@@ -151,8 +158,9 @@ void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids){
     grids[rho_c] = E*(grids[i_n] - grids[e_n]);
     grids[n] = grids[i_rho]/m_pd.m_ion_mass;
     grids[dn] = grids[i_n] - grids[e_n];
-    grids[divBcond] = m_pd.divergence2D(grids[b_x],grids[b_y]);
-    grids[divEcond] = m_pd.divergence2D(grids[E_x],grids[E_y]) - 4*PI*grids[rho_c];
+    grids[divB] = m_pd.divergence2D(grids[b_x],grids[b_y]);
+    grids[divE] = m_pd.divergence2D(grids[E_x],grids[E_y]);
+    grids[divEcond] = grids[divE] - 4*PI*grids[rho_c];
 }
 
 void Ideal2F::catchNullFieldDirection(std::vector<Grid> &grids)
@@ -169,11 +177,19 @@ void Ideal2F::catchNullFieldDirection(std::vector<Grid> &grids)
 }
 
 void Ideal2F::recomputeDT(){
-    Grid vel_mag = (m_grids[e_v_x].square() + m_grids[e_v_y].square()).sqrt();
-    Grid vel_th = (K_B*m_grids[e_temp]/M_ELECTRON).sqrt();
+    // diagonal grid size
+    Grid dr = (m_pd.m_grids[PlasmaDomain::d_x].square() + m_pd.m_grids[PlasmaDomain::d_y].square()).sqrt();
+    // smallest wavenumber supported by grid structure
+    Grid lambda = 2.*dr;
+    Grid k = 2.*PI/lambda;
+    // determine largest fluid velocity
+    Grid v_mag_i = (m_grids[i_v_x].square() + m_grids[i_v_y].square()).sqrt();
+    Grid v_mag_e = (m_grids[e_v_x].square() + m_grids[e_v_y].square()).sqrt();
+    Grid v = v_mag_e.max(v_mag_i);
+    // compute phase velocity of Langmuir wave
+    Grid v_th = (K_B*m_grids[e_temp]/M_ELECTRON).sqrt();
     Grid w_pe = (4*PI*m_grids[e_n]*E*E/M_ELECTRON).sqrt();
-    Grid tau_pe = 1/w_pe;
-    Grid diagonals = (m_pd.m_grids[PlasmaDomain::d_x].square() + m_pd.m_grids[PlasmaDomain::d_y].square()).sqrt();
-    m_grids[dt] = diagonals/(3*vel_th + vel_mag);
-    if (tau_pe.min() < m_grids[dt].min()) m_grids[dt] = tau_pe;
+    Grid w_L = (w_pe.square()+3*k.square()*v_th.square()).sqrt();
+    Grid v_L = w_L/k;
+    m_grids[dt] = dr/(v + v_L);
 }

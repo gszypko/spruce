@@ -1,13 +1,13 @@
-function [data] = loadData(folder,removeGhostCells,numGhostCells)
+function [data] = loadData(folder,numGhostCells)
 
 f = filesep;
 
 data.folder = folder;
 data.settings = readSettingsFile([folder f 'plasma.settings']);
 data.config = readConfigFile([folder f 'ucnp.config']);
-data.state.init = readStateFile([folder f 'init.state'],removeGhostCells,numGhostCells,data.config.eq_set);
-data.state.end = readStateFile([folder f 'end.state'],removeGhostCells,numGhostCells,data.config.eq_set);
-data.grids = readOutFile([folder f 'mhd.out'],removeGhostCells,numGhostCells);
+data.state.init = readStateFile([folder f 'init.state'],numGhostCells,data.config.eq_set);
+% data.state.end = readStateFile([folder f 'end.state'],numGhostCells,data.config.eq_set);
+data.grids = readOutFile([folder f 'mhd.out'],numGhostCells);
 
 fields = fieldnames(data.grids.vars);
 if max(strcmp(fields,'rho'))
