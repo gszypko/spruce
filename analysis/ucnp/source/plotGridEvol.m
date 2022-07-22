@@ -2,18 +2,17 @@ function [] = plotGridEvol(data)
 % os (struct): contains grid info from 'os.grids.out' file
 
 % for each time point, plot 2D grids from MHD simulation
-gridnames = {'i_n','e_n','dn','b_z','i_v_x','e_v_x','j_x','E_x'};
-gridstr = {'n_i','n_e','n_i-n_e','b_z','v_i_x','v_e_x','j_x','E_x'};
+gridnames = {'i_n','e_n','dn','b_z','i_v_x','e_v_x','j_x','b_y','E_x','E_y','E_z','divEcond'};
+gridstr = {'n_i','n_e','dn','b_z','v_i_x','v_e_x','j_x','b_y','E_x','E_y','E_z','divEcond'};
 
 % generate figure
 f = filesep;
 filepath = [data.folder f 'grid-evol'];
-row = 2; 
+row = 3; 
 col = 4; 
 num = length(gridnames);
 [fig,ax,an] = open_subplot(row,col,num,'Visible','off');
-fig.Position = [73.400000000000000,205,1.264400000000000e+03,4.692000000000001e+02];
-move_ax(ax(1,:),0,.05)
+fig.Position = [73.400000000000000,205,1.453200000000000e+03,7.776000000000000e+02];
 an.Position = [0.1595    0.9084    0.7230    0.0801];
 
 frames = cell(1,length(data));
@@ -35,7 +34,7 @@ for k = 1:length([data.grids.vars.time])
             colorbar
             cax.YDir = 'Normal';
             cax.PlotBoxAspectRatio = [1 1 1];
-            cax.FontSize = 12;
+            cax.FontSize = 10;
             if i == size(ax,1), xlabel('x (cm)'), end
             if j == 1, ylabel('y (cm)'), end
             title(gridstr{iter},'FontWeight','normal')
