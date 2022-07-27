@@ -79,6 +79,8 @@ parser.add_argument('timestep', type=float, help="the interval (in simulation ti
 #   'thermal_energy', 'v_x', 'v_y', 'dt', 'dt_thermal', 'dt_rad', 'n', 'beta', 'div_be', 'div_bi', 'b_mag', 'field_heating'])
 parser.add_argument('contourvar', help="the simulation variable to display as a contour plot")
 parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['b','v','be','bi'])
+parser.add_argument('-s', '--start', help="designates simulation time to begin plotting",type=float,default=0.0)
+parser.add_argument('-e', '--end', help="designates simulation time to end plotting",type=float,default=-1.0)
 parser.add_argument('-V', '--vecmode', help="designates mode of display for the chosen vector quantity", choices=['quiver','stream'], default='quiver')
 parser.add_argument('--density', metavar="vec_display_density", type=int, help="set the interval between displayed vectors", default=25)
 # parser.add_argument('-d', '--diff', metavar='diff_filename', help="filename to difference with original file")
@@ -87,6 +89,9 @@ args = parser.parse_args()
 
 vec_interval = args.density #number of vectors in each direction to display(?)
 vec_mode = args.vecmode
+
+start_time = args.start
+end_time = args.end
 
 input_file = open(args.filename)
 display_interval = float(args.timestep)
@@ -110,10 +115,10 @@ dim = input_file.readline().split(',')
 xdim = int(dim[0])
 ydim = int(dim[1])
 
-xl_ghost = 0
-xu_ghost = 0
-yl_ghost = 0
-yu_ghost = 0
+xl_ghost = 2
+xu_ghost = 2
+yl_ghost = 2
+yu_ghost = 2
 
 xdim_view = xdim - (xl_ghost + xu_ghost)
 ydim_view = ydim - (yl_ghost + yu_ghost)
@@ -147,6 +152,7 @@ t = []
 output_number = 0
 line = ""
 
+time = -1.0
 while True:
   #read through to next time step (or file end)
   line = input_file.readline()
@@ -155,6 +161,19 @@ while True:
   if not line:
     break
   time = float(line.split('=')[1])
+
+  while time < start_time:
+    line = input_file.readline()
+    while line and line[0:2] != "t=":
+      line = input_file.readline()
+    if not line:
+      break
+    time = float(line.split('=')[1])
+  if not line:
+    break
+
+  if end_time > 0.0 and time > end_time+1.0:
+    break
 
   # var_found = False
   vars_found = np.array([ False for v in file_var_names ]) #all set to false initially
@@ -267,7 +286,7 @@ if vec_var != None:
   if min_v_vec == np.finfo(np.float_).max:
     min_v_vec = 0.0
 
-if output_var in ["rad","beta","dt","dt_thermal","dt_rad","field_heating","b_mag"]: #variables that can go to zero
+if output_var in ["rad","dt","dt_thermal","dt_rad","field_heating","b_mag"]: #variables that can go to zero
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-8, base=10))
 elif output_var in ["div_bi","div_be"]:
