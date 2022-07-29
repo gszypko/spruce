@@ -12,6 +12,7 @@ namespace fs = std::filesystem;
 #include "grid.hpp"
 #include "modulehandler.hpp"
 #include "equationset.hpp"
+#include "savitzkygolay.hpp"
 
 class PlasmaDomain
 {
@@ -99,6 +100,7 @@ private:
 
   ModuleHandler m_module_handler;
   std::unique_ptr<EquationSet> m_eqs;
+  SavitzkyGolay m_sg{};
 
   fs::path m_out_directory;
   std::ofstream m_out_file;
@@ -215,9 +217,13 @@ private:
   Grid curl2D(const Grid& x, const Grid& y) { return curl2D(x,y,m_xl,m_yl,m_xu,m_yu); }
   Grid curl2D(const Grid& x, const Grid& y, int xl, int yl, int xu, int yu);
   
+  // boundary interpolation
   double boundaryInterpolate(const Grid &quantity, int i1, int j1, int i2, int j2);
   double boundaryExtrapolate(const Grid &quantity, int i1, int j1, int i2, int j2);
 
+  // Savitzky-Golay differentiation
+  Grid derivativeSGx(const Grid& grid) const {return m_sg.derivative1D(grid,0,m_grids[d_x].min());};
+  Grid derivativeSGy(const Grid& grid) const {return m_sg.derivative1D(grid,1,m_grids[d_y].min());};
 };
 
 #endif

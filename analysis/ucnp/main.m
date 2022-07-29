@@ -3,8 +3,8 @@ clc, clearvars -except inp, close all, f = filesep; setpath;
 
 if ~exist('inp','var')
     %% Generate Input Cell
-    inp = {'folder'};
-    openvar('inp')
+    inp = {'folder';'C:\Users\grant\Documents\GitHub\mhd\output\set_6'};
+%     openvar('inp')
 end
 fields = {'folder'};
 s = spreadsheet2struct(inp,fields);
@@ -12,8 +12,8 @@ s = spreadsheet2struct(inp,fields);
 % user controls
 plotGridTimeEvol = true;
 doGaussianAnalysis = false;
-numGhostCells = 2;
-eic_opt = true;
+numGhostCells = 0;
+eic_opt = false;
 
 %% Read in and Analyze Data
 % define constnats

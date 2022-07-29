@@ -9,20 +9,20 @@ Ideal2F::Ideal2F(PlasmaDomain &pd): EquationSet(pd,def_var_names()) {}
 
 void Ideal2F::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    grids[i_rho] += step*m_pd.m_ghost_zone_mask*time_derivatives[0];
-    grids[e_rho] += step*m_pd.m_ghost_zone_mask*time_derivatives[1];
-    grids[i_mom_x] += step*m_pd.m_ghost_zone_mask*time_derivatives[2];
-    grids[i_mom_y] += step*m_pd.m_ghost_zone_mask*time_derivatives[3];
-    grids[e_mom_x] += step*m_pd.m_ghost_zone_mask*time_derivatives[4];
-    grids[e_mom_y] += step*m_pd.m_ghost_zone_mask*time_derivatives[5];
-    grids[i_thermal_energy] += step*m_pd.m_ghost_zone_mask*time_derivatives[6];
-    grids[e_thermal_energy] += step*m_pd.m_ghost_zone_mask*time_derivatives[7];
-    grids[bi_x] += step*m_pd.m_ghost_zone_mask*time_derivatives[8];
-    grids[bi_y] += step*m_pd.m_ghost_zone_mask*time_derivatives[9];
-    grids[bi_z] += step*m_pd.m_ghost_zone_mask*time_derivatives[10];
-    grids[E_x] += step*m_pd.m_ghost_zone_mask*time_derivatives[11];
-    grids[E_y] += step*m_pd.m_ghost_zone_mask*time_derivatives[12];
-    grids[E_z] += step*m_pd.m_ghost_zone_mask*time_derivatives[13];
+    grids[i_rho] += step*time_derivatives[0];
+    grids[e_rho] += step*time_derivatives[1];
+    grids[i_mom_x] += step*time_derivatives[2];
+    grids[i_mom_y] += step*time_derivatives[3];
+    grids[e_mom_x] += step*time_derivatives[4];
+    grids[e_mom_y] += step*time_derivatives[5];
+    grids[i_thermal_energy] += step*time_derivatives[6];
+    grids[e_thermal_energy] += step*time_derivatives[7];
+    grids[bi_x] += step*time_derivatives[8];
+    grids[bi_y] += step*time_derivatives[9];
+    grids[bi_z] += step*time_derivatives[10];
+    grids[E_x] += step*time_derivatives[11];
+    grids[E_y] += step*time_derivatives[12];
+    grids[E_z] += step*time_derivatives[13];
     propagateChanges(grids);
 }
 
@@ -53,16 +53,16 @@ std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids
     // momentum equations   
     Grid i_d_mom_x_dt = - m_pd.transportDivergence2D(grids[i_mom_x], v_i)
                         - m_pd.derivative1D(grids[i_press], 0)
-                        + m_pd.m_ghost_zone_mask * (grids[i_rho]*grids[grav_x] + i_viscous_force_x + i_F_x);
+                        + grids[i_rho]*grids[grav_x] + i_viscous_force_x + i_F_x;
     Grid i_d_mom_y_dt = - m_pd.transportDivergence2D(grids[i_mom_y], v_i)
                         - m_pd.derivative1D(grids[i_press], 1)
-                        + m_pd.m_ghost_zone_mask * (grids[i_rho]*grids[grav_y] + i_viscous_force_y + i_F_y);
+                        + grids[i_rho]*grids[grav_y] + i_viscous_force_y + i_F_y;
     Grid e_d_mom_x_dt = - m_pd.transportDivergence2D(grids[e_mom_x], v_e)
                         - m_pd.derivative1D(grids[e_press], 0)
-                        + m_pd.m_ghost_zone_mask * (grids[e_rho]*grids[grav_x] + e_viscous_force_x + e_F_x);
+                        + grids[e_rho]*grids[grav_x] + e_viscous_force_x + e_F_x;
     Grid e_d_mom_y_dt = - m_pd.transportDivergence2D(grids[e_mom_y], v_e)
                         - m_pd.derivative1D(grids[e_press], 1)
-                        + m_pd.m_ghost_zone_mask * (grids[e_rho]*grids[grav_y] + e_viscous_force_y + e_F_y);
+                        + grids[e_rho]*grids[grav_y] + e_viscous_force_y + e_F_y;
     // energy equations
     Grid i_d_thermal_dt =   - m_pd.transportDivergence2D(grids[i_thermal_energy],v_i)
                             - grids[i_press]*m_pd.divergence2D(v_i);
@@ -71,14 +71,14 @@ std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids
     // magnetic field propagation
     Grid d_bi_x_dt = -C*m_pd.derivative1D(grids[E_z],1);
     Grid d_bi_y_dt =  C*m_pd.derivative1D(grids[E_z],0);
-    Grid d_bi_z_dt = C*(m_pd.derivative1D(grids[E_x],1) - m_pd.derivative1D(grids[E_y],0));
+    Grid d_bi_z_dt = -C*grids[curlE_z];
     // electric field propagation
-    Grid d_E_x_dt =  C*m_pd.derivative1D(grids[b_z],1) - 4*PI*grids[j_x];
-    Grid d_E_y_dt = -C*m_pd.derivative1D(grids[b_z],0) - 4*PI*grids[j_y];
-    Grid d_E_z_dt =  C*(m_pd.derivative1D(grids[b_y],0) - m_pd.derivative1D(grids[b_x],1));
+    Grid d_E_x_dt =  C*grids[dBz_dy] - 4*PI*grids[j_x];
+    Grid d_E_y_dt = -C*grids[dBz_dx] - 4*PI*grids[j_y];
+    Grid d_E_z_dt =  C*(grids[dBy_dx] - grids[dBx_dy]);
     // return time derivatives
     return {i_d_rho_dt,e_d_rho_dt,i_d_mom_x_dt,i_d_mom_y_dt,e_d_mom_x_dt,e_d_mom_y_dt,i_d_thermal_dt,e_d_thermal_dt,
-        d_bi_x_dt*0.,d_bi_y_dt*0.,d_bi_z_dt*0.,d_E_x_dt,d_E_y_dt,d_E_z_dt};
+        d_bi_x_dt,d_bi_y_dt,d_bi_z_dt,d_E_x_dt,d_E_y_dt,d_E_z_dt};
 }
 
 void Ideal2F::populateVariablesFromState(std::vector<Grid> &grids){
@@ -150,6 +150,19 @@ void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids){
     grids[rho_c] = E*(grids[i_n] - grids[e_n]);
     grids[n] = grids[i_rho]/m_pd.m_ion_mass;
     grids[dn] = grids[i_n] - grids[e_n];
+    grids[divE] = m_pd.divergence2D({grids[E_x],grids[E_y]});
+    grids[dEx_dy] = m_pd.derivative1D(grids[E_x],1);
+    grids[dEy_dx] = m_pd.derivative1D(grids[E_y],0);
+    grids[curlE_z] = grids[dEy_dx] - grids[dEx_dy];
+    grids[dEx_dy_sg] = m_pd.derivativeSGy(grids[E_x]);
+    grids[dEy_dx_sg] = m_pd.derivativeSGx(grids[E_y]);
+    grids[curlE_z_sg] = grids[dEy_dx_sg] - grids[dEx_dy_sg];
+    grids[dBz_dy] = m_pd.derivative1D(grids[b_z],1);
+    grids[dBz_dx] = m_pd.derivative1D(grids[b_z],0);
+    grids[dBx_dy] = m_pd.derivative1D(grids[b_x],1);
+    grids[dBy_dx] = m_pd.derivative1D(grids[b_y],0);
+    grids[dBz_dy_sg] = m_pd.derivativeSGy(grids[b_z]);
+    grids[dBz_dx_sg] = m_pd.derivativeSGx(grids[b_z]);
 }
 
 void Ideal2F::catchNullFieldDirection(std::vector<Grid> &grids)
@@ -183,5 +196,7 @@ void Ideal2F::recomputeDT(){
     // get timesteps
     Grid dt_wave = 1./w_pe;
     Grid dt_v = dr/(v + v_L);
+    Grid dt_c = dr/C;
     m_grids[dt] = dt_wave.min(dt_v);
+    m_grids[dt] = m_grids[dt].min(dt_c);
 }
