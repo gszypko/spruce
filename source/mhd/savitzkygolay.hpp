@@ -9,6 +9,7 @@ public:
     SavitzkyGolay();
     void initialize_k55_p33();
     void initialize_k33_p11();
+    Grid smoothing(const Grid& grid) const;
     Grid boundary_smoothing(const Grid& grid) const;
     Grid derivative1D(const Grid& grid,int dim,double dr) const;
     int fac(int val) const;

@@ -163,6 +163,8 @@ void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids){
     grids[dBy_dx] = m_pd.derivative1D(grids[b_y],0);
     grids[dBz_dy_sg] = m_pd.derivativeSGy(grids[b_z]);
     grids[dBz_dx_sg] = m_pd.derivativeSGx(grids[b_z]);
+    grids[E_x_smooth] = m_pd.m_sg.smoothing(grids[E_x]);
+    grids[E_y_smooth] = m_pd.m_sg.smoothing(grids[E_y]);
 }
 
 void Ideal2F::catchNullFieldDirection(std::vector<Grid> &grids)
