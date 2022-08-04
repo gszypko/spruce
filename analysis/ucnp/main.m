@@ -3,7 +3,7 @@ clc, clearvars -except inp, close all, f = filesep; setpath;
 
 if ~exist('inp','var')
     %% Generate Input Cell
-    inp = {'folder';'C:\Users\Grant\Documents\GitHub\mhd\output\set_0'};
+    inp = {'folder';'C:\data-mhd\08.02.22\set_3'};
 %     openvar('inp')
 end
 fields = {'folder'};

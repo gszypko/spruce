@@ -79,7 +79,8 @@ class EquationSet {
         // Return a Grid containing a maximum time step for each cell
         virtual Grid getDT() = 0;
         // Return a vector of Grids containing the time derivatives computed for all
-        // evolved quantities for the EquationSet. This vector<Grid> is fed into
+        // evolved quantities for which analytic time derivatives exist in the EquationSet. 
+        // This vector<Grid> is fed into
         // applyTimeDerivatives() to apply the time evolution to the system.
         // The argument grids should be a vector<Grid> of the same size and dimensions as
         // the member variable m_grids (this allows for evolution of intermediate steps
