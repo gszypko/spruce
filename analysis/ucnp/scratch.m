@@ -1,6 +1,5 @@
 clearvars
 setpath;
-c = defineConstants();
 
 sig = 0.1;
 total_width = 10*sig;
@@ -15,12 +14,12 @@ k_small = 2*pi/(cell_width);
 k_large = 2*pi/total_width;
 
 
-w_pe = getPlasmaFreq(n,c.mE);
+w_pe = getPlasmaFreq(n,cts.cgs.mE);
 tau_pe = 1/w_pe;
 
-w_c = getGyroFreq(B,c.mE);
+w_c = getGyroFreq(B,cts.cgs.mE);
 
-v_th = sqrt(c.kB*Te/c.mE);
+v_th = sqrt(cts.cgs.kB*Te/c.mE);
 w_th_small = sqrt(3)*v_th*k_small;
 w_th_large = sqrt(3)*v_th*k_large;
 

@@ -11,9 +11,8 @@ elseif nargin == 3 % default value for b if not specified
     b = 0.7;
 end
 
-c = defineConstants();
 Gam = getGamma(n,Ti); % ion coulomb coupling parameter
-wp = getPlasmaFreq(n,c.mI); % ion plasma frequency with units gam422
+wp = getPlasmaFreq(n,cts.cgs.mI); % ion plasma frequency with units gam422
 Lam = 1/sqrt(3*Gam^3); % plasma parameter
 mu = a*Gam^(3/2)*wp*log(1+b*Lam); % collisional relaxation rate with units gam422 (see PhysRevLett.110.235001)
 

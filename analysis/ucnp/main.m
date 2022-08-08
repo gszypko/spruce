@@ -16,10 +16,6 @@ numGhostCells = 0;
 eic_opt = false;
 
 %% Read in and Analyze Data
-% define constnats
-c = defineConstants();
-
-% read .settings file
 disp('Starting Analysis...')
 for i = 1:length(s)
     disp(['Data set: ' num2str(i) '/' num2str(length(s))])
