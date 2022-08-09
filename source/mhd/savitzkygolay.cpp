@@ -6,7 +6,7 @@
 // constructor
 SavitzkyGolay::SavitzkyGolay()
 {
-    initialize_k33_p11();
+    initialize_k55_p33();
     m_Bx = (m_Kx-1)/2;
     m_By = (m_Ky-1)/2;
     void identify_boundary_cells();

@@ -241,6 +241,7 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::time_integrator): time_integrator = stringToTimeIntegrator(rhs); break;
   case static_cast<int>(Config::equation_set): m_eqs = EquationSet::spawnEquationSet((*this),rhs); break;
   case static_cast<int>(Config::duration): m_duration = std::stod(rhs); break;
+  case static_cast<int>(Config::epsilon_courant): epsilon_courant = std::stod(rhs); break;
   default: break;
   }
 }

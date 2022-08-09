@@ -55,7 +55,7 @@ class Ideal2F: public EquationSet {
         void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids);
         void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids);
         std::vector<Grid> subcycleMaxwell(const std::vector<Grid>& grids, const std::vector<Grid>& dj, double step);
-        std::vector<Grid> maxwellCurlEqs(const std::vector<Grid>& EM,const std::vector<Grid>& j);
+        void maxwellCurlEqs(const std::vector<Grid>& EM,const std::vector<Grid>& j, std::vector<Grid>& dEM_dt);
 };
 
 #endif
