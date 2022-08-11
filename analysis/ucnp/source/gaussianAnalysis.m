@@ -51,7 +51,11 @@ for i = 1:length(data.grids.time)
     y = data.grids.y_vec;
     X = data.grids.pos_x;
     Y = data.grids.pos_y;
-    img = data.grids.vars(i).n;
+    if strcmp(data.config.eq_set,'ideal_2F')
+        img = data.grids.vars(i).i_n;
+    else
+        img = data.grids.vars(i).n;
+    end
     [fit(i)] = fitImgWithGaussian(x,y,img);
     
     [~,indx] = min(abs(x));
@@ -122,7 +126,7 @@ for i = 1:length(s.t)
     if strcmp(data.config.eq_set,'ideal_mhd') || strcmp(data.config.eq_set,'ideal_mhd_cons')
         s.data(i).Ti = data.grids.vars(i).temp(indy,indx);
         s.data(i).Te = data.grids.vars(i).temp(indy,indx);
-    elseif strcmp(data.config.eq_set,'ideal_mhd_2E')
+    elseif max(strcmp(data.config.eq_set,{'ideal_mhd_2E','ideal_2F'}))
         s.data(i).Ti = data.grids.vars(i).i_temp(indy,indx);
         s.data(i).Te = data.grids.vars(i).e_temp(indy,indx);
     else

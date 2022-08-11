@@ -4,8 +4,7 @@ function [r_c] = getGyroRadius(B,T,m)
 % T (nxm double): temperature of given species
 % m (double): mass of given species
 % r_c: cyclotron (gyro) radius
-c = defineConstants();
-v_th = sqrt(c.kB.*T./m);
+v_th = sqrt(cts.cgs.kB.*T./m);
 w_c = getGyroFreq(B,m);
 r_c = v_th./w_c;
 end

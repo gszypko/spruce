@@ -12,6 +12,7 @@ namespace fs = std::filesystem;
 #include "grid.hpp"
 #include "modulehandler.hpp"
 #include "equationset.hpp"
+#include "savitzkygolay.hpp"
 
 class PlasmaDomain
 {
@@ -34,14 +35,14 @@ public:
     epsilon, epsilon_viscous, density_min,
     temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
     output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode, safe_state_interval,
-    open_boundary_decay_base, x_origin, y_origin, time_integrator, equation_set, duration
+    open_boundary_decay_base, x_origin, y_origin, time_integrator, equation_set, duration, epsilon_courant
   };
   static inline std::vector<std::string> m_config_names = {
     "x_bound_1","x_bound_2","y_bound_1","y_bound_2",
     "epsilon","epsilon_viscous","density_min",
     "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
     "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode", "safe_state_interval",
-    "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "equation_set", "duration"
+    "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "equation_set", "duration", "epsilon_courant"
   };
 
   //Constructors and Initialization
@@ -99,6 +100,7 @@ private:
 
   ModuleHandler m_module_handler;
   std::unique_ptr<EquationSet> m_eqs;
+  SavitzkyGolay m_sg{};
 
   fs::path m_out_directory;
   std::ofstream m_out_file;
@@ -120,6 +122,7 @@ private:
   //Safety factors
   double epsilon; //Time step calculation
   double epsilon_viscous; //Prefactor for artificial viscosity
+  double epsilon_courant; // Courant safety factor for 2F model
   double density_min, temp_min, thermal_energy_min; //Lower bounds for mass density and thermal energy density
   TimeIntegrator time_integrator; //indicates time integration scheme to use
   //Output settings
@@ -215,9 +218,13 @@ private:
   Grid curl2D(const Grid& x, const Grid& y) { return curl2D(x,y,m_xl,m_yl,m_xu,m_yu); }
   Grid curl2D(const Grid& x, const Grid& y, int xl, int yl, int xu, int yu);
   
+  // boundary interpolation
   double boundaryInterpolate(const Grid &quantity, int i1, int j1, int i2, int j2);
   double boundaryExtrapolate(const Grid &quantity, int i1, int j1, int i2, int j2);
 
+  // Savitzky-Golay differentiation
+  Grid derivativeSGx(const Grid& grid) const {return m_sg.derivative1D(grid,0,m_grids[d_x].min());};
+  Grid derivativeSGy(const Grid& grid) const {return m_sg.derivative1D(grid,1,m_grids[d_y].min());};
 };
 
 #endif

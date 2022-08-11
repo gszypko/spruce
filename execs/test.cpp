@@ -7,11 +7,13 @@
 #include "ucnputils.hpp"
 #include "MhdInp.hpp"
 #include "ideal2F.hpp"
+#include "savitzkygolay.hpp"
 
 namespace fs = std::filesystem;
 
 int main(int argc, char *argv[])
 {
-    
+    SavitzkyGolay test;
+    std::cout << "testing" << std::endl;
     return 0;
 }

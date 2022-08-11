@@ -5,8 +5,7 @@ function [t,sig,gam,Ti,Te,n0] = kinetic_model(t0,sig0,Ti0,Te0,n0,eic_opt)
 if nargin < 6, eic_opt = false; end
 
 % define constants and function for thermalization rate
-c = defineConstants();
-kB = c.kB; m_i = c.mI; m_e = c.mE;
+kB = cts.cgs.kB; m_i = cts.cgs.mI; m_e = cts.cgs.mE;
 nu_ei = @(n,Te) 2*(m_e/m_i)*getEICRate(n,Te,m_e);
 if eic_opt, eic_fac = 1;
 else, eic_fac = 0; end

@@ -3,28 +3,22 @@ clc, clearvars -except inp, close all, f = filesep; setpath;
 
 if ~exist('inp','var')
     %% Generate Input Cell
-    inp = {'folder'};
-    openvar('inp')
+    inp = {'folder';'C:\data-mhd\08.08.22\set_25'};
 end
 fields = {'folder'};
 s = spreadsheet2struct(inp,fields);
 
 % user controls
 plotGridTimeEvol = true;
-doGaussianAnalysis = true;
-removeGhostCells = true;
-numGhostCells = 2;
-eic_opt = true;
+doGaussianAnalysis = false;
+numGhostCells = 0;
+eic_opt = false;
 
 %% Read in and Analyze Data
-% define constnats
-c = defineConstants();
-
-% read .settings file
 disp('Starting Analysis...')
 for i = 1:length(s)
     disp(['Data set: ' num2str(i) '/' num2str(length(s))])
-    data = loadData(s(i).folder,removeGhostCells,numGhostCells);
+    data = loadData(s(i).folder,numGhostCells);
     if plotGridTimeEvol, plotGridEvol(data); end
     if doGaussianAnalysis, gaussianAnalysis(data,eic_opt); end
 end

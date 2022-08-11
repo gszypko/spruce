@@ -3,9 +3,8 @@ function [mu] = getCollisionalRelaxationRateMD(n,Ti)
 % Ti (double): ion temperature (K)
 
 % get Coulomb coupling parameter and plasma frequency corresponding to user input
-c = defineConstants();
 Gam = getGamma(n,Ti); % ion coulomb coupling parameter
-wp = getPlasmaFreq(n,c.mI); % ion plasma frequency with units gam422
+wp = getPlasmaFreq(n,cts.cgs.mI); % ion plasma frequency with units gam422
 
 % tabulated Gamma and mu values from our 2012 velocity relaxation paper (https://link.aps.org/doi/10.1103/PhysRevLett.109.185008)
 % these were copy and pasted from '\\10.65.11.22\Killian_Research\Plasma\vccAnalysis\digitized_paper_data', which is on the
