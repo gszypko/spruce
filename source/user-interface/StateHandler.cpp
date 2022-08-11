@@ -207,6 +207,9 @@ void StateHandler::setup_ideal2F(const std::unique_ptr<Settings>& pms)
     setgrid("bi_x",zeros);
     setgrid("bi_y",zeros);
     setgrid("bi_z",zeros);
+    setgrid("E_x",zeros);
+    setgrid("E_y",zeros);
+    setgrid("E_z",zeros);
     setgrid("grav_x",zeros);
     setgrid("grav_y",zeros);
 }

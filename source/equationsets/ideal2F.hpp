@@ -18,23 +18,23 @@ class Ideal2F: public EquationSet {
         Ideal2F() = default;
         std::vector<std::string> def_var_names() const override{
             return {"i_rho","e_rho","i_mom_x","i_mom_y","e_mom_x","e_mom_y",
-                "i_temp","e_temp","bi_x","bi_y","bi_z","grav_x","grav_y",
+                "i_temp","e_temp","bi_x","bi_y","bi_z","E_x","E_y","E_z","grav_x","grav_y",
                 "i_n","e_n","i_v_x","i_v_y","e_v_x","e_v_y","j_x","j_y",
                 "i_press","e_press","press","i_thermal_energy","e_thermal_energy",
                 "rho","rho_c","n","dn","dt",
-                "E_x","E_y","E_z","b_x","b_y","b_z","b_mag","b_mag_xy","b_hat_x","b_hat_y",
+                "b_x","b_y","b_z","b_mag","b_mag_xy","b_hat_x","b_hat_y",
                 "curlE_z","divE","divB"};
         }
         enum Vars {i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,
-                i_temp,e_temp,bi_x,bi_y,bi_z,grav_x,grav_y,
+                i_temp,e_temp,bi_x,bi_y,bi_z,E_x,E_y,E_z,grav_x,grav_y,
                 i_n,e_n,i_v_x,i_v_y,e_v_x,e_v_y,j_x,j_y,
                 i_press,e_press,press,i_thermal_energy,e_thermal_energy,
                 rho,rho_c,n,dn,dt,
-                E_x,E_y,E_z,b_x,b_y,b_z,b_mag,b_mag_xy,b_hat_x,b_hat_y,
+                b_x,b_y,b_z,b_mag,b_mag_xy,b_hat_x,b_hat_y,
                 curlE_z,divE,divB};
 
         std::vector<int> state_variables() override {
-            return {i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,i_temp,e_temp,bi_x,bi_y,bi_z,grav_x,grav_y};
+            return {i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,i_temp,e_temp,bi_x,bi_y,bi_z,E_x,E_y,E_z,grav_x,grav_y};
         }
         std::vector<int> densities() override { return {i_rho,e_rho}; }
         std::vector<std::vector<int>> momenta() override { return {{i_mom_x,i_mom_y},{e_mom_x,e_mom_y}}; }
@@ -56,6 +56,7 @@ class Ideal2F: public EquationSet {
         void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids);
         std::vector<Grid> subcycleMaxwell(const std::vector<Grid>& grids, const std::vector<Grid>& dj, double step);
         void maxwellCurlEqs(const std::vector<Grid>& EM,const std::vector<Grid>& j, std::vector<Grid>& dEM_dt);
+        void populate_boundary(Grid& grid) const;
 };
 
 #endif

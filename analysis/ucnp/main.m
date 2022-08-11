@@ -3,7 +3,7 @@ clc, clearvars -except inp, close all, f = filesep; setpath;
 
 if ~exist('inp','var')
     %% Generate Input Cell
-    inp = {'folder';'C:\data-mhd\08.08.22\set_22'};
+    inp = {'folder';'C:\data-mhd\08.08.22\set_25'};
 end
 fields = {'folder'};
 s = spreadsheet2struct(inp,fields);

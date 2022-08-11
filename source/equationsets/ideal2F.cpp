@@ -138,9 +138,6 @@ void Ideal2F::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids)
     grids[press] = grids[i_press] + grids[e_press];
     grids[i_thermal_energy] = grids[i_press]/(m_pd.m_adiabatic_index - 1.0);
     grids[e_thermal_energy] = grids[e_press]/(m_pd.m_adiabatic_index - 1.0);
-    grids[E_x] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    grids[E_y] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    grids[E_z] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
 }
 
 void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids){
@@ -220,7 +217,7 @@ std::vector<Grid> Ideal2F::subcycleMaxwell(const std::vector<Grid>& grids, const
     double dt_EM = m_pd.epsilon_courant*(dx*dy/(dx+dy)/C).min(); // ideal timestep to satisfy Courant condition
     int num_steps = step/dt_EM + 1; // number of sub-cycles that satisfies Courant condition
     double dt = step/num_steps;
-    std::cout << "Number Subcycles: " << num_steps << std::endl;
+    // std::cout << "Number Subcycles: " << num_steps << std::endl;
     // preallocate variables
     std::vector<Grid> dEM_dt(6,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
     std::vector<Grid> EM {grids[E_x],grids[E_y],grids[E_z],grids[b_x],grids[b_y],grids[b_z]};
@@ -228,6 +225,8 @@ std::vector<Grid> Ideal2F::subcycleMaxwell(const std::vector<Grid>& grids, const
     std::vector<Grid> EM_half = EM;
     std::vector<Grid> j {grids[j_x],grids[j_y]};
     std::vector<Grid> dj {dj_tot[0]/num_steps,dj_tot[1]/num_steps};
+    populate_boundary(dj[0]);
+    populate_boundary(dj[1]);
     // loop over sub-cycles
     for (int i=0; i<num_steps; i++){
         // midpoint RK2 step
@@ -254,4 +253,32 @@ void Ideal2F::maxwellCurlEqs(const std::vector<Grid>& EM,const std::vector<Grid>
     dEM_dt[3] = -C*m_pd.derivative1D(EM[2],1);
     dEM_dt[4] =  C*m_pd.derivative1D(EM[2],0);
     dEM_dt[5] =  C*(m_pd.derivative1D(EM[0],1) - m_pd.derivative1D(EM[1],0));
+}
+
+void Ideal2F::populate_boundary(Grid& grid) const
+{
+    // treat left boundary
+    for (int i=0; i<m_pd.m_xl; i++){
+        for (int j=0; j<grid.cols(); j++){
+            grid(i,j) = grid(m_pd.m_xl,j);
+        }
+    }
+    // treat right boundary
+    for (int i=m_pd.m_xu+1; i<grid.rows(); i++){
+        for (int j=0; j<grid.cols(); j++){
+            grid(i,j) = grid(m_pd.m_xu,j);
+        }
+    }
+    // treat top boundary
+    for (int i=0; i<grid.rows(); i++){
+        for (int j=0; j<m_pd.m_yl; j++){
+            grid(i,j) = grid(i,m_pd.m_yl);
+        }
+    }
+    // treat bottom boundary
+    for (int i=0; i<grid.rows(); i++){
+        for (int j=m_pd.m_yu+1; j<grid.cols(); j++){
+            grid(i,j) = grid(i,m_pd.m_yu);
+        }
+    }
 }
