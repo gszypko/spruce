@@ -9,10 +9,10 @@
 void PlasmaDomain::run(double time_duration)
 {
   // handle when time is supplied as input
-  if(time_duration >= 0.0) m_duration = time_duration;
-  else {
-    assert(m_duration >= 0.0 && "Duration must be specified on command line, or in state file");
-  }
+    // m_duration can be initialized from the .config file
+    // when continuing a simulation, duration must be updated with input to run()
+  if (time_duration >= 0.0) m_duration = time_duration;
+  else assert(m_duration >= 0.0 && "Duration must be specified on command line, or in state file");
   m_max_time = m_time + m_duration;
   
   // run loop for advanceTime
@@ -30,7 +30,8 @@ void PlasmaDomain::run(double time_duration)
       writeToOutFile();
       writeStateFile("end");
     }
-  }  
+  }
+  // at end of simulation, write to mhd.out and end.state
   writeToOutFile();
   writeStateFile("end");
 }

@@ -59,18 +59,16 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   
 }
 
+// Initialoize the size of m_data_to_write and the capacity of each std::string element
 void PlasmaDomain::initOutputContainer()
 {
-  // the total number of rows (1+num_grids_to_record+num_grids_to_record*m_xdim)*m_write_interval
-  //  the 1 is because time is written first on one line
-  //  the first num_grids_to_record is for the names that precede each grid
-  //  the num_grids_to_record*m_xdim is to account for all the rows of each grid to be written
-  //  mulitply by m_write_interval because they will be stored this many times
-
   // initialize grid with copies of pi, to simulate largest precision necessary for allocating space
-  Grid pi_grid(1,m_ydim,PI*1e100);
+  Grid pi_grid(1,m_ydim,PI*1e100); // this represents the largest number we expect to write to mhd.out
   std::string row = pi_grid.format(',','\n');
   // count number of lines to record per iteration
+    // one line for time
+    // one line for each grid name written from equation set or module
+    // m_xdim lines for grid written from equation set or module
   int num_grids_to_record{0};
   for(int i=0; i<m_eqs->num_variables(); i++){
     if(m_eqs->getOutputFlag(i)) num_grids_to_record++;
@@ -82,6 +80,7 @@ void PlasmaDomain::initOutputContainer()
     num_grids_to_record++;
   }
   int num_lines_per_iter = 1+num_grids_to_record+num_grids_to_record*m_xdim;
+  // initialize size of m_data_to_write and the capacity of each element
   m_data_to_write.resize(m_write_interval*num_lines_per_iter);
   for (auto& elem : m_data_to_write) elem.reserve(row.size());
 }

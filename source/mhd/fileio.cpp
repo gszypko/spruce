@@ -109,6 +109,7 @@ void PlasmaDomain::readConfigFile(const fs::path &config_file)
   }
 }
 
+// initializes mhd.out with the comment lines and internal grid information
 void PlasmaDomain::outputPreamble()
 {
   std::ofstream out_file(m_out_directory/m_out_filename);
@@ -118,34 +119,44 @@ void PlasmaDomain::outputPreamble()
   }
   out_file << "xdim,ydim" << std::endl;
   out_file << m_xdim << "," << m_ydim << std::endl;
-  for(int v : {pos_x,pos_y,be_x,be_y}){
+  for (int v : {pos_x,pos_y,be_x,be_y}){
     out_file << m_gridnames[v] << std::endl;
     out_file << m_grids[v].format(',','\n');
   }
   out_file.close();
 }
 
+// Stores the current time and grids from the equation set and modules within m_data_to_write
+  // Each element of m_data_to_write that is updated by this function should be empty before it
+  // is updated. 
 void PlasmaDomain::storeGrids()
 {
   // write time
+  assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
   m_data_to_write[m_lines_recorded] = "t=" + num2str(m_time) + '\n';
   m_lines_recorded++;
+
   // write grids from equation set that have output flag
   for (int i=0; i<m_eqs->num_variables(); i++){
     if (m_eqs->getOutputFlag(i)){
+      assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
       m_data_to_write[m_lines_recorded] = m_eqs->nameFromIndex(i) + '\n';
       m_lines_recorded++;
+      assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
       m_data_to_write[m_lines_recorded] = m_eqs->grid(i).format(',','\n');
       m_lines_recorded++;
     }
   }
-  // write variables from modules
+
+  // write grids from modules
   std::vector<std::string> module_varnames;
   std::vector<Grid> module_data;
   m_module_handler.getFileOutputData(module_varnames,module_data);
   for(int i=0; i<module_varnames.size(); i++){
+    assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
     m_data_to_write[m_lines_recorded] = module_varnames[i] + '\n';
     m_lines_recorded++;
+    assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
     m_data_to_write[m_lines_recorded] = module_data[i].format(',','\n');
     m_lines_recorded++;
   }
@@ -153,10 +164,14 @@ void PlasmaDomain::storeGrids()
   m_output_counter++;
 }
 
+// Writes the information stored within m_data_to_write to mhd.out
+  // Each element of m_data_to_write is cleared after it is written. This preserves the capacity
+  // of the std::string element while ensuring that the same data is not written twice.
 void PlasmaDomain::writeToOutFile()
 {
   std::ofstream out_file(m_out_directory/m_out_filename,std::ofstream::app);
   for (int line = 0; line<m_lines_recorded; line++){
+    assert(!m_data_to_write[line].empty());
     out_file << m_data_to_write[line];
     m_data_to_write[line].clear();
   }

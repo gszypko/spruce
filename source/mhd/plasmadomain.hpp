@@ -17,24 +17,24 @@ namespace fs = std::filesystem;
 class PlasmaDomain
 {
 public: //******************************************************************************************************
-  // boundary condition options
+  // Boundary Condition Options
   enum class BoundaryCondition { Periodic, Open, Fixed, Reflect, OpenMoC };
   static inline std::vector<std::string> m_boundary_condition_names = {
     "periodic", "open", "fixed", "reflect", "open_moc"
   };
 
-  // time integrator options
+  // Time Integrator Options
   enum class TimeIntegrator { Euler, RK2, RK4 };
   static inline std::vector<std::string> m_time_integrator_names = {
     "euler", "rk2", "rk4"
   };
 
-  // grid names within PlasmaDomain
+  // Internal Grids
   enum Grids {d_x,d_y,pos_x,pos_y,be_x,be_y};
   static const inline std::vector<std::string> m_gridnames = {"d_x","d_y","pos_x","pos_y","be_x","be_y"};
   std::vector<Grid> m_grids{m_gridnames.size()};
 
-  // config names
+  // Config Names
   enum class Config {
     x_bound_1, x_bound_2, y_bound_1, y_bound_2,
     epsilon, epsilon_viscous, density_min,
@@ -50,7 +50,7 @@ public: //**********************************************************************
     "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "equation_set", "duration", "epsilon_courant"
   };
 
-  // Constructors and Initialization
+  // Public Member Functions
   PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file, bool continue_mode, bool overwrite_init);
   PlasmaDomain(): m_module_handler{*this} {};
   void readStateFile(const fs::path &state_file, bool continue_mode = true);
@@ -58,8 +58,6 @@ public: //**********************************************************************
   void initOutputContainer();
   static Grid convertCellSizesToCellPositions(const Grid& d, int index, std::string origin_position);
   static bool validateCellSizesAndPositions(const Grid& d, const Grid& pos, int index, double tolerance = 1.0e-4);
-
-  //Time Evolution
   void run(double time_duration);
 
 private: //*****************************************************************************************************
@@ -82,15 +80,15 @@ private: //*********************************************************************
   friend class IdealMHD2E;
   friend class Ideal2F;
 
-  // time related variables
+  // Time-Related Quantities
   TimeIntegrator m_time_integrator{TimeIntegrator::Euler}; //indicates time integration scheme to use
   double m_time{0.0};
-  double m_duration{-1.0};
-  int m_iter{0};
-  double m_max_time{-1.0}; //Upper bound on simulation time
-  int max_iterations{100}; //Upper bound on simulation iterations; unbounded if negative
+  double m_duration{-1.0}; // 
+  int m_iter{0}; // number of times the advanceTime() function has been called during simulation
+  double m_max_time{-1.0}; // upper bound on simulation time
+  int max_iterations{100}; // upper bound on simulation iterations; unbounded if negative
 
-  // output settings
+  // File Output Settings
   bool m_overwrite_init; // true when init.state to be overwritten at start of new simulation
   bool m_continue_mode; // true when continuing previous run; appends results to mhd.out and replaces mhd.state
   fs::path m_out_directory; // relative file path to where simulation files are to be saved

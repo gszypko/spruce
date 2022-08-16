@@ -14,25 +14,26 @@ namespace fs = std::filesystem;
 
 int main(int argc, char *argv[])
 {
+    // proccess command line arguments
     std::string run_mode = getCommandLineArg(argc, argv, "-m", "--mode");
-
     std::string time_duration_str = getCommandLineArg(argc, argv, "-d", "--duration");
     double time_duration = time_duration_str.empty() ? -1.0 : std::stod(time_duration_str); //set to -1 if unspecified on cmd line
-
     fs::path out_path(getCommandLineArg(argc, argv, "-o", "--output"));
     assert(!out_path.empty() && "output directory must be specified");
-    if(run_mode == "continue"){
-        // Continue Mode
+
+    // handle when running in continue mode
+        // time duration must be specified via the command line
+        // the previous run directory must exist
+    if (run_mode == "continue"){
         fs::path prev_run_path = out_path;
         assert(!time_duration_str.empty() && "In Continue Mode, duration of simulation must be specified on command line");
         fs::directory_entry prev_run_dir(prev_run_path);
         assert(prev_run_dir.exists() && prev_run_dir.is_directory() && "Given output directory of previous run must be existing directory");
-
         std::cout << "Running in Continue Mode for " << time_duration << " s...\n";
         mhdSolve(prev_run_path, time_duration);
         return 0;
     }
-    else if(run_mode == "input"){
+    else if (run_mode == "input"){
         fs::path config_path(getCommandLineArg(argc, argv, "-c", "--config"));
         fs::path grid_path(getCommandLineArg(argc, argv, "-s", "--state"));
         bool seek_config = config_path.empty();

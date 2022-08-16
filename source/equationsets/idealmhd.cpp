@@ -51,18 +51,18 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
     Grid d_bi_x_dt = induction_rhs_external[0] + induction_rhs_internal[0];
     Grid d_bi_y_dt = induction_rhs_external[1] + induction_rhs_internal[1];
     // characteristic boundary evolution
-    // std::vector<Grid> char_evolution = computeTimeDerivativesCharacteristicBoundary(grids,
-    //                                             m_pd.x_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC,
-    //                                             m_pd.x_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC,
-    //                                             m_pd.y_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC,
-    //                                             m_pd.y_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC);
+    std::vector<Grid> char_evolution = computeTimeDerivativesCharacteristicBoundary(grids,
+                                                m_pd.x_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC,
+                                                m_pd.x_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC,
+                                                m_pd.y_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC,
+                                                m_pd.y_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC);
     // return time derivatives
-    return {m_pd.m_ghost_zone_mask*d_rho_dt,
-            m_pd.m_ghost_zone_mask*d_mom_x_dt,
-            m_pd.m_ghost_zone_mask*d_mom_y_dt,
-            m_pd.m_ghost_zone_mask*d_thermal_energy_dt,
-            m_pd.m_ghost_zone_mask*d_bi_x_dt,
-            m_pd.m_ghost_zone_mask*d_bi_y_dt};
+    return {m_pd.m_ghost_zone_mask*d_rho_dt + char_evolution[0],
+            m_pd.m_ghost_zone_mask*d_mom_x_dt + char_evolution[1],
+            m_pd.m_ghost_zone_mask*d_mom_y_dt + char_evolution[2],
+            m_pd.m_ghost_zone_mask*d_thermal_energy_dt + char_evolution[3],
+            m_pd.m_ghost_zone_mask*d_bi_x_dt + char_evolution[4],
+            m_pd.m_ghost_zone_mask*d_bi_y_dt + char_evolution[5]};
 }
 
 void IdealMHD::computeConstantTerms(std::vector<Grid> &grids){
