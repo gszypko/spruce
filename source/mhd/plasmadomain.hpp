@@ -16,56 +16,53 @@ namespace fs = std::filesystem;
 
 class PlasmaDomain
 {
-public:
+public: //******************************************************************************************************
+  // boundary condition options
   enum class BoundaryCondition { Periodic, Open, Fixed, Reflect, OpenMoC };
   static inline std::vector<std::string> m_boundary_condition_names = {
     "periodic", "open", "fixed", "reflect", "open_moc"
   };
+
+  // time integrator options
   enum class TimeIntegrator { Euler, RK2, RK4 };
   static inline std::vector<std::string> m_time_integrator_names = {
     "euler", "rk2", "rk4"
   };
 
+  // grid names within PlasmaDomain
   enum Grids {d_x,d_y,pos_x,pos_y,be_x,be_y};
   static const inline std::vector<std::string> m_gridnames = {"d_x","d_y","pos_x","pos_y","be_x","be_y"};
   std::vector<Grid> m_grids{m_gridnames.size()};
 
+  // config names
   enum class Config {
     x_bound_1, x_bound_2, y_bound_1, y_bound_2,
     epsilon, epsilon_viscous, density_min,
     temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
-    output_flags, xdim, ydim, open_boundary_strength, std_out_interval, safe_state_mode, safe_state_interval,
+    output_flags, xdim, ydim, open_boundary_strength, std_out_interval, write_interval,
     open_boundary_decay_base, x_origin, y_origin, time_integrator, equation_set, duration, epsilon_courant
   };
   static inline std::vector<std::string> m_config_names = {
     "x_bound_1","x_bound_2","y_bound_1","y_bound_2",
     "epsilon","epsilon_viscous","density_min",
     "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
-    "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","safe_state_mode", "safe_state_interval",
+    "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","write_interval",
     "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "equation_set", "duration", "epsilon_courant"
   };
 
-  //Constructors and Initialization
+  // Constructors and Initialization
   PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file, bool continue_mode, bool overwrite_init);
   PlasmaDomain(): m_module_handler{*this} {};
   void readStateFile(const fs::path &state_file, bool continue_mode = true);
   void readConfigFile(const fs::path &config_file);
+  void initOutputContainer();
+  static Grid convertCellSizesToCellPositions(const Grid& d, int index, std::string origin_position);
+  static bool validateCellSizesAndPositions(const Grid& d, const Grid& pos, int index, double tolerance = 1.0e-4);
 
   //Time Evolution
   void run(double time_duration);
 
-  //Takes not-necessarily-uniform cell sizes d_x and d_y and converts to cell center positions,
-  //returned as the first (x position) and second (y position) indicies of a vector of Grids
-  //x_origin and y_origin specify location of the origin (0,0) in the domain:
-  //"lower" is the default, "center" and "upper" are also options for each
-  //For example, x_origin = "center" and y_origin = "center" places the origin
-  //at the center of the domain.
-  static Grid convertCellSizesToCellPositions(const Grid& d, int index, std::string origin_position);
-
-  static bool validateCellSizesAndPositions(const Grid& d, const Grid& pos, int index, double tolerance = 1.0e-4);
-
-private:
-
+private: //*****************************************************************************************************
   //Friend class declarations (for Modules)
   friend class ModuleHandler;
   friend class Module;
@@ -85,62 +82,64 @@ private:
   friend class IdealMHD2E;
   friend class Ideal2F;
 
-  //Strings corresponding to variables, settings, boundary conditions for file I/O
+  // time related variables
+  TimeIntegrator m_time_integrator{TimeIntegrator::Euler}; //indicates time integration scheme to use
+  double m_time{0.0};
+  double m_duration{-1.0};
+  int m_iter{0};
+  double m_max_time{-1.0}; //Upper bound on simulation time
+  int max_iterations{100}; //Upper bound on simulation iterations; unbounded if negative
+
+  // output settings
+  bool m_overwrite_init; // true when init.state to be overwritten at start of new simulation
+  bool m_continue_mode; // true when continuing previous run; appends results to mhd.out and replaces mhd.state
+  fs::path m_out_directory; // relative file path to where simulation files are to be saved
+  fs::path m_out_filename{"mhd.out"}; // file name for saving time evolution of plasma
+  std::vector<std::string> m_comment_lines{};
+  int m_iter_output_interval{1};
+  double m_time_output_interval{-1.0};
+  int m_std_out_interval{1}; //number of iterations between printing an update to standard out
+  int m_write_interval{1};
+  int m_output_counter{0};
+  std::vector<std::string> m_data_to_write; // holds data to be written to mhd.out
+  int m_lines_recorded{0}; // holds the last line of m_data_to_write that was updated
+
+  // variables relevant for boundary conditions
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)
   Grid m_ghost_zone_mask; //Equals 0 inside ghost zones and 1 everywhere else; for multiplying to negate values in ghost zones
+  BoundaryCondition x_bound_1, x_bound_2, y_bound_1, y_bound_2;
+  double open_boundary_strength{0.0}; // multiple of local sound speed added to velocity at boundary surface
+  double open_boundary_decay_base{1.0}; // base of exponential decay of rho, thermal_energy beyond open boundary surface
 
+  // PlasmaDomain internal grids
+  size_t m_xdim, m_ydim;
   Grid& grid(int index);
   Grid& grid(const std::string& name);
   int gridname2index(const std::string& name) const;
   bool is_grid(const std::string& name) const;
   
-  // std::vector<bool> m_output_flags; //Variables that are printed in .out files (for visualization purposes)
+  // ion properties
   double m_ion_mass; //in g
   double m_adiabatic_index; //aka gamma, unitless
 
+  // various class containers
   ModuleHandler m_module_handler;
   std::unique_ptr<EquationSet> m_eqs;
-  SavitzkyGolay m_sg{};
-
-  fs::path m_out_directory;
-  std::ofstream m_out_file;
-  bool m_overwrite_init;
-  std::vector<std::string> comment_lines;
-
-  double m_time;
-  double m_duration;
-  int m_iter;
-  double max_time; //Upper bound on simulation time
-
-  /**************************** CONFIGS ******************************/
-  size_t m_xdim, m_ydim;
-  int max_iterations; //Upper bound on simulation iterations; unbounded if negative
-  //Boundary condition settings
-  BoundaryCondition x_bound_1, x_bound_2, y_bound_1, y_bound_2;
-  double open_boundary_strength; // multiple of local sound speed added to velocity at boundary surface
-  double open_boundary_decay_base; // base of exponential decay of rho, thermal_energy beyond open boundary surface
-  //Safety factors
+  SavitzkyGolay m_sg{};  
+  
+  // safety factors
   double epsilon; //Time step calculation
   double epsilon_viscous; //Prefactor for artificial viscosity
   double epsilon_courant; // Courant safety factor for 2F model
   double density_min, temp_min, thermal_energy_min; //Lower bounds for mass density and thermal energy density
-  TimeIntegrator time_integrator; //indicates time integration scheme to use
-  //Output settings
-  int iter_output_interval;
-  double time_output_interval;
-  int std_out_interval; //number of iterations between printing an update to standard out
-  bool safe_state_mode; //when true, outputs a state file for every iteration; when false, only outputs a state when the run completes without issue
-  int safe_state_interval; //when safe_state_mode == true, number of iterations between .state files written out during run
-  bool continue_mode; //true when continuing previous run; appends results to mhd.out and replaces mhd.state
-
-  /*********************************************************************/ 
-
 
   void advanceTime(bool verbose = true);
 
   void integrateEuler(double time_step, double visc_coeff);
   void integrateRK2(double time_step, double visc_coeff);
   void integrateRK4(double time_step, double visc_coeff);
+
+  //******************** PRIVATE FUNCTION DECLARATIONS *************************************************************
 
   void updateGhostZones();
 
@@ -152,10 +151,9 @@ private:
   bool allInternalGridsInitialized();
 
   void outputPreamble();
-  void outputCurrentState();
-  void writeGridToOutput(const Grid& grid, std::string var_name);
+  void storeGrids();
+  void writeToOutFile();
   void writeStateFile(std::string filename_stem = "mhd",int precision = -1) const;
-  void cleanUpStateFiles(std::string filename_stem = "end") const;
   void printUpdate(double dt) const;
 
   void setOutputFlags(const std::vector<std::string> var_names, bool new_flag);
@@ -225,6 +223,16 @@ private:
   // Savitzky-Golay differentiation
   Grid derivativeSGx(const Grid& grid) const {return m_sg.derivative1D(grid,0,m_grids[d_x].min());};
   Grid derivativeSGy(const Grid& grid) const {return m_sg.derivative1D(grid,1,m_grids[d_y].min());};
+
+  template <typename T> static std::string num2str(T num,int precision=-1)
+    {
+        std::ostringstream ss;
+        if(precision == -1) ss.precision(std::numeric_limits<double>::digits10 + 1);
+        else ss.precision(precision);
+        ss.precision(precision);
+        ss << num;
+        return ss.str();
+    };
 };
 
 #endif

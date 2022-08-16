@@ -46,7 +46,7 @@ public:
     void write_array_params(const fs::path& path,const std::string& name = "file") const;
     std::string task_array_range() const;
     void print_task_array_range() const;
-    template <typename T> static std::string num2str(T num,int prec=6)
+    template <typename T> static std::string num2str(T num,int prec=4)
     {
         std::stringstream ss;
         ss.precision(prec);

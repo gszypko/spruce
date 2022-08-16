@@ -10,39 +10,29 @@
 #include <algorithm>
 
 //Construction with initial state from state file (continue mode and custom input)
-PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file,
-                          bool continue_mode, bool overwrite_init) : m_module_handler(*this)
+PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path, const fs::path &state_file, bool continue_mode, bool overwrite_init) : 
+  m_module_handler(*this), m_out_directory{out_path}, m_continue_mode{continue_mode}, m_overwrite_init{overwrite_init}
 {
-  //DEFAULT VALUES, TO BE OVERWRITTEN BY readConfigFile
-  m_overwrite_init = overwrite_init;
-  m_duration = -1.0;
-  open_boundary_strength = 1.0;
-  time_integrator = TimeIntegrator::Euler;
-  std_out_interval = 1;
-  safe_state_mode = true;
-  //***************************************************
+  // initialize grids
   m_grids = std::vector<Grid>(m_gridnames.size(),Grid::Zero(1,1));
-  m_iter = 0;
-  this->continue_mode = continue_mode;
-  m_out_directory = out_path;
-  fs::path out_filename("mhd.out");
-  if(continue_mode){
-    m_out_file.open(m_out_directory/out_filename,std::ofstream::app);
-  } else {
-    m_out_file.open(m_out_directory/out_filename);
-    fs::path new_config_path = m_out_directory/(config_path.filename());
-    fs::directory_entry new_config_dir(new_config_path);
-    if(!fs::equivalent(config_path,new_config_path)){
-      std::cout << "Copying " << config_path.string() << " into " << m_out_directory.string() << "...\n";
-      if(new_config_dir.exists()) fs::remove(new_config_path);
-      fs::copy(config_path, new_config_path, fs::copy_options::overwrite_existing);
-    }
-    else std::cout << config_path.string() << " already located in output directory.\n";
+
+  // handle config path - if config file not within output directory, copy config file into output directory
+  fs::path new_config_path = m_out_directory/(config_path.filename());
+  fs::directory_entry new_config_dir(new_config_path);
+  if(!fs::equivalent(config_path,new_config_path)){
+    std::cout << "Copying " << config_path.string() << " into " << m_out_directory.string() << "...\n";
+    if(new_config_dir.exists()) fs::remove(new_config_path);
+    fs::copy(config_path, new_config_path, fs::copy_options::overwrite_existing);
   }
+  else std::cout << config_path.string() << " already located in output directory.\n";
+
+  // read from config and state files - config must be read first so equation set can be loaded
   std::cout << "Reading config file...\n";
   readConfigFile(config_path);
   std::cout << "Reading state file...\n";
   readStateFile(state_file,continue_mode);
+
+  // process information loaded from config and state files
   std::cout << "Validating input data...\n";
   assert(allInternalGridsInitialized() && "All internal grid quantities for PlasmaDomain must be initialized");
   assert(validateCellSizesAndPositions(m_grids[d_x],m_grids[pos_x],0) && validateCellSizesAndPositions(m_grids[d_y],m_grids[pos_y],1) && "Cell sizes and positions must correspond");
@@ -50,10 +40,50 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   computeIterationBounds();
   m_eqs->populateVariablesFromState();
   m_module_handler.setupModules();
+
+  // overwrite the init.state file if new simulation with overwrite flag
   if(!continue_mode && m_overwrite_init){
     std::cout << "Writing out init.state...\n";
     writeStateFile("init");
   }
+
+  // initialize container for data to write to mhd.out
+  initOutputContainer();
+
+  // initialize the mhd.out file
+  if(!continue_mode){
+    outputPreamble();
+    storeGrids();
+    writeToOutFile();
+  }
+  
+}
+
+void PlasmaDomain::initOutputContainer()
+{
+  // the total number of rows (1+num_grids_to_record+num_grids_to_record*m_xdim)*m_write_interval
+  //  the 1 is because time is written first on one line
+  //  the first num_grids_to_record is for the names that precede each grid
+  //  the num_grids_to_record*m_xdim is to account for all the rows of each grid to be written
+  //  mulitply by m_write_interval because they will be stored this many times
+
+  // initialize grid with copies of pi, to simulate largest precision necessary for allocating space
+  Grid pi_grid(1,m_ydim,PI*1e100);
+  std::string row = pi_grid.format(',','\n');
+  // count number of lines to record per iteration
+  int num_grids_to_record{0};
+  for(int i=0; i<m_eqs->num_variables(); i++){
+    if(m_eqs->getOutputFlag(i)) num_grids_to_record++;
+  }
+  std::vector<std::string> module_varnames;
+  std::vector<Grid> module_data;
+  m_module_handler.getFileOutputData(module_varnames,module_data);
+  for(int i=0; i<module_varnames.size(); i++){
+    num_grids_to_record++;
+  }
+  int num_lines_per_iter = 1+num_grids_to_record+num_grids_to_record*m_xdim;
+  m_data_to_write.resize(m_write_interval*num_lines_per_iter);
+  for (auto& elem : m_data_to_write) elem.reserve(row.size());
 }
 
 int PlasmaDomain::gridname2index(const std::string& name) const
@@ -106,11 +136,12 @@ void PlasmaDomain::computeIterationBounds()
   }
 }
 
-//Takes not-necessarily-uniform cell sizes d and converts to cell center positions,
-//returned as a Grid
-//origin_position specifies location of the origin i.e. position=0 in the domain:
-//"lower" is the default, "center" and "upper" are also options for each
-
+//Takes not-necessarily-uniform cell sizes d_x and d_y and converts to cell center positions,
+  //returned as the first (x position) and second (y position) indicies of a vector of Grids
+  //x_origin and y_origin specify location of the origin (0,0) in the domain:
+  //"lower" is the default, "center" and "upper" are also options for each
+  //For example, x_origin = "center" and y_origin = "center" places the origin
+  //at the center of the domain.
 Grid PlasmaDomain::convertCellSizesToCellPositions(const Grid& d, int index, std::string origin_position)
 {
   int xdim = d.rows(), ydim = d.cols();

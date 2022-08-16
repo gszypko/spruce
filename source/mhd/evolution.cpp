@@ -8,52 +8,61 @@
 
 void PlasmaDomain::run(double time_duration)
 {
-  if(time_duration >= 0.0) m_duration = time_duration; //command-line-provided duration overrides state file duration
+  // handle when time is supplied as input
+  if(time_duration >= 0.0) m_duration = time_duration;
   else {
     assert(m_duration >= 0.0 && "Duration must be specified on command line, or in state file");
   }
-  if(safe_state_interval <= 0) safe_state_mode = false;
-  max_time = m_time + m_duration;
-  if(!continue_mode){
-    outputPreamble();
-    outputCurrentState();
-  }
-  while( m_time < max_time && (max_iterations < 0 || m_iter < max_iterations)){
-    if(safe_state_mode && m_iter%safe_state_interval == 0) writeStateFile();
-    double old_time = m_time;
-    m_iter++;
-    advanceTime();
-    if((iter_output_interval > 0 && m_iter%iter_output_interval == 0) || (time_output_interval > 0.0
-        && (int)(m_time/time_output_interval) > (int)(old_time/time_output_interval))) outputCurrentState();
-  }
+  m_max_time = m_time + m_duration;
   
-  if(safe_state_mode){
-    writeStateFile();
-    cleanUpStateFiles("end");
-  }
-  else writeStateFile("end");
+  // run loop for advanceTime
+  while (m_time < m_max_time && (max_iterations < 0 || m_iter < max_iterations)){
+    // advance time and note the time iteration before and after stepping
+    int old_time_iter = (int)(m_time/m_time_output_interval);
+    advanceTime();
+    int new_time_iter = (int)(m_time/m_time_output_interval);
+    // store data for output flags
+    bool store_cond_1 = m_iter_output_interval > 0 && m_iter%m_iter_output_interval == 0;
+    bool store_cond_2 = m_time_output_interval > 0.0 && new_time_iter > old_time_iter;
+    if (store_cond_1 || store_cond_2) storeGrids();
+    // write grid data to file
+    if (m_output_counter%m_write_interval == 0){
+      writeToOutFile();
+      writeStateFile("end");
+    }
+  }  
+  writeToOutFile();
+  writeStateFile("end");
 }
 
 void PlasmaDomain::advanceTime(bool verbose)
 {
+  // determine timestep for this iteration
   double min_dt;
-
   double dt_raw = m_eqs->getDT().min(m_xl,m_yl,m_xu,m_yu);
   min_dt = epsilon*dt_raw;
 
+  // iterate module functions
   m_module_handler.preIterateModules(min_dt);
   m_module_handler.iterateModules(min_dt);
 
+  // determine viscosity coefficient
   double visc_coeff = epsilon_viscous*0.5*((m_grids[d_x].square() + m_grids[d_y].square())/dt_raw).min();
 
-  if(time_integrator == TimeIntegrator::RK2) integrateRK2(min_dt, visc_coeff);
-  else if(time_integrator == TimeIntegrator::RK4) integrateRK4(min_dt, visc_coeff);
-  else if(time_integrator == TimeIntegrator::Euler) integrateEuler(min_dt, visc_coeff);
+  // run time integration according to specified method
+  if (m_time_integrator == TimeIntegrator::RK2) integrateRK2(min_dt, visc_coeff);
+  else if (m_time_integrator == TimeIntegrator::RK4) integrateRK4(min_dt, visc_coeff);
+  else if (m_time_integrator == TimeIntegrator::Euler) integrateEuler(min_dt, visc_coeff);
 
+  // post iterate all modules
   m_module_handler.postIterateModules(min_dt);
 
+  // print update to terminal
+  if(m_std_out_interval > 0 && m_iter%m_std_out_interval == 0) printUpdate(min_dt);
+
+  // step time
   m_time += min_dt;
-  if(std_out_interval > 0 && m_iter%std_out_interval == 0) printUpdate(min_dt);
+  m_iter++;
 }
 
 void PlasmaDomain::integrateEuler(double time_step, double visc_coeff)

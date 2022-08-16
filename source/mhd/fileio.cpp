@@ -19,7 +19,7 @@ void PlasmaDomain::readStateFile(const fs::path &state_file, bool continue_mode)
   std::string line, element;
   std::getline(in_file,line);
   while(line.empty() || line[0] == '#'){
-    if(line[0] == '#') comment_lines.push_back(line);
+    if(line[0] == '#') m_comment_lines.push_back(line);
     std::getline(in_file,line);
   }
   clearWhitespace(line);
@@ -111,35 +111,57 @@ void PlasmaDomain::readConfigFile(const fs::path &config_file)
 
 void PlasmaDomain::outputPreamble()
 {
-  for(std::string comment : comment_lines){
+  std::ofstream out_file(m_out_directory/m_out_filename);
+  for (std::string comment : m_comment_lines){
     assert(comment[0] == '#');
-    m_out_file << comment << std::endl;
+    out_file << comment << std::endl;
   }
-  m_out_file << "xdim,ydim" << std::endl;
-  m_out_file << m_xdim << "," << m_ydim << std::endl;
+  out_file << "xdim,ydim" << std::endl;
+  out_file << m_xdim << "," << m_ydim << std::endl;
   for(int v : {pos_x,pos_y,be_x,be_y}){
-    writeGridToOutput(m_grids[v],m_gridnames[v]);  
+    out_file << m_gridnames[v] << std::endl;
+    out_file << m_grids[v].format(',','\n');
   }
+  out_file.close();
 }
 
-void PlasmaDomain::outputCurrentState()
+void PlasmaDomain::storeGrids()
 {
-  m_out_file << "t=" << m_time << std::endl;
-  for(int i=0; i<m_eqs->num_variables(); i++){
-    if(m_eqs->getOutputFlag(i)) writeGridToOutput(m_eqs->grid(i),m_eqs->nameFromIndex(i));
+  // write time
+  m_data_to_write[m_lines_recorded] = "t=" + num2str(m_time) + '\n';
+  m_lines_recorded++;
+  // write grids from equation set that have output flag
+  for (int i=0; i<m_eqs->num_variables(); i++){
+    if (m_eqs->getOutputFlag(i)){
+      m_data_to_write[m_lines_recorded] = m_eqs->nameFromIndex(i) + '\n';
+      m_lines_recorded++;
+      m_data_to_write[m_lines_recorded] = m_eqs->grid(i).format(',','\n');
+      m_lines_recorded++;
+    }
   }
+  // write variables from modules
   std::vector<std::string> module_varnames;
   std::vector<Grid> module_data;
   m_module_handler.getFileOutputData(module_varnames,module_data);
   for(int i=0; i<module_varnames.size(); i++){
-    writeGridToOutput(module_data[i],module_varnames[i]);
+    m_data_to_write[m_lines_recorded] = module_varnames[i] + '\n';
+    m_lines_recorded++;
+    m_data_to_write[m_lines_recorded] = module_data[i].format(',','\n');
+    m_lines_recorded++;
   }
+  // increment store counter
+  m_output_counter++;
 }
 
-void PlasmaDomain::writeGridToOutput(const Grid& grid, std::string var_name)
+void PlasmaDomain::writeToOutFile()
 {
-  m_out_file << var_name << std::endl;
-  m_out_file << grid.format(',','\n');
+  std::ofstream out_file(m_out_directory/m_out_filename,std::ofstream::app);
+  for (int line = 0; line<m_lines_recorded; line++){
+    out_file << m_data_to_write[line];
+    m_data_to_write[line].clear();
+  }
+  m_lines_recorded = 0;
+  m_output_counter = 0;
 }
 
 //Output current state into state file (toggles between overwriting two different files
@@ -149,12 +171,8 @@ void PlasmaDomain::writeGridToOutput(const Grid& grid, std::string var_name)
 void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
 {
   std::ofstream state_file;
-  if (filename_stem.compare("mhd") == 0){
-    if(safe_state_mode) state_file.open(m_out_directory/fs::path(filename_stem+std::to_string((m_iter/safe_state_interval)%2)+".state"));
-    else state_file.open(m_out_directory/fs::path(filename_stem+".state"));
-  }
-  else state_file.open(m_out_directory/fs::path(filename_stem+".state"));
-  for(std::string comment : comment_lines){
+  state_file.open(m_out_directory/fs::path(filename_stem+".state"));
+  for(std::string comment : m_comment_lines){
     assert(comment[0] == '#');
     state_file << comment << std::endl;
   }
@@ -174,15 +192,6 @@ void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
     state_file << m_eqs->grid(i).format(',','\n',precision);
   }
   state_file.close();
-}
-
-//Gets rid of the older of the two state files, named mhd0.state and mhd1.state, at the end of the sim run
-//The remaining one is renamed to [filename_stem].state
-void PlasmaDomain::cleanUpStateFiles(std::string filename_stem) const
-{
-  fs::rename(m_out_directory/("mhd"+std::to_string((m_iter/safe_state_interval)%2)+".state"),
-          m_out_directory/(filename_stem+".state"));
-  fs::remove(m_out_directory/("mhd"+std::to_string((m_iter/safe_state_interval - 1)%2)+".state"));
 }
 
 PlasmaDomain::BoundaryCondition PlasmaDomain::stringToBoundaryCondition(const std::string str) const
@@ -206,7 +215,7 @@ void PlasmaDomain::printUpdate(double dt) const
   std::cout << "Iter: " << m_iter;
   if(max_iterations > 0) std::cout << "/" << max_iterations;
   std::cout << "|t: " << m_time;
-  if(max_time > 0.0) std::cout << "/" << max_time;
+  if(m_max_time > 0.0) std::cout << "/" << m_max_time;
   std::cout << "|dt: " << dt;
   std::vector<std::string> module_messages = m_module_handler.getCommandLineMessages();
   for(int i=0; i<module_messages.size(); i++){
@@ -228,17 +237,16 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::temp_min): temp_min = std::stod(rhs); break;
   case static_cast<int>(Config::thermal_energy_min): thermal_energy_min = std::stod(rhs); break;
   case static_cast<int>(Config::max_iterations): max_iterations = std::stoi(rhs); break;
-  case static_cast<int>(Config::iter_output_interval): iter_output_interval = std::stoi(rhs); break;
-  case static_cast<int>(Config::time_output_interval): time_output_interval = std::stod(rhs); break;
+  case static_cast<int>(Config::iter_output_interval): m_iter_output_interval = std::stoi(rhs); break;
+  case static_cast<int>(Config::time_output_interval): m_time_output_interval = std::stod(rhs); break;
   case static_cast<int>(Config::output_flags): assert(m_eqs.get() != nullptr && "equation_set must be defined in config file before output_flags"); m_eqs->setOutputFlag(rhs,true); break;
   case static_cast<int>(Config::xdim): m_xdim = std::stoi(rhs); break;
   case static_cast<int>(Config::ydim): m_ydim = std::stoi(rhs); break;
   case static_cast<int>(Config::open_boundary_strength): open_boundary_strength = std::stod(rhs); break;
-  case static_cast<int>(Config::safe_state_mode): safe_state_mode = (rhs == "true"); break;
-  case static_cast<int>(Config::safe_state_interval): safe_state_interval = std::stoi(rhs); break;
-  case static_cast<int>(Config::std_out_interval): std_out_interval = std::stoi(rhs); break;
+  case static_cast<int>(Config::write_interval): m_write_interval = std::stoi(rhs); break;
+  case static_cast<int>(Config::std_out_interval): m_std_out_interval = std::stoi(rhs); break;
   case static_cast<int>(Config::open_boundary_decay_base): open_boundary_decay_base = std::stod(rhs); break;
-  case static_cast<int>(Config::time_integrator): time_integrator = stringToTimeIntegrator(rhs); break;
+  case static_cast<int>(Config::time_integrator): m_time_integrator = stringToTimeIntegrator(rhs); break;
   case static_cast<int>(Config::equation_set): m_eqs = EquationSet::spawnEquationSet((*this),rhs); break;
   case static_cast<int>(Config::duration): m_duration = std::stod(rhs); break;
   case static_cast<int>(Config::epsilon_courant): epsilon_courant = std::stod(rhs); break;
