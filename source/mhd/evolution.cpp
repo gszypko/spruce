@@ -4,7 +4,6 @@
 #include "plasmadomain.hpp"
 #include "constants.hpp"
 #include <cmath>
-// #include "solarutils.hpp"
 
 void PlasmaDomain::run(double time_duration)
 {
@@ -26,8 +25,9 @@ void PlasmaDomain::run(double time_duration)
     bool store_cond_2 = m_time_output_interval > 0.0 && new_time_iter > old_time_iter;
     if (store_cond_1 || store_cond_2) storeGrids();
     // write grid data to file
-    if (m_output_counter%m_write_interval == 0){
+    if (m_write_interval > 0 && m_store_counter%m_write_interval == 0){
       writeToOutFile();
+      updateStateIdentifier();
       writeStateFile("end");
     }
   }

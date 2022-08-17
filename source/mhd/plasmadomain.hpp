@@ -97,10 +97,11 @@ private: //*********************************************************************
   int m_iter_output_interval{1};
   double m_time_output_interval{-1.0};
   int m_std_out_interval{1}; //number of iterations between printing an update to standard out
-  int m_write_interval{1};
-  int m_output_counter{0};
+  int m_write_interval{1}; // how many times data is stored within m_data_to_write before transfering to mhd.out
+  int m_store_counter{0}; // number of times data has been stored withn m_data_to_write since last call to writeToOutFile
   std::vector<std::string> m_data_to_write; // holds data to be written to mhd.out
   int m_lines_recorded{0}; // holds the last line of m_data_to_write that was updated
+  int m_state_identifier{1}; // number to be appended to mhdx.state
 
   // variables relevant for boundary conditions
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)
@@ -152,6 +153,8 @@ private: //*********************************************************************
   void storeGrids();
   void writeToOutFile();
   void writeStateFile(std::string filename_stem = "mhd",int precision = -1) const;
+  void updateStateIdentifier();
+  void cleanStateFiles();
   void printUpdate(double dt) const;
 
   void setOutputFlags(const std::vector<std::string> var_names, bool new_flag);

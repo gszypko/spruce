@@ -161,7 +161,7 @@ void PlasmaDomain::storeGrids()
     m_lines_recorded++;
   }
   // increment store counter
-  m_output_counter++;
+  m_store_counter++;
 }
 
 // Writes the information stored within m_data_to_write to mhd.out
@@ -176,7 +176,7 @@ void PlasmaDomain::writeToOutFile()
     m_data_to_write[line].clear();
   }
   m_lines_recorded = 0;
-  m_output_counter = 0;
+  m_store_counter = 0;
 }
 
 //Output current state into state file (toggles between overwriting two different files
@@ -185,8 +185,18 @@ void PlasmaDomain::writeToOutFile()
 //Resulting file is named [filename_stem].state
 void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
 {
+  // determine name of state file
+  fs::path filename;
+  if (filename_stem == "mhd"){
+    filename = "mhd" + num2str(m_state_identifier) + ".state";
+  }
+  else filename = filename_stem + ".state";
+
+  // open stream to state file
   std::ofstream state_file;
-  state_file.open(m_out_directory/fs::path(filename_stem+".state"));
+  state_file.open(m_out_directory/filename);
+  
+  // write to state file
   for(std::string comment : m_comment_lines){
     assert(comment[0] == '#');
     state_file << comment << std::endl;
@@ -207,6 +217,16 @@ void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
     state_file << m_eqs->grid(i).format(',','\n',precision);
   }
   state_file.close();
+}
+
+void PlasmaDomain::updateStateIdentifier()
+{
+  if (m_state_identifier == 1) m_state_identifier = 2;
+  else if (m_state_identifier == 2) m_state_identifier = 1;
+  else{
+    std::cerr << "<m_state_identifier> out of range: must be 1 or 2" << std::endl;
+    assert(false);
+  }
 }
 
 PlasmaDomain::BoundaryCondition PlasmaDomain::stringToBoundaryCondition(const std::string str) const
