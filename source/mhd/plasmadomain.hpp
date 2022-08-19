@@ -18,9 +18,10 @@ class PlasmaDomain
 {
 public: //******************************************************************************************************
   // Boundary Condition Options
-  enum class BoundaryCondition { Periodic, Open, Fixed, Reflect, OpenMoC };
+  enum class BoundaryCondition { Periodic, Open, Fixed, Reflect, OpenMoC, OpenUCNP };
+  enum class Boundary {xl,xu,yl,yu};
   static inline std::vector<std::string> m_boundary_condition_names = {
-    "periodic", "open", "fixed", "reflect", "open_moc"
+    "periodic", "open", "fixed", "reflect", "open_moc", "open_ucnp"
   };
 
   // Time Integrator Options
@@ -149,6 +150,7 @@ private: //*********************************************************************
   void openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
   void reflectBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
   void fixedBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
+  void ucnpBoundaryExtrapolate(Boundary bndry,int index);
 
   void computeIterationBounds();
   bool allInternalGridsInitialized();

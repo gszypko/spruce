@@ -274,29 +274,29 @@ void PlasmaDomain::printUpdate(double dt) const
 void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
 {
   switch (static_cast<int>(setting_index)) {
-  case static_cast<int>(Config::x_bound_1): x_bound_1 = stringToBoundaryCondition(rhs); break;
-  case static_cast<int>(Config::x_bound_2): x_bound_2 = stringToBoundaryCondition(rhs); break;
-  case static_cast<int>(Config::y_bound_1): y_bound_1 = stringToBoundaryCondition(rhs); break;
-  case static_cast<int>(Config::y_bound_2): y_bound_2 = stringToBoundaryCondition(rhs); break;
-  case static_cast<int>(Config::epsilon): epsilon = std::stod(rhs); break;
-  case static_cast<int>(Config::epsilon_viscous): epsilon_viscous = std::stod(rhs); break;
-  case static_cast<int>(Config::density_min): density_min = std::stod(rhs); break;
-  case static_cast<int>(Config::temp_min): temp_min = std::stod(rhs); break;
-  case static_cast<int>(Config::thermal_energy_min): thermal_energy_min = std::stod(rhs); break;
-  case static_cast<int>(Config::max_iterations): max_iterations = std::stoi(rhs); break;
-  case static_cast<int>(Config::iter_output_interval): m_iter_output_interval = std::stoi(rhs); break;
-  case static_cast<int>(Config::time_output_interval): m_time_output_interval = std::stod(rhs); break;
-  case static_cast<int>(Config::output_flags): assert(m_eqs.get() != nullptr && "equation_set must be defined in config file before output_flags"); m_eqs->setOutputFlag(rhs,true); break;
-  case static_cast<int>(Config::xdim): m_xdim = std::stoi(rhs); break;
-  case static_cast<int>(Config::ydim): m_ydim = std::stoi(rhs); break;
-  case static_cast<int>(Config::open_boundary_strength): open_boundary_strength = std::stod(rhs); break;
-  case static_cast<int>(Config::write_interval): m_write_interval = std::stoi(rhs); break;
-  case static_cast<int>(Config::std_out_interval): m_std_out_interval = std::stoi(rhs); break;
-  case static_cast<int>(Config::open_boundary_decay_base): open_boundary_decay_base = std::stod(rhs); break;
-  case static_cast<int>(Config::time_integrator): m_time_integrator = stringToTimeIntegrator(rhs); break;
-  case static_cast<int>(Config::duration): m_duration = std::stod(rhs); break;
-  case static_cast<int>(Config::sg_opt): m_sg_opt = rhs; break;
-  default: break;
+    case static_cast<int>(Config::x_bound_1): x_bound_1 = stringToBoundaryCondition(rhs); break;
+    case static_cast<int>(Config::x_bound_2): x_bound_2 = stringToBoundaryCondition(rhs); break;
+    case static_cast<int>(Config::y_bound_1): y_bound_1 = stringToBoundaryCondition(rhs); break;
+    case static_cast<int>(Config::y_bound_2): y_bound_2 = stringToBoundaryCondition(rhs); break;
+    case static_cast<int>(Config::epsilon): epsilon = std::stod(rhs); break;
+    case static_cast<int>(Config::epsilon_viscous): epsilon_viscous = std::stod(rhs); break;
+    case static_cast<int>(Config::density_min): density_min = std::stod(rhs); break;
+    case static_cast<int>(Config::temp_min): temp_min = std::stod(rhs); break;
+    case static_cast<int>(Config::thermal_energy_min): thermal_energy_min = std::stod(rhs); break;
+    case static_cast<int>(Config::max_iterations): max_iterations = std::stoi(rhs); break;
+    case static_cast<int>(Config::iter_output_interval): m_iter_output_interval = std::stoi(rhs); break;
+    case static_cast<int>(Config::time_output_interval): m_time_output_interval = std::stod(rhs); break;
+    case static_cast<int>(Config::output_flags): assert(m_eqs.get() != nullptr && "equation_set must be defined in config file before output_flags"); m_eqs->setOutputFlag(rhs,true); break;
+    case static_cast<int>(Config::xdim): m_xdim = std::stoi(rhs); break;
+    case static_cast<int>(Config::ydim): m_ydim = std::stoi(rhs); break;
+    case static_cast<int>(Config::open_boundary_strength): open_boundary_strength = std::stod(rhs); break;
+    case static_cast<int>(Config::write_interval): m_write_interval = std::stoi(rhs); break;
+    case static_cast<int>(Config::std_out_interval): m_std_out_interval = std::stoi(rhs); break;
+    case static_cast<int>(Config::open_boundary_decay_base): open_boundary_decay_base = std::stod(rhs); break;
+    case static_cast<int>(Config::time_integrator): m_time_integrator = stringToTimeIntegrator(rhs); break;
+    case static_cast<int>(Config::duration): m_duration = std::stod(rhs); break;
+    case static_cast<int>(Config::sg_opt): m_sg_opt = rhs; break;
+    default: break;
   }
 }
 

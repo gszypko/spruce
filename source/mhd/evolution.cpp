@@ -114,21 +114,25 @@ void PlasmaDomain::updateGhostZones()
     if(x_bound_1 == BoundaryCondition::Open) for(int j=m_yl; j<=m_yu; j++) openBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
     else if(x_bound_1 == BoundaryCondition::Reflect) for(int j=m_yl; j<=m_yu; j++) reflectBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
     else if(x_bound_1 == BoundaryCondition::Fixed) for(int j=m_yl; j<=m_yu; j++) fixedBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
+    else if (x_bound_1 == BoundaryCondition::OpenUCNP) for(int j=m_yl; j<=m_yu; j++) ucnpBoundaryExtrapolate(Boundary::xl,j);
   }
   if(x_bound_2 != BoundaryCondition::Periodic && x_bound_2 != BoundaryCondition::OpenMoC){
     if(x_bound_2 == BoundaryCondition::Open) for(int j=m_yl; j<=m_yu; j++) openBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
     else if(x_bound_2 == BoundaryCondition::Reflect) for(int j=m_yl; j<=m_yu; j++) reflectBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
     else if(x_bound_2 == BoundaryCondition::Fixed) for(int j=m_yl; j<=m_yu; j++) fixedBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
+    else if (x_bound_2 == BoundaryCondition::OpenUCNP) for(int j=m_yl; j<=m_yu; j++) ucnpBoundaryExtrapolate(Boundary::xu,j);
   }
   if(y_bound_1 != BoundaryCondition::Periodic && y_bound_1 != BoundaryCondition::OpenMoC){
     if(y_bound_1 == BoundaryCondition::Open) for(int i=m_xl; i<=m_xu; i++) openBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
     else if(y_bound_1 == BoundaryCondition::Reflect) for(int i=m_xl; i<=m_xu; i++) reflectBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
     else if(y_bound_1 == BoundaryCondition::Fixed) for(int i=m_xl; i<=m_xu; i++) fixedBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
+    else if (y_bound_1 == BoundaryCondition::OpenUCNP) for(int j=m_xl; j<=m_xu; j++) ucnpBoundaryExtrapolate(Boundary::yl,j);
   }
   if(y_bound_2 != BoundaryCondition::Periodic && y_bound_2 != BoundaryCondition::OpenMoC){
     if(y_bound_2 == BoundaryCondition::Open) for(int i=m_xl; i<=m_xu; i++) openBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
     else if(y_bound_2 == BoundaryCondition::Reflect) for(int i=m_xl; i<=m_xu; i++) reflectBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
     else if(y_bound_2 == BoundaryCondition::Fixed) for(int i=m_xl; i<=m_xu; i++) fixedBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
+    else if (y_bound_2 == BoundaryCondition::OpenUCNP) for(int j=m_xl; j<=m_xu; j++) ucnpBoundaryExtrapolate(Boundary::yu,j);
   }
 }
 
@@ -141,9 +145,6 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
   assert((i1 == i2 || j1 == j2) && "Points to extrapolate must be x-aligned or y-aligned");
   bool x_boundary = (j1 == j2);
-
-  // Grid &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y], &m_rho = grids[rho], &m_thermal_energy = grids[thermal_energy];
-
   double delta_last = x_boundary ? m_grids[d_x](i3,j3) : m_grids[d_y](i3,j3);
   double dist23 = x_boundary ? 0.5*(m_grids[d_x](i2,j2) + m_grids[d_x](i3,j3)) : 0.5*(m_grids[d_y](i2,j2) + m_grids[d_y](i3,j3));
   double dist12 = x_boundary ? 0.5*(m_grids[d_x](i1,j1) + m_grids[d_x](i2,j2)) : 0.5*(m_grids[d_y](i1,j1) + m_grids[d_y](i2,j2));
@@ -254,4 +255,52 @@ void PlasmaDomain::fixedBoundaryExtrapolate(int i1, int i2, int i3, int i4, int 
       m_eqs->grid(v)(i3,j3) = 0.0;
     }
   }
+}
+
+// boundary test case for UCNPs
+  // index corresponds to the cell of interest along dimension not being extrapolated
+  // so index corresponds to a y cell if treating an x boundary and vice versa
+  // nearest interior cell given by (m_xl/m_xu, index) or (index, m_yl,m_yu)
+  // boundary cells are indexed 0 -> m_xl-1 or m_xu+1 -> m_xdim-1
+  // current implementation simply copies values from nearest interior cell into boundary cell
+void PlasmaDomain::ucnpBoundaryExtrapolate(Boundary bndry,int index)
+{
+  int int_x, int_y, bnd_x,bnd_y; // indices corresponding to nearest interior cell
+  for (int i=0; i<N_GHOST; i++){ // for each boundary cell
+    switch (bndry){
+      case Boundary::xl: 
+        int_x = m_xl;
+        int_y = index;
+        bnd_x = i;
+        bnd_y = index;
+        break;
+      case Boundary::xu: 
+        int_x = m_xu;
+        int_y = index;
+        bnd_x = m_xu + 1 + i;
+        bnd_y = index;
+        break;
+      case Boundary::yl: 
+        int_x = index;
+        int_y = m_yl;
+        bnd_x = index;
+        bnd_y = i;
+        break;
+      case Boundary::yu: 
+        int_x = index;
+        int_y = m_yu;
+        bnd_x = index;
+        bnd_y = m_yu + 1 + i;
+        break;
+      default: assert(false);
+    }
+    for (int j : m_eqs->densities()) m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
+    for (int j : m_eqs->thermal_energies()) m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
+    for (int j : m_eqs->fields()) m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
+    for (int s=0; s<m_eqs->num_species(); s++){
+      for (int j : m_eqs->momenta()[s]) m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
+    }
+  }
+  
+  
 }
