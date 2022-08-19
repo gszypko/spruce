@@ -30,25 +30,22 @@ class IdealMHD: public EquationSet {
         std::vector<int> densities() override { return {rho}; }
         std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y}}; }
         std::vector<int> thermal_energies() override { return {thermal_energy}; }
+        std::vector<int> fields() override { return {bi_x,bi_y}; }
 
         void populateVariablesFromState(std::vector<Grid> &grids) override;
-        Grid getDT() override;
         std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff) override;
         void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
         void propagateChanges(std::vector<Grid> &grids) override;
+        Grid getDT() override {return m_grids[dt];}
 
     private:
+        void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids);
+        void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids);
+        void catchNullFieldDirection(std::vector<Grid> &grids);
         void recomputeDT();
-        void enforceMinimums(std::vector<Grid> &grids);
-        void computeConstantTerms(std::vector<Grid> &grids);
-        void recomputeDerivedVariables(std::vector<Grid> &grids);
-        void recomputeTemperature(std::vector<Grid> &grids);
-        void recomputeThermalEnergy(std::vector<Grid> &grids);
-        void recomputeKineticEnergy(std::vector<Grid> &grids);
-        void recomputeNumberDensity(std::vector<Grid> &grids);
-        void recomputeMagneticFields(std::vector<Grid> &grids);
         std::vector<Grid> computeTimeDerivativesCharacteristicBoundary(const std::vector<Grid> &grids, bool x_bound_1, bool x_bound_2, bool y_bound_1, bool y_bound_2);
         std::vector<std::vector<Grid>> singleBoundaryTermsMOC(const std::vector<Grid> &grids, int boundary_index, bool boundary_lower);
+        void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
 };
 
 #endif

@@ -7,6 +7,8 @@
 
 IdealMHD2E::IdealMHD2E(PlasmaDomain &pd): EquationSet(pd,def_var_names()) {}
 
+void IdealMHD2E::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){}
+
 void IdealMHD2E::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     grids[rho] += step*m_pd.m_ghost_zone_mask*time_derivatives[0];

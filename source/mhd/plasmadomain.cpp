@@ -40,16 +40,14 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   computeIterationBounds();
   m_eqs->populateVariablesFromState();
   m_module_handler.setupModules();
-
+  m_sg = SavitzkyGolay(m_sg_opt,Grid::Zero(m_xdim,m_ydim));
   // overwrite the init.state file if new simulation with overwrite flag
   if(!continue_mode && m_overwrite_init){
     std::cout << "Writing out init.state...\n";
     writeStateFile("init");
   }
-
   // initialize container for data to write to mhd.out
   initOutputContainer();
-
   // initialize the mhd.out file
   if(!continue_mode){
     outputPreamble();

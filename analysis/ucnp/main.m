@@ -10,7 +10,7 @@ s = spreadsheet2struct(inp,fields);
 
 % user controls
 plotGridTimeEvol = true;
-doGaussianAnalysis = false;
+doGaussianAnalysis = true;
 numGhostCells = 0;
 eic_opt = false;
 

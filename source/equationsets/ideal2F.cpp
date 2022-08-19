@@ -7,6 +7,20 @@
 
 Ideal2F::Ideal2F(PlasmaDomain &pd): EquationSet(pd,def_var_names()) {}
 
+void Ideal2F::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs)
+{
+    for (int i=0; i<lhs.size(); i++){
+        if (lhs[i] == "use_sub_cycling") m_use_sub_cycling = (rhs[i] == "true");
+        else if (lhs[i] == "epsilon_courant") m_epsilon_courant = stod(rhs[i]);
+        else if (lhs[i] == "smooth_fields") m_smooth_fields = (rhs[i] == "true");
+        else if (lhs[i] == "verbose_2F") m_verbose = (rhs[i] == "true");
+        else{
+            std::cerr << lhs[i] << " is not recognized for this equation set." << std::endl;
+            assert(false);
+        }
+    }
+}
+
 void Ideal2F::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     // evolve fluid variables
@@ -19,7 +33,7 @@ void Ideal2F::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<G
     grids[i_thermal_energy] += step*time_derivatives[6];
     grids[e_thermal_energy] += step*time_derivatives[7];
     // evolve electromagnetic fields
-    if (use_sub_cycling){
+    if (m_use_sub_cycling){
         // compute change in current density
         Grid j_x_new = E*(grids[i_mom_x]/m_pd.m_ion_mass-grids[e_mom_x]/M_ELECTRON);
         Grid j_y_new = E*(grids[i_mom_y]/m_pd.m_ion_mass-grids[e_mom_y]/M_ELECTRON);
@@ -89,7 +103,7 @@ std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids
                             - grids[e_press]*m_pd.divergence2D(v_e);
     // optionally evolve electromagnetic fields
     Grid dEx_dt, dEy_dt, dEz_dt, dBx_dt, dBy_dt, dBz_dt;
-    if (!use_sub_cycling){
+    if (!m_use_sub_cycling){
         dEx_dt = +C*m_pd.derivative1D(grids[b_z],1) - 4.*PI*grids[j_x];
         dEy_dt = -C*m_pd.derivative1D(grids[b_z],0) - 4.*PI*grids[j_y];
         dEz_dt = +C*(m_pd.derivative1D(grids[b_y],0) - m_pd.derivative1D(grids[b_x],1));
@@ -206,7 +220,7 @@ void Ideal2F::recomputeDT(){
     Grid dt_v = dr/(v + v_L);
     Grid dt_EM = dx*dy/(dx+dy)/C;
     m_grids[dt] = dt_wave.min(dt_v);
-    if (!use_sub_cycling) m_grids[dt] = m_grids[dt].min(dt_EM);
+    if (!m_use_sub_cycling) m_grids[dt] = m_grids[dt].min(dt_EM);
 }
 
 std::vector<Grid> Ideal2F::subcycleMaxwell(const std::vector<Grid>& grids, const std::vector<Grid>& dj_tot, double step)
@@ -214,10 +228,10 @@ std::vector<Grid> Ideal2F::subcycleMaxwell(const std::vector<Grid>& grids, const
     // determine sub-cycle timestep - Courant condition in two dimensions
     const Grid& dx = m_pd.m_grids[PlasmaDomain::d_x];
     const Grid& dy = m_pd.m_grids[PlasmaDomain::d_y];
-    double dt_EM = m_pd.epsilon_courant*(dx*dy/(dx+dy)/C).min(); // ideal timestep to satisfy Courant condition
+    double dt_EM = m_epsilon_courant*(dx*dy/(dx+dy)/C).min(); // ideal timestep to satisfy Courant condition
     int num_steps = step/dt_EM + 1; // number of sub-cycles that satisfies Courant condition
     double dt = step/num_steps;
-    // std::cout << "Number Subcycles: " << num_steps << std::endl;
+    if (m_verbose) std::cout << "Number Subcycles: " << num_steps << std::endl;
     // preallocate variables
     std::vector<Grid> dEM_dt(6,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
     std::vector<Grid> EM {grids[E_x],grids[E_y],grids[E_z],grids[b_x],grids[b_y],grids[b_z]};

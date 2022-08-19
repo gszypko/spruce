@@ -8,9 +8,10 @@
 ConfigHandler::ConfigHandler(fs::path config_path): 
     m_pd{}, m_config_path{config_path}
 {
-    instantiate_modules();
-    define_config_names();
     read_config();
+    instantiate_modules();
+    instantiate_equation_set();
+    define_config_names();
 }
 
 void ConfigHandler::read_config()
@@ -30,42 +31,46 @@ void ConfigHandler::read_config()
     m_config_data.shrink_to_fit();
 }
 
+void ConfigHandler::instantiate_modules()
+{
+    for (const auto& name : module_names){
+        if (name == "eic_thermalization") m_modules.push_back(std::unique_ptr<Module>(new EICThermalization(m_pd)));
+        else if (name == "coulomb_explosion") m_modules.push_back(std::unique_ptr<Module>(new CoulombExplosion(m_pd)));
+        else assert(false && "Module name not recognized.");
+    }
+}
+
+void ConfigHandler::instantiate_equation_set()
+{
+    // look for equation set name within .config data
+    for (const auto& line : m_config_data){
+        std::string lhs,rhs;
+        parse_config_line(line,lhs,rhs);
+        if (EquationSet::isEquationSetName(lhs) && (rhs == "true")) m_eqn_set_name = lhs;
+    }
+    assert(!m_eqn_set_name.empty() && "Active equation set not found in .config file.");
+    // instantiate the active equation set
+    m_eqs = EquationSet::instantiateDefault(m_pd,m_eqn_set_name);
+}
+
 void ConfigHandler::define_config_names()
 {
-    for (auto i : m_additional_configs)
-        m_config_names.push_back(i);
+    for (const auto& name : PlasmaDomain::m_config_names)
+        m_config_names.push_back(name);
     for (const auto& module : m_modules)
         for (auto i : module->config_names())
             m_config_names.push_back(i);
-}
-
-std::string ConfigHandler::get_eqset_name() const
-{
-    for (auto line : m_config_data){
-        std::string lhs,rhs;
-        parse_config_line(line,lhs,rhs);
-        if (lhs == "equation_set") return rhs;
-    }
-    assert(false && "Equation set not found in .config file.");
-    return "";
+    for (const auto& name : m_eqs->config_names())
+        m_config_names.push_back(name);
 }
 
 void ConfigHandler::parse_config_line(const std::string& line,std::string& lhs,std::string& rhs) const
 {
     std::istringstream ss(line);
     std::getline(ss,lhs,'=');
-    std::getline(ss,rhs);
+    std::getline(ss,rhs,'#');
     lhs.erase(std::remove(lhs.begin(),lhs.end(),' '),lhs.end());
     rhs.erase(std::remove(rhs.begin(),rhs.end(),' '),rhs.end());
-}
-
-void ConfigHandler::instantiate_modules()
-{
-    for (auto name : module_names){
-        if (name == "eic_thermalization") m_modules.push_back(std::unique_ptr<Module>(new EICThermalization(m_pd)));
-        else if (name == "coulomb_explosion") m_modules.push_back(std::unique_ptr<Module>(new CoulombExplosion(m_pd)));
-        else assert(false && "Module name not recognized.");
-    }
 }
 
 void ConfigHandler::update_config(std::string name,std::string val)

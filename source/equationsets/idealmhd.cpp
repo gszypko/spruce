@@ -7,6 +7,8 @@
 
 IdealMHD::IdealMHD(PlasmaDomain &pd): EquationSet(pd,def_var_names()) {}
 
+void IdealMHD::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) {}
+
 void IdealMHD::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     grids[rho] += step*time_derivatives[0];
@@ -36,12 +38,12 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
     // momentum equations   
     Grid d_mom_x_dt =   - m_pd.transportDivergence2D(grids[mom_x], v)
                         - m_pd.derivative1D(grids[press], 0)
-                        + m_pd.m_ghost_zone_mask * (grids[rho]*grids[grav_x] + viscous_force_x
-                        + external_mag_force[0] + internal_mag_force[0]);
+                        + grids[rho]*grids[grav_x] + viscous_force_x 
+                        + external_mag_force[0] + internal_mag_force[0];
     Grid d_mom_y_dt =   - m_pd.transportDivergence2D(grids[mom_y], v)
                         - m_pd.derivative1D(grids[press], 1)
-                        + m_pd.m_ghost_zone_mask * (grids[rho]*grids[grav_y] + viscous_force_y
-                        + external_mag_force[1] + internal_mag_force[1]);
+                        + grids[rho]*grids[grav_y] + viscous_force_y
+                        + external_mag_force[1] + internal_mag_force[1];
     // energy equations
     Grid d_thermal_energy_dt =  - m_pd.transportDivergence2D(grids[thermal_energy],v)
                                 - grids[press]*m_pd.divergence2D(v);
@@ -65,53 +67,36 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
             m_pd.m_ghost_zone_mask*d_bi_y_dt + char_evolution[5]};
 }
 
-void IdealMHD::computeConstantTerms(std::vector<Grid> &grids){
-}
-
-void IdealMHD::recomputeDerivedVariables(std::vector<Grid> &grids){
+void IdealMHD::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids)
+{
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    recomputeNumberDensity(grids);
-    recomputeTemperature(grids);
-    recomputeKineticEnergy(grids);
-    recomputeMagneticFields(grids);
-    recomputeDT();
-}
-
-void IdealMHD::recomputeTemperature(std::vector<Grid> &grids){
-    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    recomputeNumberDensity(grids);
-    // enforce minimum on thermal energies
-    grids[thermal_energy] = grids[thermal_energy].max(m_pd.thermal_energy_min);
-    // recompute pressures
-    grids[press] = (m_pd.m_adiabatic_index - 1.0)*grids[thermal_energy];
-    // recompute temperatures and enforce minimum
-    grids[temp] = (grids[press]/(2*K_B*grids[n])).max(m_pd.temp_min);
-}
-
-void IdealMHD::recomputeThermalEnergy(std::vector<Grid> &grids){
-    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    recomputeNumberDensity(grids);
-    grids[press] = 2*K_B*grids[n]*grids[temp];
+    grids[n] = grids[rho]/m_pd.m_ion_mass;
+    grids[press] = 2*grids[n]*K_B*grids[temp];
     grids[thermal_energy] = grids[press]/(m_pd.m_adiabatic_index - 1.0);
 }
 
-void IdealMHD::recomputeKineticEnergy(std::vector<Grid> &grids){
+void IdealMHD::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids)
+{
+    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    grids[n] = (grids[rho]/m_pd.m_ion_mass).max(m_pd.density_min);
+    grids[rho] = grids[n]*m_pd.m_ion_mass;
     grids[v_x] = grids[mom_x]/grids[rho];
     grids[v_y] = grids[mom_y]/grids[rho];
     grids[kinetic_energy] = 0.5*grids[rho]*(grids[v_x].square()+grids[v_y].square());
-}
-
-void IdealMHD::recomputeNumberDensity(std::vector<Grid> &grids){
-    grids[n] = grids[rho]/m_pd.m_ion_mass;
-}
-
-void IdealMHD::recomputeMagneticFields(std::vector<Grid> &grids){
+    grids[thermal_energy] = grids[thermal_energy].max(m_pd.thermal_energy_min);
+    grids[press] = (m_pd.m_adiabatic_index - 1.0)*grids[thermal_energy];
+    grids[temp] = (grids[press]/(2*K_B*grids[n])).max(m_pd.temp_min);
     grids[b_x] = m_pd.m_grids[PlasmaDomain::be_x] + grids[bi_x];
     grids[b_y] = m_pd.m_grids[PlasmaDomain::be_y] + grids[bi_y];
     grids[b_mag] = (grids[b_x].square() + grids[b_y].square()).sqrt();
     grids[b_hat_x] = grids[b_x]/grids[b_mag];
     grids[b_hat_y] = grids[b_y]/grids[b_mag];
-    // ensure bhat is zero when b is zero
+    catchNullFieldDirection(grids);
+}
+
+void IdealMHD::catchNullFieldDirection(std::vector<Grid> &grids)
+{
+    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     for(int i=0; i<m_pd.m_xdim; i++){
         for(int j=0; j<m_pd.m_ydim; j++){
             if(grids[b_mag](i,j) == 0.0){
@@ -143,29 +128,20 @@ void IdealMHD::recomputeDT(){
     m_grids[dt] = diagonals/(vel_mag + c_s.max(v_alfven).max(v_fast).max(v_slow));
 }
 
-Grid IdealMHD::getDT(){
-    return m_grids[dt];
-}
-
-void IdealMHD::enforceMinimums(std::vector<Grid>& grids)
-{
-    grids[n] = (grids[rho]/m_pd.m_ion_mass).max(m_pd.density_min);
-    grids[rho] = grids[n]*m_pd.m_ion_mass;
-    grids[thermal_energy] = grids[thermal_energy].max(m_pd.thermal_energy_min);
-}
-
 void IdealMHD::propagateChanges(std::vector<Grid> &grids)
 {
-    enforceMinimums(grids);
+    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     m_pd.updateGhostZones();
-    recomputeDerivedVariables(grids);
+    recomputeDerivedVarsFromEvolvedVars(grids);
+    recomputeDT();
 }
 
 void IdealMHD::populateVariablesFromState(std::vector<Grid> &grids){
-    computeConstantTerms(grids);
-    recomputeThermalEnergy(grids);
-    recomputeDerivedVariables(grids);
+    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    recomputeEvolvedVarsFromStateVars(grids);
     m_pd.updateGhostZones();
+    recomputeDerivedVarsFromEvolvedVars(grids);
+    recomputeDT();
 }
 
 // Returns time derivative from characteristic boundary cond for the quantities

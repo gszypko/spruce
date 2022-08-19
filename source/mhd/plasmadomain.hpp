@@ -40,14 +40,14 @@ public: //**********************************************************************
     epsilon, epsilon_viscous, density_min,
     temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
     output_flags, xdim, ydim, open_boundary_strength, std_out_interval, write_interval,
-    open_boundary_decay_base, x_origin, y_origin, time_integrator, equation_set, duration, epsilon_courant
+    open_boundary_decay_base, x_origin, y_origin, time_integrator, duration, sg_opt
   };
   static inline std::vector<std::string> m_config_names = {
     "x_bound_1","x_bound_2","y_bound_1","y_bound_2",
     "epsilon","epsilon_viscous","density_min",
     "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
     "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","write_interval",
-    "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "equation_set", "duration", "epsilon_courant"
+    "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "duration", "sg_opt"
   };
 
   // Public Member Functions
@@ -124,13 +124,17 @@ private: //*********************************************************************
   // various class containers
   ModuleHandler m_module_handler;
   std::unique_ptr<EquationSet> m_eqs;
-  SavitzkyGolay m_sg{};  
+
+  // savitzky golay filter
+  std::string m_sg_opt{"k33_p11"}; // k33_p11, k55_p33
+  SavitzkyGolay m_sg; // initialized during PlasmaDomain constructor after config/state loading bc need grid size
   
   // safety factors
-  double epsilon; //Time step calculation
-  double epsilon_viscous; //Prefactor for artificial viscosity
-  double epsilon_courant; // Courant safety factor for 2F model
-  double density_min, temp_min, thermal_energy_min; //Lower bounds for mass density and thermal energy density
+  double epsilon; // time step calculation
+  double epsilon_viscous; // prefactor for artificial viscosity
+  double density_min; // number density minimum - cgs
+  double temp_min; // temperature minimum - cgs
+  double thermal_energy_min; // thermal energy density minimum - cgs
 
   void advanceTime(bool verbose = true);
 
@@ -220,10 +224,6 @@ private: //*********************************************************************
   // boundary interpolation
   double boundaryInterpolate(const Grid &quantity, int i1, int j1, int i2, int j2);
   double boundaryExtrapolate(const Grid &quantity, int i1, int j1, int i2, int j2);
-
-  // Savitzky-Golay differentiation
-  Grid derivativeSGx(const Grid& grid) const {return m_sg.derivative1D(grid,0,m_grids[d_x].min());};
-  Grid derivativeSGy(const Grid& grid) const {return m_sg.derivative1D(grid,1,m_grids[d_y].min());};
 
   template <typename T> static std::string num2str(T num,int precision=-1)
     {

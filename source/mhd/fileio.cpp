@@ -88,21 +88,33 @@ void PlasmaDomain::readConfigFile(const fs::path &config_file)
   std::vector<std::vector<std::string> > rhs_lists;
   std::vector<int> list_vars;
   int num_combinations = 1;
-  //Read through config file
-  while(std::getline(in_file, line)){
+  // read through config file
+  while (std::getline(in_file, line)){
+    // obtain the lhs and rhs quantities for the current line
     clearWhitespace(line);
-    if(line.empty() || line[0] == '#') continue; //skip comment and empty lines
+    if (line.empty() || line[0] == '#') continue; // skip comment and empty lines
     std::istringstream ss_line(line);
     std::string lhs, rhs;
     std::getline(ss_line,lhs,'=');
     std::getline(ss_line,rhs,'#');
-    if(m_module_handler.isModuleName(lhs)){
+    // check if lhs corresponds to the equation set and, if so, instantiate that equation set
+    if (EquationSet::isEquationSetName(lhs)){
+      m_eqs = EquationSet::instantiateWithConfig((*this),in_file,lhs,(rhs == "true"));
+      continue;
+    }
+    // check if lhs corresponds to a module and, if so, instantiate the module
+    if (m_module_handler.isModuleName(lhs)){
+      assert(m_eqs.get() != nullptr && "<m_eqs> must be instantiated before instantiating modules");
       m_module_handler.instantiateModule(lhs,in_file,(rhs == "true"));
       continue;
     }
+    // if config does not correspond to equation set or module, handle as PlasmaDomain config
     std::vector<std::string> rhs_vec = splitString(rhs,',');
     auto it = std::find(m_config_names.begin(),m_config_names.end(),lhs);
-    assert(it != m_config_names.end());
+    if (it == m_config_names.end()){
+      std::cerr << lhs << " is not a valid config name." << std::endl;
+      assert(false);
+    }
     auto index = std::distance(m_config_names.begin(),it);
     if(rhs_vec.size() == 1) handleSingleConfig(index,rhs);
     else if(rhs_vec.size() > 1) handleConfigList(index,rhs_vec,rhs_lists,list_vars,num_combinations);
@@ -282,9 +294,8 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
   case static_cast<int>(Config::std_out_interval): m_std_out_interval = std::stoi(rhs); break;
   case static_cast<int>(Config::open_boundary_decay_base): open_boundary_decay_base = std::stod(rhs); break;
   case static_cast<int>(Config::time_integrator): m_time_integrator = stringToTimeIntegrator(rhs); break;
-  case static_cast<int>(Config::equation_set): m_eqs = EquationSet::spawnEquationSet((*this),rhs); break;
   case static_cast<int>(Config::duration): m_duration = std::stod(rhs); break;
-  case static_cast<int>(Config::epsilon_courant): epsilon_courant = std::stod(rhs); break;
+  case static_cast<int>(Config::sg_opt): m_sg_opt = rhs; break;
   default: break;
   }
 }

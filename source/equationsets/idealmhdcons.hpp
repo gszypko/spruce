@@ -30,6 +30,7 @@ class IdealMHDCons: public EquationSet {
         std::vector<int> densities() override { return {rho}; }
         std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y}}; }
         std::vector<int> thermal_energies() override { return {thermal_energy}; }
+        std::vector<int> fields() override { return {bi_x,bi_y}; }
 
         Grid getDT() override;
         void populateVariablesFromState(std::vector<Grid> &grids) override;
@@ -48,6 +49,7 @@ class IdealMHDCons: public EquationSet {
         void recomputeThermalEnergy(std::vector<Grid> &grids);
         void recomputeTemperature(std::vector<Grid> &grids);
         void recomputeThermalEnergyFromTemp(std::vector<Grid> &grids);
+        void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
 };
 
 #endif

@@ -6,9 +6,12 @@
 
 #include "grid.hpp"
 #include "equationset.hpp"
+#include "constants.hpp"
+#include "savitzkygolay.hpp"
 #include <vector>
 #include <string>
-#include "constants.hpp"
+
+#define VERBOSE_2F 1
 
 class PlasmaDomain;
 
@@ -16,6 +19,8 @@ class Ideal2F: public EquationSet {
     public:
         Ideal2F(PlasmaDomain &pd);
         Ideal2F() = default;
+        std::vector<std::string> config_names() const override 
+            {return {"use_sub_cycling","epsilon_courant","smooth_fields"};};
         std::vector<std::string> def_var_names() const override{
             return {"i_rho","e_rho","i_mom_x","i_mom_y","e_mom_x","e_mom_y",
                 "i_temp","e_temp","bi_x","bi_y","bi_z","E_x","E_y","E_z","grav_x","grav_y",
@@ -39,6 +44,7 @@ class Ideal2F: public EquationSet {
         std::vector<int> densities() override { return {i_rho,e_rho}; }
         std::vector<std::vector<int>> momenta() override { return {{i_mom_x,i_mom_y},{e_mom_x,e_mom_y}}; }
         std::vector<int> thermal_energies() override { return {i_thermal_energy,e_thermal_energy}; }
+        std::vector<int> fields() override { return {E_x,E_y,E_z,bi_x,bi_y,bi_z}; }
 
         Grid getDT() override {return m_grids[dt];};
 
@@ -48,7 +54,13 @@ class Ideal2F: public EquationSet {
         void propagateChanges(std::vector<Grid> &grids) override;
 
     private:
-        bool use_sub_cycling = true;
+        // private members
+        bool m_use_sub_cycling{true};
+        double m_epsilon_courant{0.1};
+        bool m_smooth_fields{false};
+        bool m_verbose{false};
+
+        // private functions
         void recomputeDT();
         void catchNullFieldDirection(std::vector<Grid> &grids);
         void enforceMinimums(std::vector<Grid>& grids);
@@ -57,6 +69,7 @@ class Ideal2F: public EquationSet {
         std::vector<Grid> subcycleMaxwell(const std::vector<Grid>& grids, const std::vector<Grid>& dj, double step);
         void maxwellCurlEqs(const std::vector<Grid>& EM,const std::vector<Grid>& j, std::vector<Grid>& dEM_dt);
         void populate_boundary(Grid& grid) const;
+        void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
 };
 
 #endif
