@@ -92,6 +92,11 @@ void IdealMHD::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids)
     grids[b_hat_x] = grids[b_x]/grids[b_mag];
     grids[b_hat_y] = grids[b_y]/grids[b_mag];
     catchNullFieldDirection(grids);
+    grids[pressSG] = m_pd.m_sg.smooth_interior(grids[press]);
+    grids[dPdx] = m_pd.derivative1D(grids[press],0);
+    grids[dPdy] = m_pd.derivative1D(grids[press],1);
+    grids[dPdxSG] = m_pd.m_sg.derivative1D_interior(grids[press],0,m_pd.m_grids[PlasmaDomain::d_x].min());
+    grids[dPdySG] = m_pd.m_sg.derivative1D_interior(grids[press],1,m_pd.m_grids[PlasmaDomain::d_y].min());
 }
 
 void IdealMHD::catchNullFieldDirection(std::vector<Grid> &grids)
