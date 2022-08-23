@@ -99,7 +99,7 @@ void PlasmaDomain::readConfigFile(const fs::path &config_file)
     std::getline(ss_line,rhs,'#');
     // check if lhs corresponds to the equation set and, if so, instantiate that equation set
     if (EquationSet::isEquationSetName(lhs)){
-      m_eqs = EquationSet::instantiateWithConfig((*this),in_file,lhs,(rhs == "true"));
+      EquationSet::instantiateWithConfig(m_eqs,(*this),in_file,lhs,(rhs == "true"));
       continue;
     }
     // check if lhs corresponds to a module and, if so, instantiate the module

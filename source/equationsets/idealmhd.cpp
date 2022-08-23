@@ -29,8 +29,8 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
     std::vector<Grid> v = {grids[v_x],grids[v_y]};
     Grid d_rho_dt = -m_pd.transportDivergence2D(grids[rho],v);
     // viscous forces
-    Grid viscous_force_x = visc_coeff*grids[rho]*m_pd.laplacian(grids[v_x]);
-    Grid viscous_force_y = visc_coeff*grids[rho]*m_pd.laplacian(grids[v_y]);
+    Grid viscous_force_x = visc_coeff*m_pd.laplacian(grids[mom_x]);
+    Grid viscous_force_y = visc_coeff*m_pd.laplacian(grids[mom_y]);
     // magnetic forces
     Grid curl_db = m_pd.curl2D(grids[bi_x],grids[bi_y])/(4.0*PI);
     std::vector<Grid> external_mag_force = Grid::CrossProductZ2D(curl_db,{be_x,be_y});

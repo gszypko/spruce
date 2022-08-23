@@ -12,9 +12,7 @@ void Ideal2F::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<
     for (int i=0; i<lhs.size(); i++){
         if (lhs[i] == "use_sub_cycling") m_use_sub_cycling = (rhs[i] == "true");
         else if (lhs[i] == "epsilon_courant") m_epsilon_courant = stod(rhs[i]);
-        else if (lhs[i] == "smooth_vars") m_smooth_vars = (rhs[i] == "true");
         else if (lhs[i] == "verbose_2F") m_verbose = (rhs[i] == "true");
-        else if (lhs[i] == "apply_fixed_curl_bc") m_apply_fixed_curl_bc = (rhs[i] == "true");
         else{
             std::cerr << lhs[i] << " is not recognized for this equation set." << std::endl;
             assert(false);
@@ -127,7 +125,6 @@ void Ideal2F::populateVariablesFromState(std::vector<Grid> &grids){
 void Ideal2F::propagateChanges(std::vector<Grid> &grids)
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    if (m_smooth_vars) smooth_vars(grids);
     enforceMinimums(grids);
     m_pd.updateGhostZones();
     recomputeDerivedVarsFromEvolvedVars(grids);
@@ -185,17 +182,6 @@ void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids){
     grids[divE] = m_pd.divergence2D({grids[E_x],grids[E_y]});
     grids[divB] = m_pd.divergence2D({grids[b_x],grids[b_y]});
     grids[curlE_z] = -(m_pd.derivative1D(grids[E_x],1) - m_pd.derivative1D(grids[E_y],0));
-    if (m_apply_fixed_curl_bc) apply_fixed_curl_bc(grids[curlE_z]);
-    grids[j_x_sg] = m_pd.m_sg.smooth_interior(grids[j_x]);
-    grids[E_x_sg] = m_pd.m_sg.smooth_interior(grids[E_x]);
-    grids[E_y_sg] = m_pd.m_sg.smooth_interior(grids[E_y]);
-    populate_boundary(grids[j_x_sg]);
-    populate_boundary(grids[E_x_sg]);
-    populate_boundary(grids[E_y_sg]);
-    grids[curlE_z_sg] = -(m_pd.derivative1D(grids[E_x_sg],1) - m_pd.derivative1D(grids[E_y_sg],0));
-    if (m_apply_fixed_curl_bc) apply_fixed_curl_bc(grids[curlE_z_sg]);
-    grids[B_z_sg] = m_pd.m_sg.smooth_interior(grids[b_z]);
-    populate_boundary(grids[B_z_sg]);
 }
 
 void Ideal2F::catchNullFieldDirection(std::vector<Grid> &grids)
@@ -279,49 +265,9 @@ void Ideal2F::maxwellCurlEqs(const std::vector<Grid>& EM,const std::vector<Grid>
     dEM_dt[0] =  C*m_pd.derivative1D(EM[5],1) - 4.*PI*j[0];
     dEM_dt[1] = -C*m_pd.derivative1D(EM[5],0) - 4.*PI*j[1];
     dEM_dt[2] =  C*(m_pd.derivative1D(EM[4],0)-m_pd.derivative1D(EM[3],1));
-    if (m_apply_fixed_curl_bc) apply_fixed_curl_bc(dEM_dt[2]);
     dEM_dt[3] = -C*m_pd.derivative1D(EM[2],1);
     dEM_dt[4] =  C*m_pd.derivative1D(EM[2],0);
     dEM_dt[5] =  C*(m_pd.derivative1D(EM[0],1) - m_pd.derivative1D(EM[1],0));
-    if (m_apply_fixed_curl_bc) apply_fixed_curl_bc(dEM_dt[5]);
-}
-
-void Ideal2F::apply_fixed_curl_bc(Grid& grid) const
-{
-    // determine number of interior cells to include in fixed boundary
-    int num_int_x = 1;
-    int num_int_y = 1;
-    if (num_int_x < m_pd.m_sg.Bx()) num_int_x = m_pd.m_sg.Bx();
-    if (num_int_y < m_pd.m_sg.By()) num_int_y = m_pd.m_sg.By();
-    // treat left boundary
-    for (int i=0; i<m_pd.m_xl+num_int_x; i++){
-        #pragma omp parallel for
-        for (int j=0; j<grid.cols(); j++){
-            grid(i,j) = grid(m_pd.m_xl+num_int_x,j);
-        }
-    }
-    // treat right boundary
-    for (int i=m_pd.m_xu+1-num_int_x; i<grid.rows(); i++){
-        #pragma omp parallel for
-        for (int j=0; j<grid.cols(); j++){
-            grid(i,j) = grid(m_pd.m_xu-num_int_x,j);
-        }
-    }
-    // treat bottom boundary
-    #pragma omp parallel for
-    for (int i=0; i<grid.rows(); i++){
-        #pragma omp parallel for
-        for (int j=0; j<m_pd.m_yl+num_int_y; j++){
-            grid(i,j) = grid(i,m_pd.m_yl+num_int_y);
-        }
-    }
-    // treat top boundary
-    #pragma omp parallel for
-    for (int i=0; i<grid.rows(); i++){
-        for (int j=m_pd.m_yu+1-num_int_y; j<grid.cols(); j++){
-            grid(i,j) = grid(i,m_pd.m_yu-num_int_y);
-        }
-    }
 }
 
 void Ideal2F::populate_boundary(Grid& grid) const
@@ -350,13 +296,4 @@ void Ideal2F::populate_boundary(Grid& grid) const
             grid(i,j) = grid(i,m_pd.m_yu);
         }
     }
-}
-
-void Ideal2F::smooth_vars(std::vector<Grid> &grids) const
-{
-    int sg_ghost_xl = m_pd.m_xl + m_pd.m_sg.Bx();
-    int sg_ghost_yl = m_pd.m_yl + m_pd.m_sg.By();
-    int sg_ghost_xu = m_pd.m_xu - m_pd.m_sg.Bx();
-    int sg_ghost_yu = m_pd.m_yu - m_pd.m_sg.By();
-    for (auto ind : vars_to_smooth) grids[ind] = m_pd.m_sg.smooth(grids[ind],sg_ghost_xl,sg_ghost_xu,sg_ghost_yl,sg_ghost_yu);
 }

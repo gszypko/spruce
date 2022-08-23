@@ -55,10 +55,7 @@ class Ideal2F: public EquationSet {
         // private members
         bool m_use_sub_cycling{true};
         double m_epsilon_courant{0.1};
-        bool m_smooth_vars{false};
         bool m_verbose{false};
-        bool m_apply_fixed_curl_bc{false};
-        std::vector<int> vars_to_smooth {i_rho,e_rho,i_mom_x,e_mom_x,i_thermal_energy,e_thermal_energy};
 
         // private functions
         void recomputeDT();

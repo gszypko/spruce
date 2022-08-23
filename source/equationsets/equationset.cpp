@@ -34,11 +34,11 @@ std::unique_ptr<EquationSet> EquationSet::instantiateDefault(PlasmaDomain &pd,co
     return ptr;
 }
 
-std::unique_ptr<EquationSet> EquationSet::instantiateWithConfig(PlasmaDomain &pd, std::ifstream &in_file, const std::string &name, bool active){
-    std::unique_ptr<EquationSet> ptr;
+void EquationSet::instantiateWithConfig(std::unique_ptr<EquationSet>& eqs,PlasmaDomain &pd, std::ifstream &in_file, const std::string &name, bool active)
+{
     if(active){ // instantiate equation set if it is active
-        ptr = instantiateDefault(pd,name);
-        ptr->configureEquationSet(in_file);    
+        eqs = instantiateDefault(pd,name);
+        eqs->configureEquationSet(in_file);    
     }
     else{ // do not instantiate if equation set is not active
         std::string line;
@@ -52,7 +52,6 @@ std::unique_ptr<EquationSet> EquationSet::instantiateWithConfig(PlasmaDomain &pd
             clearWhitespace(line);
         }
     }
-    return ptr;
 }
 
 bool EquationSet::isEquationSetName(const std::string& name)
