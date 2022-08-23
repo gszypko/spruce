@@ -25,7 +25,7 @@ void PlasmaDomain::run(double time_duration)
     bool store_cond_2 = m_time_output_interval > 0.0 && new_time_iter > old_time_iter;
     if (store_cond_1 || store_cond_2) storeGrids();
     // write grid data to file
-    if (m_write_interval > 0 && m_store_counter%m_write_interval == 0){
+    if (m_write_interval > 0 && m_store_counter > 0 && m_store_counter%m_write_interval == 0){
       writeToOutFile();
       updateStateIdentifier();
       writeStateFile("end");
@@ -294,11 +294,16 @@ void PlasmaDomain::ucnpBoundaryExtrapolate(Boundary bndry,int index)
         break;
       default: assert(false);
     }
-    for (int j : m_eqs->densities()) m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
-    for (int j : m_eqs->thermal_energies()) m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
-    for (int j : m_eqs->fields()) m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
-    for (int s=0; s<m_eqs->num_species(); s++){
-      for (int j : m_eqs->momenta()[s]) m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
+    for (int j : m_eqs->densities())
+      m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
+    for (int j : m_eqs->thermal_energies())
+      m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
+    for (int j : m_eqs->fields())
+      m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
+    for (int species=0; species<m_eqs->num_species(); species++){
+      std::vector<int> momenta = m_eqs->momenta()[species];
+      for (int j : momenta)
+        m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
     }
   }
   

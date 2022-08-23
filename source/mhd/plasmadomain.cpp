@@ -20,20 +20,31 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   fs::path new_config_path = m_out_directory/(config_path.filename());
   fs::directory_entry new_config_dir(new_config_path);
   if(!fs::equivalent(config_path,new_config_path)){
+    #if VERBOSE
     std::cout << "Copying " << config_path.string() << " into " << m_out_directory.string() << "...\n";
+    #endif
     if(new_config_dir.exists()) fs::remove(new_config_path);
     fs::copy(config_path, new_config_path, fs::copy_options::overwrite_existing);
   }
-  else std::cout << config_path.string() << " already located in output directory.\n";
-
+  else{
+    #if VERBOSE
+    std::cout << config_path.string() << " already located in output directory.\n";
+    #endif
+  }
   // read from config and state files - config must be read first so equation set can be loaded
+  #if VERBOSE
   std::cout << "Reading config file...\n";
+  #endif
   readConfigFile(config_path);
+  #if VERBOSE
   std::cout << "Reading state file...\n";
+  #endif
   readStateFile(state_file,continue_mode);
 
   // process information loaded from config and state files
+  #if VERBOSE
   std::cout << "Validating input data...\n";
+  #endif
   assert(allInternalGridsInitialized() && "All internal grid quantities for PlasmaDomain must be initialized");
   assert(validateCellSizesAndPositions(m_grids[d_x],m_grids[pos_x],0) && validateCellSizesAndPositions(m_grids[d_y],m_grids[pos_y],1) && "Cell sizes and positions must correspond");
   assert(m_eqs->allStateGridsInitialized() && "All variables specified as state variables for the current EquationSet must be specified in the .state file");
@@ -50,7 +61,7 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   // initialize container for data to write to mhd.out
   initOutputContainer();
   // initialize the mhd.out file
-  if(!continue_mode){
+  if(!continue_mode && m_write_interval > 0){
     outputPreamble();
     storeGrids();
     writeToOutFile();
@@ -80,8 +91,10 @@ void PlasmaDomain::initOutputContainer()
   }
   int num_lines_per_iter = 1+num_grids_to_record+num_grids_to_record*m_xdim;
   // initialize size of m_data_to_write and the capacity of each element
-  m_data_to_write.resize(m_write_interval*num_lines_per_iter);
-  for (auto& elem : m_data_to_write) elem.reserve(row.size());
+  if (m_write_interval > 0){
+    m_data_to_write.resize(m_write_interval*num_lines_per_iter);
+    for (auto& elem : m_data_to_write) elem.reserve(row.size());
+  }
 }
 
 int PlasmaDomain::gridname2index(const std::string& name) const

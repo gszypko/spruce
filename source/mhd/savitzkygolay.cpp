@@ -254,6 +254,24 @@ Grid SavitzkyGolay::smooth(const Grid& grid) const
     return interior + boundary;
 }
 
+Grid SavitzkyGolay::smooth(const Grid& grid, int xl, int xu, int yl, int yu) const
+{
+    assert(grid.rows() == m_grid_size_x);
+    assert(grid.cols() == m_grid_size_y);
+    assert(xl >= 0 && yl >= 0 && xu < grid.rows() && yu < grid.cols());
+    Grid result = grid;
+    #pragma omp parallel for
+    for (int i=xl; i<=xu; i++){
+        for (int j=yl; j<=yu; j++){
+            if (i < m_xl || i > m_xu || j < m_yl || j > m_yu)
+                result(i,j) = smooth_cell_boundary(grid,i,j);
+            else 
+                result(i,j) = smooth_cell_interior(grid,i,j);
+        }
+    }
+    return result;
+}
+
 Grid SavitzkyGolay::smooth_interior(const Grid& grid) const
 {
     assert(grid.rows() == m_grid_size_x);

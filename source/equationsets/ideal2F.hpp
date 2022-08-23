@@ -11,8 +11,6 @@
 #include <vector>
 #include <string>
 
-#define VERBOSE_2F 1
-
 class PlasmaDomain;
 
 class Ideal2F: public EquationSet {
@@ -20,7 +18,7 @@ class Ideal2F: public EquationSet {
         Ideal2F(PlasmaDomain &pd);
         Ideal2F() = default;
         std::vector<std::string> config_names() const override 
-            {return {"use_sub_cycling","epsilon_courant","smooth_fields"};};
+            {return {"use_sub_cycling","epsilon_courant","smooth_fields","viscosity"};};
         std::vector<std::string> def_var_names() const override{
             return {"i_rho","e_rho","i_mom_x","i_mom_y","e_mom_x","e_mom_y",
                 "i_temp","e_temp","bi_x","bi_y","bi_z","E_x","E_y","E_z","grav_x","grav_y",
@@ -28,7 +26,7 @@ class Ideal2F: public EquationSet {
                 "i_press","e_press","press","i_thermal_energy","e_thermal_energy",
                 "rho","rho_c","n","dn","dt",
                 "b_x","b_y","b_z","b_mag","b_mag_xy","b_hat_x","b_hat_y",
-                "curlE_z","divE","divB"};
+                "curlE_z","divE","divB","j_x_sg","E_x_sg","E_y_sg","curlE_z_sg","B_z_sg"};
         }
         enum Vars {i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,
                 i_temp,e_temp,bi_x,bi_y,bi_z,E_x,E_y,E_z,grav_x,grav_y,
@@ -36,7 +34,7 @@ class Ideal2F: public EquationSet {
                 i_press,e_press,press,i_thermal_energy,e_thermal_energy,
                 rho,rho_c,n,dn,dt,
                 b_x,b_y,b_z,b_mag,b_mag_xy,b_hat_x,b_hat_y,
-                curlE_z,divE,divB};
+                curlE_z,divE,divB,j_x_sg,E_x_sg,E_y_sg,curlE_z_sg,B_z_sg};
 
         std::vector<int> state_variables() override {
             return {i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,i_temp,e_temp,bi_x,bi_y,bi_z,E_x,E_y,E_z,grav_x,grav_y};
@@ -44,7 +42,7 @@ class Ideal2F: public EquationSet {
         std::vector<int> densities() override { return {i_rho,e_rho}; }
         std::vector<std::vector<int>> momenta() override { return {{i_mom_x,i_mom_y},{e_mom_x,e_mom_y}}; }
         std::vector<int> thermal_energies() override { return {i_thermal_energy,e_thermal_energy}; }
-        std::vector<int> fields() override { return {E_x,E_y,E_z,bi_x,bi_y,bi_z}; }
+        std::vector<int> fields() override { return {}; }
 
         Grid getDT() override {return m_grids[dt];};
 
@@ -57,8 +55,10 @@ class Ideal2F: public EquationSet {
         // private members
         bool m_use_sub_cycling{true};
         double m_epsilon_courant{0.1};
-        bool m_smooth_fields{false};
+        bool m_smooth_vars{false};
         bool m_verbose{false};
+        bool m_apply_fixed_curl_bc{false};
+        std::vector<int> vars_to_smooth {i_rho,e_rho,i_mom_x,e_mom_x,i_thermal_energy,e_thermal_energy};
 
         // private functions
         void recomputeDT();
@@ -68,6 +68,8 @@ class Ideal2F: public EquationSet {
         void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids);
         std::vector<Grid> subcycleMaxwell(const std::vector<Grid>& grids, const std::vector<Grid>& dj, double step);
         void maxwellCurlEqs(const std::vector<Grid>& EM,const std::vector<Grid>& j, std::vector<Grid>& dEM_dt);
+        void apply_fixed_curl_bc(Grid& grid) const;
+        void smooth_vars(std::vector<Grid> &grids) const;
         void populate_boundary(Grid& grid) const;
         void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
 };

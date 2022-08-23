@@ -150,7 +150,7 @@ int EquationSet::indexFromName(std::string name){
     int ind{};
     try { ind = m_var_indices.at(name); }
     catch (const std::out_of_range& e) {
-        std::cerr << "Variable name " << name << " not recognized\n";
+        std::cerr << "Variable name <" << name << "> not recognized\n";
         assert(false);
         return 0;
     }

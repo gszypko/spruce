@@ -22,11 +22,14 @@ public:
 
     // usage
     Grid smooth(const Grid& grid) const;
+    Grid smooth(const Grid& grid, int xl, int xu, int yl, int yu) const;
     Grid smooth_interior(const Grid& grid) const;
     Grid smooth_boundary(const Grid& grid) const;
     Grid derivative1D(const Grid& grid,int dim,double dr) const;
     Grid derivative1D_interior(const Grid& grid,int dim,double dr) const;
     Grid derivative1D_boundary(const Grid& grid,int dim,double dr) const;
+    int Bx() const {return m_Bx;};
+    int By() const {return m_By;};
 private:
     // private members
     std::vector<std::vector<Grid>> m_coeffs; // convolution coefficients: m_coeffs[px][py](kx,ky)
