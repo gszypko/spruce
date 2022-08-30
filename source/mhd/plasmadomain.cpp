@@ -52,6 +52,7 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   m_sg = SavitzkyGolay(m_sg_opt,Grid::Zero(m_xdim,m_ydim));
   m_eqs->populateVariablesFromState();
   m_module_handler.setupModules();
+  m_eqs->setupEquationSet();
   
   // overwrite the init.state file if new simulation with overwrite flag
   if(!continue_mode && m_overwrite_init){

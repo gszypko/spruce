@@ -83,6 +83,13 @@ void EquationSet::configureEquationSet(std::ifstream &in_file)
     parseEquationSetConfigs(lhs_strings,rhs_strings);
 }
 
+// any steps required for setup after instantiation of module but before iteration of grids
+// typical use is to instantiate sizes of internal grids and compute any grids that are constant in time
+void EquationSet::setupEquationSet()
+{
+    return;
+}
+
 Grid& EquationSet::grid(int index) {
     assert(index >= 0 && index < num_variables() && "Grid index must be within range of m_grids");
     return m_grids[index];

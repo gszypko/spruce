@@ -23,6 +23,7 @@ class EquationSet {
         static std::unique_ptr<EquationSet> instantiateDefault(PlasmaDomain &pd,const std::string &name);
         static void instantiateWithConfig(std::unique_ptr<EquationSet>& eqs,PlasmaDomain &pd, std::ifstream &in_file, const std::string &name, bool active);
         void configureEquationSet(std::ifstream &in_file);
+        virtual void setupEquationSet();
         static const inline std::vector<std::string> m_sets {"ideal_mhd","ideal_mhd_cons","ideal_mhd_2E","ideal_2F"};
         static bool isEquationSetName(const std::string& name);
         virtual std::vector<std::string> config_names() const {return {};};

@@ -17,6 +17,7 @@ class Ideal2F: public EquationSet {
     public:
         Ideal2F(PlasmaDomain &pd);
         Ideal2F() = default;
+        void setupEquationSet() override; 
         std::vector<std::string> config_names() const override 
             {return {"use_sub_cycling","epsilon_courant","smooth_fields","viscosity"};};
         std::vector<std::string> def_var_names() const override{
@@ -26,7 +27,7 @@ class Ideal2F: public EquationSet {
                 "i_press","e_press","press","i_thermal_energy","e_thermal_energy",
                 "rho","rho_c","n","dn","dt",
                 "b_x","b_y","b_z","b_mag","b_mag_xy","b_hat_x","b_hat_y",
-                "curlE_z","divE","divB","j_x_sg","E_x_sg","E_y_sg","curlE_z_sg","B_z_sg"};
+                "curlE_z","divE","divB","lapEx"};
         }
         enum Vars {i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,
                 i_temp,e_temp,bi_x,bi_y,bi_z,E_x,E_y,E_z,grav_x,grav_y,
@@ -34,7 +35,7 @@ class Ideal2F: public EquationSet {
                 i_press,e_press,press,i_thermal_energy,e_thermal_energy,
                 rho,rho_c,n,dn,dt,
                 b_x,b_y,b_z,b_mag,b_mag_xy,b_hat_x,b_hat_y,
-                curlE_z,divE,divB,j_x_sg,E_x_sg,E_y_sg,curlE_z_sg,B_z_sg};
+                curlE_z,divE,divB,lapEx};
 
         std::vector<int> state_variables() override {
             return {i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,i_temp,e_temp,bi_x,bi_y,bi_z,E_x,E_y,E_z,grav_x,grav_y};
@@ -56,6 +57,11 @@ class Ideal2F: public EquationSet {
         bool m_use_sub_cycling{true};
         double m_epsilon_courant{0.1};
         bool m_verbose{false};
+        std::string m_viscosity_opt{"momentum"};
+        double m_maxwell_viscosity{0};
+        double m_maxwell_viscosity_length_x{-1};
+        double m_maxwell_viscosity_length_y{-1};
+        Grid m_maxwell_viscosity_mask;
 
         // private functions
         void recomputeDT();
@@ -63,8 +69,8 @@ class Ideal2F: public EquationSet {
         void enforceMinimums(std::vector<Grid>& grids);
         void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids);
         void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids);
-        std::vector<Grid> subcycleMaxwell(const std::vector<Grid>& grids, const std::vector<Grid>& dj, double step);
-        void maxwellCurlEqs(const std::vector<Grid>& EM,const std::vector<Grid>& j, std::vector<Grid>& dEM_dt);
+        std::vector<Grid> subcycleMaxwell(const std::vector<Grid>& grids, const std::vector<Grid>& dj, double step) const;
+        void maxwellCurlEqs(const std::vector<Grid>& EM,const std::vector<Grid>& j, const Grid& visc_coeff, std::vector<Grid>& EM_laplacian, std::vector<Grid>& dEM_dt) const;
         void apply_fixed_curl_bc(Grid& grid) const;
         void smooth_vars(std::vector<Grid> &grids) const;
         void populate_boundary(Grid& grid) const;

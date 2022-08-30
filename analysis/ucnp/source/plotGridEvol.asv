@@ -3,16 +3,16 @@ function [] = plotGridEvol(data)
 
 % for each time point, plot 2D grids from MHD simulation
 gridnames = {'i_n', 'dn', 'e_v_x', 'j_x', 'E_x', 'curlE_z', 'b_z'};
-gridstr = {'n', 'n_i-n_e', 'v_e_x', 'j_x', 'E_x', 'curlE_z', 'b_z'};
+gridstr = {'n', 'v_x', 'v_y', 'T', 'P', '\epsilon_t_h'};
 
 % generate figure
 f = filesep;
 filepath = [data.folder f 'grid-evol'];
 row = 2; 
-col = 4; 
+col = 3; 
 num = length(gridnames);
-[fig,ax,an] = open_subplot(row,col,num,'Visible','on');
-fig.Position = [1.303333333333333e+02,283,926,3.853333333333330e+02];
+[fig,ax,an] = open_subplot(row,col,num,'Visible','off');
+fig.Position = [1.303333333333333e+02,185,856,4.833333333333331e+02];
 an.Position = [0.1595    0.9084    0.7230    0.0801];
 
 frames = cell(1,length(data));
@@ -45,7 +45,6 @@ for k = 1:length([data.grids.vars.time])
     str1 = ['Iter = ' num2str(k-1)];
     str2 = ['t = ' num2str(data.grids.vars(k).time*1e6,'%.3g') '\mus = ' num2str(data.grids.vars(k).time/data.tau,'%.3g') '\tau_e_x_p'];
     an.String = [str1 dlm str2];
-    an.Position = [0.159500000000000,0.929069291338582,0.723000000000000,0.080100000000000];
 
     frames{k} = getframe(fig);
 end
