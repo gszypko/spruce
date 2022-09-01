@@ -2,8 +2,8 @@ function [] = plotGridEvol(data)
 % os (struct): contains grid info from 'os.grids.out' file
 
 % for each time point, plot 2D grids from MHD simulation
-gridnames = {'i_n', 'dn', 'e_v_x', 'j_x', 'E_x', 'curlE_z', 'b_z'};
-gridstr = {'n', 'n_i-n_e', 'v_e_x', 'j_x', 'E_x', 'curlE_z', 'b_z'};
+gridnames = {'n', 'v_x', 'temp', 'press', 'mom_x','visc','visc_force_x','lap_mom_x'};
+gridstr = {'n', 'v_x', 'T', 'P', '\pi_x','visc','F_v_i_s_c_,_x','\nabla^2\pi_x'};
 
 % generate figure
 f = filesep;

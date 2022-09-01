@@ -19,11 +19,11 @@ class IdealMHD: public EquationSet {
         std::vector<std::string> def_var_names() const override{
             return {"rho","temp","mom_x","mom_y","bi_x","bi_y","grav_x","grav_y",
                 "n","press","thermal_energy","v_x","v_y","kinetic_energy",
-                "b_x","b_y","b_mag","b_hat_x","b_hat_y","dt"};
+                "b_x","b_y","b_mag","b_hat_x","b_hat_y","dt","visc","visc_force_x","lap_mom_x"};
         }
         enum Vars {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y,
                 n,press,thermal_energy,v_x,v_y,kinetic_energy,
-                b_x,b_y,b_mag,b_hat_x,b_hat_y,dt};
+                b_x,b_y,b_mag,b_hat_x,b_hat_y,dt,visc,visc_force_x,lap_mom_x};
 
         std::vector<int> state_variables() override {
             return {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};
@@ -35,7 +35,7 @@ class IdealMHD: public EquationSet {
         std::vector<int> fields() override { return {bi_x,bi_y}; }
 
         void populateVariablesFromState(std::vector<Grid> &grids) override;
-        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff) override;
+        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, const Grid& visc_coeff) override;
         void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
         void propagateChanges(std::vector<Grid> &grids) override;
         Grid getDT() override {return m_grids[dt];}

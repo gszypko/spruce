@@ -20,7 +20,7 @@ void IdealMHDCons::applyTimeDerivatives(std::vector<Grid> &grids, const std::vec
     propagateChanges(grids);
 }
 
-std::vector<Grid> IdealMHDCons::computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff){
+std::vector<Grid> IdealMHDCons::computeTimeDerivatives(const std::vector<Grid> &grids, const Grid& visc_coeff){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     // PlasmaDomain grid references for more concise notation
     Grid& be_x = m_pd.m_grids[PlasmaDomain::be_x];

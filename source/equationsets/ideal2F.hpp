@@ -48,7 +48,7 @@ class Ideal2F: public EquationSet {
         Grid getDT() override {return m_grids[dt];};
 
         void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
-        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff) override;
+        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, const Grid& visc_coeff) override;
         void populateVariablesFromState(std::vector<Grid> &grids) override;
         void propagateChanges(std::vector<Grid> &grids) override;
 

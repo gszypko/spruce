@@ -79,7 +79,7 @@ void Ideal2F::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<G
     propagateChanges(grids);
 }
 
-std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff){
+std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids, const Grid& visc_coeff){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     // continuity equations
     std::vector<Grid> v_i = {grids[i_v_x],grids[i_v_y]};

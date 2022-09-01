@@ -3,7 +3,7 @@ clc, clearvars -except inp, close all, f = filesep; setpath;
 
 if ~exist('inp','var')
     %% Generate Input Cell
-    inp = {'folder';'C:\data-mhd\08.23.22\set_10'};
+    inp = {'folder';'C:\data-mhd\08.30.22\set_2'};
 end
 fields = {'folder'};
 s = spreadsheet2struct(inp,fields);
@@ -11,7 +11,7 @@ s = spreadsheet2struct(inp,fields);
 % user controls
 plotGridTimeEvol = true;
 doGaussianAnalysis = false;
-numGhostCells = 1;
+numGhostCells = 2;
 eic_opt = false;
 
 %% Read in and Analyze Data

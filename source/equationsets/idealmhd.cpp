@@ -20,7 +20,7 @@ void IdealMHD::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<
     propagateChanges(grids);
 }
 
-std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff){
+std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grids, const Grid& visc_coeff){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     // PlasmaDomain grid references for more concise notation
     Grid& be_x = m_pd.m_grids[PlasmaDomain::be_x];
@@ -31,6 +31,9 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
     // viscous forces
     Grid viscous_force_x = visc_coeff*m_pd.laplacian(grids[mom_x]);
     Grid viscous_force_y = visc_coeff*m_pd.laplacian(grids[mom_y]);
+    m_grids[visc] = visc_coeff;
+    m_grids[lap_mom_x] = m_pd.laplacian(grids[mom_x]);
+    m_grids[visc_force_x] = viscous_force_x;
     // magnetic forces
     Grid curl_db = m_pd.curl2D(grids[bi_x],grids[bi_y])/(4.0*PI);
     std::vector<Grid> external_mag_force = Grid::CrossProductZ2D(curl_db,{be_x,be_y});
@@ -73,6 +76,9 @@ void IdealMHD::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids)
     grids[n] = grids[rho]/m_pd.m_ion_mass;
     grids[press] = 2*grids[n]*K_B*grids[temp];
     grids[thermal_energy] = grids[press]/(m_pd.m_adiabatic_index - 1.0);
+    grids[visc] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    grids[visc_force_x] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    grids[lap_mom_x] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
 }
 
 void IdealMHD::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids)
