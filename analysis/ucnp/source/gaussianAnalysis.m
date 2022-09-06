@@ -1,4 +1,7 @@
-function [] = gaussianAnalysis(data,eic_opt)
+function [] = gaussianAnalysis(data,eic_opt,plotFreq)
+if nargin < 3, plotFreq = 1; end
+data.grids.vars = data.grids.vars(1:plotFreq:end);
+data.grids.time = data.grids.time(1:plotFreq:end);
 
 % set up save directories
 f = filesep;
@@ -18,7 +21,7 @@ vid = VideoWriter(file_path,'MPEG-4');
 vid.FrameRate = 10;
 open(vid)
 
-fig = figure('Visible','off');
+fig = figure('Visible','on');
 fig.Position = [195         259        1027         491];
 fig.Color = [1 1 1];
 
@@ -43,8 +46,10 @@ an.HorizontalAlignment = 'left';
 an.VerticalAlignment = 'top';
 an.LineStyle = 'none';
 an.FontSize = 12;
-    
+
+fignum = 0;
 for i = 1:length(data.grids.time)
+    fignum = fignum + 1;
     hold([ax{:}],'off')
     disp(['2D Gaussian Fits: ' num2str(i) '/' num2str(length(data.grids.time))])
     x = data.grids.x_vec;
@@ -152,7 +157,7 @@ end
 
 %% Plot Summary of Expansion for MHD Sims Against Vlasov Theory
 
-fig = figure('Visible','off');
+fig = figure('Visible','on');
 fig.Position = [195         259        1027         491];
 fig.Color = [1 1 1];
 
@@ -205,7 +210,7 @@ close(fig)
 
 %% Plot Velocity Transects
 
-fig = figure('Visible','off');
+fig = figure('Visible','on');
 fig.Position = [195         259        1027         491];
 fig.Color = [1 1 1];
 q = {'data','theory'};

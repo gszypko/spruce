@@ -7,7 +7,16 @@
 
 IdealMHDCons::IdealMHDCons(PlasmaDomain &pd): EquationSet(pd,def_var_names()) {}
 
-void IdealMHDCons::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){}
+void IdealMHDCons::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs)
+{
+    for (int i=0; i<lhs.size(); i++){
+        if (lhs[i] == "global_viscosity") m_global_viscosity = stod(rhs[i]);
+        else{
+            std::cerr << lhs[i] << " is not recognized for this equation set." << std::endl;
+            assert(false);
+        }
+    }
+}
 
 void IdealMHDCons::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
@@ -20,17 +29,20 @@ void IdealMHDCons::applyTimeDerivatives(std::vector<Grid> &grids, const std::vec
     propagateChanges(grids);
 }
 
-std::vector<Grid> IdealMHDCons::computeTimeDerivatives(const std::vector<Grid> &grids, const Grid& visc_coeff){
+std::vector<Grid> IdealMHDCons::computeTimeDerivatives(const std::vector<Grid> &grids){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     // PlasmaDomain grid references for more concise notation
+    Grid& d_x = m_pd.m_grids[PlasmaDomain::d_x];
+    Grid& d_y = m_pd.m_grids[PlasmaDomain::d_y];
     Grid& be_x = m_pd.m_grids[PlasmaDomain::be_x];
     Grid& be_y = m_pd.m_grids[PlasmaDomain::be_y];
     // continuity equations
     std::vector<Grid> v = {grids[v_x],grids[v_y]};
     Grid d_rho_dt = -m_pd.transportDivergence2D(grids[rho],v);
     // viscous forces
-    Grid viscous_force_x = visc_coeff*grids[rho]*m_pd.laplacian(grids[v_x]);
-    Grid viscous_force_y = visc_coeff*grids[rho]*m_pd.laplacian(grids[v_y]);
+    Grid global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/grids[dt].min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
+    Grid viscous_force_x = global_visc_coeff*m_pd.laplacian(grids[mom_x]);
+    Grid viscous_force_y = global_visc_coeff*m_pd.laplacian(grids[mom_y]);
     // tensor for momentum equation
     Grid Txx = grids[press_tot] + grids[b_x]*grids[b_x]/(4.*PI);
     Grid Tyy = grids[press_tot] + grids[b_y]*grids[b_y]/(4.*PI);

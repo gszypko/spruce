@@ -39,24 +39,16 @@ void PlasmaDomain::run(double time_duration)
 void PlasmaDomain::advanceTime(bool verbose)
 {
   // determine timestep for this iteration
-  Grid dt_raw = m_eqs->getDT();
-  double dt_min = dt_raw.min(m_xl,m_yl,m_xu,m_yu);
-  double step_size = epsilon*dt_min;
+  double step_size = epsilon*m_eqs->getDT().min(m_xl,m_yl,m_xu,m_yu);
 
   // iterate module functions
   m_module_handler.preIterateModules(step_size);
   m_module_handler.iterateModules(step_size);
-
-  // determine viscosity coefficient
-  Grid visc_safety_criteria = 0.5*(m_grids[d_x].square() + m_grids[d_y].square())/step_size;
-  double global_visc_coeff = (global_viscosity*0.5*(m_grids[d_x].square() + m_grids[d_y].square())/dt_min).min();
-  Grid hyper_visc_coeff = hyper_viscosity*0.5*visc_safety_criteria;
-  Grid visc_coeff = (global_visc_coeff + hyper_visc_coeff).min(visc_safety_criteria);
   
   // run time integration according to specified method
-  if (m_time_integrator == TimeIntegrator::RK2) integrateRK2(step_size, visc_coeff);
-  else if (m_time_integrator == TimeIntegrator::RK4) integrateRK4(step_size, visc_coeff);
-  else if (m_time_integrator == TimeIntegrator::Euler) integrateEuler(step_size, visc_coeff);
+  if (m_time_integrator == TimeIntegrator::RK2) integrateRK2(step_size);
+  else if (m_time_integrator == TimeIntegrator::RK4) integrateRK4(step_size);
+  else if (m_time_integrator == TimeIntegrator::Euler) integrateEuler(step_size);
 
   // post iterate all modules
   m_module_handler.postIterateModules(step_size);
@@ -69,40 +61,40 @@ void PlasmaDomain::advanceTime(bool verbose)
   m_iter++;
 }
 
-void PlasmaDomain::integrateEuler(double time_step, Grid visc_coeff)
+void PlasmaDomain::integrateEuler(double time_step)
 {
-  std::vector<Grid> time_derivatives = m_eqs->computeTimeDerivatives(visc_coeff);
+  std::vector<Grid> time_derivatives = m_eqs->computeTimeDerivatives();
   m_eqs->applyTimeDerivatives(time_derivatives, time_step);
 }
 
-void PlasmaDomain::integrateRK2(double time_step, Grid visc_coeff)
+void PlasmaDomain::integrateRK2(double time_step)
 {
   // First create copy of system advanced by half the timestep (Euler)...
-  std::vector<Grid> time_derivatives_naive = m_eqs->computeTimeDerivatives(visc_coeff);
+  std::vector<Grid> time_derivatives_naive = m_eqs->computeTimeDerivatives();
   std::vector<Grid> grids_halfstep = m_eqs->allGrids();
   m_eqs->applyTimeDerivatives(grids_halfstep, time_derivatives_naive, 0.5*time_step);
 
   // ...then use that half-advanced system to compute time derivatives to
   // apply to actual system for full time step (second-order R-K, a.k.a. midpoint method)
-  std::vector<Grid> time_derivatives = m_eqs->computeTimeDerivatives(grids_halfstep,visc_coeff);
+  std::vector<Grid> time_derivatives = m_eqs->computeTimeDerivatives(grids_halfstep);
   m_eqs->applyTimeDerivatives(time_derivatives, time_step);
 }
 
-void PlasmaDomain::integrateRK4(double time_step, Grid visc_coeff)
+void PlasmaDomain::integrateRK4(double time_step)
 {
-  std::vector<Grid> k1 = m_eqs->computeTimeDerivatives(visc_coeff);
+  std::vector<Grid> k1 = m_eqs->computeTimeDerivatives();
 
   std::vector<Grid> grids_copy = m_eqs->allGrids();
   m_eqs->applyTimeDerivatives(grids_copy, k1, 0.5*time_step);
-  std::vector<Grid> k2 = m_eqs->computeTimeDerivatives(grids_copy,visc_coeff);
+  std::vector<Grid> k2 = m_eqs->computeTimeDerivatives(grids_copy);
 
   grids_copy = m_eqs->allGrids();
   m_eqs->applyTimeDerivatives(grids_copy, k2, 0.5*time_step);
-  std::vector<Grid> k3 = m_eqs->computeTimeDerivatives(grids_copy,visc_coeff);
+  std::vector<Grid> k3 = m_eqs->computeTimeDerivatives(grids_copy);
 
   grids_copy = m_eqs->allGrids();
   m_eqs->applyTimeDerivatives(grids_copy, k3, time_step);
-  std::vector<Grid> k4 = m_eqs->computeTimeDerivatives(grids_copy,visc_coeff);
+  std::vector<Grid> k4 = m_eqs->computeTimeDerivatives(grids_copy);
 
   std::vector<Grid> k_final = k1;
   for(int i=0; i<k_final.size(); i++)

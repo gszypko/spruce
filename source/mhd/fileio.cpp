@@ -279,8 +279,6 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
     case static_cast<int>(Config::y_bound_1): y_bound_1 = stringToBoundaryCondition(rhs); break;
     case static_cast<int>(Config::y_bound_2): y_bound_2 = stringToBoundaryCondition(rhs); break;
     case static_cast<int>(Config::epsilon): epsilon = std::stod(rhs); break;
-    case static_cast<int>(Config::global_viscosity): global_viscosity = std::stod(rhs); break;
-    case static_cast<int>(Config::hyper_viscosity): hyper_viscosity = std::stod(rhs); break;
     case static_cast<int>(Config::density_min): density_min = std::stod(rhs); break;
     case static_cast<int>(Config::temp_min): temp_min = std::stod(rhs); break;
     case static_cast<int>(Config::thermal_energy_min): thermal_energy_min = std::stod(rhs); break;

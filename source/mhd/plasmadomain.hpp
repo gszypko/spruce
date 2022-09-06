@@ -38,15 +38,13 @@ public: //**********************************************************************
   // Config Names
   enum class Config {
     x_bound_1, x_bound_2, y_bound_1, y_bound_2,
-    epsilon, global_viscosity, hyper_viscosity, density_min,
-    temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
+    epsilon, density_min, temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
     output_flags, xdim, ydim, open_boundary_strength, std_out_interval, write_interval,
     open_boundary_decay_base, x_origin, y_origin, time_integrator, duration, sg_opt
   };
   static inline std::vector<std::string> m_config_names = {
     "x_bound_1","x_bound_2","y_bound_1","y_bound_2",
-    "epsilon","global_viscosity","hyper_viscosity","density_min",
-    "temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
+    "epsilon","density_min","temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
     "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","write_interval",
     "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "duration", "sg_opt"
   };
@@ -132,17 +130,15 @@ private: //*********************************************************************
   
   // safety factors
   double epsilon; // time step calculation
-  double global_viscosity; // prefactor for global artificial viscosity
-  double hyper_viscosity; // prefactor for hyper artificial viscosity
   double density_min; // number density minimum - cgs
   double temp_min; // temperature minimum - cgs
   double thermal_energy_min; // thermal energy density minimum - cgs
 
   void advanceTime(bool verbose = true);
 
-  void integrateEuler(double time_step, Grid visc_coeff);
-  void integrateRK2(double time_step, Grid visc_coeff);
-  void integrateRK4(double time_step, Grid visc_coeff);
+  void integrateEuler(double time_step);
+  void integrateRK2(double time_step);
+  void integrateRK4(double time_step);
 
   //******************** PRIVATE FUNCTION DECLARATIONS *************************************************************
 

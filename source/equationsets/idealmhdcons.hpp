@@ -34,11 +34,12 @@ class IdealMHDCons: public EquationSet {
 
         Grid getDT() override;
         void populateVariablesFromState(std::vector<Grid> &grids) override;
-        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, const Grid& visc_coeff) override;
+        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids) override;
         void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
         void propagateChanges(std::vector<Grid> &grids) override;
 
     private:
+        double m_global_viscosity{0};
         void enforceMinimums(std::vector<Grid>& grids);
         void recomputeDT();
         void computeConstantTerms(std::vector<Grid> &grids);

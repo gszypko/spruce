@@ -7,7 +7,16 @@
 
 IdealMHD2E::IdealMHD2E(PlasmaDomain &pd): EquationSet(pd,def_var_names()) {}
 
-void IdealMHD2E::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){}
+void IdealMHD2E::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs)
+{
+    for (int i=0; i<lhs.size(); i++){
+        if (lhs[i] == "global_viscosity") m_global_viscosity = stod(rhs[i]);
+        else{
+            std::cerr << lhs[i] << " is not recognized for this equation set." << std::endl;
+            assert(false);
+        }
+    }
+}
 
 void IdealMHD2E::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
@@ -21,17 +30,20 @@ void IdealMHD2E::applyTimeDerivatives(std::vector<Grid> &grids, const std::vecto
     propagateChanges(grids);
 }
 
-std::vector<Grid> IdealMHD2E::computeTimeDerivatives(const std::vector<Grid> &grids, const Grid& visc_coeff){
+std::vector<Grid> IdealMHD2E::computeTimeDerivatives(const std::vector<Grid> &grids){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     // PlasmaDomain grid references for more concise notation
+    Grid& d_x = m_pd.m_grids[PlasmaDomain::d_x];
+    Grid& d_y = m_pd.m_grids[PlasmaDomain::d_y];
     Grid& be_x = m_pd.m_grids[PlasmaDomain::be_x];
     Grid& be_y = m_pd.m_grids[PlasmaDomain::be_y];
     // continuity equations
     std::vector<Grid> v = {grids[v_x],grids[v_y]};
     Grid d_rho_dt = -m_pd.transportDivergence2D(grids[rho],v);
     // viscous forces
-    Grid viscous_force_x = visc_coeff*grids[rho]*m_pd.laplacian(grids[v_x]);
-    Grid viscous_force_y = visc_coeff*grids[rho]*m_pd.laplacian(grids[v_y]);
+    Grid global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/grids[dt].min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
+    Grid viscous_force_x = global_visc_coeff*m_pd.laplacian(grids[mom_x]);
+    Grid viscous_force_y = global_visc_coeff*m_pd.laplacian(grids[mom_y]);
     // magnetic forces
     Grid curl_db = m_pd.curl2D(grids[bi_x],grids[bi_y])/(4.0*PI);
     std::vector<Grid> external_mag_force = Grid::CrossProductZ2D(curl_db,{be_x,be_y});

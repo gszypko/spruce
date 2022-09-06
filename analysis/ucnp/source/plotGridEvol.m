@@ -1,9 +1,13 @@
-function [] = plotGridEvol(data)
+function [] = plotGridEvol(data,plotFreq)
 % os (struct): contains grid info from 'os.grids.out' file
 
+if nargin < 2, plotFreq = 1; end
+data.grids.vars = data.grids.vars(1:plotFreq:end);
+data.grids.time = data.grids.time(1:plotFreq:end);
+
 % for each time point, plot 2D grids from MHD simulation
-gridnames = {'i_n', 'i_v_x', 'i_temp', 'e_n', 'e_v_x', 'e_temp', 'dn', 'j_x', 'E_x','E_ideal', 'b_mag', 'dt'};
-gridstr = {'n_i', 'v_i_,_x', 'T_i', 'n_e', 'v_e_,_x', 'T_e', '\Deltan', 'j_x', 'E_x','E_ideal', '|b|', 'dt'};
+gridnames = {'n', 'v_x', 'v_y', 'temp', 'press', 'mom_x', 'visc', 'visc_force_x', 'lap_mom_x', 'dt'};
+gridstr = {'n', 'v_x', 'v_y', 'T', 'P', '\pi_x', 'visc', 'F_\nu_,_x', '\nabla^2\pi_x', 'dt'};
 
 % generate figure
 f = filesep;

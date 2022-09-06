@@ -78,7 +78,7 @@ class EquationSet {
         virtual std::vector<int> thermal_energies() = 0;
         virtual std::vector<int> fields() = 0;
 
-        std::vector<Grid> computeTimeDerivatives(Grid visc_coeff) { return computeTimeDerivatives(m_grids,visc_coeff); }
+        std::vector<Grid> computeTimeDerivatives() { return computeTimeDerivatives(m_grids); }
         void applyTimeDerivatives(const std::vector<Grid> &time_derivatives, double step) { applyTimeDerivatives(m_grids,time_derivatives,step); }
         void propagateChanges() { propagateChanges(m_grids); }
         void populateVariablesFromState() { populateVariablesFromState(m_grids); }
@@ -92,7 +92,7 @@ class EquationSet {
         // The argument grids should be a vector<Grid> of the same size and dimensions as
         // the member variable m_grids (this allows for evolution of intermediate steps
         // by the PlasmaDomain, without touching the current "real" state of the system)
-        virtual std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, const Grid& visc_coeff) = 0;
+        virtual std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids) = 0;
         // Apply the time evolution described by the result of computeTimeDerivatives()
         // The argument grids should be a vector<Grid> of the same size and dimensions as
         // the member variable m_grids (this allows for evolution of intermediate steps

@@ -35,12 +35,14 @@ class IdealMHD: public EquationSet {
         std::vector<int> fields() override { return {bi_x,bi_y}; }
 
         void populateVariablesFromState(std::vector<Grid> &grids) override;
-        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, const Grid& visc_coeff) override;
+        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids) override;
         void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
         void propagateChanges(std::vector<Grid> &grids) override;
         Grid getDT() override {return m_grids[dt];}
 
     private:
+        double m_global_viscosity{0};
+        std::string m_viscosity_opt{"momentum"};
         void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids);
         void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids);
         void catchNullFieldDirection(std::vector<Grid> &grids);

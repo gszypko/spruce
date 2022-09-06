@@ -48,7 +48,7 @@ class Ideal2F: public EquationSet {
         Grid getDT() override {return m_grids[dt];};
 
         void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
-        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, const Grid& visc_coeff) override;
+        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids) override;
         void populateVariablesFromState(std::vector<Grid> &grids) override;
         void propagateChanges(std::vector<Grid> &grids) override;
 
@@ -58,20 +58,18 @@ class Ideal2F: public EquationSet {
         double m_epsilon_courant{0.1};
         bool m_verbose{false};
         std::string m_viscosity_opt{"momentum"};
-        double m_maxwell_viscosity{0};
-        double m_maxwell_viscosity_length_x{-1};
-        double m_maxwell_viscosity_length_y{-1};
-        Grid m_maxwell_viscosity_mask;
         bool m_remove_curl_terms{false};
+        double m_global_viscosity{0};
 
         // private functions
         void recomputeDT();
+        Grid ionTimescale() const;
         void catchNullFieldDirection(std::vector<Grid> &grids);
         void enforceMinimums(std::vector<Grid>& grids);
         void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids);
         void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids);
         std::vector<Grid> subcycleMaxwell(const std::vector<Grid>& grids, const std::vector<Grid>& dj, double step) const;
-        void maxwellCurlEqs(const std::vector<Grid>& EM,const std::vector<Grid>& j, const Grid& visc_coeff, std::vector<Grid>& EM_laplacian, std::vector<Grid>& dEM_dt) const;
+        void maxwellCurlEqs(const std::vector<Grid>& EM,const std::vector<Grid>& j, std::vector<Grid>& EM_laplacian, std::vector<Grid>& dEM_dt) const;
         void apply_fixed_curl_bc(Grid& grid) const;
         void smooth_vars(std::vector<Grid> &grids) const;
         void populate_boundary(Grid& grid) const;
