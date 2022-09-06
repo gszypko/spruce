@@ -263,7 +263,7 @@ void Ideal2F::recomputeDT(){
 // returns timescale of bulk flow and acoustic waves for ions
 Grid Ideal2F::ionTimescale() const
 {
-    Grid c_s = (m_pd.m_adiabatic_index*m_grids[press]/m_grids[rho]).sqrt();
+    Grid c_s = (m_pd.m_adiabatic_index*m_grids[i_press]/m_grids[i_rho]).sqrt();
     Grid vel_mag = (m_grids[i_v_x].square() + m_grids[i_v_y].square()).sqrt();
     Grid diagonals = (m_pd.m_grids[PlasmaDomain::d_x].square() + m_pd.m_grids[PlasmaDomain::d_y].square()).sqrt();
     return diagonals/(vel_mag + c_s);
