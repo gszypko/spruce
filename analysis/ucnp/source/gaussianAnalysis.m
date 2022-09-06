@@ -126,14 +126,17 @@ for i = 1:length(s.t)
     if strcmp(data.config.eq_set,'ideal_mhd') || strcmp(data.config.eq_set,'ideal_mhd_cons')
         s.data(i).Ti = data.grids.vars(i).temp(indy,indx);
         s.data(i).Te = data.grids.vars(i).temp(indy,indx);
+        s.data(i).vx = data.grids.vars(i).v_x(indy,:);
+        s.data(i).vy = data.grids.vars(i).v_y(:,indx)';
     elseif max(strcmp(data.config.eq_set,{'ideal_mhd_2E','ideal_2F'}))
         s.data(i).Ti = data.grids.vars(i).i_temp(indy,indx);
         s.data(i).Te = data.grids.vars(i).e_temp(indy,indx);
+        s.data(i).vx = data.grids.vars(i).i_v_x(indy,:);
+        s.data(i).vy = data.grids.vars(i).i_v_y(:,indx)';
     else
         error('Error: equation set is not valid.')
     end
-    s.data(i).vx = data.grids.vars(i).v_x(indy,:);
-    s.data(i).vy = data.grids.vars(i).v_y(:,indx)';
+    
 end
 
 s.theory = struct;

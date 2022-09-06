@@ -48,11 +48,11 @@ void PlasmaDomain::advanceTime(bool verbose)
   m_module_handler.iterateModules(step_size);
 
   // determine viscosity coefficient
-  Grid visc_safety_criteria = (m_grids[d_x].square() + m_grids[d_y].square())/(2*step_size);
-  double global_visc_coeff = global_viscosity*visc_safety_criteria.min();
-  Grid hyper_visc_coeff = hyper_viscosity*visc_safety_criteria.min()*(dt_min/dt_raw);
-  Grid visc_coeff = global_visc_coeff + hyper_visc_coeff;
-
+  Grid visc_safety_criteria = 0.5*(m_grids[d_x].square() + m_grids[d_y].square())/step_size;
+  double global_visc_coeff = (global_viscosity*0.5*(m_grids[d_x].square() + m_grids[d_y].square())/dt_min).min();
+  Grid hyper_visc_coeff = hyper_viscosity*0.5*visc_safety_criteria;
+  Grid visc_coeff = (global_visc_coeff + hyper_visc_coeff).min(visc_safety_criteria);
+  
   // run time integration according to specified method
   if (m_time_integrator == TimeIntegrator::RK2) integrateRK2(step_size, visc_coeff);
   else if (m_time_integrator == TimeIntegrator::RK4) integrateRK4(step_size, visc_coeff);

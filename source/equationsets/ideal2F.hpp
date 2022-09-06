@@ -27,7 +27,7 @@ class Ideal2F: public EquationSet {
                 "i_press","e_press","press","i_thermal_energy","e_thermal_energy",
                 "rho","rho_c","n","dn","dt",
                 "b_x","b_y","b_z","b_mag","b_mag_xy","b_hat_x","b_hat_y",
-                "curlE_z","divE","divB","lapEx"};
+                "curlE_z","divE","divB","lapEx","E_ideal"};
         }
         enum Vars {i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,
                 i_temp,e_temp,bi_x,bi_y,bi_z,E_x,E_y,E_z,grav_x,grav_y,
@@ -35,7 +35,7 @@ class Ideal2F: public EquationSet {
                 i_press,e_press,press,i_thermal_energy,e_thermal_energy,
                 rho,rho_c,n,dn,dt,
                 b_x,b_y,b_z,b_mag,b_mag_xy,b_hat_x,b_hat_y,
-                curlE_z,divE,divB,lapEx};
+                curlE_z,divE,divB,lapEx,E_ideal};
 
         std::vector<int> state_variables() override {
             return {i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,i_temp,e_temp,bi_x,bi_y,bi_z,E_x,E_y,E_z,grav_x,grav_y};
@@ -62,6 +62,7 @@ class Ideal2F: public EquationSet {
         double m_maxwell_viscosity_length_x{-1};
         double m_maxwell_viscosity_length_y{-1};
         Grid m_maxwell_viscosity_mask;
+        bool m_remove_curl_terms{false};
 
         // private functions
         void recomputeDT();

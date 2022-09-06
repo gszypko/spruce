@@ -17,6 +17,7 @@ void Ideal2F::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<
         else if (lhs[i] == "maxwell_viscosity") m_maxwell_viscosity = stod(rhs[i]);
         else if (lhs[i] == "maxwell_viscosity_length_x") m_maxwell_viscosity_length_x = stod(rhs[i]);
         else if (lhs[i] == "maxwell_viscosity_length_y") m_maxwell_viscosity_length_y = stod(rhs[i]);
+        else if (lhs[i] == "remove_curl_terms") m_remove_curl_terms = (rhs[i] == "true");
         else{
             std::cerr << lhs[i] << " is not recognized for this equation set." << std::endl;
             assert(false);
@@ -39,6 +40,8 @@ void Ideal2F::setupEquationSet()
     Grid eta_yu = (-2*(y - y.max()).abs()/m_maxwell_viscosity_length_y).exp();
     Grid eta_y = eta_yl.max(eta_yu);
     m_maxwell_viscosity_mask = m_maxwell_viscosity*eta_x.max(eta_y);
+    // do not subcycle if curl terms are not used
+    if (m_remove_curl_terms) m_use_sub_cycling = false;
 }
 
 void Ideal2F::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step){
@@ -55,8 +58,8 @@ void Ideal2F::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<G
     // evolve electromagnetic fields
     if (m_use_sub_cycling){
         // compute change in current density
-        Grid j_x_new = E*(grids[i_mom_x]/m_pd.m_ion_mass-grids[e_mom_x]/M_ELECTRON);
-        Grid j_y_new = E*(grids[i_mom_y]/m_pd.m_ion_mass-grids[e_mom_y]/M_ELECTRON);
+        Grid j_x_new = E*(grids[i_mom_x]/m_pd.m_ion_mass - grids[e_mom_x]/M_ELECTRON);
+        Grid j_y_new = E*(grids[i_mom_y]/m_pd.m_ion_mass - grids[e_mom_y]/M_ELECTRON);
         std::vector<Grid> dj = {j_x_new - grids[j_x],j_y_new - grids[j_y]};
         // use sub-cycling to evolve E and B
         std::vector<Grid> step_EM = subcycleMaxwell(grids, dj, step);
@@ -134,12 +137,23 @@ std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids
     // optionally evolve electromagnetic fields
     Grid dEx_dt, dEy_dt, dEz_dt, dBx_dt, dBy_dt, dBz_dt;
     if (!m_use_sub_cycling){
-        dEx_dt = + C*m_pd.derivative1D(grids[b_z],1) - 4.*PI*grids[j_x];
-        dEy_dt = - C*m_pd.derivative1D(grids[b_z],0) - 4.*PI*grids[j_y];
-        dEz_dt = + C*(m_pd.derivative1D(grids[b_y],0) - m_pd.derivative1D(grids[b_x],1));
-        dBx_dt = - C*m_pd.derivative1D(grids[E_z],1);
-        dBy_dt = + C*m_pd.derivative1D(grids[E_z],0);
-        dBz_dt = + C*(m_pd.derivative1D(grids[E_x],1) - m_pd.derivative1D(grids[E_y],0));
+        if (!m_remove_curl_terms){
+            dEx_dt = + C*m_pd.derivative1D(grids[b_z],1) - 4.*PI*grids[j_x];
+            dEy_dt = - C*m_pd.derivative1D(grids[b_z],0) - 4.*PI*grids[j_y];
+            dEz_dt = + C*(m_pd.derivative1D(grids[b_y],0) - m_pd.derivative1D(grids[b_x],1));
+            dBx_dt = - C*m_pd.derivative1D(grids[E_z],1);
+            dBy_dt = + C*m_pd.derivative1D(grids[E_z],0);
+            dBz_dt = + C*(m_pd.derivative1D(grids[E_x],1) - m_pd.derivative1D(grids[E_y],0));
+        }
+        else{
+            dEx_dt = - 4.*PI*grids[j_x];
+            dEy_dt = - 4.*PI*grids[j_y];
+            dEz_dt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+            dBx_dt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+            dBy_dt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+            dBz_dt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+        }
+        
 
         if (m_maxwell_viscosity > 0){
             dEx_dt += visc_coeff*m_pd.laplacian(grids[E_x]);
@@ -224,6 +238,7 @@ void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids){
     grids[curlE_z] = -(m_pd.derivative1D(grids[E_x],1) - m_pd.derivative1D(grids[E_y],0));
     grids[lapEx] = m_pd.laplacian(grids[E_x]);
     populate_boundary(grids[lapEx]);
+    grids[E_ideal] = (M_ELECTRON*m_pd.derivative1D(grids[i_press], 0) - m_pd.m_ion_mass*m_pd.derivative1D(grids[e_press], 0))/(M_ELECTRON+m_pd.m_ion_mass)/E/grids[i_n];
 }
 
 void Ideal2F::catchNullFieldDirection(std::vector<Grid> &grids)
@@ -261,7 +276,7 @@ void Ideal2F::recomputeDT(){
     Grid dt_v = dr/(v + v_L);
     Grid dt_EM = dx*dy/(dx+dy)/C;
     m_grids[dt] = dt_wave.min(dt_v);
-    if (!m_use_sub_cycling) m_grids[dt] = m_grids[dt].min(dt_EM);
+    if (!m_use_sub_cycling && !m_remove_curl_terms) m_grids[dt] = m_grids[dt].min(dt_EM);
 }
 
 std::vector<Grid> Ideal2F::subcycleMaxwell(const std::vector<Grid>& grids, const std::vector<Grid>& dj_tot, double step) const

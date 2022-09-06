@@ -2,17 +2,17 @@ function [] = plotGridEvol(data)
 % os (struct): contains grid info from 'os.grids.out' file
 
 % for each time point, plot 2D grids from MHD simulation
-gridnames = {'n', 'v_x', 'temp', 'press', 'mom_x','visc','visc_force_x','lap_mom_x'};
-gridstr = {'n', 'v_x', 'T', 'P', '\pi_x','visc','F_v_i_s_c_,_x','\nabla^2\pi_x'};
+gridnames = {'i_n', 'i_v_x', 'i_temp', 'e_n', 'e_v_x', 'e_temp', 'dn', 'j_x', 'E_x','E_ideal', 'b_mag', 'dt'};
+gridstr = {'n_i', 'v_i_,_x', 'T_i', 'n_e', 'v_e_,_x', 'T_e', '\Deltan', 'j_x', 'E_x','E_ideal', '|b|', 'dt'};
 
 % generate figure
 f = filesep;
 filepath = [data.folder f 'grid-evol'];
-row = 2; 
+row = 3; 
 col = 4; 
 num = length(gridnames);
 [fig,ax,an] = open_subplot(row,col,num,'Visible','on');
-fig.Position = [1.303333333333333e+02,283,926,3.853333333333330e+02];
+fig.Position = [1.303333333333333e+02,1.866000000000000e+02,8.818666666666668e+02,4.817333333333330e+02];
 an.Position = [0.1595    0.9084    0.7230    0.0801];
 
 frames = cell(1,length(data));
@@ -25,7 +25,7 @@ for k = 1:length([data.grids.vars.time])
         for j = 1:size(ax,2)
             iter = iter + 1;
             if iter > num, break, end
-            
+
             cax = get_axis(fig,ax{i,j});
             xdata = data.grids.x_vec;
             ydata = data.grids.y_vec;
@@ -38,6 +38,9 @@ for k = 1:length([data.grids.vars.time])
             if i == size(ax,1), xlabel('x (cm)'), end
             if j == 1, ylabel('y (cm)'), end
             title(gridstr{iter},'FontWeight','normal')
+
+            if strcmp(gridnames{iter},'E_x'), c_lims = cax.CLim; end
+            if strcmp(gridnames{iter},'E_ideal'), cax.CLim = c_lims; end
         end
     end
 
