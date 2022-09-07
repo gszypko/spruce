@@ -4,15 +4,32 @@
 #include <cassert>
 
 // constructor
-SavitzkyGolay::SavitzkyGolay()
+SavitzkyGolay::SavitzkyGolay(std::string option,const Grid& grid)
 {
-    initialize_k55_p33();
+    // initialize requested kernal and polynomial sizes
+    switch (opt2ind(option)){
+        case static_cast<int>(k55_p33): initialize_k55_p33(); break;
+        case static_cast<int>(k33_p11): initialize_k33_p11(); break;
+        default: assert(false);
+    }
     m_Bx = (m_Kx-1)/2;
     m_By = (m_Ky-1)/2;
-    void identify_boundary_cells();
+    // for given SG option, determine how many boundary cells and 
+    identify_interior_edges(grid);
 }
 
-// process 5x5 kernel, 3x3 polynomial coefficients
+// return the index for the option corresponding to name
+int SavitzkyGolay::opt2ind(std::string name)
+{
+    auto it = std::find(opts.begin(),opts.end(),name);
+    if (it == opts.end()){
+        std::cerr << name << "is not a valid option." << std::endl;
+        assert(false);
+    }
+    return std::distance(opts.begin(),it);
+}
+
+// initialize coefficients for 5x5 kernel and 3x3 polynomial
 void SavitzkyGolay::initialize_k55_p33()
 {
     // define polynomial order and kernel sizes
@@ -47,27 +64,10 @@ void SavitzkyGolay::initialize_k55_p33()
     m_coeffs.resize(m_Px+1);
     for (auto& row : m_coeffs) row.resize(m_Py+1,Grid::Zero(m_Kx,m_Ky));
     // process symmetry of coefficients
-    for (int px : m_px){
-        for (int py : m_py){
-            int poly_ind = px*(m_Px+1)+py;
-            for (int kx : m_kx){
-                for (int ky : m_ky){
-                    int kernel_ind = kx*m_Kx+ky;
-                    double val;
-                    if (kernel_ind < coeffs[poly_ind].size()) val = coeffs[poly_ind][kernel_ind];
-                    else{
-                        val = coeffs[poly_ind][m_Kx*m_Ky-1-kernel_ind];
-                        if (symmetry[poly_ind]=="A") val *= (-1.);
-                    }
-                    m_coeffs[px][py](kx,ky) = val;
-                }
-            }
-        }
-        
-    }
+    initialize_coeffs(coeffs,symmetry);
 }
 
-// process 5x5 kernel, 3x3 polynomial coefficients
+// initialize coefficients for 3x3 kernel and 1x1 polynomial
 void SavitzkyGolay::initialize_k33_p11()
 {
     // define polynomial order and kernel sizes
@@ -87,6 +87,15 @@ void SavitzkyGolay::initialize_k33_p11()
 	coeffs.push_back({+2.500000E-01,	+0.000000E+00,	-2.500000E-01,	+0.000000E+00,	+0.000000E+00}); // 1 1
     std::vector<std::string> symmetry {"S","A","A","S"};
     // initialize size of coefficient container
+    initialize_coeffs(coeffs,symmetry);
+}
+
+// constructs full coefficient matrix from compacted coeffs and symmetry information
+void SavitzkyGolay::initialize_coeffs(std::vector<std::vector<double>>& coeffs,std::vector<std::string>& symmetry)
+{
+    assert(coeffs.size()==symmetry.size());
+    assert(coeffs.size() == ((m_Px+1)*(m_Py+1)));
+    for (auto elem : coeffs) assert(elem.size() == (m_Kx*m_Ky+1)/2);
     m_coeffs.resize(m_Px+1);
     for (auto& row : m_coeffs) row.resize(m_Py+1,Grid::Zero(m_Kx,m_Ky));
     // process symmetry of coefficients
@@ -110,151 +119,205 @@ void SavitzkyGolay::initialize_k33_p11()
     }
 }
 
-Grid SavitzkyGolay::smoothing(const Grid& grid) const
+void SavitzkyGolay::identify_interior_edges(const Grid& grid)
 {
-    // identify nearest interior cells to boundary
-    int Bx_l = m_Bx;
-    int Bx_r = grid.rows()-1-m_Bx;
-    int By_l = m_By;
-    int By_r = grid.rows()-1-m_By;
-    // begin differentiation loop
-    Grid result {Grid::Zero(grid.rows(),grid.cols())};
-    #pragma omp parallel for
-    for (int i=0; i<grid.rows(); i++){
-        for (int j=0; j<grid.cols(); j++){
-            // determine boundary status
-            bool is_bndry_x = (i<Bx_l || i>Bx_r) ? true : false;
-            bool is_bndry_y = (j<By_l || j>By_r) ? true : false;
-            // handle interior cells
-            if (!is_bndry_x && !is_bndry_y){
-                for (int kx : m_kx){
-                    for (int ky : m_ky){
-                        result(i,j) += m_coeffs[0][0](kx,ky)*grid(i+kx-m_Bx,j+ky-m_By);
-                    }
-                }
-            }
-            // handle near-boundary cells
-            else{
-                // get boundary cell positions relative to nearest interior cell
-                int u_x, u_y; // cell positions relative to boundary
-                int n_x, n_y; // nearest cell position to boundary cell
-                // handle x boundary cells
-                if (i < Bx_l){
-                    u_x = i - Bx_l;
-                    n_x = Bx_l;
-                }
-                else if (i > Bx_r){
-                    u_x = i - Bx_r;
-                    n_x = Bx_r;
-                }
-                else{
-                    u_x = 0;
-                    n_x = i;
-                }
-                // handle y boundary cells
-                if (j < By_l){
-                    u_y = j - By_l;
-                    n_y = By_l;
-                }
-                else if (j > By_r){
-                    u_y = j - By_r;
-                    n_y = By_r;
-                }
-                else{
-                    u_y = 0;
-                    n_y = j;
-                }
-                // loop over coefficients
-                int mx = 0;
-                int my = 0;
-                for (int px = mx; px<m_Px; px++){
-                    for (int py = my; py<m_Py; py++){
-                        double a_xy{0.};
-                        for (int kx : m_kx){
-                            for (int ky : m_ky){
-                                a_xy += m_coeffs[px][py](kx,ky)*grid(n_x+kx-m_Bx,n_y+ky-m_By);
-                            }
-                        }
-                        double x_contribution = fac(px)*pow(u_x,px-mx)/fac(px-mx);
-                        double y_contribution = fac(py)*pow(u_y,py-my)/fac(py-my);
-                        result(i,j) += a_xy*x_contribution*y_contribution;
-                    }
-                }
-                        
-            }
+    assert(grid.rows()>=m_Kx && grid.cols()>=m_Ky);
+    m_grid_size_x = grid.rows();
+    m_grid_size_y = grid.cols();
+    m_xl = m_Bx;
+    m_xu = grid.rows()-1-m_Bx;
+    m_yl = m_By;
+    m_yu = grid.cols()-1-m_By;
+}
+
+void SavitzkyGolay::process_boundary_cells(int ind_x, int ind_y, int& u_x, int& u_y, int& n_x, int& n_y) const
+{
+    // handle x boundary cells
+    if (ind_x < m_xl){
+        u_x = ind_x - m_xl;
+        n_x = m_xl;
+    }
+    else if (ind_x > m_xu){
+        u_x = ind_x - m_xu;
+        n_x = m_xu;
+    }
+    else{
+        u_x = 0;
+        n_x = ind_x;
+    }
+    // handle y boundary cells
+    if (ind_y < m_yl){
+        u_y = ind_y - m_yl;
+        n_y = m_yl;
+    }
+    else if (ind_y > m_yu){
+        u_y = ind_y - m_yu;
+        n_y = m_yu;
+    }
+    else{
+        u_y = 0;
+        n_y = ind_y;
+    }
+}
+
+double SavitzkyGolay::smooth_cell_interior(const Grid& grid, int ind_x, int ind_y) const
+{
+    assert(ind_x >= m_xl && ind_x <= m_xu);
+    assert(ind_y >= m_yl && ind_y <= m_yu);
+    double result{0.};
+    for (int kx : m_kx){
+        for (int ky : m_ky){
+            result += m_coeffs[0][0](kx,ky)*grid(ind_x+kx-m_Bx,ind_y+ky-m_By);
         }
     }
     return result;
 }
 
-Grid SavitzkyGolay::boundary_smoothing(const Grid& grid) const
+double SavitzkyGolay::smooth_cell_boundary(const Grid& grid, int ind_x, int ind_y) const
 {
-    // identify nearest interior cells to boundary
-    int Bx_l = m_Bx;
-    int Bx_r = grid.rows()-1-m_Bx;
-    int By_l = m_By;
-    int By_r = grid.rows()-1-m_By;
-    // begin differentiation loop
+    double result{0.};
+    // determine boundary status
+    bool is_bndry_x = (ind_x<m_xl || ind_x>m_xu) ? true : false;
+    bool is_bndry_y = (ind_y<m_yl || ind_y>m_yu) ? true : false;
+    assert(is_bndry_x || is_bndry_y);
+    // get boundary cell positions relative to nearest interior cell
+    int u_x, u_y; // cell positions relative to boundary
+    int n_x, n_y; // nearest cell position to boundary cell
+    process_boundary_cells(ind_x,ind_x,u_x,u_y,n_x,n_y);
+    // loop over coefficients
+    int mx = 0;
+    int my = 0;
+    for (int px = mx; px<m_Px; px++){
+        for (int py = my; py<m_Py; py++){
+            double a_xy{0.};
+            for (int kx : m_kx){
+                for (int ky : m_ky){
+                    a_xy += m_coeffs[px][py](kx,ky)*grid(n_x+kx-m_Bx,n_y+ky-m_By);
+                }
+            }
+            double x_contribution = fac(px)*pow(u_x,px-mx)/fac(px-mx);
+            double y_contribution = fac(py)*pow(u_y,py-my)/fac(py-my);
+            result += a_xy*x_contribution*y_contribution;
+        }
+    }
+    return result;
+}
+
+double SavitzkyGolay::derivative_cell_interior(const Grid& grid, int ind_x, int ind_y, int mx, int my) const
+{
+    assert(ind_x >= m_xl && ind_x <= m_xu);
+    assert(ind_y >= m_yl && ind_y <= m_yu);
+    double result{0.};
+    for (int kx : m_kx){
+        for (int ky : m_ky){
+            result += m_coeffs[mx][my](kx,ky)*grid(ind_x+kx-m_Bx,ind_y+ky-m_By);
+        }
+    }
+    return result;
+}
+
+double SavitzkyGolay::derivative_cell_boundary(const Grid& grid, int ind_x, int ind_y, int mx, int my) const
+{
+    double result{0.};
+    // determine boundary status
+    bool is_bndry_x = (ind_x<m_xl || ind_x>m_xu) ? true : false;
+    bool is_bndry_y = (ind_y<m_yl || ind_y>m_yu) ? true : false;
+    assert(is_bndry_x || is_bndry_y);
+    // get boundary cell positions relative to nearest interior cell
+    int u_x, u_y; // cell positions relative to boundary
+    int n_x, n_y; // nearest cell position to boundary cell
+    process_boundary_cells(ind_x,ind_x,u_x,u_y,n_x,n_y);
+    // loop over coefficients
+    for (int px = mx; px<m_Px; px++){
+        for (int py = my; py<m_Py; py++){
+            double a_xy{0.};
+            for (int kx : m_kx){
+                for (int ky : m_ky){
+                    a_xy += m_coeffs[px][py](kx,ky)*grid(n_x+kx-m_Bx,n_y+ky-m_By);
+                }
+            }
+            double x_contribution = fac(px)*pow(u_x,px-mx)/fac(px-mx);
+            double y_contribution = fac(py)*pow(u_y,py-my)/fac(py-my);
+            result += a_xy*x_contribution*y_contribution;
+        }
+    }
+    return result;
+}
+
+// return smoothed grid - treats both interior and boundary cells
+Grid SavitzkyGolay::smooth(const Grid& grid) const
+{
+    assert(grid.rows() == m_grid_size_x);
+    assert(grid.cols() == m_grid_size_y);
+    Grid interior = smooth_interior(grid);
+    Grid boundary = smooth_boundary(grid);
+    return interior + boundary;
+}
+
+Grid SavitzkyGolay::smooth(const Grid& grid, int xl, int xu, int yl, int yu) const
+{
+    assert(grid.rows() == m_grid_size_x);
+    assert(grid.cols() == m_grid_size_y);
+    assert(xl >= 0 && yl >= 0 && xu < grid.rows() && yu < grid.cols());
+    Grid result = grid;
+    #pragma omp parallel for
+    for (int i=xl; i<=xu; i++){
+        for (int j=yl; j<=yu; j++){
+            if (i < m_xl || i > m_xu || j < m_yl || j > m_yu)
+                result(i,j) = smooth_cell_boundary(grid,i,j);
+            else 
+                result(i,j) = smooth_cell_interior(grid,i,j);
+        }
+    }
+    return result;
+}
+
+Grid SavitzkyGolay::smooth_interior(const Grid& grid) const
+{
+    assert(grid.rows() == m_grid_size_x);
+    assert(grid.cols() == m_grid_size_y);
+    // loop over interior cells
+    Grid result = Grid::Zero(grid.rows(),grid.cols());
+    #pragma omp parallel for
+    for (int i=m_xl; i<=m_xu; i++){
+        for (int j=m_yl; j<=m_yu; j++){
+            result(i,j) = smooth_cell_interior(grid,i,j);
+        }
+    }
+    return result;
+}
+
+Grid SavitzkyGolay::smooth_boundary(const Grid& grid) const
+{
+    assert(grid.rows() == m_grid_size_x);
+    assert(grid.cols() == m_grid_size_y);
     Grid result {Grid::Zero(grid.rows(),grid.cols())};
+    // lower x boundary
+    for (int i=0; i<m_xl; i++){
+        #pragma omp parallel for
+        for (int j=0; j<grid.cols(); j++){
+            result(i,j) = smooth_cell_boundary(grid,i,j);
+        }
+    }
+    // upper x boundary
+    for (int i=m_xu+1; i<grid.rows(); i++){
+        #pragma omp parallel for
+        for (int j=0; j<grid.cols(); j++){
+            result(i,j) = smooth_cell_boundary(grid,i,j);
+        }
+    }
+    // lower y boundary
     #pragma omp parallel for
     for (int i=0; i<grid.rows(); i++){
-        for (int j=0; j<grid.cols(); j++){
-            // determine boundary status
-            bool is_bndry_x = (i<Bx_l || i>Bx_r) ? true : false;
-            bool is_bndry_y = (j<By_l || j>By_r) ? true : false;
-            // handle interior cells
-            if (!is_bndry_x && !is_bndry_y){
-                result(i,j) = grid(i,j);
-            }
-            // handle near-boundary cells
-            else{
-                // get boundary cell positions relative to nearest interior cell
-                int u_x, u_y; // cell positions relative to boundary
-                int n_x, n_y; // nearest cell position to boundary cell
-                // handle x boundary cells
-                if (i < Bx_l){
-                    u_x = i - Bx_l;
-                    n_x = Bx_l;
-                }
-                else if (i > Bx_r){
-                    u_x = i - Bx_r;
-                    n_x = Bx_r;
-                }
-                else{
-                    u_x = 0;
-                    n_x = i;
-                }
-                // handle y boundary cells
-                if (j < By_l){
-                    u_y = j - By_l;
-                    n_y = By_l;
-                }
-                else if (j > By_r){
-                    u_y = j - By_r;
-                    n_y = By_r;
-                }
-                else{
-                    u_y = 0;
-                    n_y = j;
-                }
-                // loop over coefficients
-                int mx = 0;
-                int my = 0;
-                for (int px = mx; px<m_Px; px++){
-                    for (int py = my; py<m_Py; py++){
-                        double a_xy{0.};
-                        for (int kx : m_kx){
-                            for (int ky : m_ky){
-                                a_xy += m_coeffs[px][py](kx,ky)*grid(n_x+kx-m_Bx,n_y+ky-m_By);
-                            }
-                        }
-                        double x_contribution = fac(px)*pow(u_x,px-mx)/fac(px-mx);
-                        double y_contribution = fac(py)*pow(u_y,py-my)/fac(py-my);
-                        result(i,j) += a_xy*x_contribution*y_contribution;
-                    }
-                }
-                        
-            }
+        for (int j=0; j<m_yl; j++){
+            result(i,j) = smooth_cell_boundary(grid,i,j);
+        }
+    }
+    // upper y boundary
+    #pragma omp parallel for
+    for (int i=0; i<grid.rows(); i++){
+        for (int j=m_yu+1; j<grid.cols(); j++){
+            result(i,j) = smooth_cell_boundary(grid,i,j);
         }
     }
     return result;
@@ -262,77 +325,63 @@ Grid SavitzkyGolay::boundary_smoothing(const Grid& grid) const
 
 Grid SavitzkyGolay::derivative1D(const Grid& grid,int dim,double dr) const
 {
-    // process dimension being integrated
+    assert(grid.rows() == m_grid_size_x);
+    assert(grid.cols() == m_grid_size_y);
+    Grid interior = derivative1D_interior(grid,dim,dr);
+    Grid boundary = derivative1D_boundary(grid,dim,dr);
+    return interior + boundary;
+}
+
+Grid SavitzkyGolay::derivative1D_interior(const Grid& grid,int dim,double dr) const
+{
+    assert(grid.rows() == m_grid_size_x);
+    assert(grid.cols() == m_grid_size_y);
     int mx = (dim==0) ? 1 : 0; // order of derivative along x
     int my = (dim==1) ? 1 : 0; // order of derivative along y
-    // identify nearest interior cells to boundary
-    int Bx_l = m_Bx;
-    int Bx_r = grid.rows()-1-m_Bx;
-    int By_l = m_By;
-    int By_r = grid.rows()-1-m_By;
-    // begin differentiation loop
+    // loop over interior cells
+    Grid result = Grid::Zero(grid.rows(),grid.cols());
+    #pragma omp parallel for
+    for (int i=m_xl; i<=m_xu; i++){
+        for (int j=m_yl; j<=m_yu; j++){
+            result(i,j) = derivative_cell_interior(grid,i,j,mx,my);
+        }
+    }
+    return result/dr;
+}
+
+Grid SavitzkyGolay::derivative1D_boundary(const Grid& grid,int dim,double dr) const
+{
+    assert(grid.rows() == m_grid_size_x);
+    assert(grid.cols() == m_grid_size_y);
+    int mx = (dim==0) ? 1 : 0; // order of derivative along x
+    int my = (dim==1) ? 1 : 0; // order of derivative along y
     Grid result {Grid::Zero(grid.rows(),grid.cols())};
+    // lower x boundary
+    for (int i=0; i<m_xl; i++){
+        #pragma omp parallel for
+        for (int j=0; j<grid.cols(); j++){
+            result(i,j) = derivative_cell_boundary(grid,i,j,mx,my);
+        }
+    }
+    // upper x boundary
+    for (int i=m_xu+1; i<grid.rows(); i++){
+        #pragma omp parallel for
+        for (int j=0; j<grid.cols(); j++){
+            result(i,j) = derivative_cell_boundary(grid,i,j,mx,my);
+        }
+    }
+    // lower y boundary
     #pragma omp parallel for
     for (int i=0; i<grid.rows(); i++){
-        for (int j=0; j<grid.cols(); j++){
-            // determine boundary status
-            bool is_bndry_x = (i<Bx_l || i>Bx_r) ? true : false;
-            bool is_bndry_y = (j<By_l || j>By_r) ? true : false;
-            // handle interior cells
-            if (!is_bndry_x && !is_bndry_y){
-                for (int kx : m_kx){
-                    for (int ky : m_ky){
-                        result(i,j) += m_coeffs[mx][my](kx,ky)*grid(i+kx-m_Bx,j+ky-m_By);
-                    }
-                }
-            }
-            // handle near-boundary cells
-            else{
-                // get boundary cell positions relative to nearest interior cell
-                int u_x, u_y; // cell positions relative to boundary
-                int n_x, n_y; // nearest cell position to boundary cell
-                // handle x boundary cells
-                if (i < Bx_l){
-                    u_x = i - Bx_l;
-                    n_x = Bx_l;
-                }
-                else if (i > Bx_r){
-                    u_x = i - Bx_r;
-                    n_x = Bx_r;
-                }
-                else{
-                    u_x = 0;
-                    n_x = i;
-                }
-                // handle y boundary cells
-                if (j < By_l){
-                    u_y = j - By_l;
-                    n_y = By_l;
-                }
-                else if (j > By_r){
-                    u_y = j - By_r;
-                    n_y = By_r;
-                }
-                else{
-                    u_y = 0;
-                    n_y = j;
-                }
-                // loop over coefficients
-                for (int px = mx; px<m_Px; px++){
-                    for (int py = my; py<m_Py; py++){
-                        double a_xy{0.};
-                        for (int kx : m_kx){
-                            for (int ky : m_ky){
-                                a_xy += m_coeffs[px][py](kx,ky)*grid(n_x+kx-m_Bx,n_y+ky-m_By);
-                            }
-                        }
-                        double x_contribution = fac(px)*pow(u_x,px-mx)/fac(px-mx);
-                        double y_contribution = fac(py)*pow(u_y,py-my)/fac(py-my);
-                        result(i,j) += a_xy*x_contribution*y_contribution;
-                    }
-                }
-                        
-            }
+        for (int j=0; j<m_yl; j++){
+            result(i,j) = derivative_cell_boundary(grid,i,j,mx,my);
+        }
+    }
+    // upper y boundary
+    #pragma omp parallel for
+    for (int i=0; i<grid.rows(); i++){
+        for (int j=m_yu+1; j<grid.cols(); j++){
+            result(i,j) = derivative_cell_boundary(grid,i,j,mx,my);
         }
     }
     return result/dr;

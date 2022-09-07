@@ -50,6 +50,7 @@ public:
   Grid sqrt() const;
   Grid pow(double power) const;
   Grid log() const;
+  Grid exp() const;
   Grid for_each(const Grid& grid,const std::function<double(double,double)>& fun) const;
   Grid for_each(double a,const std::function<double(double,double)>& fun) const;
   // *** New Math

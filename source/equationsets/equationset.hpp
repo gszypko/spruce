@@ -17,12 +17,18 @@ class PlasmaDomain;
 
 class EquationSet {
     public:
-        // *** Construction
+        // Construction
         EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names);
         virtual ~EquationSet() {}
-        static std::unique_ptr<EquationSet> spawnEquationSet(PlasmaDomain &pd, std::string name);
+        static std::unique_ptr<EquationSet> instantiateDefault(PlasmaDomain &pd,const std::string &name);
+        static void instantiateWithConfig(std::unique_ptr<EquationSet>& eqs,PlasmaDomain &pd, std::ifstream &in_file, const std::string &name, bool active);
+        void configureEquationSet(std::ifstream &in_file);
+        virtual void setupEquationSet();
         static const inline std::vector<std::string> m_sets {"ideal_mhd","ideal_mhd_cons","ideal_mhd_2E","ideal_2F"};
-        // ** Getters
+        static bool isEquationSetName(const std::string& name);
+        virtual std::vector<std::string> config_names() const {return {};};
+
+        // Getters
         Grid& grid(int index);
         Grid& grid(const std::string& name);
         std::vector<Grid> allGrids() const;
@@ -70,8 +76,9 @@ class EquationSet {
         virtual std::vector<int> densities() = 0;
         virtual std::vector<std::vector<int>> momenta() = 0;
         virtual std::vector<int> thermal_energies() = 0;
+        virtual std::vector<int> fields() = 0;
 
-        std::vector<Grid> computeTimeDerivatives(double visc_coeff) { return computeTimeDerivatives(m_grids,visc_coeff); }
+        std::vector<Grid> computeTimeDerivatives() { return computeTimeDerivatives(m_grids); }
         void applyTimeDerivatives(const std::vector<Grid> &time_derivatives, double step) { applyTimeDerivatives(m_grids,time_derivatives,step); }
         void propagateChanges() { propagateChanges(m_grids); }
         void populateVariablesFromState() { populateVariablesFromState(m_grids); }
@@ -85,7 +92,7 @@ class EquationSet {
         // The argument grids should be a vector<Grid> of the same size and dimensions as
         // the member variable m_grids (this allows for evolution of intermediate steps
         // by the PlasmaDomain, without touching the current "real" state of the system)
-        virtual std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff) = 0;
+        virtual std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids) = 0;
         // Apply the time evolution described by the result of computeTimeDerivatives()
         // The argument grids should be a vector<Grid> of the same size and dimensions as
         // the member variable m_grids (this allows for evolution of intermediate steps
@@ -103,13 +110,13 @@ class EquationSet {
         // the member variable m_grids (this allows for evolution of intermediate steps
         // by the PlasmaDomain, without touching the current "real" state of the system)
         virtual void populateVariablesFromState(std::vector<Grid> &grids) = 0;
-
     protected:
         PlasmaDomain& m_pd;
         std::vector<Grid> m_grids{};
         std::vector<bool> m_output_flags{};
         const std::vector<std::string> m_var_names{};
         std::unordered_map<std::string,int> m_var_indices{};
+        virtual void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) = 0;
 };
 
 #endif

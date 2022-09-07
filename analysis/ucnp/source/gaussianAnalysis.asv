@@ -137,7 +137,7 @@ for i = 1:length(s.t)
         s.data(i).Ti = data.grids.vars(i).i_temp(indy,indx);
         s.data(i).Te = data.grids.vars(i).e_temp(indy,indx);
         s.data(i).vx = data.grids.vars(i).i_v_x(indy,:);
-        s.data(i).vy = data.grids.vars(i).i_v_y(:,indx)';
+        s.data(i).vy = data.grids.vars(i).i_v_(:,indx)';
     else
         error('Error: equation set is not valid.')
     end

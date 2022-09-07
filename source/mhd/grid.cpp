@@ -122,6 +122,8 @@ Grid Grid::pow(double power) const { return UnaryOperation( UNARY_LAMBDA(std::po
 
 Grid Grid::log() const {return UnaryOperation(UNARY_LAMBDA(std::log(this_comp)));}
 
+Grid Grid::exp() const {return UnaryOperation(UNARY_LAMBDA(std::exp(this_comp)));}
+
 Grid Grid::sqrt() const { return UnaryOperation( UNARY_LAMBDA(std::sqrt(this_comp)) ); }
 
 Grid Grid::for_each(const Grid& grid,const std::function<double(double,double)>& fun) const {return ComponentWiseOperation(grid,fun);}
@@ -333,7 +335,7 @@ Grid Grid::Gaussian2D(const Grid& x,const Grid& y,double amp,double min,double s
   Grid result = Zero(x.rows(),x.cols());
   for (int i = 0; i < result.rows(); i++){
       for (int j = 0; j < result.cols(); j++){
-          result(i,j) = min+amp*exp(-0.5*std::pow((x(i,j)-x_cen)/std::abs(sig_x),2))*exp(-0.5*std::pow((y(i,j)-y_cen)/std::abs(sig_y),2));
+          result(i,j) = min+amp*std::exp(-0.5*std::pow((x(i,j)-x_cen)/std::abs(sig_x),2))*std::exp(-0.5*std::pow((y(i,j)-y_cen)/std::abs(sig_y),2));
       }
   }
   return result;
@@ -344,7 +346,7 @@ Grid Grid::Exp2D(const Grid& x,const Grid& y,double amp,double min,double sig_x,
   Grid result = Zero(x.rows(),x.cols());
   for (int i = 0; i < result.rows(); i++){
       for (int j = 0; j < result.cols(); j++){
-          result(i,j) = min+amp*exp(-std::abs(x(i,j)-x_cen)/std::abs(sig_x))*exp(-std::abs(y(i,j)-y_cen)/std::abs(sig_y));
+          result(i,j) = min+amp*std::exp(-std::abs(x(i,j)-x_cen)/std::abs(sig_x))*std::exp(-std::abs(y(i,j)-y_cen)/std::abs(sig_y));
       }
   }
   return result;

@@ -3,10 +3,13 @@
 #include "idealmhdcons.hpp"
 #include "idealmhd2E.hpp"
 #include "ideal2F.hpp"
+#include "utils.hpp"
 #include <iostream>
 #include <algorithm>
 #include <cassert>
 #include <stdexcept>
+#include <fstream>
+
 
 EquationSet::EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names): 
     m_pd(pd),
@@ -17,17 +20,74 @@ EquationSet::EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names):
     for(int i=0; i<m_var_names.size(); i++) m_var_indices[m_var_names[i]] = i;
 }
 
-std::unique_ptr<EquationSet> EquationSet::spawnEquationSet(PlasmaDomain &pd, std::string name){
+std::unique_ptr<EquationSet> EquationSet::instantiateDefault(PlasmaDomain &pd,const std::string &name)
+{
     std::unique_ptr<EquationSet> ptr;
     if (name == "ideal_mhd") ptr = std::unique_ptr<EquationSet>(new IdealMHD(pd));
     else if (name == "ideal_mhd_cons") ptr = std::unique_ptr<EquationSet>(new IdealMHDCons(pd));
     else if (name == "ideal_mhd_2E") ptr = std::unique_ptr<EquationSet>(new IdealMHD2E(pd));
     else if (name == "ideal_2F") ptr = std::unique_ptr<EquationSet>(new Ideal2F(pd));
     else{
-        std::cerr << "EquationSet name " << name << " not recognized" << std::endl;
+        std::cerr << "Equation set name <" << name << "> not recognized." << std::endl;
         assert(false);
     }
     return ptr;
+}
+
+void EquationSet::instantiateWithConfig(std::unique_ptr<EquationSet>& eqs,PlasmaDomain &pd, std::ifstream &in_file, const std::string &name, bool active)
+{
+    if(active){ // instantiate equation set if it is active
+        eqs = instantiateDefault(pd,name);
+        eqs->configureEquationSet(in_file);    
+    }
+    else{ // do not instantiate if equation set is not active
+        std::string line;
+        std::getline(in_file, line);
+        clearWhitespace(line);
+        assert(line[0] == '{' && "All Equation set activation/deactivation configs must be immediately followed by curly brackets");
+        std::getline(in_file, line);
+        clearWhitespace(line);
+        while(line[0] != '}'){
+            std::getline(in_file, line);
+            clearWhitespace(line);
+        }
+    }
+}
+
+bool EquationSet::isEquationSetName(const std::string& name)
+{
+    auto it = std::find(m_sets.begin(),m_sets.end(),name);
+    return it != m_sets.end();
+}
+
+void EquationSet::configureEquationSet(std::ifstream &in_file)
+{
+    std::vector<std::string> lhs_strings, rhs_strings;
+    std::string line;
+    std::getline(in_file, line);
+    assert(line[0] == '{' && "All equation set activation configs must be immediately followed by curly brackets (on their own lines) to enclose Module configs");
+    if (line[0] == '{'){
+        std::getline(in_file, line);
+        while(line[0] != '}'){
+            clearWhitespace(line);
+            if (line.empty() || line[0] == '#') continue; // skip comment and empty lines
+            std::istringstream ss_line(line);
+            std::string lhs, rhs;
+            std::getline(ss_line,lhs,'=');
+            std::getline(ss_line,rhs,'#');
+            lhs_strings.push_back(lhs);
+            rhs_strings.push_back(rhs);
+            std::getline(in_file, line);
+        }
+    }
+    parseEquationSetConfigs(lhs_strings,rhs_strings);
+}
+
+// any steps required for setup after instantiation of module but before iteration of grids
+// typical use is to instantiate sizes of internal grids and compute any grids that are constant in time
+void EquationSet::setupEquationSet()
+{
+    return;
 }
 
 Grid& EquationSet::grid(int index) {
@@ -96,7 +156,7 @@ int EquationSet::indexFromName(std::string name){
     int ind{};
     try { ind = m_var_indices.at(name); }
     catch (const std::out_of_range& e) {
-        std::cerr << "Variable name " << name << " not recognized\n";
+        std::cerr << "Variable name <" << name << "> not recognized\n";
         assert(false);
         return 0;
     }

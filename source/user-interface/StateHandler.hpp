@@ -17,7 +17,7 @@ class StateHandler
 {
 public:
     // *** Construction
-    StateHandler(const std::string& eqs_name);
+    StateHandler(const std::string& eqn_set_name);
     // *** Usage
     int gridname2ind(const std::string& name) const;
     int varname2ind(const std::string& name) const;
@@ -36,7 +36,7 @@ public:
 private:
     // *** Members - Equation Set
     PlasmaDomain m_pd{};
-    std::string m_eqs_name;
+    std::string m_eqn_set_name;
     std::unique_ptr<EquationSet> m_eqs;
     // *** Members - Preamble Variables
     std::vector<std::string> m_varnames {"xdim","ydim","ion_mass","adiabatic_index","time"};

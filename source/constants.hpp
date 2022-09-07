@@ -2,6 +2,7 @@
 #define CONSTANTS_HPP
 
 #define N_GHOST 2 //number of ghost cells to use for Open and Wall boundaries
+#define VERBOSE 0 // 
 
 /**************************** PHYSICAL CONSTANTS ****************************/
 #define K_B 1.3807e-16 //boltzmann constant, erg K^-1

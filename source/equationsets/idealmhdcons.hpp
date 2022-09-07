@@ -30,14 +30,16 @@ class IdealMHDCons: public EquationSet {
         std::vector<int> densities() override { return {rho}; }
         std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y}}; }
         std::vector<int> thermal_energies() override { return {thermal_energy}; }
+        std::vector<int> fields() override { return {bi_x,bi_y}; }
 
         Grid getDT() override;
         void populateVariablesFromState(std::vector<Grid> &grids) override;
-        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff) override;
+        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids) override;
         void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
         void propagateChanges(std::vector<Grid> &grids) override;
 
     private:
+        double m_global_viscosity{0};
         void enforceMinimums(std::vector<Grid>& grids);
         void recomputeDT();
         void computeConstantTerms(std::vector<Grid> &grids);
@@ -48,6 +50,7 @@ class IdealMHDCons: public EquationSet {
         void recomputeThermalEnergy(std::vector<Grid> &grids);
         void recomputeTemperature(std::vector<Grid> &grids);
         void recomputeThermalEnergyFromTemp(std::vector<Grid> &grids);
+        void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
 };
 
 #endif

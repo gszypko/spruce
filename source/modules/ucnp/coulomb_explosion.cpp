@@ -5,7 +5,7 @@
 CoulombExplosion::CoulombExplosion(PlasmaDomain &pd): Module(pd) {}
 
 void CoulombExplosion::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){
-    for(int i=0; i<lhs.size(); i++){
+    for (int i=0; i<lhs.size(); i++){
         if(lhs[i] == "timescale") m_timescale = std::stod(rhs[i]);
         else if(lhs[i] == "lengthscale") m_lengthscale = std::stod(rhs[i]);
         else if(lhs[i] == "strength") m_strength = std::stod(rhs[i]);

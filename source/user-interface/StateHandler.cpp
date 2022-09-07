@@ -4,10 +4,10 @@
 #include <cmath>
 #include "antihelmholtz.hpp"
 
-StateHandler::StateHandler(const std::string& eqs_name):
-    m_eqs_name{eqs_name}
+StateHandler::StateHandler(const std::string& eqn_set_name):
+    m_eqn_set_name{eqn_set_name}
 {
-    m_eqs = EquationSet::spawnEquationSet(m_pd, m_eqs_name);
+    m_eqs = EquationSet::instantiateDefault(m_pd,m_eqn_set_name);
     for (const auto& name : PlasmaDomain::m_gridnames) m_gridnames.push_back(name);
     for (const auto& ind : m_eqs->state_variables()) m_gridnames.push_back(m_eqs->nameFromIndex(ind));
     m_grids.resize(m_gridnames.size(),Grid::Zero(1,1));
@@ -134,10 +134,10 @@ void StateHandler::setup(const std::unique_ptr<Settings>& pms)
     setgrid("be_x",B[0]);
     setgrid("be_y",B[1]);
     //*** initialize grids for equation set
-    if (m_eqs_name == "ideal_mhd") setup_idealmhd(pms);
-    else if (m_eqs_name == "ideal_mhd_cons") setup_idealmhdcons(pms);
-    else if (m_eqs_name == "ideal_mhd_2E") setup_idealmhd2e(pms);
-    else if (m_eqs_name == "ideal_2F") setup_ideal2F(pms);
+    if (m_eqn_set_name == "ideal_mhd") setup_idealmhd(pms);
+    else if (m_eqn_set_name == "ideal_mhd_cons") setup_idealmhdcons(pms);
+    else if (m_eqn_set_name == "ideal_mhd_2E") setup_idealmhd2e(pms);
+    else if (m_eqn_set_name == "ideal_2F") setup_ideal2F(pms);
     else assert(false && "Equation set not recognized.");
 }
 

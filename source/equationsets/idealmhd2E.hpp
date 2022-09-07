@@ -30,14 +30,16 @@ class IdealMHD2E: public EquationSet {
         std::vector<int> densities() override { return {rho,rho}; }
         std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y},{mom_x,mom_y}}; }
         std::vector<int> thermal_energies() override { return {i_thermal_energy,e_thermal_energy}; }
+        std::vector<int> fields() override { return {bi_x,bi_y}; }
 
         void populateVariablesFromState(std::vector<Grid> &grids) override;
         Grid getDT() override;
-        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids, double visc_coeff) override;
+        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids) override;
         void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
         void propagateChanges(std::vector<Grid> &grids) override;
 
     private:
+        double m_global_viscosity{0};
         void recomputeDT();
         void computeConstantTerms(std::vector<Grid> &grids);
         void recomputeDerivedVariables(std::vector<Grid> &grids);
@@ -47,6 +49,7 @@ class IdealMHD2E: public EquationSet {
         void recomputeNumberDensity(std::vector<Grid> &grids);
         void recomputeMagneticFields(std::vector<Grid> &grids);
         void enforceMinimums(std::vector<Grid>& grids);
+        void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
 };
 
 #endif

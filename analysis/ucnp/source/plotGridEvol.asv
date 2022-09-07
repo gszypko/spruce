@@ -1,26 +1,26 @@
 function [] = plotGridEvol(data,plotFreq)
 % os (struct): contains grid info from 'os.grids.out' file
 
-if nargin < 2, plotFreq = 1; end
-data.grids.vars = data.grids.vars(1:plotFreq:end);
-data.grids.time = data.grids.time(1:plotFreq:end);
+if nargin == 1, plotFreq = 1; end
 
 % for each time point, plot 2D grids from MHD simulation
-gridnames = {'i_n', 'dn', 'i_temp', 'e_temp', 'i_v_x', 'e_v_x', 'j_x', 'E_x'};
-gridstr = {'n_i', 'n_i-n_e', 'T_i', 'T_e', 'v_i_x', 'v_e_x', 'j_x', 'E_x'};
+gridnames = {'i_n', 'i_v_x', 'i_temp', 'e_n', 'e_v_x', 'e_temp', 'dn', 'j_x', 'E_x','E_ideal', 'b_mag', 'dt'};
+gridstr = {'n_i', 'v_i_,_x', 'T_i', 'n_e', 'v_e_,_x', 'T_e', '\Deltan', 'j_x', 'E_x','E_ideal', '|b|', 'dt'};
 
 % generate figure
 f = filesep;
 filepath = [data.folder f 'grid-evol'];
-row = 2; 
+row = 3; 
 col = 4; 
 num = length(gridnames);
 [fig,ax,an] = open_subplot(row,col,num,'Visible','on');
-fig.Position = [1.303333333333333e+02,1.866000000000000e+02,1.194666666666667e+03,4.817333333333330e+02];
+fig.Position = [1.303333333333333e+02,1.866000000000000e+02,8.818666666666668e+02,4.817333333333330e+02];
 an.Position = [0.1595    0.9084    0.7230    0.0801];
 
 frames = cell(1,length(data));
-for k = 1:length([data.grids.vars.time])
+iter = 0;
+for k = 1:plotFreq:length([data.grids.vars.time])
+    it
     disp(['Plotting: ' num2str(k) '/' num2str(length([data.grids.vars.time]))])
     
     % update axis information
