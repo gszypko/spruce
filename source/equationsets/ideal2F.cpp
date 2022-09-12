@@ -220,6 +220,8 @@ void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids){
     grids[lapEx] = m_pd.laplacian(grids[E_x]);
     populate_boundary(grids[lapEx]);
     grids[E_ideal] = (M_ELECTRON*m_pd.derivative1D(grids[i_press], 0) - m_pd.m_ion_mass*m_pd.derivative1D(grids[e_press], 0))/(M_ELECTRON+m_pd.m_ion_mass)/E/grids[i_n];
+    grids[divEcond] = grids[divE] - 4.*PI*grids[rho_c];
+
 }
 
 void Ideal2F::catchNullFieldDirection(std::vector<Grid> &grids)
