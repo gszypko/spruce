@@ -39,6 +39,7 @@ class IdealMHD: public EquationSet {
         void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
         void propagateChanges(std::vector<Grid> &grids) override;
         Grid getDT() override {return m_grids[dt];}
+        void viscosity_mask(Grid& grid) const;
 
     private:
         double m_global_viscosity{0};

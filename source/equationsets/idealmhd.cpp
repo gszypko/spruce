@@ -55,6 +55,8 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
         std::cerr << "Viscosity option <" << m_viscosity_opt << "> is not valid." << std::endl;
         assert(false);
     }
+    viscosity_mask(viscous_force_x);
+    viscosity_mask(viscous_force_y);
     m_grids[visc] = global_visc_coeff;
     m_grids[lap_mom_x] = m_pd.laplacian(grids[mom_x]);
     m_grids[visc_force_x] = viscous_force_x;
@@ -172,6 +174,27 @@ void IdealMHD::populateVariablesFromState(std::vector<Grid> &grids){
     m_pd.updateGhostZones();
     recomputeDerivedVarsFromEvolvedVars(grids);
     recomputeDT();
+}
+
+// sets viscosity in outermost interior cell to zero because it is large due to using a boundary cell
+void IdealMHD::viscosity_mask(Grid& grid) const
+{
+    // treat left boundary
+    for (int j=0; j<grid.cols(); j++){
+        grid(m_pd.m_xl,j) = 0;
+    }
+    // treat right boundary
+    for (int j=0; j<grid.cols(); j++){
+        grid(m_pd.m_xu,j) = 0;
+    }
+    // treat bottom boundary
+    for (int i=0; i<grid.rows(); i++){
+        grid(i,m_pd.m_yl) = 0;
+    }
+    // treat top boundary
+    for (int i=0; i<grid.rows(); i++){
+        grid(i,m_pd.m_yu) = 0;
+    }
 }
 
 // Returns time derivative from characteristic boundary cond for the quantities
