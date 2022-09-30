@@ -3,16 +3,16 @@ clc, clearvars -except inp, close all, f = filesep; setpath;
 
 if ~exist('inp','var')
     %% Generate Input Cell
-    inp = {'folder';'C:\data-mhd\09.06.22\set_19'};
+    inp = {'folder';'C:\Users\grant\OneDrive\Research\mhd\data-expsims\an-mhd-09.26.22\HIH-4\set_1'};
 end
 fields = {'folder'};
 s = spreadsheet2struct(inp,fields);
 
 % user controls
 plotGridTimeEvol = true;
-plotFreq = 1;
 doGaussianAnalysis = true;
-numGhostCells = 0;
+plotFreq = 1;
+numGhostCells = 2;
 eic_opt = false;
 
 

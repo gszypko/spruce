@@ -1,6 +1,6 @@
-function [fig,ax,an] = open_subplot(row,col,num,name,value)
+function [fig,ax,an] = open_subplot(row,col,name,value,num)
 
-if nargin < 3, num = row*col; end
+if nargin < 5, num = row*col; end
 if num > row*col, error('<num> must be smaller than <row>*<col>.'); end
 
 % open figure

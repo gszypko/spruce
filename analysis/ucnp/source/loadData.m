@@ -24,7 +24,7 @@ elseif max(strcmp({'ideal_2F','ideal_mhd_2E'},data.config.eq_set))
 else
     error('Error: equation set is not valid.')
 end
-data.sig0 = (data.settings.sigx*data.settings.sigy^2)^(1/3);
+data.sig0 = (data.settings.sig_x*data.settings.sig_y^2)^(1/3);
 data.tau = getTauExp(data.sig0,data.Ti+data.Te);
 
 end

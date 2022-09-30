@@ -1,31 +1,45 @@
-clearvars
-setpath;
+clc, clearvars -except folders
+f = filesep;
+newfolders = cell(size(folders));
 
-sig = 0.1;
-total_width = 10*sig;
-cell_width = total_width/101;
+%% update folder names
+for i = 1:length(folders)
+    currname = folders{i};
+    % remove apostrophe from name
+    if startsWith(currname,'''')
+        currname = currname{2:end-1};
+    end
+    relfolder = extractAfter(currname,'C:\');
+    relfolder = strrep(relfolder,'/',f);
+    newname = ['C:\Users\grant\OneDrive\Research\mhd' f relfolder];
+    if endsWith(newname,f)
+        newname(end) = [];
+    end
+    newname = strrep(newname,'\\',f);
+    disp(newname)
+end
 
-n = 1e9;
-Te = 20;
-B = 10;
+%% remove unnecessary analysis subfolders
 
-l_deb = getDebyeLength(n,Te);
-k_small = 2*pi/(cell_width);
-k_large = 2*pi/total_width;
-
-
-w_pe = getPlasmaFreq(n,cts.cgs.mE);
-tau_pe = 1/w_pe;
-
-w_c = getGyroFreq(B,cts.cgs.mE);
-
-v_th = sqrt(cts.cgs.kB*Te/c.mE);
-w_th_small = sqrt(3)*v_th*k_small;
-w_th_large = sqrt(3)*v_th*k_large;
-
-w_tot_small = sqrt(w_pe^2+w_th_small^2);
-w_tot_large = sqrt(w_pe^2+w_th_large^2);
-
-v_pe = w_tot_small/k_small;
-
-dt = cell_width/(v_pe);
+% loop through data folders
+for i = 1:length(folders)
+    
+    % check that folder exists
+    if ~exist(folders{i}, 'dir')
+        disp(folders{i})
+    end
+    
+    % loop through subfolders
+    subfolders = dir(folders{i});
+    subfolders = subfolders(3:end);
+    subfolders(~[subfolders.isdir]) = [];
+    if isempty(subfolders)
+        continue;
+    end
+    for j = 1:length(subfolders)
+        if ~strcmp(subfolders(j).name,'an-RELACS-10.13.21')
+            dirtodelete = [subfolders(j).folder f subfolders(j).name];
+            rmdir(dirtodelete,'s')
+        end
+    end
+end

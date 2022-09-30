@@ -57,7 +57,6 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
     }
     viscosity_mask(viscous_force_x);
     viscosity_mask(viscous_force_y);
-    m_grids[visc] = global_visc_coeff;
     m_grids[lap_mom_x] = m_pd.laplacian(grids[mom_x]);
     m_grids[visc_force_x] = viscous_force_x;
     // magnetic forces
@@ -102,9 +101,9 @@ void IdealMHD::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids)
     grids[n] = grids[rho]/m_pd.m_ion_mass;
     grids[press] = 2*grids[n]*K_B*grids[temp];
     grids[thermal_energy] = grids[press]/(m_pd.m_adiabatic_index - 1.0);
-    grids[visc] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     grids[visc_force_x] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     grids[lap_mom_x] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    grids[gradPx] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
 }
 
 void IdealMHD::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids)
@@ -124,6 +123,7 @@ void IdealMHD::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids)
     grids[b_hat_x] = grids[b_x]/grids[b_mag];
     grids[b_hat_y] = grids[b_y]/grids[b_mag];
     catchNullFieldDirection(grids);
+    grids[gradPx] = m_pd.derivative1D(grids[press], 0);
 }
 
 void IdealMHD::catchNullFieldDirection(std::vector<Grid> &grids)
