@@ -19,6 +19,11 @@ void IdealMHD::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector
     }
 }
 
+void IdealMHD::setupEquationSet()
+{
+    m_guide_field = std::max((m_grids[b_mag].max()),1.0);
+}
+
 void IdealMHD::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     grids[rho] += step*time_derivatives[0];
@@ -85,6 +90,7 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
                                                 m_pd.x_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC,
                                                 m_pd.y_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC,
                                                 m_pd.y_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC, global_visc_coeff);
+
     // return time derivatives
     return {m_pd.m_ghost_zone_mask*d_rho_dt + char_evolution[0],
             m_pd.m_ghost_zone_mask*d_mom_x_dt + char_evolution[1],
@@ -92,8 +98,6 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
             m_pd.m_ghost_zone_mask*d_thermal_energy_dt + char_evolution[3],
             m_pd.m_ghost_zone_mask*d_bi_x_dt + char_evolution[4],
             m_pd.m_ghost_zone_mask*d_bi_y_dt + char_evolution[5]};
-            // m_pd.m_ghost_zone_mask*d_bi_x_dt ,
-            // m_pd.m_ghost_zone_mask*d_bi_y_dt };
 }
 
 void IdealMHD::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids)
@@ -190,28 +194,7 @@ std::vector<Grid> IdealMHD::computeTimeDerivativesCharacteristicBoundary(const s
 
     std::vector<Grid> results(num_vars,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
     for(int i=0; i<num_vars; i++){
-        //all normal terms included
-        //all parallel terms inside domain included
         for(int k=0; k<bound_flags.size(); k++) if(bound_flags[k]) results[i] += bound_vals[k][i][0] + bound_vals[k][i][1];
-    }
-
-    // Only include corner parallel term in corners where only one characteristic boundary is active
-    std::vector<int> vars = {0,1,2,3,4,5};
-    if(x_bound_1){
-        if(!y_bound_1) for(int i : vars) results[i] += x_lower[i][2];
-        if(!y_bound_2) for(int i : vars) results[i] += x_lower[i][3];
-    }
-    if(x_bound_2){
-        if(!y_bound_1) for(int i : vars) results[i] += x_upper[i][2];
-        if(!y_bound_2) for(int i : vars) results[i] += x_upper[i][3];
-    }
-    if(y_bound_1){
-        if(!x_bound_1) for(int i : vars) results[i] += y_lower[i][2];
-        if(!x_bound_2) for(int i : vars) results[i] += y_lower[i][3];
-    }
-    if(y_bound_2){
-        if(!x_bound_1) for(int i : vars) results[i] += y_upper[i][2];
-        if(!x_bound_2) for(int i : vars) results[i] += y_upper[i][3];
     }
 
     Grid mom_x_term = grids[rho]*results[1] + grids[v_x]*results[0];
@@ -222,17 +205,13 @@ std::vector<Grid> IdealMHD::computeTimeDerivativesCharacteristicBoundary(const s
     return results;
 }
 
-// Returns {normal term, parallel term inside domain, parallel term in lower corner, parallel term in upper corner} (in full-sized grid) for single MOC boundary,
+// Returns {normal term, parallel term} (in full-sized grid) for single MOC boundary,
 // corresponding to each of {rho, v_x, v_y, b_x, b_y, thermal_energy}
 std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vector<Grid> &grids, int boundary_index, bool boundary_lower, double visc_coeff){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     std::vector<int> x_idx, y_idx; //Full extent of boundary's ghost zone region
     std::vector<int> x_idx_interior, y_idx_interior; //Full extent of boundary's ghost zone not overlapping with other ghost zones
     std::vector<int> x_idx_padded, y_idx_padded; //Full extent of boundary's ghost zone region, reduced for central differencing safety
-    std::vector<int> x_idx_lower, y_idx_lower; //Lower corner of boundary's ghost zone
-    std::vector<int> x_idx_upper, y_idx_upper; //Upper corner of boundary's ghost zone
-    std::vector<int> x_idx_lower_edge, y_idx_lower_edge; //Lower edge (single cell layer) of boundary's ghost zone
-    std::vector<int> x_idx_upper_edge, y_idx_upper_edge; //Upper edge (single cell layer) of boundary's ghost zone
     if(boundary_index == 0){
         if(boundary_lower) x_idx = {0, N_GHOST-1};
         else x_idx = {(int)(m_pd.m_xdim) - N_GHOST, (int)(m_pd.m_xdim) - 1};
@@ -244,26 +223,30 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
     }
     x_idx_interior = x_idx;
     x_idx_padded = x_idx;
-    x_idx_lower = {0,-1};
-    x_idx_upper = {0,-1};
-    x_idx_lower_edge = {0,-1};
-    x_idx_upper_edge = {0,-1};
     y_idx_interior = y_idx;
     y_idx_padded = y_idx;
-    y_idx_lower = {0,-1};
-    y_idx_upper = {0,-1};
-    y_idx_lower_edge = {0,-1};
-    y_idx_upper_edge = {0,-1};
     if(boundary_index == 0 && m_pd.y_bound_1 != PlasmaDomain::BoundaryCondition::Periodic){
         y_idx_interior = {y_idx[0]+N_GHOST,y_idx.back()-N_GHOST};
         y_idx_padded = {y_idx[0]+1,y_idx.back()-1};
-        y_idx_lower = {y_idx[0],y_idx[0]+N_GHOST-1};
-        y_idx_upper = {y_idx.back()-N_GHOST+1,y_idx.back()};
+        if(m_pd.y_bound_1 != PlasmaDomain::BoundaryCondition::OpenMoC){
+            y_idx[0] = y_idx_interior[0];
+            y_idx_padded[0] = y_idx_interior[0];
+        }
+        if(m_pd.y_bound_2 != PlasmaDomain::BoundaryCondition::OpenMoC){
+            y_idx[1] = y_idx_interior[1];
+            y_idx_padded[1] = y_idx_interior[1];
+        }
     } else if(boundary_index == 1 && m_pd.x_bound_1 != PlasmaDomain::BoundaryCondition::Periodic){
         x_idx_interior = {x_idx[0]+N_GHOST,x_idx.back()-N_GHOST};
         x_idx_padded = {x_idx[0]+1,x_idx.back()-1};
-        x_idx_lower = {x_idx[0],x_idx[0]+N_GHOST-1};
-        x_idx_upper = {x_idx.back()-N_GHOST+1,x_idx.back()};
+        if(m_pd.x_bound_1 != PlasmaDomain::BoundaryCondition::OpenMoC){
+            x_idx[0] = x_idx_interior[0];
+            x_idx_padded[0] = x_idx_interior[0];
+        }
+        if(m_pd.x_bound_2 != PlasmaDomain::BoundaryCondition::OpenMoC){
+            x_idx[1] = x_idx_interior[1];
+            x_idx_padded[1] = x_idx_interior[1];
+        }
     }
 
     // Mask grid where equal to 1 inside of boundary ghost zone, 0 elsewhere
@@ -273,8 +256,6 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
     Grid upper_corner_mask = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     for(int i=x_idx[0]; i<=x_idx[1]; i++) for(int j=y_idx[0]; j<=y_idx[1]; j++) boundary_mask(i,j) = 1.0;
     for(int i=x_idx_interior[0]; i<=x_idx_interior[1]; i++) for(int j=y_idx_interior[0]; j<=y_idx_interior[1]; j++) interior_mask(i,j) = 1.0;
-    for(int i=x_idx_lower[0]; i<=x_idx_lower[1]; i++) for(int j=y_idx_lower[0]; j<=y_idx_lower[1]; j++) lower_corner_mask(i,j) = 1.0;
-    for(int i=x_idx_upper[0]; i<=x_idx_upper[1]; i++) for(int j=y_idx_upper[0]; j<=y_idx_upper[1]; j++) upper_corner_mask(i,j) = 1.0;
 
     int v_perp = (boundary_index == 0) ? v_x : v_y;
     int v_para = (boundary_index == 1) ? v_x : v_y;
@@ -285,7 +266,7 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
     Grid m_b_perp = (boundary_index == 0 ? (m_pd.m_grids[PlasmaDomain::be_x] + grids[bi_x]) : (m_pd.m_grids[PlasmaDomain::be_y] + grids[bi_y]));
     Grid m_b_para = (boundary_index == 1 ? (m_pd.m_grids[PlasmaDomain::be_x] + grids[bi_x]) : (m_pd.m_grids[PlasmaDomain::be_y] + grids[bi_y]));
 
-    double b_guide = 1.0; //constant guide field in third dimension
+    double b_guide = m_guide_field; //constant guide field in third dimension
     Grid s_perp = m_b_perp/(m_b_perp.abs());
     Grid R_para = m_b_para/(m_b_para.abs() + std::abs(b_guide));
     Grid R_guide = b_guide/(m_b_para.abs() + std::abs(b_guide));
@@ -352,44 +333,33 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
 
     int para_index = boundary_index == 0 ? 1 : 0;
     //Compute alternate perpendicular terms (for negating inflowing characteristics)
-    // Grid d_3_alt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     Grid d_3_alt = s_perp/grids[rho]*(
         R_guide*(
             m_pd.derivative1D(grids[press]+m_b_perp.square()/(8.0*PI),para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
-            +m_pd.derivative1DBackward(grids[press]+m_b_perp.square()/(8.0*PI),false,para_index,x_idx_lower_edge[0],y_idx_lower_edge[0],x_idx_lower_edge[1],y_idx_lower_edge[1])
-            +m_pd.derivative1DBackward(grids[press]+m_b_perp.square()/(8.0*PI),true,para_index,x_idx_upper_edge[0],y_idx_upper_edge[0],x_idx_upper_edge[1],y_idx_upper_edge[1])
             )
         );
     Grid d_5_alt = c_plus*alpha_plus*(
         grids[grav_perp]
         + 1.0/(4.0*PI*grids[rho])* m_b_para * (
             m_pd.derivative1D(m_b_perp,para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
-            +m_pd.derivative1DBackward(m_b_perp,false,para_index,x_idx_lower_edge[0],y_idx_lower_edge[0],x_idx_lower_edge[1],y_idx_lower_edge[1])
-            +m_pd.derivative1DBackward(m_b_perp,true,para_index,x_idx_upper_edge[0],y_idx_upper_edge[0],x_idx_upper_edge[1],y_idx_upper_edge[1])
             )
         )
         + c_minus*alpha_minus*s_perp*(
             R_para * grids[grav_para]
             + R_para / grids[rho] * (
                 m_pd.derivative1D(grids[press] + m_b_perp.square()/(8.0*PI),para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
-                +m_pd.derivative1DBackward(grids[press] + m_b_perp.square()/(8.0*PI),false,para_index,x_idx_lower_edge[0],y_idx_lower_edge[0],x_idx_lower_edge[1],y_idx_lower_edge[1])
-                +m_pd.derivative1DBackward(grids[press] + m_b_perp.square()/(8.0*PI),true,para_index,x_idx_upper_edge[0],y_idx_upper_edge[0],x_idx_upper_edge[1],y_idx_upper_edge[1])
             )
         );
     Grid d_7_alt = c_minus*alpha_minus*(
         grids[grav_perp]
         + 1.0/(4.0*PI*grids[rho])* m_b_para * (
             m_pd.derivative1D(m_b_perp,para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
-            +m_pd.derivative1DBackward(m_b_perp,false,para_index,x_idx_lower_edge[0],y_idx_lower_edge[0],x_idx_lower_edge[1],y_idx_lower_edge[1])
-            +m_pd.derivative1DBackward(m_b_perp,true,para_index,x_idx_upper_edge[0],y_idx_upper_edge[0],x_idx_upper_edge[1],y_idx_upper_edge[1])
             )
         )
         - c_plus*alpha_plus*s_perp*(
             R_para * grids[grav_para]
             + R_para / grids[rho] * (
                 m_pd.derivative1D(grids[press] + m_b_perp.square()/(8.0*PI),para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
-                +m_pd.derivative1DBackward(grids[press] + m_b_perp.square()/(8.0*PI),false,para_index,x_idx_lower_edge[0],y_idx_lower_edge[0],x_idx_lower_edge[1],y_idx_lower_edge[1])
-                +m_pd.derivative1DBackward(grids[press] + m_b_perp.square()/(8.0*PI),true,para_index,x_idx_upper_edge[0],y_idx_upper_edge[0],x_idx_upper_edge[1],y_idx_upper_edge[1])
             )
         );
 
@@ -411,7 +381,6 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
 
     // Compute all normal terms
 
-    //double visc_coeff = 0.0;
     rho_terms.push_back(-((m_pd.m_adiabatic_index/grids[rho])*d_2 + 0.5*grids[rho]*alpha_plus*(d_5+d_6) + 0.5*grids[rho]*alpha_minus*(d_7+d_8))/c_s_sq);
     v_para_terms.push_back(-0.5*s_perp*(R_guide*(-d_3 + d_4)
                             + c_minus*alpha_minus/c_s_sq*R_para*(-d_5 + d_6) + c_plus*alpha_plus/c_s_sq*R_para*(d_7 - d_8))
@@ -445,53 +414,8 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
                             -m_b_perp*m_pd.derivative1D(grids[v_para],para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
                             +m_b_para*m_pd.derivative1D(grids[v_perp],para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1]));
 
-    // Compute all lower corner parallel terms
 
-    rho_terms.push_back(-m_pd.derivative1DBackward(grids[boundary_index == 0 ? mom_y : mom_x], false, para_index,
-                        x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1]));
-    v_para_terms.push_back(-1.0/grids[rho]*m_pd.derivative1DBackward(grids[press] + (m_b_para.square() + m_b_perp.square())/(8.0*PI),false, para_index,
-                                                            x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
-                        -grids[v_para]*m_pd.derivative1DBackward(grids[v_para],false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
-                        +m_b_para/(4.0*PI*grids[rho])*m_pd.derivative1DBackward(m_b_para,false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
-                        +lower_corner_mask*grids[grav_para]
-                        + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_para],false,para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1]));
-    v_perp_terms.push_back(-grids[v_para]*m_pd.derivative1DBackward(grids[v_perp],false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
-                        +m_b_para/(4.0*PI*grids[rho])*m_pd.derivative1DBackward(m_b_perp,false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
-                        +lower_corner_mask*grids[grav_perp]
-                        + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_perp],false,para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1]));
-    thermal_energy_terms.push_back(-m_pd.derivative1DBackward(grids[thermal_energy]*grids[v_para],false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
-                                -grids[press]*m_pd.derivative1DBackward(grids[v_para],false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1]));
-    b_para_terms.push_back(-grids[v_para]*m_pd.derivative1DBackward(m_b_para,false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
-                            -m_b_para*m_pd.derivative1DBackward(grids[v_para],false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
-                            +m_b_para*m_pd.derivative1DBackward(grids[v_para],false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1]));
-    b_perp_terms.push_back(-grids[v_para]*m_pd.derivative1DBackward(m_b_perp,false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
-                            -m_b_perp*m_pd.derivative1DBackward(grids[v_para],false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1])
-                            +m_b_para*m_pd.derivative1DBackward(grids[v_perp],false, para_index,x_idx_lower[0],y_idx_lower[0],x_idx_lower[1],y_idx_lower[1]));
-
-    // Compute all upper corner parallel terms
-
-    rho_terms.push_back(-m_pd.derivative1DBackward(grids[boundary_index == 0 ? mom_y : mom_x], true, para_index,
-                        x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1]));
-    v_para_terms.push_back(-1.0/grids[rho]*m_pd.derivative1DBackward(grids[press] + (m_b_para.square() + m_b_perp.square())/(8.0*PI),true, para_index,
-                                                            x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
-                        -grids[v_para]*m_pd.derivative1DBackward(grids[v_para],true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
-                        +m_b_para/(4.0*PI*grids[rho])*m_pd.derivative1DBackward(m_b_para,true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
-                        +upper_corner_mask*grids[grav_para]
-                        + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_para],true,para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1]));
-    v_perp_terms.push_back(-grids[v_para]*m_pd.derivative1DBackward(grids[v_perp],true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
-                        +m_b_para/(4.0*PI*grids[rho])*m_pd.derivative1DBackward(m_b_perp,true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
-                        +upper_corner_mask*grids[grav_perp]
-                        + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_perp],true,para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1]));
-    thermal_energy_terms.push_back(-m_pd.derivative1DBackward(grids[thermal_energy]*grids[v_para],true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
-                                -grids[press]*m_pd.derivative1DBackward(grids[v_para],true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1]));
-    b_para_terms.push_back(-grids[v_para]*m_pd.derivative1DBackward(m_b_para,true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
-                            -m_b_para*m_pd.derivative1DBackward(grids[v_para],true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
-                            +m_b_para*m_pd.derivative1DBackward(grids[v_para],true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1]));
-    b_perp_terms.push_back(-grids[v_para]*m_pd.derivative1DBackward(m_b_perp,true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
-                            -m_b_perp*m_pd.derivative1DBackward(grids[v_para],true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1])
-                            +m_b_para*m_pd.derivative1DBackward(grids[v_perp],true, para_index,x_idx_upper[0],y_idx_upper[0],x_idx_upper[1],y_idx_upper[1]));
-
-    std::vector<Grid> zero(4,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
+    std::vector<Grid> zero(2,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
     return {rho_terms,
             v_x == v_para ? v_para_terms : v_perp_terms, v_y == v_para ? v_para_terms : v_perp_terms,
             thermal_energy_terms,
