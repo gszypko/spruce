@@ -10,7 +10,6 @@ from matplotlib.image import NonUniformImage
 import sys
 import argparse
 
-# matplotlib.rcParams.update({'font.size': 22})
 
 def read_grid(in_file,xdim,ydim,xl,yl,xu,yu):
   result = []
@@ -84,8 +83,23 @@ parser.add_argument('-e', '--end', help="designates simulation time to end plott
 parser.add_argument('-V', '--vecmode', help="designates mode of display for the chosen vector quantity", choices=['quiver','stream'], default='quiver')
 parser.add_argument('--density', metavar="vec_display_density", type=int, help="set the interval between displayed vectors", default=25)
 # parser.add_argument('-d', '--diff', metavar='diff_filename', help="filename to difference with original file")
-parser.add_argument('-r', '--realtime', action='store_true')
+parser.add_argument('-t', '--time_label', help="inserts the time into the plot title" , action='store_true')
+parser.add_argument('-tr', '--time_label_rounded', help="when -t is specified, rounds the time to the nearest integer", action='store_true')
+parser.add_argument('-d', '--dark_mode', help="renders using a black background and white text", action='store_true')
+parser.add_argument('-r', '--realtime', help="render in real time, instead of writing out to a video file", action='store_true')
+parser.add_argument('-S', '--serif', help="render using a serif font", action='store_true')
+parser.add_argument('-fv', '--full_varname', help="use full variable name in title, instead of abbreviation", action='store_true')
+parser.add_argument('-nv', '--no_varname', help="omit variable name from title", action='store_true')
+parser.add_argument('-nu', '--no_units', help="omit units from title", action='store_true')
+parser.add_argument('-L','--low_colorbar', help="set the lower limit of the contour color bar", type=float)
+parser.add_argument('-H','--high_colorbar', help="set the upper limit of the contour color bar", type=float)
+parser.add_argument('-fs', '--font_size', help="set the font size", type=float, default=10)
+parser.add_argument('-g', '--ghost_zones', help="includes ghost zones in the contour plot", action='store_true')
 args = parser.parse_args()
+
+matplotlib.rcParams.update({'font.size': args.font_size})
+if args.dark_mode: plt.style.use('dark_background')
+if args.serif: matplotlib.rcParams.update({'font.family': 'serif'})
 
 vec_interval = args.density #number of vectors in each direction to display(?)
 vec_mode = args.vecmode
@@ -115,10 +129,13 @@ dim = input_file.readline().split(',')
 xdim = int(dim[0])
 ydim = int(dim[1])
 
-xl_ghost = 2
-xu_ghost = 2
-yl_ghost = 2
-yu_ghost = 2
+num_ghost = 2
+if args.ghost_zones: num_ghost = 0
+
+xl_ghost = num_ghost
+xu_ghost = num_ghost
+yl_ghost = num_ghost
+yu_ghost = num_ghost
 
 xdim_view = xdim - (xl_ghost + xu_ghost)
 ydim_view = ydim - (yl_ghost + yu_ghost)
@@ -131,9 +148,9 @@ yu = ydim - yu_ghost
 
 #read in grid cell positions
 assert input_file.readline() == "pos_x\n"
-X = read_grid(input_file,xdim,ydim,xl,yl,xu,yu)
+X = read_grid(input_file,xdim,ydim,xl,yl,xu,yu)/1.0e8
 assert input_file.readline() == "pos_y\n"
-Y = read_grid(input_file,xdim,ydim,xl,yl,xu,yu)
+Y = read_grid(input_file,xdim,ydim,xl,yl,xu,yu)/1.0e8
 
 x_min = X[0][0]
 x_max = X[-1][0]
@@ -267,6 +284,11 @@ for i in range(len(var)):
   curr_min = np.nanmin(var[i][xl:xu,yl:yu])
   if np.isfinite(curr_min): min_v = np.fmin(min_v,curr_min)
 
+if args.low_colorbar is not None:
+  min_v = args.low_colorbar
+if args.high_colorbar is not None:
+  max_v = args.high_colorbar
+
 if vec_var != None:
   max_v_vec = np.finfo(np.float_).min
   min_v_vec = np.finfo(np.float_).max
@@ -323,10 +345,10 @@ elif output_var in ["div_bi","div_be"]:
 im.set_data(x,y,np.transpose(var[frame]))
 im.set_clim(vmin=min_v,vmax=max_v)
 ax.add_image(im)
-ax.set(xlim=(x_min,x_max), ylim=(y_min,y_max), xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame]))
+ax.set(xlim=(x_min,x_max), ylim=(y_min,y_max), xlabel="x (Mm)",ylabel="y (Mm)",title=output_var+", t="+str(t[frame]))
 # ax.set_aspect('equal')
 var_colorbar = fig.colorbar(im)
-var_colorbar.set_label(fullnames[output_var]+ fullunits[output_var])
+#var_colorbar.set_label(fullnames[output_var]+ fullunits[output_var])
 
 # contour_color_axes = fig.axes[-1]
 
@@ -372,7 +394,7 @@ if vec_var != None:
   np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
   np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
   if vec_mode == "stream":
-    num_points = 17
+    num_points = 11
     if this_vec_x[1,1]*this_vec_x[-2,1] > 0.0:
       print("loop detected")
       num_points = int(num_points*2)
@@ -385,7 +407,7 @@ if vec_var != None:
     print(stream_points)
     stream = ax.streamplot(x_eq,y_eq,this_vec_x.transpose(),this_vec_y.transpose(),\
       start_points=np.column_stack((stream_points,y_eq[0]*np.ones_like(stream_points))),\
-        color=(0.0,0.0,0.0),density=100,linewidth=1.0,arrowstyle='->',maxlength=10.0)
+        color=(0.0,0.0,0.0),density=100,linewidth=2.0,arrowstyle='->',arrowsize=1.5,maxlength=10.0)
   else:
     assert vec_mode == "quiver"
     quiv = ax.quiver(X[x_vec_indices, y_vec_indices], Y[x_vec_indices, y_vec_indices], \
@@ -401,14 +423,26 @@ if vec_var != None:
 plt.tight_layout()
 frame = -2
 
-def updatefig(*args):
+def updatefig(*args_arg):
     global frame
     global ax
     global quiv
     global stream
     frame = (frame + 1)%len(var)
     im.set_data(x,y,np.transpose(var[frame]))
-    ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame])+" s")
+    # ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame])+" s")
+    plot_title = ""
+    if not args.no_varname:
+      if args.full_varname: plot_title += fullnames[output_var]
+      else: plot_title += output_var
+    if not args.no_units:
+      plot_title += fullunits[output_var]
+    # plot_title = fullnames[output_var]+ fullunits[output_var]
+    if args.time_label:
+      if len(plot_title) != 0: plot_title += ", "
+      if args.time_label_rounded: plot_title += "t="+str(round(t[frame]))+" s"
+      else: plot_title += "t="+str(t[frame])+" s"
+    ax.set(xlabel="x (Mm)",ylabel="y (Mm)",title=plot_title)
     if vec_var != "be" and vec_var != None:
       this_vec_x = vec_x[frame].copy()
       this_vec_y = vec_y[frame].copy()
@@ -431,7 +465,7 @@ def updatefig(*args):
           art.remove()
         stream = ax.streamplot(x_eq,y_eq,this_vec_x.transpose(),this_vec_y.transpose(),\
           start_points=np.column_stack((stream_points,y_eq[0]*np.ones_like(stream_points))),\
-            color=(0.0,0.0,0.0),density=100,linewidth=1.0,arrowstyle='->',maxlength=1000.0)
+            color=(0.0,0.0,0.0),density=100,linewidth=2.0,arrowstyle='->',arrowsize=1.5,maxlength=1000.0)
         print("frame " + str(frame) + " plotted")
     plt.tight_layout()
     return im, ax
