@@ -10,8 +10,8 @@ import sys
 
 BETA = 0.004
 B_0 = 200.0 #G
-T_C = 1.0e6 #K
 PRESS_00 = BETA*B_0**2/(8.0*np.pi) #dyn cm^-2
+T_C = 1.0e6 #K
 G = 2.748e4 #cm s^-2
 MU = 0.5*1.6726e-24 #g
 K_B = 1.3807e-16 #erg K^-1
