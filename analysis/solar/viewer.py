@@ -9,7 +9,7 @@ import matplotlib.animation as animation
 from matplotlib.image import NonUniformImage
 import sys
 import argparse
-
+import aia_response as aia
 
 def read_grid(in_file,xdim,ydim,xl,yl,xu,yu):
   result = []
@@ -67,6 +67,9 @@ fullunits = {
   'b_mag': r'G',
   'field_heating': r'erg cm$^{-3}$ s$^{-1}$'
 }
+for filter in aia.filter_names():
+  fullnames[filter] = filter.split("A")[0] + " " + r'$\mathrm{\AA}$'
+  fullunits[filter] = r'Simulated AIA Image'
 for key in fullunits.keys():
   if fullunits[key] != r'':
     fullunits[key] = " (" + fullunits[key] + ")"
@@ -74,15 +77,13 @@ for key in fullunits.keys():
 parser = argparse.ArgumentParser(description='View the output from mhdtoy.')
 parser.add_argument('filename', help="the name of the file output from mhdtoy")
 parser.add_argument('timestep', type=float, help="the interval (in simulation time units) between frames of output animation")
-# parser.add_argument('contourvar', help="the simulation variable to display as a contour plot", choices=['rho', 'temp', 'press', 'rad', \
-#   'thermal_energy', 'v_x', 'v_y', 'dt', 'dt_thermal', 'dt_rad', 'n', 'beta', 'div_be', 'div_bi', 'b_mag', 'field_heating'])
 parser.add_argument('contourvar', help="the simulation variable to display as a contour plot")
 parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['b','v','be','bi'])
 parser.add_argument('-s', '--start', help="designates simulation time to begin plotting",type=float,default=0.0)
 parser.add_argument('-e', '--end', help="designates simulation time to end plotting",type=float,default=-1.0)
 parser.add_argument('-V', '--vecmode', help="designates mode of display for the chosen vector quantity", choices=['quiver','stream'], default='quiver')
+parser.add_argument('-u','--uniform_stream', help="force uniform streamline spacing for vector field", action='store_true')
 parser.add_argument('--density', metavar="vec_display_density", type=int, help="set the interval between displayed vectors", default=25)
-# parser.add_argument('-d', '--diff', metavar='diff_filename', help="filename to difference with original file")
 parser.add_argument('-t', '--time_label', help="inserts the time into the plot title" , action='store_true')
 parser.add_argument('-tr', '--time_label_rounded', help="when -t is specified, rounds the time to the nearest integer", action='store_true')
 parser.add_argument('-d', '--dark_mode', help="renders using a black background and white text", action='store_true')
@@ -95,6 +96,8 @@ parser.add_argument('-L','--low_colorbar', help="set the lower limit of the cont
 parser.add_argument('-H','--high_colorbar', help="set the upper limit of the contour color bar", type=float)
 parser.add_argument('-fs', '--font_size', help="set the font size", type=float, default=10)
 parser.add_argument('-g', '--ghost_zones', help="includes ghost zones in the contour plot", action='store_true')
+parser.add_argument('-nc', '--no_colorbar', help="omit colorbar for contour quantity", action='store_true')
+parser.add_argument('-nt','--no_ticks', help="omits labels along the x- and y-axes", action='store_true')
 args = parser.parse_args()
 
 matplotlib.rcParams.update({'font.size': args.font_size})
@@ -110,11 +113,15 @@ end_time = args.end
 input_file = open(args.filename)
 display_interval = float(args.timestep)
 output_var = args.contourvar
+
+# Define any contour quantities that require multiple file values
 file_var_names = np.array([output_var])
 if output_var == "beta":
   file_var_names = np.array(["press","bi_x","bi_y"])
 if output_var == "b_mag":
   file_var_names = np.array(["bi_x","bi_y"])
+if aia.is_filter(output_var):
+  file_var_names = np.array(["n","temp"])
 vec_var = args.vector
 file_vec_name = vec_var
 if vec_var == "b":
@@ -240,6 +247,7 @@ while True:
 
 input_file.close()
 
+# Apply any post-reading calculations for contourvars that combine multiple variables
 var = []
 if output_var == "beta":
   for i in range(len(file_vars[0])):
@@ -249,6 +257,10 @@ elif output_var == "b_mag":
   for i in range(len(file_vars[0])):
     field_mag = np.sqrt((bx+file_vars[0][i])**2 + (by+file_vars[1][i])**2)
     var.append(field_mag)
+elif aia.is_filter(output_var):
+  for i in range(len(file_vars[0])):
+    resp = aia.response(output_var,file_vars[1][i])
+    var.append(np.sqrt((file_vars[0][i])**2*resp))
 else:
   var = file_vars[0]
 
@@ -308,6 +320,7 @@ if vec_var != None:
   if min_v_vec == np.finfo(np.float_).max:
     min_v_vec = 0.0
 
+# Set contour bar scaling (linear, log, etc)
 if output_var in ["rad","dt","dt_thermal","dt_rad","field_heating","b_mag"]: #variables that can go to zero
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-8, base=10))
@@ -317,9 +330,13 @@ elif output_var in ["div_bi","div_be"]:
 elif output_var in ["v_x","v_y","bi_x","bi_y"]: #variables with negative and positive values
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-2, base=10))
+elif aia.is_filter(output_var):
+  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+    interpolation='nearest')
 else:
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.LogNorm())
+
 
 if output_var == "beta":
   logrange = np.log10(max_v) - np.log10(min_v)
@@ -341,13 +358,20 @@ elif output_var in ["div_bi","div_be"]:
   colors = [(0.0,(0.5,0.5,1.0)),(0.5,(1.0,1.0,1.0)),(1.0,(1.0,0.5,0.5))]
   div_cmap = LinearSegmentedColormap.from_list('light_rwb',colors)
   im.set_cmap(div_cmap)
+elif aia.is_filter(output_var):
+  im.set_cmap(aia.colormap(output_var))
 
 im.set_data(x,y,np.transpose(var[frame]))
 im.set_clim(vmin=min_v,vmax=max_v)
 ax.add_image(im)
-ax.set(xlim=(x_min,x_max), ylim=(y_min,y_max), xlabel="x (Mm)",ylabel="y (Mm)",title=output_var+", t="+str(t[frame]))
+ax.set(xlim=(x_min,x_max), ylim=(y_min,y_max), title=output_var+", t="+str(t[frame]))
+if args.no_ticks:
+  ax.set(xticks=[],yticks=[])
+else:
+  ax.set(xlabel="x (Mm)",ylabel="y (Mm)")
 # ax.set_aspect('equal')
-var_colorbar = fig.colorbar(im)
+if not args.no_colorbar:
+  var_colorbar = fig.colorbar(im)
 #var_colorbar.set_label(fullnames[output_var]+ fullunits[output_var])
 
 # contour_color_axes = fig.axes[-1]
@@ -395,15 +419,19 @@ if vec_var != None:
   np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
   if vec_mode == "stream":
     num_points = 11
-    if this_vec_x[1,1]*this_vec_x[-2,1] > 0.0:
-      print("loop detected")
-      num_points = int(num_points*2)
-      stream_pow = 1
+    if args.uniform_stream:
+      num_points *= 2
+      stream_points = np.linspace(x[1],x[-2],num_points)
     else:
-      stream_pow = 2
-    norm_normalized = norm[:,0]**stream_pow/np.trapz(norm[:,0]**stream_pow)
-    cdf = [np.trapz(norm_normalized[:(i+1)]) for i in range(len(norm_normalized))]
-    stream_points = np.interp(np.linspace(0.05,0.95,num=num_points),cdf,x)
+      if this_vec_x[1,1]*this_vec_x[-2,1] > 0.0:
+        print("loop detected")
+        num_points = int(num_points*2)
+        stream_pow = 1
+      else:
+        stream_pow = 2
+      norm_normalized = norm[:,0]**stream_pow/np.trapz(norm[:,0]**stream_pow)
+      cdf = [np.trapz(norm_normalized[:(i+1)]) for i in range(len(norm_normalized))]
+      stream_points = np.interp(np.linspace(0.05,0.95,num=num_points),cdf,x)
     print(stream_points)
     stream = ax.streamplot(x_eq,y_eq,this_vec_x.transpose(),this_vec_y.transpose(),\
       start_points=np.column_stack((stream_points,y_eq[0]*np.ones_like(stream_points))),\
@@ -430,19 +458,19 @@ def updatefig(*args_arg):
     global stream
     frame = (frame + 1)%len(var)
     im.set_data(x,y,np.transpose(var[frame]))
-    # ax.set(xlabel="x (cm)",ylabel="y (cm)",title=output_var+", t="+str(t[frame])+" s")
     plot_title = ""
     if not args.no_varname:
       if args.full_varname: plot_title += fullnames[output_var]
       else: plot_title += output_var
     if not args.no_units:
       plot_title += fullunits[output_var]
-    # plot_title = fullnames[output_var]+ fullunits[output_var]
     if args.time_label:
       if len(plot_title) != 0: plot_title += ", "
       if args.time_label_rounded: plot_title += "t="+str(round(t[frame]))+" s"
       else: plot_title += "t="+str(t[frame])+" s"
-    ax.set(xlabel="x (Mm)",ylabel="y (Mm)",title=plot_title)
+    ax.set(title=plot_title)
+    if not args.no_ticks:
+      ax.set(xlabel="x (Mm)",ylabel="y (Mm)")
     if vec_var != "be" and vec_var != None:
       this_vec_x = vec_x[frame].copy()
       this_vec_y = vec_y[frame].copy()
