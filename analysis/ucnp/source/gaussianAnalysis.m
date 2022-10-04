@@ -76,18 +76,21 @@ for i = 1:length(data.grids.time)
     set(fig,'CurrentAxes',ax{1})
     imagesc(x,y,img./1e8)
     ax{1}.PlotBoxAspectRatio = [1 1 1];
+    ax{1}.YDir = 'Normal';
     shading interp
     cb = colorbar;
     
     set(fig,'CurrentAxes',ax{2})
     imagesc(x,y,fit(i).imgfit./1e8);
     ax{2}.PlotBoxAspectRatio = [1 1 1];
+    ax{2}.YDir = 'Normal';
     shading interp
     cb = colorbar;
     
     set(fig,'CurrentAxes',ax{3})
     imagesc(x,y,fit(i).imgres./1e8);
     ax{3}.PlotBoxAspectRatio = [1 1 1];
+    ax{3}.YDir = 'Normal';
     shading interp
     cb = colorbar;
     cb.Label.String = 'n (10^8 cm^-^3)';
@@ -97,6 +100,7 @@ for i = 1:length(data.grids.time)
     hold on
     plot(x,imgfitx./1e8,'LineWidth',2,'MarkerSize',4,'Color',l(2).col,'MarkerFaceColor',l(2).col,'MarkerEdgeColor',l(2).col)
     ax{4}.PlotBoxAspectRatio = [1 1 1];
+    ax{4}.YDir = 'Normal';
     title('x axis','FontWeight','normal')
     ylabel('n (10^8 cm^-^3)')
     
@@ -105,6 +109,7 @@ for i = 1:length(data.grids.time)
     hold on
     plot(y,imgfity./1e8,'LineWidth',2,'MarkerSize',4,'Color',l(2).col,'MarkerFaceColor',l(2).col,'MarkerEdgeColor',l(2).col)
     ax{5}.PlotBoxAspectRatio = [1 1 1];
+    ax{5}.YDir = 'Normal';
     title('y axis','FontWeight','normal')
     legend(lgdstr)
     

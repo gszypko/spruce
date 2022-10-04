@@ -71,7 +71,7 @@ for k = 1:length([imgs.t])
             title(colstr{j},'FontWeight','normal')
             if strcmp(colvar{j},'n_sim'), cmax = max(zdata,[],'all'); end
             if strcmp(colvar{j},'n_exp'), cax.CLim = [0 cmax]; end
-            if strcmp(colvar{j},'n_res'), cax.CLim = [-cmax cmax]/; end
+            if strcmp(colvar{j},'n_res'), cax.CLim = [-cmax cmax]/5; end
 
         end
     end

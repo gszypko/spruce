@@ -5,7 +5,7 @@ clc, clearvars, close all, f = filesep; setpath;
 
 % specify paths to relevant folders
 set_id = 3;
-target_path = 'C:\Users\Grant\OneDrive\Research\mhd\data-expsims\an-mhd-09.26.22\C4.3';
+target_path = 'C:\Users\Grant\OneDrive\Research\mhd\data-expsims\an-mhd-09.26.22\HIH-4';
 config_path = 'C:\Users\grant\Documents\GitHub\mhd\ucnp.config';
 settings_path = 'C:\Users\grant\Documents\GitHub\mhd\ucnp.settings';
 
@@ -117,7 +117,7 @@ if plot_density_images
         pause(1)
     end
     close(fig)
-    write_video([target_path f 'density-from-integration-images'],frames);
+    write_video([target_path f 'imgs'],frames);
 end
 
 %% Plot LIF Fits for Density, Velocity, and Temperature
