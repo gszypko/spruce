@@ -19,12 +19,12 @@ class IdealMHD: public EquationSet {
         std::vector<std::string> def_var_names() const override{
             return {"rho","temp","mom_x","mom_y","bi_x","bi_y","grav_x","grav_y",
                 "n","press","thermal_energy","v_x","v_y","kinetic_energy",
-                "b_x","b_y","b_mag","b_hat_x","b_hat_y","dt","visc_force_x","lap_mom_x",
+                "b_x","b_y","b_mag","b_hat_x","b_hat_y","dt","visc_force_x","lap_mom_x","lap_v_x",
                 "gradPx"};
         }
         enum Vars {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y,
                 n,press,thermal_energy,v_x,v_y,kinetic_energy,
-                b_x,b_y,b_mag,b_hat_x,b_hat_y,dt,visc_force_x,lap_mom_x,
+                b_x,b_y,b_mag,b_hat_x,b_hat_y,dt,visc_force_x,lap_mom_x,lap_v_x,
                 gradPx};
 
         std::vector<int> state_variables() override {
@@ -45,7 +45,7 @@ class IdealMHD: public EquationSet {
 
     private:
         double m_global_viscosity{0};
-        std::string m_viscosity_opt{"momentum"};
+        std::string m_viscosity_opt{"velocity"};
         void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids);
         void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids);
         void catchNullFieldDirection(std::vector<Grid> &grids);

@@ -79,9 +79,8 @@ std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids
     Grid e_d_rho_dt = -m_pd.transportDivergence2D(grids[e_rho],v_e);
     // viscous forces
     Grid i_viscous_force_x, i_viscous_force_y, e_viscous_force_x, e_viscous_force_y;
-    Grid i_global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/ionTimescale().min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
-    Grid e_global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/grids[dt].min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
-    Grid dt_ion = ionTimescale();
+    Grid i_global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/ionTimescale();
+    Grid e_global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/grids[dt];
     if (m_viscosity_opt == "momentum"){
         i_viscous_force_x = i_global_visc_coeff*m_pd.laplacian(grids[i_mom_x]);
         i_viscous_force_y = i_global_visc_coeff*m_pd.laplacian(grids[i_mom_y]);

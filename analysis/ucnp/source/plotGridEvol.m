@@ -6,17 +6,17 @@ data.grids.vars = data.grids.vars(1:plotFreq:end);
 data.grids.time = data.grids.time(1:plotFreq:end);
 
 % for each time point, plot 2D grids from MHD simulation
-gridnames = {'n', 'v_x', 'temp', 'gradPx', 'mom_x', 'visc_force_x', 'lap_mom_x', 'dt'};
-gridstr = {'n', 'v_x', 'temp', '\nablaP_x', 'mom_x', 'visc_force_x', 'lap_mom_x', 'dt'};
+gridnames = {'n', 'v_x', 'v_y', 'i_temp', 'e_temp', 'dt'};
+gridstr = {'n', 'v_x', 'v_y', 'T_i', 'T_e', 'dt'};
 
 % generate figure
 f = filesep;
 filepath = [data.folder f 'grid-evol'];
 row = 2; 
-col = 4; 
+col = 3; 
 num = length(gridnames);
 [fig,ax,an] = open_subplot(row,col,'Visible','on',num);
-fig.Position = [1.303333333333333e+02,1.866000000000000e+02,1.194666666666667e+03,4.817333333333330e+02];
+fig.Position = [257.0000  482.6000  789.6000  393.6000];
 an.Position = [0.1595    0.9084    0.7230    0.0801];
 
 frames = cell(1,length(data));

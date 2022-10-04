@@ -4,12 +4,12 @@
 clc, clearvars, close all, f = filesep; setpath;
 
 % specify paths to relevant folders
-target_path = 'C:\Users\grant\OneDrive\Research\mhd\data-expsims\an-mhd-09.26.22\HIH-4';
+set_id = 3;
+target_path = 'C:\Users\Grant\OneDrive\Research\mhd\data-expsims\an-mhd-09.26.22\C4.3';
 config_path = 'C:\Users\grant\Documents\GitHub\mhd\ucnp.config';
 settings_path = 'C:\Users\grant\Documents\GitHub\mhd\ucnp.settings';
 
 % generate set paths
-set_id = 1;
 set_path = [target_path f 'set_' num2str(set_id)];
 mID = mkdir(set_path);
 state_path_txt = [set_path f 'init.txt'];
@@ -20,8 +20,8 @@ config_path_txt = [set_path f 'ucnp.txt'];
 config_path_config = [set_path f 'ucnp.config'];
 
 % image filter options
-sg_kernel = 15; % number of grids to use for sg smoothing of density images
-sg_kernel_lif = 7;
+sg_kernel = 11; % number of grids to use for sg smoothing of density images
+sg_kernel_lif = 5;
 sg_kernel_state = 15;
 gauss_kernel = 3; % sigma value for imguassfilt
 
@@ -306,6 +306,7 @@ density = density(1+sg_boundary_state:end-sg_boundary_state,1+sg_boundary_state:
 imagesc(x,y,density)
 ax = gca;
 ax.YDir = 'Normal';
+colorbar
 
 % begin handling grids - variable names depends on equation set
 
@@ -327,13 +328,23 @@ if strcmp(eq_set,'ideal_mhd')
     grids.grav_y = zeros(size(X));
 elseif strcmp(eq_set,'ideal_2F')
     grids.i_rho = settings.m_i.*density;
-    grids.e_rho = settings.m_i.*density;
+    grids.e_rho = cts.cgs.mE.*density;
     grids.i_mom_x = zeros(size(X));
     grids.i_mom_y = zeros(size(X));
     grids.e_mom_x = zeros(size(X));
     grids.e_mom_y = zeros(size(X));
     grids.i_temp = settings.Ti*ones(size(X));
     grids.e_temp = settings.Te*ones(size(X));
+    grids.bi_x = zeros(size(X));
+    grids.bi_y = zeros(size(X));
+    grids.grav_x = zeros(size(X));
+    grids.grav_y = zeros(size(X));
+elseif strcmp(eq_set,'ideal_mhd_2E')
+    grids.rho = settings.m_i.*density;
+    grids.i_temp = settings.Ti*ones(size(X));
+    grids.e_temp = settings.Te*ones(size(X));
+    grids.mom_x = zeros(size(X));
+    grids.mom_y = zeros(size(X));
     grids.bi_x = zeros(size(X));
     grids.bi_y = zeros(size(X));
     grids.grav_x = zeros(size(X));
