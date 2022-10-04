@@ -41,7 +41,7 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
     std::vector<Grid> v = {grids[v_x],grids[v_y]};
     Grid d_rho_dt = -m_pd.transportDivergence2D(grids[rho],v);
     // viscous forces
-    Grid global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/grids[dt].min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
+    double global_visc_coeff = m_global_viscosity*0.5*((d_x.square()+d_y.square())/grids[dt]).min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
     Grid viscous_force_x, viscous_force_y;
     if (m_viscosity_opt == "momentum"){
         viscous_force_x = global_visc_coeff*m_pd.laplacian(grids[mom_x]);
@@ -55,7 +55,7 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
         std::cerr << "Viscosity option <" << m_viscosity_opt << "> is not valid." << std::endl;
         assert(false);
     }
-    m_grids[visc] = global_visc_coeff;
+    m_grids[visc] = global_visc_coeff*Grid::Ones(m_pd.m_xdim,m_pd.m_ydim);
     m_grids[lap_mom_x] = m_pd.laplacian(grids[mom_x]);
     m_grids[visc_force_x] = viscous_force_x;
     // magnetic forces
@@ -84,7 +84,7 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
                                                 m_pd.x_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC,
                                                 m_pd.x_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC,
                                                 m_pd.y_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC,
-                                                m_pd.y_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC);
+                                                m_pd.y_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC, global_visc_coeff);
     // return time derivatives
     return {m_pd.m_ghost_zone_mask*d_rho_dt + char_evolution[0],
             m_pd.m_ghost_zone_mask*d_mom_x_dt + char_evolution[1],
@@ -92,6 +92,8 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
             m_pd.m_ghost_zone_mask*d_thermal_energy_dt + char_evolution[3],
             m_pd.m_ghost_zone_mask*d_bi_x_dt + char_evolution[4],
             m_pd.m_ghost_zone_mask*d_bi_y_dt + char_evolution[5]};
+            // m_pd.m_ghost_zone_mask*d_bi_x_dt ,
+            // m_pd.m_ghost_zone_mask*d_bi_y_dt };
 }
 
 void IdealMHD::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids)
@@ -176,12 +178,12 @@ void IdealMHD::populateVariablesFromState(std::vector<Grid> &grids){
 
 // Returns time derivative from characteristic boundary cond for the quantities
 // {rho, mom_x, mom_y, thermal_energy, b_x, b_y} in that order
-std::vector<Grid> IdealMHD::computeTimeDerivativesCharacteristicBoundary(const std::vector<Grid> &grids, bool x_bound_1, bool x_bound_2, bool y_bound_1, bool y_bound_2){
+std::vector<Grid> IdealMHD::computeTimeDerivativesCharacteristicBoundary(const std::vector<Grid> &grids, bool x_bound_1, bool x_bound_2, bool y_bound_1, bool y_bound_2, double visc_coeff){
     std::vector<std::vector<Grid> > x_lower, x_upper, y_lower, y_upper;
-    if(x_bound_1) x_lower = singleBoundaryTermsMOC(grids, 0, true);
-    if(x_bound_2) x_upper = singleBoundaryTermsMOC(grids, 0, false);
-    if(y_bound_1) y_lower = singleBoundaryTermsMOC(grids, 1, true);
-    if(y_bound_2) y_upper = singleBoundaryTermsMOC(grids, 1, false);
+    if(x_bound_1) x_lower = singleBoundaryTermsMOC(grids, 0, true, visc_coeff);
+    if(x_bound_2) x_upper = singleBoundaryTermsMOC(grids, 0, false, visc_coeff);
+    if(y_bound_1) y_lower = singleBoundaryTermsMOC(grids, 1, true, visc_coeff);
+    if(y_bound_2) y_upper = singleBoundaryTermsMOC(grids, 1, false, visc_coeff);
     int num_vars = 6;
     std::vector<bool> bound_flags = {x_bound_1,x_bound_2,y_bound_1,y_bound_2};
     std::vector<std::vector<std::vector<Grid> > > bound_vals = {x_lower, x_upper, y_lower, y_upper};
@@ -222,13 +224,15 @@ std::vector<Grid> IdealMHD::computeTimeDerivativesCharacteristicBoundary(const s
 
 // Returns {normal term, parallel term inside domain, parallel term in lower corner, parallel term in upper corner} (in full-sized grid) for single MOC boundary,
 // corresponding to each of {rho, v_x, v_y, b_x, b_y, thermal_energy}
-std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vector<Grid> &grids, int boundary_index, bool boundary_lower){
+std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vector<Grid> &grids, int boundary_index, bool boundary_lower, double visc_coeff){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     std::vector<int> x_idx, y_idx; //Full extent of boundary's ghost zone region
     std::vector<int> x_idx_interior, y_idx_interior; //Full extent of boundary's ghost zone not overlapping with other ghost zones
     std::vector<int> x_idx_padded, y_idx_padded; //Full extent of boundary's ghost zone region, reduced for central differencing safety
-    std::vector<int> x_idx_lower, y_idx_lower; //Lower corner of boundary's ghost zone, central difference safe
-    std::vector<int> x_idx_upper, y_idx_upper; //Upper corner of boundary's ghost zone, central difference safe
+    std::vector<int> x_idx_lower, y_idx_lower; //Lower corner of boundary's ghost zone
+    std::vector<int> x_idx_upper, y_idx_upper; //Upper corner of boundary's ghost zone
+    std::vector<int> x_idx_lower_edge, y_idx_lower_edge; //Lower edge (single cell layer) of boundary's ghost zone
+    std::vector<int> x_idx_upper_edge, y_idx_upper_edge; //Upper edge (single cell layer) of boundary's ghost zone
     if(boundary_index == 0){
         if(boundary_lower) x_idx = {0, N_GHOST-1};
         else x_idx = {(int)(m_pd.m_xdim) - N_GHOST, (int)(m_pd.m_xdim) - 1};
@@ -242,10 +246,14 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
     x_idx_padded = x_idx;
     x_idx_lower = {0,-1};
     x_idx_upper = {0,-1};
+    x_idx_lower_edge = {0,-1};
+    x_idx_upper_edge = {0,-1};
     y_idx_interior = y_idx;
     y_idx_padded = y_idx;
     y_idx_lower = {0,-1};
     y_idx_upper = {0,-1};
+    y_idx_lower_edge = {0,-1};
+    y_idx_upper_edge = {0,-1};
     if(boundary_index == 0 && m_pd.y_bound_1 != PlasmaDomain::BoundaryCondition::Periodic){
         y_idx_interior = {y_idx[0]+N_GHOST,y_idx.back()-N_GHOST};
         y_idx_padded = {y_idx[0]+1,y_idx.back()-1};
@@ -277,8 +285,10 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
     Grid m_b_perp = (boundary_index == 0 ? (m_pd.m_grids[PlasmaDomain::be_x] + grids[bi_x]) : (m_pd.m_grids[PlasmaDomain::be_y] + grids[bi_y]));
     Grid m_b_para = (boundary_index == 1 ? (m_pd.m_grids[PlasmaDomain::be_x] + grids[bi_x]) : (m_pd.m_grids[PlasmaDomain::be_y] + grids[bi_y]));
 
+    double b_guide = 1.0; //constant guide field in third dimension
     Grid s_perp = m_b_perp/(m_b_perp.abs());
-    Grid R_para = m_b_para/(m_b_para.abs());
+    Grid R_para = m_b_para/(m_b_para.abs() + std::abs(b_guide));
+    Grid R_guide = b_guide/(m_b_para.abs() + std::abs(b_guide));
     Grid c_s_sq = m_pd.m_adiabatic_index*grids[press]/grids[rho];
     Grid c_a_sq = m_grids[b_mag].square()/(4.0*PI*m_grids[rho]);
     Grid c_perp_sq = m_b_perp.square()/(4.0*PI*m_grids[rho]);
@@ -306,10 +316,14 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
         - grids[rho]*m_pd.derivative1DBackward(grids[thermal_energy],positive_forward,boundary_index,x_idx[0],y_idx[0],x_idx.back(),y_idx.back())
     );
     Grid d_3 = (grids[v_perp] + c_perp)*(
-        Grid::Zero(m_pd.m_xdim,m_pd.m_ydim)
+        // Grid::Zero(m_pd.m_xdim,m_pd.m_ydim)
+        -s_perp*R_guide*m_pd.derivative1DBackward(grids[v_para],positive_forward,boundary_index,x_idx[0],y_idx[0],x_idx.back(),y_idx.back())
+        + R_guide/(4.0*PI*grids[rho]).sqrt()*m_pd.derivative1DBackward(m_b_para,positive_forward,boundary_index,x_idx[0],y_idx[0],x_idx.back(),y_idx.back())
     );
     Grid d_4 = (grids[v_perp] - c_perp)*(
-        Grid::Zero(m_pd.m_xdim,m_pd.m_ydim)
+        // Grid::Zero(m_pd.m_xdim,m_pd.m_ydim)
+        s_perp*R_guide*m_pd.derivative1DBackward(grids[v_para],positive_forward,boundary_index,x_idx[0],y_idx[0],x_idx.back(),y_idx.back())
+        + R_guide/(4.0*PI*grids[rho]).sqrt()*m_pd.derivative1DBackward(m_b_para,positive_forward,boundary_index,x_idx[0],y_idx[0],x_idx.back(),y_idx.back())
     );
     Grid d_5 = (grids[v_perp] + c_plus)*(
         alpha_plus/grids[rho]*m_pd.derivative1DBackward(grids[press],positive_forward,boundary_index,x_idx[0],y_idx[0],x_idx.back(),y_idx.back())
@@ -338,19 +352,46 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
 
     int para_index = boundary_index == 0 ? 1 : 0;
     //Compute alternate perpendicular terms (for negating inflowing characteristics)
-    Grid d_3_alt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    // Grid d_3_alt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    Grid d_3_alt = s_perp/grids[rho]*(
+        R_guide*(
+            m_pd.derivative1D(grids[press]+m_b_perp.square()/(8.0*PI),para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
+            +m_pd.derivative1DBackward(grids[press]+m_b_perp.square()/(8.0*PI),false,para_index,x_idx_lower_edge[0],y_idx_lower_edge[0],x_idx_lower_edge[1],y_idx_lower_edge[1])
+            +m_pd.derivative1DBackward(grids[press]+m_b_perp.square()/(8.0*PI),true,para_index,x_idx_upper_edge[0],y_idx_upper_edge[0],x_idx_upper_edge[1],y_idx_upper_edge[1])
+            )
+        );
     Grid d_5_alt = c_plus*alpha_plus*(
         grids[grav_perp]
-        + 1.0/(4.0*PI*grids[rho])* m_b_para * m_pd.derivative1D(m_b_perp,para_index,x_idx_padded[0],y_idx_padded[0],x_idx_padded[1],y_idx_padded[1]))
+        + 1.0/(4.0*PI*grids[rho])* m_b_para * (
+            m_pd.derivative1D(m_b_perp,para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
+            +m_pd.derivative1DBackward(m_b_perp,false,para_index,x_idx_lower_edge[0],y_idx_lower_edge[0],x_idx_lower_edge[1],y_idx_lower_edge[1])
+            +m_pd.derivative1DBackward(m_b_perp,true,para_index,x_idx_upper_edge[0],y_idx_upper_edge[0],x_idx_upper_edge[1],y_idx_upper_edge[1])
+            )
+        )
         + c_minus*alpha_minus*s_perp*(
             R_para * grids[grav_para]
-            + R_para / grids[rho] * m_pd.derivative1D(grids[press] + m_b_perp.square()/(8.0*PI),para_index,x_idx_padded[0],y_idx_padded[0],x_idx_padded[1],y_idx_padded[1]));
+            + R_para / grids[rho] * (
+                m_pd.derivative1D(grids[press] + m_b_perp.square()/(8.0*PI),para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
+                +m_pd.derivative1DBackward(grids[press] + m_b_perp.square()/(8.0*PI),false,para_index,x_idx_lower_edge[0],y_idx_lower_edge[0],x_idx_lower_edge[1],y_idx_lower_edge[1])
+                +m_pd.derivative1DBackward(grids[press] + m_b_perp.square()/(8.0*PI),true,para_index,x_idx_upper_edge[0],y_idx_upper_edge[0],x_idx_upper_edge[1],y_idx_upper_edge[1])
+            )
+        );
     Grid d_7_alt = c_minus*alpha_minus*(
         grids[grav_perp]
-        + 1.0/(4.0*PI*grids[rho])* m_b_para * m_pd.derivative1D(m_b_perp,para_index,x_idx_padded[0],y_idx_padded[0],x_idx_padded[1],y_idx_padded[1]))
+        + 1.0/(4.0*PI*grids[rho])* m_b_para * (
+            m_pd.derivative1D(m_b_perp,para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
+            +m_pd.derivative1DBackward(m_b_perp,false,para_index,x_idx_lower_edge[0],y_idx_lower_edge[0],x_idx_lower_edge[1],y_idx_lower_edge[1])
+            +m_pd.derivative1DBackward(m_b_perp,true,para_index,x_idx_upper_edge[0],y_idx_upper_edge[0],x_idx_upper_edge[1],y_idx_upper_edge[1])
+            )
+        )
         - c_plus*alpha_plus*s_perp*(
             R_para * grids[grav_para]
-            + R_para / grids[rho] * m_pd.derivative1D(grids[press] + m_b_perp.square()/(8.0*PI),para_index,x_idx_padded[0],y_idx_padded[0],x_idx_padded[1],y_idx_padded[1]));
+            + R_para / grids[rho] * (
+                m_pd.derivative1D(grids[press] + m_b_perp.square()/(8.0*PI),para_index,x_idx_interior[0],y_idx_interior[0],x_idx_interior[1],y_idx_interior[1])
+                +m_pd.derivative1DBackward(grids[press] + m_b_perp.square()/(8.0*PI),false,para_index,x_idx_lower_edge[0],y_idx_lower_edge[0],x_idx_lower_edge[1],y_idx_lower_edge[1])
+                +m_pd.derivative1DBackward(grids[press] + m_b_perp.square()/(8.0*PI),true,para_index,x_idx_upper_edge[0],y_idx_upper_edge[0],x_idx_upper_edge[1],y_idx_upper_edge[1])
+            )
+        );
 
     //Check for inflowing characteristic speeds and swap out alternate values as necessary
     int inflow_dir = boundary_lower ? 1 : -1;
@@ -370,14 +411,15 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
 
     // Compute all normal terms
 
-    double visc_coeff = 0.0;
+    //double visc_coeff = 0.0;
     rho_terms.push_back(-((m_pd.m_adiabatic_index/grids[rho])*d_2 + 0.5*grids[rho]*alpha_plus*(d_5+d_6) + 0.5*grids[rho]*alpha_minus*(d_7+d_8))/c_s_sq);
-    v_para_terms.push_back(-0.5*s_perp*(c_minus*alpha_minus/c_s_sq*R_para*(-d_5 + d_6) + c_plus*alpha_plus/c_s_sq*R_para*(d_7 - d_8))
+    v_para_terms.push_back(-0.5*s_perp*(R_guide*(-d_3 + d_4)
+                            + c_minus*alpha_minus/c_s_sq*R_para*(-d_5 + d_6) + c_plus*alpha_plus/c_s_sq*R_para*(d_7 - d_8))
                             + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_para],positive_forward,boundary_index,x_idx[0],y_idx[0],x_idx.back(),y_idx.back()));
     v_perp_terms.push_back(-0.5/c_s_sq*(c_plus*alpha_plus*(d_5 - d_6) + c_minus*alpha_minus*(d_7 - d_8))
                             + visc_coeff*m_pd.secondDerivative1DBackward(grids[v_perp],positive_forward,boundary_index,x_idx[0],y_idx[0],x_idx.back(),y_idx.back()));
     thermal_energy_terms.push_back(-(0.5*(grids[thermal_energy]+grids[press])*alpha_plus*(d_5+d_6) + 0.5*(grids[thermal_energy]+grids[press])*alpha_minus*(d_7+d_8))/c_s_sq);
-    b_para_terms.push_back(-(PI*grids[rho]).sqrt()*( alpha_minus/c_s*R_para*(d_5 + d_6) - alpha_plus/c_s*R_para*(d_7 + d_8) ));
+    b_para_terms.push_back(-(PI*grids[rho]).sqrt()*( R_guide*(d_3 + d_4) + alpha_minus/c_s*R_para*(d_5 + d_6) - alpha_plus/c_s*R_para*(d_7 + d_8) ));
     b_perp_terms.push_back(-d_1);
 
 
