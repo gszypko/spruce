@@ -1,13 +1,13 @@
-function [] = compareExpAndSimData(data,eic_opt)
+function [] = compareExpAndSimData(data,flags)
 
-% load experimental data
+% load experimental data from 'os.mat' file
 f = filesep;
 base_folder = extractBefore(data.folder,[f 'set_']);
-load([base_folder f 'os.mat']);
-
+load([base_folder f 'os.mat'],'os');
 
 % find indices of simulation time points that are closest to experimental time points
-ind_t = zeros(size(os));
+% ind_t(i) holds the index of data.grids.vars corresponding to experimental time point os(i).delays
+ind_t = zeros(size(os)); 
 for i = 1:length([os.delays])
     [~,ind_t(i)] = min(abs(os(i).delays*1e-9 - data.grids.time));
 end
@@ -37,16 +37,12 @@ for i = 1:length([os.delays])
 end
 
 % plot density with residuals
-row = 1; 
-col = 3; 
 colvar = {'n_sim','n_exp','n_res'};
 colstr = {'Sim','Exp','Sim - Exp'};
 num = length(colvar);
-[fig,ax,an] = open_subplot(row,col,'Visible','on',num);
-fig.Position = [257.0000  482.6000  789.6000  393.6000];
+[fig,ax,an] = open_subplot(num,'Visible',flags.figvis);
 an.Position = [0.1595    0.9084    0.7230    0.0801];
 
-frames = cell(1,length([imgs.t]));
 for k = 1:length([imgs.t])
     disp(['Plotting: ' num2str(k) '/' num2str(length([imgs.t]))])
     
@@ -78,11 +74,10 @@ for k = 1:length([imgs.t])
     str1 = ['t = ' num2str(imgs(k).t*1e6,'%.3g') '\mus = ' num2str(imgs(k).t/data.tau,'%.3g') '\tau_e_x_p'];
     an.String = str1;
     an.Position = [0.159500000000000,0.929069291338582,0.723000000000000,0.080100000000000];
-
-    frames{k} = getframe(fig);
+    saveas(fig,[data.folder f 'imgs-' num2str(k) '.png']);
 end
 close(fig)
-write_video([data.folder f 'imgs'],frames);
+
 
 % do same thing but for lif
 % create struct to hold info to be plotted
@@ -102,16 +97,12 @@ for i = 1:length([os.delays])
 end
 
 % plot lif with residuals
-row = 2; 
-col = 3; 
 colvar = {'n_sim','n_exp','n_res','v_sim','v_exp','v_res'};
 colstr = {'n_s_i_m','n_e_x_p','n_r_e_s','v_s_i_m','v_e_x_p','v_r_e_s'};
 num = length(colvar);
-[fig,ax,an] = open_subplot(row,col,'Visible','on',num);
-fig.Position = [257.0000  482.6000  789.6000  393.6000];
+[fig,ax,an] = open_subplot(num,'Visible','on');
 an.Position = [0.1595    0.9084    0.7230    0.0801];
 
-frames = cell(1,length([map.t]));
 for k = 1:length([map.t])
     disp(['Plotting: ' num2str(k) '/' num2str(length([map.t]))])
     
@@ -146,9 +137,8 @@ for k = 1:length([map.t])
     an.String = str1;
     an.Position = [0.159500000000000,0.929069291338582,0.723000000000000,0.080100000000000];
 
-    frames{k} = getframe(fig);
+    saveas(fig,[data.folder f 'imgs-' num2str(k) '.png']);
 end
 close(fig)
-write_video([data.folder f 'map'],frames);
 
 end

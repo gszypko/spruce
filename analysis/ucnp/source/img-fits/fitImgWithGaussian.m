@@ -47,21 +47,22 @@ fitmodel = @(c,data) gaussian2D(c,data,0);
 data = grid;
 zdata = imgbin(:);
 
-% Set fit options to default
-options = optimoptions('lsqcurvefit','Algorithm','trust-region-reflective');
+% Set fit options to default\]
+opts = optimoptions('lsqcurvefit','Display','off');
 
 % Do the fit
-[p,~,R,~,~,~,J] = lsqcurvefit(fitmodel,p0,data,zdata,lb,ub,options);
+[p,~,R,~,~,~,J] = lsqcurvefit(fitmodel,p0,data,zdata,lb,ub,opts);
 
 pci = nlparci(p,R,'jacobian',J);    % 95% confidence intervals from fit
 pse = (pci(:,2) - pci(:,1))/3.92;    % convert 95% confidence intervals to standard error
 
 %% Output Fit Results
-fit.xRelInMM = xbin;
-fit.yRelInMM = ybin;
-fit.imgbin = imgbin.*normfac;
-fit.imgfit = reshape(fitmodel(p,data),size(imgbin,1),size(imgbin,2)).*normfac;
-fit.imgres = fit.imgfit - fit.imgbin;
+fit.x = x;
+fit.y = y;
+[X,Y] = meshgrid(fit.x,fit.y);
+fit.img = img;
+fit.imgfit = reshape(fitmodel(p,[X(:) Y(:)]),size(img,1),size(img,2)).*normfac;
+fit.imgres = fit.imgfit - fit.img;
 
 fit.amp = p(1).*normfac;
 fit.ampErr = pse(1).*normfac;

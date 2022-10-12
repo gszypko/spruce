@@ -1,23 +1,30 @@
-function [] = plotGridEvol(data,plotFreq)
-% os (struct): contains grid info from 'os.grids.out' file
+function [] = plotGridEvol(data,flags)
+f = filesep;
 
-if nargin < 2, plotFreq = 1; end
-data.grids.vars = data.grids.vars(1:plotFreq:end);
-data.grids.time = data.grids.time(1:plotFreq:end);
+% handle plot frequency
+data.grids.vars = data.grids.vars(1:flags.plot_freq:end);
+data.grids.time = data.grids.time(1:flags.plot_freq:end);
 
-% for each time point, plot 2D grids from MHD simulation
-gridnames = {'n', 'v_x', 'v_y', 'i_temp', 'e_temp', 'dt'};
-gridstr = {'n', 'v_x', 'v_y', 'T_i', 'T_e', 'dt'};
+% determine grid names and strings for plotting
+[grid_names,grid_str] = readGridNames(data.folder);
+if isfield(flags,'vars')
+    if isempty(flags.vars)
+        error('Variables must be specified.')
+    end
+end
+varnames = flags.vars;
+varstr = varnames;
+for i = 1:length(varnames)
+    ind = find(strcmp(grid_names,flags.vars{i}));
+    if ~isempty(ind)
+        varstr{i} = grid_str{ind};
+    end
+end
 
 % generate figure
-f = filesep;
-filepath = [data.folder f 'grid-evol'];
-row = 2; 
-col = 3; 
-num = length(gridnames);
-[fig,ax,an] = open_subplot(row,col,'Visible','on',num);
-fig.Position = [257,2.736666666666666e+02,1.023333333333333e+03,6.025333333333334e+02];
-an.Position = [0.1595    0.9084    0.7230    0.0801];
+num = length(varnames);
+[fig,ax,an] = open_subplot(num,'Visible',flags.figvis);
+an.Position = [0.1567    0.8909    0.7230    0.0801];
 
 frames = cell(1,length(data));
 for k = 1:length([data.grids.vars.time])
@@ -33,7 +40,7 @@ for k = 1:length([data.grids.vars.time])
             cax = get_axis(fig,ax{i,j});
             xdata = data.grids.x_vec;
             ydata = data.grids.y_vec;
-            zdata = data.grids.vars(k).(gridnames{iter});
+            zdata = data.grids.vars(k).(varnames{iter});
             imagesc(xdata,ydata,zdata)
             colorbar
             cax.YDir = 'Normal';
@@ -41,10 +48,7 @@ for k = 1:length([data.grids.vars.time])
             cax.FontSize = 10;
             if i == size(ax,1), xlabel('x (cm)'), end
             if j == 1, ylabel('y (cm)'), end
-            title(gridstr{iter},'FontWeight','normal')
-
-            if strcmp(gridnames{iter},'E_x'), c_lims = cax.CLim; end
-            if strcmp(gridnames{iter},'E_ideal'), cax.CLim = c_lims; end
+            title(varstr{iter},'FontWeight','normal')
         end
     end
 
@@ -57,6 +61,7 @@ for k = 1:length([data.grids.vars.time])
     frames{k} = getframe(fig);
 end
 close(fig)
+filepath = [data.folder f 'grid-evol'];
 write_video(filepath,frames);
 
 end

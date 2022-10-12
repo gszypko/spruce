@@ -55,9 +55,6 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
         std::cerr << "Viscosity option <" << m_viscosity_opt << "> is not valid." << std::endl;
         assert(false);
     }
-    m_grids[lap_mom_x] = m_pd.laplacian(grids[mom_x]);
-    m_grids[lap_v_x] = m_pd.laplacian(grids[v_x]);
-    m_grids[visc_force_x] = viscous_force_x;
     // magnetic forces
     Grid curl_db = m_pd.curl2D(grids[bi_x],grids[bi_y])/(4.0*PI);
     std::vector<Grid> external_mag_force = Grid::CrossProductZ2D(curl_db,{be_x,be_y});
@@ -119,7 +116,6 @@ void IdealMHD::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids)
     grids[b_hat_x] = grids[b_x]/grids[b_mag];
     grids[b_hat_y] = grids[b_y]/grids[b_mag];
     catchNullFieldDirection(grids);
-    grids[gradPx] = m_pd.derivative1D(grids[press], 0);
 }
 
 void IdealMHD::catchNullFieldDirection(std::vector<Grid> &grids)
@@ -170,10 +166,6 @@ void IdealMHD::populateVariablesFromState(std::vector<Grid> &grids){
     m_pd.updateGhostZones();
     recomputeDerivedVarsFromEvolvedVars(grids);
     recomputeDT();
-    grids[visc_force_x] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    grids[lap_mom_x] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    grids[lap_v_x] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    grids[gradPx] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
 }
 
 // sets viscosity in outermost interior cell to zero because it is large due to using a boundary cell

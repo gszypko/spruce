@@ -126,36 +126,26 @@ s.data = struct;
 for i = 1:length(s.t)
     s.data(i).sigx = fit(i).sigx;
     s.data(i).sigy = fit(i).sigy;
-    s.data(i).n = fit(i).amp;
+    s.data(i).n_c = fit(i).amp;
     [~,indx] = min(abs(data.grids.x_vec));
     [~,indy] = min(abs(data.grids.y_vec));
     if max(strcmp(data.config.eq_set,{'ideal_mhd','ideal_mhd_cons'}))
-        s.data(i).Ti = data.grids.vars(i).temp(indy,indx);
-        s.data(i).Te = data.grids.vars(i).temp(indy,indx);
-        s.data(i).xt.n = data.grids.vars(i).n(indy,:);
-        s.data(i).yt.n = data.grids.vars(i).n(:,indx)';
-        s.data(i).xt.v = data.grids.vars(i).v_x(indy,:);
-        s.data(i).yt.v = data.grids.vars(i).v_y(:,indx)';
-        s.data(i).xt.Te = data.grids.vars(i).temp(indy,:);
-        s.data(i).yt.Te = data.grids.vars(i).temp(:,indx)';
+        s.data(i).n_x = data.grids.vars(i).temp(indy,:);
+        s.data(i).n_y = data.grids.vars(i).temp(indy,:);
+        s.data(i).Ti_c = data.grids.vars(i).temp(indy,indx);
+        s.data(i).Te_c = data.grids.vars(i).temp(indy,indx);
+        s.data(i).v_x = data.grids.vars(i).v_x(indy,:);
+        s.data(i).v_y = data.grids.vars(i).v_y(:,indx)';
     elseif strcmp(data.config.eq_set,{'ideal_2F'})
-        s.data(i).Ti = data.grids.vars(i).i_temp(indy,indx);
-        s.data(i).Te = data.grids.vars(i).e_temp(indy,indx);
-        s.data(i).xt.n = data.grids.vars(i).n(indy,:);
-        s.data(i).yt.n = data.grids.vars(i).n(:,indx)';
-        s.data(i).xt.v = data.grids.vars(i).i_v_x(indy,:);
-        s.data(i).yt.v = data.grids.vars(i).i_v_y(:,indx)';
-        s.data(i).xt.Te = data.grids.vars(i).e_temp(indy,:);
-        s.data(i).yt.Te = data.grids.vars(i).e_temp(:,indx)';
+        s.data(i).Ti_c = data.grids.vars(i).i_temp(indy,indx);
+        s.data(i).Te_c = data.grids.vars(i).e_temp(indy,indx);
+        s.data(i).v_x = data.grids.vars(i).i_v_x(indy,:);
+        s.data(i).v_y = data.grids.vars(i).i_v_y(:,indx)';
     elseif strcmp(data.config.eq_set,{'ideal_mhd_2E'})
-        s.data(i).Ti = data.grids.vars(i).i_temp(indy,indx);
-        s.data(i).Te = data.grids.vars(i).e_temp(indy,indx);
-        s.data(i).xt.n = data.grids.vars(i).n(indy,:);
-        s.data(i).yt.n = data.grids.vars(i).n(:,indx)';
-        s.data(i).xt.v = data.grids.vars(i).v_x(indy,:);
-        s.data(i).yt.v = data.grids.vars(i).v_y(:,indx)';
-        s.data(i).xt.Te = data.grids.vars(i).e_temp(indy,:);
-        s.data(i).yt.Te = data.grids.vars(i).e_temp(:,indx)';
+        s.data(i).Ti_c = data.grids.vars(i).i_temp(indy,indx);
+        s.data(i).Te_c = data.grids.vars(i).e_temp(indy,indx);
+        s.data(i).v_x = data.grids.vars(i).v_x(indy,:);
+        s.data(i).v_y = data.grids.vars(i).v_y(:,indx)';
     else
         error('Error: equation set is not valid.')
     end
@@ -185,6 +175,7 @@ if flags.eic_opt, qstr{2} = 'Vlasov';
 else, qstr{2} = 'Vlasov w/EIC'; end
 colvar = {'sigx','sigy','Ti','Te'};
 colstr = {'\sigma_x (cm)','\sigma_y (cm)','T_i (K)','T_e (K)'};
+rowvar = {''};
 
 iter = 0;
 for i = 1:row
@@ -224,18 +215,25 @@ close(fig)
 
 % generate figure
 frames = cell(length([s.t]));
-num = 6;
+num = 9;
 [fig,ax,an,row,col] = open_subplot(num,'Visible',flags.figvis);
 an.Position = [0.1567    0.8909    0.7230    0.0801];
 
-col_var = {'n','v','Te'};
-row_var_y = {'xt','yt'};
-row_var_x = {'x','y'};
-col_str = {'n (cm^-3)','v (cm/s)','T_e (K)'};
-row_str = {'x (cm)','y (cm)'};
+q = {'data','theory'};
+qstr = {'MHD','Vlasov'};
+colvar1 = {'x','y'};
+colvar1str = {'x (cm)','y (cm)'};
+colvar2 = {'vx','vy'};
+colvar2str = {'v_x (cm/s)','v_y (cm/s)'};
 
+an = annotation('textbox');
+an.Position = [0.0058    0.8762    0.9919    0.1143];
+an.HorizontalAlignment = 'center';
+an.VerticalAlignment = 'middle';
+an.LineStyle = 'none';
+an.FontSize = 11;
 for k = 1:length(s.t)
-    disp(['Plotting Transects: ' num2str(k) '/' num2str(length(s.t))])
+    disp(['Plotting velocity transects: ' num2str(k) '/' num2str(length(s.t))])
     hold([ax{:}],'off')
 
     iter = 0;
@@ -243,32 +241,35 @@ for k = 1:length(s.t)
         for j = 1:col
             if iter > num - 1, break, end
             iter = iter + 1;
-            cax = get_axis(fig,ax{i,j});
-            hold off
+            set(fig,'CurrentAxes',ax{i,j})
             
-            l = get_line_specs(2);
+            lgdstr = qstr;
+            l = get_line_specs(length(lgdstr));
+            
             for indq = 1:length(q)
-                xdata = [s.(row_var_x{i})];
-                ydata = [s.data(k).(row_var_y{i}).(col_var{j})];
-                lp = l(1);
+                xdata = [s.(colvar1{j})];
+                ydata = [s.(q{indq})(k).(colvar2{j})];
+                lp = l(indq);
                 plot(xdata,ydata,lp.style,'LineWidth',2,'MarkerSize',4,'Color',lp.col,'MarkerFaceColor',lp.col,'MarkerEdgeColor',lp.col)
+                hold on
             end
-            cax.PlotBoxAspectRatio = [1 1 1];
-            cax.FontSize = 10;
-            grid on
-            grid minor
+            ax{i,j}.PlotBoxAspectRatio = [1 1 1];
+            ax{i,j}.FontSize = 10;
 
-            xlabel(row_str{i})
-            ylabel(col_str{j})
+            xlabel(colvar1str{j})
+            ylabel(colvar2str{j})
 
         end
     end
 
+    % add legend
+    lgd = legend(lgdstr);
+    lgd.Position = [0.791325844092480,0.188322633618048,0.107387476611277,0.091250001907349];
 
-    an.String = ['Central Transects: t = ' num2str(s.t(k)*1e6,'%.2g') ' \mus = ' num2str(s.t(k)/s.tau,'%.2g') ' \tau_{exp}'];
+    an.String = ['Central Velocity Transects: t = ' num2str(s.t(k)*1e6,'%.2g') ' \mus = ' num2str(s.t(k)/s.tau,'%.2g') ' \tau_{exp}'];
     frames{k} = getframe(fig);
 end
 close(fig)
-write_video([data.folder f 'transects'],frames);
+write_video([data.folder f 'vlasov-velocities'],frames);
 
 end

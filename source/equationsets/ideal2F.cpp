@@ -212,6 +212,7 @@ void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids){
     catchNullFieldDirection(grids);
     grids[rho] = grids[i_rho] + grids[e_rho];
     grids[rho_c] = E*(grids[i_n] - grids[e_n]);
+    grids[n] = grids[i_n];
     grids[dn] = grids[i_n] - grids[e_n];
     grids[divE] = m_pd.divergence2D({grids[E_x],grids[E_y]});
     grids[divB] = m_pd.divergence2D({grids[b_x],grids[b_y]});
