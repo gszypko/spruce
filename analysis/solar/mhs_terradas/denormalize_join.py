@@ -3,38 +3,23 @@
 # Undoes unit normalization in output from mhs_terradas/compute.py
 # and generates a .state file compatible with mhdtoy
 
-# ACTIVE REGION
-# GAUSSIAN PROFILE
-#,CHI,X_1,X_2,B1_FACTOR,B2_FACTOR,PRESS_AR,TEMP_AR,W_0
-#,20.0,-0.25,0.25,1.0,-1.0,40.0,4.0,0.2
-#,DENORMALIZATION FACTORS:
-#,BETA,B_0,T_C,G,MU,K_B,GAMMA,ION_MASS
-#,0.004,200.0,1000000.0,27480.0,8.363e-25,1.3807e-16,1.6666666666666667,1.6726e-24
-# CORONAL HOLE
-# GAUSSIAN PROFILE
-#,CHI,PRESS_CH,TEMP_CH,W_0
-#,20.0,0.25,0.8,0.2
-#,DENORMALIZATION FACTORS:
-#,BETA,B_0,T_C,G,MU,K_B,GAMMA,ION_MASS
-#,0.004,5.0,1000000.0,27480.0,8.363e-25,1.3807e-16,1.6666666666666667,1.6726e-24
-
 import csv
 import numpy as np
 import os
 import sys
 
 BETA = 0.004
-b_0 = [200.0,5.0] #G
+b_0 = [-125.0,20.0] #G
 press_00 = [BETA*b_0[0]**2/(8.0*np.pi),BETA*b_0[1]**2/(8.0*np.pi)]
 T_C = 1.0e6 #K
-G = 2.748e4 #cm s^-2
+G = 2.748e4 #cm s^-2 CUT IN HALF SINCE ADDING THE TWO SOLUTIONS TOGETHER IN FULL
 MU = 0.5*1.6726e-24 #g
 K_B = 1.3807e-16 #erg K^-1
 H = K_B*T_C/MU/G
 GAMMA = 5.0/3.0
 ION_MASS = 1.6726e-24 #g
 
-OVERLAP = 20
+# OVERLAP = 20
 
 if len(sys.argv) < 4:
     print("Need to specify AR directory, CH directory, output folder, and optionally output filename")
@@ -100,6 +85,7 @@ for in_filename in [in_filename_ar,in_filename_ch]:
 
 assert ydim[0] == ydim[1]
 
+
 counter = 0
 for this_var in vars:
     zero = np.zeros((xdim[counter],ydim[counter]))
@@ -115,17 +101,17 @@ for this_var in vars:
         this_var.pop(name)
     counter += 1
 
-combined_xdim = xdim[0] + xdim[1] - OVERLAP
-combined_ydim = ydim[0]
+assert xdim[0] == xdim[1] and ydim[0] == ydim[1]
+
 with open(out_path+"/"+out_filename, 'w', newline='') as f:
     writer = csv.writer(f)
     for comment in comments: writer.writerows(comment)
     writer.writerow(["#","JOINED INTO INTERCHANGE RECONNECTION REGION"])
     writer.writerow(["#","DENORMALIZATION FACTORS:"])
-    writer.writerow(["#","BETA","B_0_AR","B_0_CH","T_C","G","MU","K_B","GAMMA","ION_MASS","OVERLAP"])
-    writer.writerow(["#",str(BETA),str(b_0[0]),str(b_0[1]),str(T_C),str(G),str(MU),str(K_B),str(GAMMA),str(ION_MASS),str(OVERLAP)])
+    writer.writerow(["#","BETA","B_0_AR","B_0_CH","T_C","G","MU","K_B","GAMMA","ION_MASS"])
+    writer.writerow(["#",str(BETA),str(b_0[0]),str(b_0[1]),str(T_C),str(G),str(MU),str(K_B),str(GAMMA),str(ION_MASS)])
     writer.writerow(["xdim","ydim"])
-    writer.writerow([str(combined_xdim),str(combined_ydim)])
+    writer.writerow([str(xdim[0]),str(ydim[0])])
     writer.writerow(["ion_mass"])
     writer.writerow([str(ION_MASS)])
     writer.writerow(["adiabatic_index"])
@@ -138,23 +124,13 @@ with open(out_path+"/"+out_filename, 'w', newline='') as f:
         name = names[i]
         ar_var = mults[0][i]*(vars[0][name])
         ch_var = mults[1][i]*(vars[1][name])
-        combined_var =  np.zeros((combined_xdim,combined_ydim))
-        if name == "pos_x":
-            for y in range(0,combined_ydim):
-                for x in range(0,xdim[0]):
-                    combined_var[x,y] = ar_var[x,y]
-                for x in range(OVERLAP,xdim[1]):
-                    combined_var[xdim[0]-OVERLAP+x,y] = ar_var[-1,y]+(ch_var[x,y]-ch_var[OVERLAP-1,y])
+        if name in ["d_x","d_y","pos_x","pos_y","grav_x","grav_y"]:
+            combined_var = ar_var
+        elif name == "temp":
+            ar_rho = mults[0][names.index("rho")]*(vars[0]["rho"])
+            ch_rho = mults[1][names.index("rho")]*(vars[1]["rho"])
+            combined_var = (ar_var*ar_rho + ch_var*ch_rho)/(ar_rho+ch_rho)
         else:
-            for y in range(0,combined_ydim):
-                for x in range(0,xdim[0]-OVERLAP):
-                    combined_var[x,y] = ar_var[x,y]
-                for x in range(OVERLAP,xdim[1]):
-                    combined_var[xdim[0]-OVERLAP+x,y] = ch_var[x,y]
-                #linear blend between two in overlap region
-                for x in range(0,OVERLAP):
-                    s1 = (x+0.5)/float(OVERLAP)
-                    s2 = 1.0-s1
-                    combined_var[xdim[0]-OVERLAP+x,y] = s1*ar_var[xdim[0]-OVERLAP+x,y] + s2*ch_var[x,y]
+            combined_var =  ar_var + ch_var
         writer.writerow([name])
         writer.writerows(combined_var)
