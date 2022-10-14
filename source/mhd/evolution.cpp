@@ -108,25 +108,25 @@ void PlasmaDomain::updateGhostZones()
   if(x_bound_1 != BoundaryCondition::Periodic && x_bound_1 != BoundaryCondition::OpenMoC){
     if(x_bound_1 == BoundaryCondition::Open) for(int j=m_yl; j<=m_yu; j++) openBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
     else if(x_bound_1 == BoundaryCondition::Reflect) for(int j=m_yl; j<=m_yu; j++) reflectBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
-    else if(x_bound_1 == BoundaryCondition::Fixed) for(int j=m_yl; j<=m_yu; j++) fixedBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
+    else if(x_bound_1 == BoundaryCondition::Fixed) for(int j=0; j<m_ydim; j++) fixedBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
     else if (x_bound_1 == BoundaryCondition::OpenUCNP) for(int j=m_yl; j<=m_yu; j++) ucnpBoundaryExtrapolate(Boundary::xl,j);
   }
   if(x_bound_2 != BoundaryCondition::Periodic && x_bound_2 != BoundaryCondition::OpenMoC){
     if(x_bound_2 == BoundaryCondition::Open) for(int j=m_yl; j<=m_yu; j++) openBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
     else if(x_bound_2 == BoundaryCondition::Reflect) for(int j=m_yl; j<=m_yu; j++) reflectBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
-    else if(x_bound_2 == BoundaryCondition::Fixed) for(int j=m_yl; j<=m_yu; j++) fixedBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
+    else if(x_bound_2 == BoundaryCondition::Fixed) for(int j=0; j<m_ydim; j++) fixedBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
     else if (x_bound_2 == BoundaryCondition::OpenUCNP) for(int j=m_yl; j<=m_yu; j++) ucnpBoundaryExtrapolate(Boundary::xu,j);
   }
   if(y_bound_1 != BoundaryCondition::Periodic && y_bound_1 != BoundaryCondition::OpenMoC){
     if(y_bound_1 == BoundaryCondition::Open) for(int i=m_xl; i<=m_xu; i++) openBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
     else if(y_bound_1 == BoundaryCondition::Reflect) for(int i=m_xl; i<=m_xu; i++) reflectBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
-    else if(y_bound_1 == BoundaryCondition::Fixed) for(int i=m_xl; i<=m_xu; i++) fixedBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
+    else if(y_bound_1 == BoundaryCondition::Fixed) for(int i=0; i<m_xdim; i++) fixedBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
     else if (y_bound_1 == BoundaryCondition::OpenUCNP) for(int j=m_xl; j<=m_xu; j++) ucnpBoundaryExtrapolate(Boundary::yl,j);
   }
   if(y_bound_2 != BoundaryCondition::Periodic && y_bound_2 != BoundaryCondition::OpenMoC){
     if(y_bound_2 == BoundaryCondition::Open) for(int i=m_xl; i<=m_xu; i++) openBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
     else if(y_bound_2 == BoundaryCondition::Reflect) for(int i=m_xl; i<=m_xu; i++) reflectBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
-    else if(y_bound_2 == BoundaryCondition::Fixed) for(int i=m_xl; i<=m_xu; i++) fixedBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
+    else if(y_bound_2 == BoundaryCondition::Fixed) for(int i=0; i<m_xdim; i++) fixedBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
     else if (y_bound_2 == BoundaryCondition::OpenUCNP) for(int j=m_xl; j<=m_xu; j++) ucnpBoundaryExtrapolate(Boundary::yu,j);
   }
 }
