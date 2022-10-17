@@ -105,6 +105,8 @@ parser.add_argument('-fs', '--font_size', help="set the font size", type=float, 
 parser.add_argument('-g', '--ghost_zones', help="includes ghost zones in the contour plot", action='store_true')
 parser.add_argument('-nc', '--no_colorbar', help="omit colorbar for contour quantity", action='store_true')
 parser.add_argument('-nt','--no_ticks', help="omits labels along the x- and y-axes", action='store_true')
+parser.add_argument('-i','--interactive',help="manually control the time stepping of the plot \
+                    (with left and right arrow keys) and investigate contour values by mousing over",action='store_true')
 args = parser.parse_args()
 
 matplotlib.rcParams.update({'font.size': args.font_size})
@@ -492,7 +494,7 @@ def updatefig(*args_arg):
     global quiv
     global stream
     global start_pts
-    if not args.streampoint_record:
+    if not (args.streampoint_record or args.interactive):
       frame = (frame + 1)%len(var)
     im.set_data(x,y,np.transpose(var[frame]))
     plot_title = ""
@@ -556,7 +558,7 @@ def extract_separate_lines(segments):
     line_segments.append(this_line_segments)
   return lines, line_segments
 
-def onclick(event):
+def modifystreampoints(event):
   ix, iy = event.xdata, event.ydata
   print(f"{ix},{iy} clicked")
   if ix is not None and iy is not None and args.streampoint_record:
@@ -578,7 +580,7 @@ def onclick(event):
   updatefig()
   fig.canvas.draw_idle()
 
-def onenter(event):
+def savestreampoints(event):
   if(event.key == "0"):
     global stream
     global args
@@ -590,14 +592,48 @@ def onenter(event):
       for l in lines:
         f.write(f"{l[0][0]},{l[0][1]}\n")
 
+def advancetime(event):
+  global frame
+  if event.key == "right":
+    frame = (frame + 1)%len(var)
+    updatefig()
+    fig.canvas.draw_idle()
+  elif event.key == "left":
+    frame = (frame - 1)%len(var)
+    updatefig()
+    fig.canvas.draw_idle()
 
-if args.streampoint_record:
-  cid = fig.canvas.mpl_connect('button_press_event', onclick)
-  cid = fig.canvas.mpl_connect('key_press_event', onenter)
+def displayinfo(event):
+  global fig
+  global x,y
+  global var
+  global frame
+  if event.xdata is None or event.ydata is None:
+    fig.suptitle("")
+  else:
+    xround = round(event.xdata)
+    yround = round(event.ydata)
+    xidx = min(np.searchsorted(x,event.xdata),xdim-1)
+    if xidx != 0:
+      xidx = xidx if (event.xdata-x[xidx-1])>(x[xidx]-event.xdata) else xidx-1
+    yidx = min(np.searchsorted(y,event.ydata),ydim-1)
+    if yidx != 0:
+      yidx = yidx if (event.ydata-y[yidx-1])>(y[yidx]-event.ydata) else yidx-1
+    fig.suptitle(f"{var[frame][xidx,yidx]:.3e} at ({xround},{yround})",x=0.1,ha='left')
+  fig.canvas.draw_idle()
+
+
+
+if args.interactive:
+  cid = fig.canvas.mpl_connect('key_press_event', advancetime)
+  cid = fig.canvas.mpl_connect('motion_notify_event', displayinfo)
+elif args.streampoint_record:
+  cid = fig.canvas.mpl_connect('button_press_event', modifystreampoints)
+  cid = fig.canvas.mpl_connect('key_press_event', savestreampoints)
 else:
   ani = animation.FuncAnimation(fig, updatefig, frames=len(var), repeat=args.realtime, interval=100, blit=False)
 
-if args.realtime or args.streampoint_record:
+if args.realtime or args.streampoint_record or args.interactive:
   plt.show()
 else:
   FFwriter = animation.FFMpegWriter(bitrate=2000)
