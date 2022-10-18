@@ -100,7 +100,70 @@ end
 close(fig)
 
 %% Get Density from LIF Fits
+% for each time point, 
+for i = 1:length([os.delays])
+    % determine number of kernels to be used with SG filter
+    dx = mean(diff(os(i).map.x))/10;
+    dy = mean(diff(os(i).map.y))/10;
+    sg_kx = ceil(flags.sg_imgs_length/dx/2)*2+1;
+    sg_ky = ceil(flags.sg_imgs_length/dy/2)*2+1;
+    if sg_kx < 5, sg_kx = 5; end
+    if sg_ky < 5, sg_ky = 5; end
+    sg_bx = floor(sg_kx/2);
+    sg_by = floor(sg_ky/2);
+    % use sg filter on density images
+    os(i).map.nFit_filt = sgfilt2D(os(i).map.nFit,sg_kx,sg_ky,3,3);
+    os(i).map.nFit_res = os(i).map.nFit_filt - os(i).map.nFit;
+    % remove boundary cells of sg filter from os.map
+    os(i).map.x = os(i).map.x(1+sg_bx:end-sg_bx);
+    os(i).map.y = os(i).map.y(1+sg_by:end-sg_by);
+    os(i).map.nFit = os(i).map.nFit(1+sg_bx:end-sg_bx,1+sg_by:end-sg_by);
+    os(i).map.nFit_filt = os(i).map.nFit_filt(1+sg_bx:end-sg_bx,1+sg_by:end-sg_by);
+    os(i).map.nFit_res = os(i).map.nFit_res(1+sg_bx:end-sg_bx,1+sg_by:end-sg_by);
+    % bin image if it has too many pixels
+    fields = {'nFit','nFit_filt','nFit_res'};
+    for j = 1:length(fields)
+        [xbin,ybin,os(i).map.(fields{j})] = binImgForFit(os(i).map.x,os(i).map.y,os(i).map.(fields{j}),600);
+    end
+    os(i).map.x = xbin;
+    os(i).map.y = ybin;
+end
 
+%% Extract Te From Size Evolution
+
+% for each time point, 
+fit = struct;
+fit(length([os.delays])).sig_x = [];
+fit(length([os.delays])).sig_y = [];
+for k = 1:length([os.delays])
+    x = os(k).imgs.xRelInMM/10;
+    y = os(k).imgs.yRelInMM/10;
+    img = os(k).imgs.density;
+    results = fitImgWithGaussian(x,y,img);
+    fit(k).sig_x = results.sigx;
+    fit(k).sig_y = results.sigy;
+    fit(k).sig = (fit(k).sig_x*fit(k).sig_y^2)^(1/3);
+    fit(k).sig_norm = fit(1).sig;
+end
+
+tau = @(Te) sqrt(cts.cgs.mI*fit(1).sig^2/cts.cgs.kB/Te);
+fitmodel = @(c,data) fit(1).sig*sqrt(1+data.^2/tau(c)^2);
+p0 = settings.Te;
+data = [os.delays].*1e-9;
+data = data';
+zdata = [fit.sig]';
+[p,~,R,~,~,~,J] = lsqcurvefit(fitmodel,p0,data,zdata);
+
+num = 1;
+[fig,ax,an] = open_subplot(num,'Visible',flags.figvis);
+an.Position = [0.1479    0.8056    0.5164    0.1020];
+cax = ax{1};
+hold on
+l = get_line_specs(2);  
+plot(data./tau(p),fitmodel(p,data),'LineWidth',2,'MarkerSize',4,'Color',l(1).col,'MarkerFaceColor',l(1).col,'MarkerEdgeColor',l(1).col)
+plot(data./tau(p),[fit.sig],'o','LineWidth',2,'MarkerSize',4,'Color',l(2).col,'MarkerFaceColor',l(2).col,'MarkerEdgeColor',l(2).col)
+an.String = ['T_e = ' num2str(p) ' K'];
+saveas(fig,[path f 'Te.png']);
 
 %% Handle Config File
 % need to update the duration and time_output_interval lines of the .config file to be consistent with the temporal of
@@ -197,9 +260,17 @@ movefile(settings_path,[extractBefore(settings_path,'.txt') '.settings']);
 
 % option for whether to use smoothed density distribution or not
 if flags.smooth_density
-    density = os(ind_t).imgs.density_filt;
+    if ~flags.useLIFFits
+        density = os(ind_t).imgs.density_filt;
+    else
+        density = os(ind_t).map.nFit_filt;
+    end
 else
-    density = os(ind_t).imgs.density;
+    if ~flags.useLIFFits
+        density = os(ind_t).imgs.density;
+    else
+        density = os(ind_t).map.nFit;
+    end
 end
 
 % enforce density minimum
@@ -239,8 +310,13 @@ state.X = X;
 state.Y = Y;
 
 % interpolate experimental density distribution
-X = os(ind_t).imgs.xRelInMM/10;
-Y = os(ind_t).imgs.yRelInMM/10;
+if ~flags.useLIFFits
+    X = os(ind_t).imgs.xRelInMM/10;
+    Y = os(ind_t).imgs.yRelInMM/10;
+else
+    X = os(ind_t).map.x/10;
+    Y = os(ind_t).map.y/10;
+end
 V = density*1e8;
 Xq = state.X;
 Yq = state.Y;

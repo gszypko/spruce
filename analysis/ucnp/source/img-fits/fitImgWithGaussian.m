@@ -59,8 +59,8 @@ pse = (pci(:,2) - pci(:,1))/3.92;    % convert 95% confidence intervals to stand
 %% Output Fit Results
 fit.x = x;
 fit.y = y;
-[X,Y] = meshgrid(fit.x,fit.y);
 fit.img = img;
+[X,Y] = meshgrid(fit.x,fit.y);
 fit.imgfit = reshape(fitmodel(p,[X(:) Y(:)]),size(img,1),size(img,2)).*normfac;
 fit.imgres = fit.imgfit - fit.img;
 

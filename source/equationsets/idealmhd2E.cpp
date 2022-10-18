@@ -114,6 +114,8 @@ void IdealMHD2E::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids)
     grids[b_mag] = (grids[b_x].square() + grids[b_y].square()).sqrt();
     grids[b_hat_x] = grids[b_x]/grids[b_mag];
     grids[b_hat_y] = grids[b_y]/grids[b_mag];
+    grids[dPdx] = m_pd.derivative1D(grids[press],0);
+    grids[dPdy] = m_pd.derivative1D(grids[press],1);
     catchNullFieldDirection(grids);
 }
 

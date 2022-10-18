@@ -1,4 +1,5 @@
 function [] = gaussianAnalysis(data,flags)
+%% Handle Inputs
 % handle plot frequency 
 data.grids.vars = data.grids.vars(1:flags.plot_freq:end);
 data.grids.time = data.grids.time(1:flags.plot_freq:end);
@@ -126,7 +127,8 @@ s.data = struct;
 for i = 1:length(s.t)
     s.data(i).sigx = fit(i).sigx;
     s.data(i).sigy = fit(i).sigy;
-    s.data(i).n = fit(i).amp;
+    s.data(i).n2 = fit(i).amp;
+    s.data(i).n3 = fit(i).amp;
     [~,indx] = min(abs(data.grids.x_vec));
     [~,indy] = min(abs(data.grids.y_vec));
     if max(strcmp(data.config.eq_set,{'ideal_mhd','ideal_mhd_cons'}))
@@ -163,29 +165,30 @@ for i = 1:length(s.t)
 end
 
 s.theory = struct;
-[~,sig,gam,Ti,Te,~] = kinetic_model(s.t,s.sig0,s.Ti0,s.Te0,s.data(1).n,flags.eic_opt);
+[~,sig,gam,Ti,Te,n2,n3] = kinetic_model(s.t,s.sig0,s.Ti0,s.Te0,s.data(1).n2,flags.eic_opt);
 for i = 1:length(s.t)
     s.theory(i).sigx = sig(i);
     s.theory(i).sigy = sig(i);
     s.theory(i).Ti = Ti(i);
     s.theory(i).Te = Te(i);
+    s.theory(i).n2 = n2(i);
+    s.theory(i).n3 = n3(i);
     s.theory(i).vx = gam(i).*s.x;
     s.theory(i).vy = gam(i).*s.y;
 end
 
 %% Plot Summary of Expansion for MHD Sims Against Vlasov Theory
-% generate figure
-num = 4;
-[fig,ax,an,row,col] = open_subplot(num,'Visible',flags.figvis);
-an.Position = [0.1567    0.8909    0.7230    0.0801];
+
 
 q = {'data','theory'};
 qstr{1} = 'MHD';
 if flags.eic_opt, qstr{2} = 'Vlasov';
 else, qstr{2} = 'Vlasov w/EIC'; end
-colvar = {'sigx','sigy','Ti','Te'};
-colstr = {'\sigma_x (cm)','\sigma_y (cm)','T_i (K)','T_e (K)'};
-
+colvar = {'n2','n3','sigx','sigy','Ti','Te'};
+colstr = {'n_2_D (10^8 cm^-^3)','n_3_D (10^8 cm^-^3)','\sigma_x (cm)','\sigma_y (cm)','T_i (K)','T_e (K)'};
+num = length(colvar);
+[fig,ax,an,row,col] = open_subplot(num,'Visible',flags.figvis);
+an.Position = [0.1567    0.8909    0.7230    0.0801];
 iter = 0;
 for i = 1:row
     for j = 1:col
@@ -205,17 +208,17 @@ for i = 1:row
         end
         cax.PlotBoxAspectRatio = [1 1 1];
         cax.FontSize = 12;
+        grid on
+        grid minor
 
         if i == row, xlabel('t / \tau_{exp}'), end
         ylabel(colstr{iter})
-%         title('title')
-
     end
 end
 
 % add legend
 lgd = legend(lgdstr);
-lgd.Position = [0.777965695280062,0.604462568894955,0.206112384107097,0.086259707997385];
+lgd.Position = [0.8954    0.4610    0.0911    0.0787];
 
 saveas(fig,[data.folder f 'vlasov-evol.png']);
 close(fig)

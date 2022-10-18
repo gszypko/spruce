@@ -34,6 +34,18 @@ for i = 1:length([os.delays])
         imgs(i).n_sim = data.grids.vars(ind_t(i)).n;
     end
     imgs(i).n_res = imgs(i).n_sim - imgs(i).n_exp;
+    
+    fit_exp = fitImgWithGaussian(imgs(i).x,imgs(i).y,imgs(i).n_exp);
+    fit_sim = fitImgWithGaussian(imgs(i).x,imgs(i).y,imgs(i).n_sim);
+    imgs(i).sigx_exp = fit_exp.sigx;
+    imgs(i).sigx_sim = fit_sim.sigx;
+    imgs(i).sigy_exp = fit_exp.sigy;
+    imgs(i).sigy_sim = fit_sim.sigy;
+    fac_exp = imgs(1).sigx_exp*imgs(1).sigy_exp^2/(imgs(i).sigx_exp*imgs(i).sigy_exp^2);
+    fac_sim = imgs(1).sigx_sim*imgs(1).sigy_sim/(imgs(i).sigx_sim*imgs(i).sigy_sim);
+    imgs(i).n_exp_norm = imgs(i).n_exp./fac_exp;
+    imgs(i).n_sim_norm = imgs(i).n_sim./fac_sim;
+    imgs(i).n_res_norm = imgs(i).n_sim_norm - imgs(i).n_exp_norm;
 end
 
 % plot density with residuals
@@ -67,7 +79,7 @@ for k = 1:length([imgs.t])
             title(colstr{j},'FontWeight','normal')
             if strcmp(colvar{j},'n_sim'), cmax = max(zdata,[],'all'); end
             if strcmp(colvar{j},'n_exp'), cax.CLim = [0 cmax]; end
-            if strcmp(colvar{j},'n_res'), cax.CLim = [-cmax cmax]/5; end
+            if strcmp(colvar{j},'n_res'), cax.CLim = [-cmax cmax]/4; end
 
         end
     end
@@ -94,6 +106,17 @@ for i = 1:length([os.delays])
     map(i).v_exp = os(i).map.vExp*100;
     map(i).v_sim = interp2(data.grids.pos_x,data.grids.pos_y,data.grids.vars(ind_t(i)).v_x,map(i).X,map(i).Y);
     map(i).v_res = map(i).v_sim - map(i).v_exp;
+    fit_exp = fitImgWithGaussian(map(i).x,map(i).y,map(i).n_exp);
+    fit_sim = fitImgWithGaussian(map(i).x,map(i).y,map(i).n_sim);
+    map(i).sigx_exp = fit_exp.sigx;
+    map(i).sigx_sim = fit_sim.sigx;
+    map(i).sigy_exp = fit_exp.sigy;
+    map(i).sigy_sim = fit_sim.sigy;
+    fac_exp = map(1).sigx_exp*map(1).sigy_exp^2/(map(i).sigx_exp*map(i).sigy_exp^2);
+    fac_sim = map(1).sigx_sim*map(1).sigy_sim/(map(i).sigx_sim*map(i).sigy_sim);
+    map(i).n_exp_norm = map(i).n_exp./fac_exp;
+    map(i).n_sim_norm = map(i).n_sim./fac_sim;
+    map(i).n_res_norm = map(i).n_sim_norm - map(i).n_exp_norm;
 end
 
 % plot lif with residuals
@@ -117,6 +140,7 @@ for k = 1:length([map.t])
             xdata = map(k).x;
             ydata = map(k).y;
             zdata = map(k).(colvar{iter});
+
             imagesc(xdata,ydata,zdata)
             colorbar
             cax.YDir = 'Normal';
@@ -127,17 +151,17 @@ for k = 1:length([map.t])
             title(colstr{iter},'FontWeight','normal')
             if strcmp(colvar{iter},'n_sim'), cmax = max(zdata,[],'all'); end
             if strcmp(colvar{iter},'n_exp'), cax.CLim = [0 cmax]; end
-            if strcmp(colvar{iter},'n_res'), cax.CLim = [-cmax cmax]/5; end
+            if strcmp(colvar{iter},'n_res'), cax.CLim = [-cmax cmax]/4; end
             if strcmp(colvar{iter},'v_sim'), cmax = max(zdata,[],'all'); end
             if strcmp(colvar{iter},'v_exp'), cax.CLim = [-cmax cmax+.00001]; end
-            if strcmp(colvar{iter},'v_res'), cax.CLim = [-cmax cmax+.00001]/5; end
+            if strcmp(colvar{iter},'v_res'), cax.CLim = [-cmax cmax+.00001]/4; end
         end
     end
     str1 = ['t = ' num2str(map(k).t*1e6,'%.3g') '\mus = ' num2str(map(k).t/data.tau,'%.3g') '\tau_e_x_p'];
     an.String = str1;
     an.Position = [0.159500000000000,0.929069291338582,0.723000000000000,0.080100000000000];
 
-    saveas(fig,[data.folder f 'imgs-' num2str(k) '.png']);
+    saveas(fig,[data.folder f 'lif-' num2str(k) '.png']);
 end
 close(fig)
 
