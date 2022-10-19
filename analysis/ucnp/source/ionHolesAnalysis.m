@@ -1,6 +1,6 @@
 function [] = ionHolesAnalysis(data,flags)
 f = filesep;
-%% Compute Grids
+%% Check for Required Grids
 % In this section, I compute any grids that I would like to work with that were not saved in the .out file
 % I am expecting for grids n, v_x, v_y, i_temp, e_temp, dt, dPdx, dPdy to exist already, so I will run a check for that
 expected_grids = {'n','v_x','v_y','i_temp','e_temp','dt','dPdx','dPdy'};
@@ -9,14 +9,6 @@ for i = 1:length(expected_grids)
     if ~max(strcmp(vars,expected_grids{i}))
         error(['Expected variable <' expected_grids{i} '> is missing.'])
     end
-end
-
-% for each time point, compute grids of interest
-for i = 1:length(data.grids.time)
-    data.grids.vars(i).P = data.grids.vars(i).n*cts.cgs.kB*(data.grids.vars(i).i_temp + data.grids.vars(i).e_temp);
-    data.grids.vars(i).pi_x = data.settings.m_i*data.grids.vars(i).n*data.grids.vars(i).v_x;
-    data.grids.vars(i).pi_y = data.settings.m_i*data.grids.vars(i).n*data.grids.vars(i).v_y;
-
 end
 
 %% Fit Gaussian to Initial Time Point to Get Hole Location
@@ -41,7 +33,7 @@ for k = 1:length(data.grids.time)
                                                                   - G1D(d(:,1),d(:,2),c(1),c(7),c(10),c(3),c(8),c(6));
     
     % angle, xcen, ycen, amp1, sigx1, sigy1, amp2, sigx1
-    if k == 1, s(1).theta = 17; end
+    if k == 1, s(1).theta = 15; end
     xp0 = x_prime(fit.x0,fit.y0,s(1).theta);
     sig0 = data.sig0;
     tau = data.tau;
@@ -67,7 +59,7 @@ for k = 1:length(data.grids.time)
     
     [X,Y] = meshgrid(data.grids.x_vec,data.grids.y_vec);
     xdata = [X(:) Y(:)];
-    ydata = sgfilt2D(data.grids.vars(k).n(:),15,15,3,3);
+    [~,~,ydata] = sgfilt2D(data.grids.x_vec,data.grids.x_vec,data.grids.vars(k).n(:),15,15,3,3,false);
     
     x = lsqcurvefit(fun,x0,xdata,ydata,lb,ub);
     
@@ -122,7 +114,36 @@ for k = 1:length(data.grids.time)
     frames{k} = getframe(fig);
 end
 close(fig)
-write_video([data.folder f 'ion-hole-fits'],frames);
+write_video([data.folder f 'ion-hole-fits-2D-n'],frames);
+
+for k = 1:length([s.t])
+    t_fac = sqrt(1+s(k).t^2/data.tau^2);
+    xp0 = x_prime(fit.x0,fit.y0,s(1).theta);
+    s(k).xL_model = -(xp0+data.sig0*atan(s(k).t/tau))*t_fac;
+    s(k).xR_model = +(xp0+data.sig0*atan(s(k).t/tau))*t_fac;
+end
+
+num = 1;
+[fig,ax,an,row,col] = open_subplot(num,'Visible',flags.figvis);
+an.Position = [0.1567    0.8909    0.7230    0.0801];
+q = {'xL','xR','xL_model','xR_model'};
+qstr = {'xL','xR','Model L','Model R'};
+l = get_line_specs(length(q));
+cax = get_axis(fig,ax{1});
+hold on
+for i = 1:length(q)
+    plot([s.t]/data.tau,[s.(q{i})],'LineWidth',2,'MarkerSize',4,'Color',l(i).col,'MarkerFaceColor',l(i).col,'MarkerEdgeColor',l(i).col)
+end
+cax.FontSize = 12;
+xlabel('t / \tau')
+ylabel('Hole Pos. (cm)')
+title('Extracted from 2D Fits to Ion Density')
+lgd = legend(qstr);
+lgd.Position = [0.1865    0.7103    0.2306    0.1921];
+saveas(fig,[data.folder f 'ion-hole-pos-2D-n.png']);
+close(fig)
+
+
 %% 
 
 

@@ -442,7 +442,7 @@ for i = 1:length(fields)
     state_data{iter} = fields{i};
     for j = 1:size(grids.(fields{i}),2)
         iter = iter + 1;
-        allOneString = sprintf('%.5g,', grids.(fields{i})(:,j)');
+        allOneString = sprintf('%.9g,', grids.(fields{i})(:,j)');
         allOneString = allOneString(1:end-1);% strip final comma
         state_data{iter} = allOneString;
     end
@@ -456,6 +456,6 @@ for i = 1:length(state_data)
 end
 % write file
 writecell(state_data,state_path,'QuoteStrings','none');
-movefile(state_path,[extractBefore(state_path,'.txt') '.state']);
+movefile(state_path,[extractBefore(state_path,'.txt') '.state'],'f');
 
 end

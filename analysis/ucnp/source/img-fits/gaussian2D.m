@@ -1,4 +1,4 @@
-function [out] = gaussian2D(c,data,offset)
+function [out] = gaussian2D(c,data)
 % c (vector double): fit model coefficients
 %   c(1): amplitude
 %   c(2): x center
@@ -6,10 +6,6 @@ function [out] = gaussian2D(c,data,offset)
 %   c(4): y center
 %   c(5): rms radius on y axis
 %   c(6): offset, can be optionally set by input argument
-
-if nargin == 3
-    c(6) = offset;
-end
 
 % data (nx2 double): first column is x positions and second is y positions
 % x(i) and y(i) are coordinate pairs to evaluate Gaussian at
