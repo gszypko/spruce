@@ -164,6 +164,7 @@ plot(data./tau(p),fitmodel(p,data),'LineWidth',2,'MarkerSize',4,'Color',l(1).col
 plot(data./tau(p),[fit.sig],'o','LineWidth',2,'MarkerSize',4,'Color',l(2).col,'MarkerFaceColor',l(2).col,'MarkerEdgeColor',l(2).col)
 an.String = ['T_e = ' num2str(p) ' K'];
 saveas(fig,[path f 'Te.png']);
+close(fig)
 
 %% Handle Config File
 % need to update the duration and time_output_interval lines of the .config file to be consistent with the temporal of
