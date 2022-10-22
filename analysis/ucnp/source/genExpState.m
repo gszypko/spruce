@@ -274,7 +274,7 @@ else
     end
 end
 
-% enforce density minimum
+% enforce density minimum on the density grid prior to doing any smoothing
 for i = 1:size(density,1)
     for j = 1:size(density,2)
         if density(i,j) < settings.n_min/1e8
@@ -310,7 +310,7 @@ state.y = linspace(-settings.y_lim-sg_by*dy,settings.y_lim+sg_by*dy,settings.Ny+
 state.X = X;
 state.Y = Y;
 
-% interpolate experimental density distribution
+% interpolate experimental density distribution onto the simulation grid
 if ~flags.useLIFFits
     X = os(ind_t).imgs.xRelInMM/10;
     Y = os(ind_t).imgs.yRelInMM/10;
@@ -323,7 +323,7 @@ Xq = state.X;
 Yq = state.Y;
 state.n = interp2(X,Y,V,Xq,Yq,'linear',settings.n_min);
 
-% enforce density minimum
+% enforce density minimum again
 for i = 1:size(state.n,1)
     for j = 1:size(state.n,2)
         if state.n(i,j) < settings.n_min
@@ -333,10 +333,10 @@ for i = 1:size(state.n,1)
 end
 
 % apply sg filter to state grid and only keep the smoothed values for positions exterior to simulation domain or less than min
-x_L_sg = x_L + sg_length; 
-x_R_sg = x_R - sg_length;
-y_L_sg = y_L + sg_length;
-y_R_sg = y_R - sg_length;
+x_L_sg = x_L + sg_length/2; 
+x_R_sg = x_R - sg_length/2;
+y_L_sg = y_L + sg_length/2;
+y_R_sg = y_R - sg_length/2;
 state.n_sg = sgfilt2D(state.n,sg_kx,sg_ky,1,1);
 for i = 1:size(state.n,1)
     for j = 1:size(state.n,2)

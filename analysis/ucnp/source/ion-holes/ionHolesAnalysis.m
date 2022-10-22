@@ -59,7 +59,7 @@ for k = 1:length(data.grids.time)
     
     [X,Y] = meshgrid(data.grids.x_vec,data.grids.y_vec);
     xdata = [X(:) Y(:)];
-    [~,~,ydata] = sgfilt2D(data.grids.x_vec,data.grids.x_vec,data.grids.vars(k).n(:),15,15,3,3,false);
+    [ydata] = sgfilt2D(data.grids.vars(k).n(:),15,15,3,3);
     
     x = lsqcurvefit(fun,x0,xdata,ydata,lb,ub);
     
