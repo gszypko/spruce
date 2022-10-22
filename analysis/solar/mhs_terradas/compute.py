@@ -24,16 +24,16 @@ GAUSSIAN = sys.argv[3] == "T"
 if not os.path.exists(out_directory):
     os.makedirs(out_directory)
 
-DOMAIN_WIDTH = 4.0
+DOMAIN_WIDTH = 8.0
 DOMAIN_HEIGHT = 4.0
-X_DIM = 102
+X_DIM = 202
 Z_DIM = 102
 # N_GHOST = 1
 
-X_1 = -0.25
-X_2 = 0.25
-B_1_MULT = 1.0
-B_2_MULT = -1.0
+X_1 = 2.25 #location of center for CH; location of one magnetic pole for AR
+X_2 = 1.75 #location of other magnetic pole for AR; not used for CH
+B_1_MULT = -1.0
+B_2_MULT = 1.0
 
 # In units of P_C and T_C, respectively
 PRESS_AR = 40.0
@@ -64,7 +64,7 @@ def a_boundary(x):
     if GAUSSIAN: func = a_boundary_gaussian(W_0,1)
     else: func = a_boundary_parabolic(X_0,1)
     if ACTIVE_REGION: return B_1_MULT*func(x-X_1) + B_2_MULT*func(x-X_2)
-    else: return func(x)
+    else: return func(x-X_1)
 
 
 def compute_b(a, x_pos, z_pos):
@@ -262,8 +262,8 @@ with open(out_directory+"/normalized.txt", 'w', newline='') as f:
         values.extend([X_1,X_2,B_1_MULT,B_2_MULT,PRESS_AR,TEMP_AR])
     else:
         writer.writerow(["# CORONAL HOLE"])
-        labels.extend(["PRESS_CH","TEMP_CH"])
-        values.extend([PRESS_CH,TEMP_CH])
+        labels.extend(["PRESS_CH","TEMP_CH","X_1"])
+        values.extend([PRESS_CH,TEMP_CH,X_1])
     if GAUSSIAN:
         writer.writerow(["# GAUSSIAN PROFILE"])
         labels.extend(["W_0"])
