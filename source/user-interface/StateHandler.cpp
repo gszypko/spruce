@@ -102,8 +102,8 @@ void StateHandler::write_state_file(const fs::path& directory) const
 void StateHandler::setup(const std::unique_ptr<Settings>& pms)
 {
     //*** initialize variables
-    setvar("xdim",2*floor(pms->getval("Nx")/2)+1);
-    setvar("ydim",2*floor(pms->getval("Ny")/2)+1);
+    setvar("xdim",pms->getval("Nx"));
+    setvar("ydim",pms->getval("Ny"));
     setvar("ion_mass",pms->getval("m_i"));
     setvar("adiabatic_index",pms->getval("gam"));
     setvar("time",0.);
@@ -143,14 +143,9 @@ void StateHandler::setup(const std::unique_ptr<Settings>& pms)
 
 void StateHandler::setup_idealmhd(const std::unique_ptr<Settings>& pms)
 {
-    double rho_max { pms->getval("n")*getvar("ion_mass") };
-    double rho_min { pms->getval("n_min")*getvar("ion_mass") };
-    if (pms->getopt("n_dist") == "gaussian") 
-        setgrid("rho",Grid::Gaussian2D(getgrid("pos_x"),getgrid("pos_y"),rho_max,rho_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0));
-    else if (pms->getopt("n_dist")=="exponential") 
-        setgrid("rho",Grid::Exp2D(getgrid("pos_x"),getgrid("pos_y"),rho_max,rho_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0));
-    else assert(false && "Density distribution options are: <gaussian> and <exponential>.");
+    Grid n = setup_density(pms);
     Grid zeros = Grid::Zero(getvar("xdim"),getvar("ydim"));
+    setgrid("rho",n*getvar("ion_mass"));
     setgrid("temp",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Te")));
     setgrid("mom_x",zeros);
     setgrid("mom_y",zeros);
@@ -167,14 +162,9 @@ void StateHandler::setup_idealmhdcons(const std::unique_ptr<Settings>& pms)
 
 void StateHandler::setup_idealmhd2e(const std::unique_ptr<Settings>& pms)
 {
-    double rho_max { pms->getval("n")*getvar("ion_mass") };
-    double rho_min { pms->getval("n_min")*getvar("ion_mass") };
-    if (pms->getopt("n_dist") == "gaussian") 
-        setgrid("rho",Grid::Gaussian2D(getgrid("pos_x"),getgrid("pos_y"),rho_max,rho_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0));
-    else if (pms->getopt("n_dist")=="exponential") 
-        setgrid("rho",Grid::Exp2D(getgrid("pos_x"),getgrid("pos_y"),rho_max,rho_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0));
-    else assert(false && "Density distribution options are: <gaussian> and <exponential>.");
+    Grid n = setup_density(pms);
     Grid zeros = Grid::Zero(getvar("xdim"),getvar("ydim"));
+    setgrid("rho",n*getvar("ion_mass"));
     setgrid("e_temp",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Te")));
     setgrid("i_temp",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Ti")));
     setgrid("mom_x",zeros);
@@ -187,16 +177,9 @@ void StateHandler::setup_idealmhd2e(const std::unique_ptr<Settings>& pms)
 
 void StateHandler::setup_ideal2F(const std::unique_ptr<Settings>& pms)
 {
-    double n_max { pms->getval("n") };
-    double n_min { pms->getval("n_min") };
-    Grid n;
-    if (pms->getopt("n_dist") == "gaussian")
-        n = Grid::Gaussian2D(getgrid("pos_x"),getgrid("pos_y"),n_max,n_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0);
-    else if (pms->getopt("n_dist")=="exponential")
-        n = Grid::Exp2D(getgrid("pos_x"),getgrid("pos_y"),n_max,n_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0);
-    else assert(false && "Density distribution options are: <gaussian> and <exponential>.");
+    Grid n = setup_density(pms);
     Grid zeros = Grid::Zero(getvar("xdim"),getvar("ydim"));
-    setgrid("i_rho",n*pms->getval("m_i"));
+    setgrid("i_rho",n*getvar("ion_mass"));
     setgrid("e_rho",n*M_ELECTRON);
     setgrid("i_mom_x",zeros);
     setgrid("i_mom_y",zeros);
@@ -212,4 +195,28 @@ void StateHandler::setup_ideal2F(const std::unique_ptr<Settings>& pms)
     setgrid("E_z",zeros);
     setgrid("grav_x",zeros);
     setgrid("grav_y",zeros);
+}
+
+Grid StateHandler::setup_density(const std::unique_ptr<Settings>& pms) const
+{
+    double n_max { pms->getval("n") };
+    double n_min { pms->getval("n_min") };
+    Grid n{Grid::Zero(getvar("xdim"),getvar("ydim"))};
+    // choose overall density distribution for plasma
+    if (pms->getopt("n_dist") == "gaussian") 
+        n = Grid::Gaussian2D(getgrid("pos_x"),getgrid("pos_y"),n_max,n_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0);
+    else if (pms->getopt("n_dist")=="exponential") 
+        n = Grid::Exp2D(getgrid("pos_x"),getgrid("pos_y"),n_max,n_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0);
+    else if (pms->getopt("n_dist") == "uniform")
+        n = Grid(pms->getval("Nx"),pms->getval("Ny"),n_max);
+    else assert(false && "Density distribution options are: <gaussian>, <exponential>, or <uniform>.");
+    // option for adding a central ion hole to the x axis of the plasma
+    if (pms->getopt("n_hole") == "on"){
+        double hole_amp = pms->getval("n_hole_amp");
+        double hole_min = 0;
+        double hole_size = pms->getval("n_hole_size");
+        Grid n_hole = Grid::Gaussian2D(getgrid("pos_x"),getgrid("pos_y"),hole_amp,hole_min,hole_size,pms->getval("sig_y"),0,0);
+        n -= n_hole;
+    }
+    return n;
 }

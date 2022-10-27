@@ -51,6 +51,7 @@ end
 
 for i = time_start:length(C)
     if startsWith(C{i},'t=')
+        disp(['Loading Grids: ' num2str(floor(i/length(C)*100)) '%'])
         iter_t = iter_t + 1;
         out.vars(iter_t).time = str2double(extractAfter(C{i},'t='));
     else
