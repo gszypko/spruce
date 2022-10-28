@@ -5,14 +5,19 @@
 #include "constants.hpp"
 #include <cmath>
 
-void PlasmaDomain::run(double time_duration)
+void PlasmaDomain::run(double time_duration,double cluster_time)
 {
   // handle when time is supplied as input
     // m_duration can be initialized from the .config file
     // when continuing a simulation, duration must be updated with input to run()
-  if (time_duration >= 0.0) m_duration = time_duration;
-  else assert(m_duration >= 0.0 && "Duration must be specified on command line, or in state file");
-  m_max_time = m_time + m_duration;
+  if (time_duration > 0.0){
+    m_duration = time_duration;
+    m_max_time = m_time + m_duration;
+  }
+  else{
+    assert(m_duration >= 0.0 && "Duration must be specified on command line, or in state file");
+    m_max_time = m_duration;
+  }
   
   // run loop for advanceTime
   while (m_time < m_max_time && (max_iterations < 0 || m_iter < max_iterations)){
@@ -30,10 +35,14 @@ void PlasmaDomain::run(double time_duration)
       updateStateIdentifier();
       writeStateFile("end");
     }
+    if (timer.elapsed() > cluster_time && cluster_time > 0) break;
   }
   // at end of simulation, write to mhd.out and end.state
   writeToOutFile();
   writeStateFile("end");
+  if (m_time >= m_max_time ||  (max_iterations > 0 && m_iter >= max_iterations)){
+    std::cerr << "Simulation successfully reached max simulation time or iterations. Printing this error to end recursive scripts." << std::endl;
+  }
 }
 
 void PlasmaDomain::advanceTime(bool verbose)

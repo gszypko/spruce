@@ -19,6 +19,8 @@ int main(int argc, char *argv[])
     std::string run_mode = getCommandLineArg(argc, argv, "-m", "--mode");
     std::string time_duration_str = getCommandLineArg(argc, argv, "-d", "--duration");
     double time_duration = time_duration_str.empty() ? -1.0 : std::stod(time_duration_str); //set to -1 if unspecified on cmd line
+    std::string cluster_time_str = getCommandLineArg(argc, argv, "-r", "--runtime");
+    double cluster_time = cluster_time_str.empty() ? -1.0 : std::stod(cluster_time_str); //set to -1 if unspecified on cmd line
     fs::path out_path(getCommandLineArg(argc, argv, "-o", "--output"));
     assert(!out_path.empty() && "output directory must be specified");
 
@@ -33,7 +35,7 @@ int main(int argc, char *argv[])
         #if VERBOSE 
             std::cout << "Running in Continue Mode for " << time_duration << " s...\n"; 
         #endif
-        mhdSolve(prev_run_path, time_duration);
+        mhdSolve(prev_run_path, time_duration, cluster_time);
         return 0;
     }
     else if (run_mode == "input"){
@@ -75,7 +77,7 @@ int main(int argc, char *argv[])
                 std::cout << "Running in Input Mode from the state file " << grid_path.string() << " for " << time_duration << " s...\n";
                 #endif
             }
-            mhdSolve(grid_path, config_path, out_path, time_duration, !seek_grids);
+            mhdSolve(grid_path, config_path, out_path, time_duration, !seek_grids, cluster_time);
             return 0;
         } else {
             std::cerr << "Grids must be specified in .state file.\n";

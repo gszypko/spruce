@@ -1,4 +1,4 @@
-function [t,sig,gam,Ti,Te,n0] = kinetic_model(t0,sig0,Ti0,Te0,n0,eic_opt)
+function [t,sig,gam,Ti,Te,n2,n3] = kinetic_model(t0,sig0,Ti0,Te0,n0,eic_opt)
 % solves the kinetic equations from https://aip.scitation.org/doi/10.1063/1.4915135
 % includes electron-ion thermalization but not disorder-induced heating term
 
@@ -36,6 +36,7 @@ sig = sqrt(y(:,1));
 gam = y(:,2);
 Ti = y(:,3);
 Te = y(:,4);
-n = n0./sig.^3;
+n2 = n0.*(sig0./sig).^2;
+n3 = n0.*(sig0./sig).^3;
 
 end

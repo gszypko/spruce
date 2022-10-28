@@ -13,6 +13,7 @@ namespace fs = std::filesystem;
 #include "modulehandler.hpp"
 #include "equationset.hpp"
 #include "savitzkygolay.hpp"
+#include "Timer.hpp"
 
 class PlasmaDomain
 {
@@ -57,7 +58,7 @@ public: //**********************************************************************
   void initOutputContainer();
   static Grid convertCellSizesToCellPositions(const Grid& d, int index, std::string origin_position);
   static bool validateCellSizesAndPositions(const Grid& d, const Grid& pos, int index, double tolerance = 1.0e-4);
-  void run(double time_duration);
+  void run(double time_duration,double cluster_time);
 
 private: //*****************************************************************************************************
   //Friend class declarations (for Modules)
@@ -80,6 +81,7 @@ private: //*********************************************************************
   friend class Ideal2F;
 
   // Time-Related Quantities
+  Timer timer{};
   TimeIntegrator m_time_integrator{TimeIntegrator::Euler}; //indicates time integration scheme to use
   double m_time{0.0};
   double m_duration{-1.0}; // 

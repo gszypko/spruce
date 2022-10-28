@@ -11,17 +11,25 @@ C = readfile(path);
 names = cell(length(C),1);
 vals = cell(length(C),1);
 units = cell(length(C),1);
+iter = 0;
 for i = 1:length(C)
+    if isempty(C{i}), continue; end
+    if startsWith(C{i},"%"), continue; end
+    iter = iter + 1;
     line = split(C{i},"=");
-    names{i} = strtrim(line{1});
-    units{i} = strtrim(line{2});
-    vals{i} = strtrim(line{3});
+    if contains(line{3},"%"), line{3} = extractBefore(line{3},"%"); end
+    names{iter} = strtrim(line{1});
+    units{iter} = strtrim(line{2});
+    vals{iter} = strtrim(line{3});
 end
+names = names(1:iter);
+units = units(1:iter);
+vals = vals(1:iter);
 
 % reformat file contents into output structure
 out = struct;
-q = {'n','sig_x','sig_y','Ti','Te','dBdx','x_lim','y_lim','Nx','Ny','m_i','gam'};
-qstr = {'n','sigx','sigy','Ti','Te','dBdx','xlim','ylim','Nx','Ny','mI','adiabatic_index'};
+q = {'n','n_min','sig_x','sig_y','Ti','Te','dBdx','x_lim','y_lim','Nx','Ny','m_i','gam'};
+qstr = {'n','n_min','sig_x','sig_y','Ti','Te','dBdx','x_lim','y_lim','Nx','Ny','m_i','adiabatic_index'};
 specified = zeros(size(q));
 for i = 1:length(names)
     ind = find(strcmp(names{i},q)); 

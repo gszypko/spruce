@@ -33,6 +33,7 @@ public:
     void setup_idealmhdcons(const std::unique_ptr<Settings>& pms);
     void setup_idealmhd2e(const std::unique_ptr<Settings>& pms);
     void setup_ideal2F(const std::unique_ptr<Settings>& pms);
+    Grid setup_density(const std::unique_ptr<Settings>& pms) const;
 private:
     // *** Members - Equation Set
     PlasmaDomain m_pd{};

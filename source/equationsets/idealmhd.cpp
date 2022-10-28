@@ -46,7 +46,7 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
     std::vector<Grid> v = {grids[v_x],grids[v_y]};
     Grid d_rho_dt = -m_pd.transportDivergence2D(grids[rho],v);
     // viscous forces
-    double global_visc_coeff = m_global_viscosity*0.5*((d_x.square()+d_y.square())/grids[dt]).min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
+    Grid global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/grids[dt];
     Grid viscous_force_x, viscous_force_y;
     if (m_viscosity_opt == "momentum"){
         viscous_force_x = global_visc_coeff*m_pd.laplacian(grids[mom_x]);
@@ -60,9 +60,6 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
         std::cerr << "Viscosity option <" << m_viscosity_opt << "> is not valid." << std::endl;
         assert(false);
     }
-    m_grids[visc] = global_visc_coeff*Grid::Ones(m_pd.m_xdim,m_pd.m_ydim);
-    m_grids[lap_mom_x] = m_pd.laplacian(grids[mom_x]);
-    m_grids[visc_force_x] = viscous_force_x;
     // magnetic forces
     Grid curl_db = m_pd.curl2D(grids[bi_x],grids[bi_y])/(4.0*PI);
     std::vector<Grid> external_mag_force = Grid::CrossProductZ2D(curl_db,{be_x,be_y});
@@ -103,12 +100,9 @@ std::vector<Grid> IdealMHD::computeTimeDerivatives(const std::vector<Grid> &grid
 void IdealMHD::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids)
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    grids[n] = grids[rho]/m_pd.m_ion_mass;
-    grids[press] = 2*grids[n]*K_B*grids[temp];
+    grids[n] = (grids[rho]/m_pd.m_ion_mass).max(m_pd.density_min);
+    grids[press] = 2*grids[n]*K_B*grids[temp].max(m_pd.temp_min);
     grids[thermal_energy] = grids[press]/(m_pd.m_adiabatic_index - 1.0);
-    grids[visc] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    grids[visc_force_x] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    grids[lap_mom_x] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
 }
 
 void IdealMHD::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids)
@@ -178,6 +172,27 @@ void IdealMHD::populateVariablesFromState(std::vector<Grid> &grids){
     m_pd.updateGhostZones();
     recomputeDerivedVarsFromEvolvedVars(grids);
     recomputeDT();
+}
+
+// sets viscosity in outermost interior cell to zero because it is large due to using a boundary cell
+void IdealMHD::viscosity_mask(Grid& grid) const
+{
+    // treat left boundary
+    for (int j=0; j<grid.cols(); j++){
+        grid(m_pd.m_xl,j) = 0;
+    }
+    // treat right boundary
+    for (int j=0; j<grid.cols(); j++){
+        grid(m_pd.m_xu,j) = 0;
+    }
+    // treat bottom boundary
+    for (int i=0; i<grid.rows(); i++){
+        grid(i,m_pd.m_yl) = 0;
+    }
+    // treat top boundary
+    for (int i=0; i<grid.rows(); i++){
+        grid(i,m_pd.m_yu) = 0;
+    }
 }
 
 // Returns time derivative from characteristic boundary cond for the quantities

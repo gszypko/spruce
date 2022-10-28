@@ -343,10 +343,11 @@ Grid Grid::Gaussian2D(const Grid& x,const Grid& y,double amp,double min,double s
 Grid Grid::Exp2D(const Grid& x,const Grid& y,double amp,double min,double sig_x,double sig_y,double x_cen,double y_cen)
 {
   assert(x.rows()==y.rows() && x.cols()==y.cols());
+  double eta = sig_y/sig_x;
   Grid result = Zero(x.rows(),x.cols());
   for (int i = 0; i < result.rows(); i++){
       for (int j = 0; j < result.cols(); j++){
-          result(i,j) = min+amp*std::exp(-std::abs(x(i,j)-x_cen)/std::abs(sig_x))*std::exp(-std::abs(y(i,j)-y_cen)/std::abs(sig_y));
+          result(i,j) = min+amp*std::exp(-std::sqrt(std::pow(x(i,j)-x_cen,2.)+std::pow(y(i,j)-y_cen,2.)/eta)/sig_x);
       }
   }
   return result;

@@ -79,9 +79,8 @@ std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids
     Grid e_d_rho_dt = -m_pd.transportDivergence2D(grids[e_rho],v_e);
     // viscous forces
     Grid i_viscous_force_x, i_viscous_force_y, e_viscous_force_x, e_viscous_force_y;
-    Grid i_global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/ionTimescale().min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
-    Grid e_global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/grids[dt].min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
-    Grid dt_ion = ionTimescale();
+    Grid i_global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/ionTimescale();
+    Grid e_global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/grids[dt];
     if (m_viscosity_opt == "momentum"){
         i_viscous_force_x = i_global_visc_coeff*m_pd.laplacian(grids[i_mom_x]);
         i_viscous_force_y = i_global_visc_coeff*m_pd.laplacian(grids[i_mom_y]);
@@ -213,6 +212,7 @@ void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids){
     catchNullFieldDirection(grids);
     grids[rho] = grids[i_rho] + grids[e_rho];
     grids[rho_c] = E*(grids[i_n] - grids[e_n]);
+    grids[n] = grids[i_n];
     grids[dn] = grids[i_n] - grids[e_n];
     grids[divE] = m_pd.divergence2D({grids[E_x],grids[E_y]});
     grids[divB] = m_pd.divergence2D({grids[b_x],grids[b_y]});
@@ -220,6 +220,8 @@ void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids){
     grids[lapEx] = m_pd.laplacian(grids[E_x]);
     populate_boundary(grids[lapEx]);
     grids[E_ideal] = (M_ELECTRON*m_pd.derivative1D(grids[i_press], 0) - m_pd.m_ion_mass*m_pd.derivative1D(grids[e_press], 0))/(M_ELECTRON+m_pd.m_ion_mass)/E/grids[i_n];
+    grids[divEcond] = grids[divE] - 4.*PI*grids[rho_c];
+
 }
 
 void Ideal2F::catchNullFieldDirection(std::vector<Grid> &grids)

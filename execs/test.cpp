@@ -4,16 +4,13 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+#include "Timer.hpp"
 
 namespace fs = std::filesystem;
 
 int main(int argc, char *argv[])
 {
-    std::vector<std::string> test(1);
-    test[0].reserve(22);
-    std::cout << "capacity before: " << test[0].capacity() << std::endl;
-    test.push_back("2");
-    std::cout << "capacity after: " << test[0].capacity() << std::endl;
-    std::cout << "testing" << std::endl;
+    Timer timer;
+    timer.print_elapsed();
     return 0;
 }
