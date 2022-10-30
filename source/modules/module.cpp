@@ -53,6 +53,11 @@ void Module::postIterateModule(double dt)
     return;
 }
 
+void Module::applyTimeDerivativesModule(std::vector<Grid> &grids, double dt)
+{
+    return;
+}
+
 std::string Module::commandLineMessage() const
 {
     return "";

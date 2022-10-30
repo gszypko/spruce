@@ -17,24 +17,31 @@ class PlasmaDomain;
 
 class EquationSet {
     public:
+        // Static Members
+        static const inline std::vector<std::string> m_sets {"ideal_mhd","ideal_mhd_cons","ideal_mhd_2E","ideal_2F"};
+        static bool isEquationSetName(const std::string& name);
+
         // Construction
         EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names);
         virtual ~EquationSet() {}
         static std::unique_ptr<EquationSet> instantiateDefault(PlasmaDomain &pd,const std::string &name);
         static void instantiateWithConfig(std::unique_ptr<EquationSet>& eqs,PlasmaDomain &pd, std::ifstream &in_file, const std::string &name, bool active);
         void configureEquationSet(std::ifstream &in_file);
-        virtual void setupEquationSet();
-        static const inline std::vector<std::string> m_sets {"ideal_mhd","ideal_mhd_cons","ideal_mhd_2E","ideal_2F"};
-        static bool isEquationSetName(const std::string& name);
+        
+        // Setup
+        void setupEquationSet();
+        virtual void setupEquationSetDerived();
         virtual std::vector<std::string> config_names() const {return {};};
 
-        // Getters
+        // Grid Getters
         Grid& grid(int index);
         Grid& grid(const std::string& name);
         std::vector<Grid> allGrids() const;
         std::vector<std::string> allNames() const;
         std::string nameFromIndex(int index) const;
         int indexFromName(std::string name);
+        Grid getDT();
+        std::vector<Grid> getTimeDerivatives() {return m_grids_dt;};
         
         // The number of different variables tracked by the EquationSet
         int num_variables();
@@ -64,6 +71,10 @@ class EquationSet {
         // These are the variables that should be written to/read from any .state file
         virtual std::vector<int> state_variables() = 0;
 
+        // Defines the indices corresponding to all of the evolved variables for the EquationSet
+        // These are the variables that are updated during applyTimeDerivatives
+        virtual std::vector<int> evolved_variables() = 0;
+
         //Vector quantities (momenta and fields) should be formatted as
         //e.g. { {mom1_x,mom1_y},{mom2_x,mom2_y},etc. }
         //If multiple species are involved, the order in which the indices
@@ -81,10 +92,10 @@ class EquationSet {
         std::vector<Grid> computeTimeDerivatives() { return computeTimeDerivatives(m_grids); }
         void applyTimeDerivatives(const std::vector<Grid> &time_derivatives, double step) { applyTimeDerivatives(m_grids,time_derivatives,step); }
         void propagateChanges() { propagateChanges(m_grids); }
-        void populateVariablesFromState() { populateVariablesFromState(m_grids); }
+        void populateVariablesFromState() { populateVariablesFromState(m_grids); };
+        void recomputeEvolvedVarsFromStateVars() {recomputeEvolvedVarsFromStateVars(m_grids);};
+        void recomputeDerivedVarsFromEvolvedVars() {recomputeDerivedVarsFromEvolvedVars(m_grids);};
 
-        // Return a Grid containing a maximum time step for each cell
-        virtual Grid getDT() = 0;
         // Return a vector of Grids containing the time derivatives computed for all
         // evolved quantities for which analytic time derivatives exist in the EquationSet. 
         // This vector<Grid> is fed into
@@ -109,10 +120,14 @@ class EquationSet {
         // The argument grids should be a vector<Grid> of the same size and dimensions as
         // the member variable m_grids (this allows for evolution of intermediate steps
         // by the PlasmaDomain, without touching the current "real" state of the system)
-        virtual void populateVariablesFromState(std::vector<Grid> &grids) = 0;
+        void populateVariablesFromState(std::vector<Grid> &grids);
+        virtual void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) = 0;
+        virtual void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) = 0;
+        virtual void recomputeDT() = 0;
     protected:
         PlasmaDomain& m_pd;
         std::vector<Grid> m_grids{};
+        std::vector<Grid> m_grids_dt{};
         std::vector<bool> m_output_flags{};
         const std::vector<std::string> m_var_names{};
         std::unordered_map<std::string,int> m_var_indices{};

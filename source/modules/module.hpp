@@ -33,6 +33,9 @@ class Module {
         //All modules are guaranteed to run this function after all of them
         //run iterateModule() and postIterateModule()
         virtual void postIterateModule(double dt);
+        //Module function to be called during the applyTimeDerivatives function of the 
+        //equation sets.
+        virtual void applyTimeDerivativesModule(std::vector<Grid> &grids, double dt);
         //Returns a short message to print to stdout related to the most recent iteration
         //of the Module. Should not include any line breaks.
         //Default behavior is no message; override in derived Module classes to customize.

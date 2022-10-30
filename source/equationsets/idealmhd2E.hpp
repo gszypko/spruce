@@ -27,25 +27,28 @@ class IdealMHD2E: public EquationSet {
         std::vector<int> state_variables() override {
             return {rho,i_temp,e_temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};
         }
+
+        std::vector<int> evolved_variables() override {
+            return {rho,mom_x,mom_y,i_thermal_energy,e_thermal_energy,bi_x,bi_y};
+        }
+
         std::vector<int> densities() override { return {rho,rho}; }
         std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y},{mom_x,mom_y}}; }
         std::vector<int> thermal_energies() override { return {i_thermal_energy,e_thermal_energy}; }
         std::vector<int> fields() override { return {bi_x,bi_y}; }
 
-        void populateVariablesFromState(std::vector<Grid> &grids) override;
-        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids) override;
-        void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
+        void computeTimeDerivatives(const std::vector<Grid> &grids) override;
+        void applyTimeDerivatives(std::vector<Grid> &grids, double step) override;
         void propagateChanges(std::vector<Grid> &grids) override;
-        Grid getDT() override {return m_grids[dt];}
         void viscosity_mask(Grid& grid) const;
 
     private:
         double m_global_viscosity{0};
         std::string m_viscosity_opt{"velocity"};
-        void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids);
-        void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids);
+        void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) override;
+        void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) override;
+        void recomputeDT() override;
         void catchNullFieldDirection(std::vector<Grid> &grids);
-        void recomputeDT();
         void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
 };
 

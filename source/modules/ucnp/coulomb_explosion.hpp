@@ -4,8 +4,6 @@
 #include "module.hpp"
 #include "grid.hpp"
 #include "plasmadomain.hpp"
-#include "idealmhd.hpp"
-#include "idealmhd2E.hpp"
 #include <iostream>
 #include <functional>
 #include <cmath>

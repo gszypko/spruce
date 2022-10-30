@@ -42,6 +42,13 @@ void ModuleHandler::postIterateModules(double dt)
     }
 }
 
+void ModuleHandler::iterateApplyTimeDerivativesModules(std::vector<Grid> &grids,double dt)
+{
+    for(int i=0; i<m_modules.size(); i++){
+        m_modules[i]->applyTimeDerivativesModule(grids,dt);
+    }
+}
+
 bool ModuleHandler::isModuleName(std::string name) const
 {
     auto it = std::find(m_module_names.begin(),m_module_names.end(),name);

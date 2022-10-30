@@ -27,29 +27,26 @@ class IdealMHDCons: public EquationSet {
         std::vector<int> state_variables() override {
             return {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};
         }
+
+        std::vector<int> evolved_variables() override {
+            return {rho,mom_x,mom_y,energy,bi_x,bi_y};
+        }
+
         std::vector<int> densities() override { return {rho}; }
         std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y}}; }
         std::vector<int> thermal_energies() override { return {thermal_energy}; }
         std::vector<int> fields() override { return {bi_x,bi_y}; }
 
-        Grid getDT() override;
-        void populateVariablesFromState(std::vector<Grid> &grids) override;
-        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids) override;
-        void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
+        void computeTimeDerivatives(const std::vector<Grid> &grids) override;
+        void applyTimeDerivatives(std::vector<Grid> &grids, double step) override;
         void propagateChanges(std::vector<Grid> &grids) override;
 
     private:
         double m_global_viscosity{0};
-        void enforceMinimums(std::vector<Grid>& grids);
-        void recomputeDT();
-        void computeConstantTerms(std::vector<Grid> &grids);
-        void recomputeDerivedVariables(std::vector<Grid> &grids);
-        void recomputeNumberDensity(std::vector<Grid> &grids);
-        void recomputeKineticEnergy(std::vector<Grid> &grids);
-        void recomputeMagneticEnergy(std::vector<Grid> &grids);
-        void recomputeThermalEnergy(std::vector<Grid> &grids);
-        void recomputeTemperature(std::vector<Grid> &grids);
-        void recomputeThermalEnergyFromTemp(std::vector<Grid> &grids);
+        void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) override;
+        void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) override;
+        void recomputeDT() override;
+        void catchNullFieldDirection(std::vector<Grid> &grids);
         void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
 };
 

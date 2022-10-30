@@ -3,6 +3,7 @@
 #include "idealmhdcons.hpp"
 #include "idealmhd2E.hpp"
 #include "ideal2F.hpp"
+#include "plasmadomain.hpp"
 #include "utils.hpp"
 #include <iostream>
 #include <algorithm>
@@ -83,9 +84,27 @@ void EquationSet::configureEquationSet(std::ifstream &in_file)
     parseEquationSetConfigs(lhs_strings,rhs_strings);
 }
 
+void EquationSet::setupEquationSet()
+{
+    assert(allStateGridsInitialized() && "All variables specified as state variables for the current EquationSet must be specified in the .state file");
+    populateVariablesFromState();
+    assert(allGridsInitialized() && "All variables must be initialized by <populateVariablesFromState>.");
+    m_grids_dt = std::vector<Grid>(num_variables(),Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
+    setupEquationSetDerived();
+    indexFromName("dt"); // ensure that dt is a grid within the equation set, this function throws error if not found
+}
+
+void EquationSet::populateVariablesFromState(std::vector<Grid> &grids){
+    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    recomputeEvolvedVarsFromStateVars(grids);
+    m_pd.updateGhostZones();
+    recomputeDerivedVarsFromEvolvedVars(grids);
+    recomputeDT();
+}
+
 // any steps required for setup after instantiation of module but before iteration of grids
 // typical use is to instantiate sizes of internal grids and compute any grids that are constant in time
-void EquationSet::setupEquationSet()
+void EquationSet::setupEquationSetDerived()
 {
     return;
 }
@@ -163,3 +182,18 @@ int EquationSet::indexFromName(std::string name){
     return ind;
 }
 
+Grid EquationSet::getDT() {return m_grids[indexFromName("dt")];}
+
+void EquationSet::applyTimeDerivativesBase(std::vector<Grid> &grids, double step)
+{
+    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    for (int i : evolved_variables()) grids[i] += step*m_grids_dt[i];
+    propagateChanges(grids);
+}
+
+void EquationSet::applyTimeDerivativesBase(std::vector<Grid> &grids,const std::vector<Grid> &grids_dt, double step)
+{
+    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    for (int i : evolved_variables()) grids[i] += step*grids_dt[i];
+    propagateChanges(grids);
+}

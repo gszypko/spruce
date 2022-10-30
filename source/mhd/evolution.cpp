@@ -79,20 +79,20 @@ void PlasmaDomain::integrateEuler(double time_step)
 void PlasmaDomain::integrateRK2(double time_step)
 {
   // First create copy of system advanced by half the timestep (Euler)...
-  std::vector<Grid> time_derivatives_naive = m_eqs->computeTimeDerivatives();
+  m_eqs->computeTimeDerivatives();
   std::vector<Grid> grids_halfstep = m_eqs->allGrids();
-  m_eqs->applyTimeDerivatives(grids_halfstep, time_derivatives_naive, 0.5*time_step);
+  m_eqs->applyTimeDerivatives(grids_halfstep, 0.5*time_step);
 
   // ...then use that half-advanced system to compute time derivatives to
   // apply to actual system for full time step (second-order R-K, a.k.a. midpoint method)
-  std::vector<Grid> time_derivatives = m_eqs->computeTimeDerivatives(grids_halfstep);
-  m_eqs->applyTimeDerivatives(time_derivatives, time_step);
+  m_eqs->computeTimeDerivatives(grids_halfstep);
+  m_eqs->applyTimeDerivatives(time_step);
 }
 
 void PlasmaDomain::integrateRK4(double time_step)
 {
-  std::vector<Grid> k1 = m_eqs->computeTimeDerivatives();
-
+  m_eqs->computeTimeDerivatives();
+  std::vector<Grid> k1 = m_eqs->getTimeDerivatives();
   std::vector<Grid> grids_copy = m_eqs->allGrids();
   m_eqs->applyTimeDerivatives(grids_copy, k1, 0.5*time_step);
   std::vector<Grid> k2 = m_eqs->computeTimeDerivatives(grids_copy);

@@ -29,25 +29,29 @@ class IdealMHD: public EquationSet {
             return {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};
         }
 
+        std::vector<int> evolved_variables() override {
+            return {rho,mom_x,mom_y,thermal_energy,bi_x,bi_y};
+        }
+
         std::vector<int> densities() override { return {rho}; }
         std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y}}; }
         std::vector<int> thermal_energies() override { return {thermal_energy}; }
         std::vector<int> fields() override { return {bi_x,bi_y}; }
 
-        void populateVariablesFromState(std::vector<Grid> &grids) override;
-        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids) override;
-        void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
+        void computeTimeDerivatives(const std::vector<Grid> &grids) override;
+        void applyTimeDerivatives(std::vector<Grid> &grids, double step) override;
         void propagateChanges(std::vector<Grid> &grids) override;
-        Grid getDT() override {return m_grids[dt];}
         void viscosity_mask(Grid& grid) const;
 
     private:
         double m_global_viscosity{0};
         std::string m_viscosity_opt{"velocity"};
-        void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids);
-        void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids);
+        double m_guide_field{};
+        void setupEquationSetDerived() override;
+        void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) override;
+        void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) override;
         void catchNullFieldDirection(std::vector<Grid> &grids);
-        void recomputeDT();
+        void recomputeDT() override;
         std::vector<Grid> computeTimeDerivativesCharacteristicBoundary(const std::vector<Grid> &grids, bool x_bound_1, bool x_bound_2, bool y_bound_1, bool y_bound_2, double visc_coeff);
         std::vector<std::vector<Grid>> singleBoundaryTermsMOC(const std::vector<Grid> &grids, int boundary_index, bool boundary_lower, double visc_coeff);
         void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;

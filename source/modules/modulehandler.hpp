@@ -21,6 +21,7 @@ class ModuleHandler {
         void iterateModules(double dt);
         void preIterateModules(double dt);
         void postIterateModules(double dt);
+        void iterateApplyTimeDerivativesModules(std::vector<Grid> &grids,double dt);
         void instantiateModule(const std::string &module_name, std::ifstream &in_file, bool module_active = true);
         bool isModuleName(std::string name) const; //Check if string is valid module name defined within this class
         std::vector<std::string> getCommandLineMessages() const; //Return short messages from Modules to print to command line
