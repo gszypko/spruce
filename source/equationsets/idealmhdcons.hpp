@@ -37,8 +37,7 @@ class IdealMHDCons: public EquationSet {
         std::vector<int> thermal_energies() override { return {thermal_energy}; }
         std::vector<int> fields() override { return {bi_x,bi_y}; }
 
-        void computeTimeDerivatives(const std::vector<Grid> &grids) override;
-        void applyTimeDerivatives(std::vector<Grid> &grids, double step) override;
+        void computeTimeDerivativesDerived(const std::vector<Grid> &grids, std::vector<Grid> &grids_dt) override;
         void propagateChanges(std::vector<Grid> &grids) override;
 
     private:

@@ -91,7 +91,7 @@ void EquationSet::setupEquationSet()
     assert(allGridsInitialized() && "All variables must be initialized by <populateVariablesFromState>.");
     m_grids_dt = std::vector<Grid>(num_variables(),Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
     setupEquationSetDerived();
-    indexFromName("dt"); // ensure that dt is a grid within the equation set, this function throws error if not found
+    indexFromName("dt"); // this function call is made to ensure that dt is a grid within the equation set, this function throws error if not found
 }
 
 void EquationSet::populateVariablesFromState(std::vector<Grid> &grids){
@@ -184,16 +184,17 @@ int EquationSet::indexFromName(std::string name){
 
 Grid EquationSet::getDT() {return m_grids[indexFromName("dt")];}
 
-void EquationSet::applyTimeDerivativesBase(std::vector<Grid> &grids, double step)
+void EquationSet::computeTimeDerivatives(const std::vector<Grid> &grids, std::vector<Grid> &grids_dt)
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    for (int i : evolved_variables()) grids[i] += step*m_grids_dt[i];
-    propagateChanges(grids);
+    assert(grids_dt.size() == m_grids_dt.size() && "This function designed to operate on full system vector<Grid>");
+    computeTimeDerivativesDerived(grids,grids_dt);
+    m_pd.m_module_handler.iterateComputeTimeDerivativesModules(grids,grids_dt);
 }
 
-void EquationSet::applyTimeDerivativesBase(std::vector<Grid> &grids,const std::vector<Grid> &grids_dt, double step)
+void EquationSet::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &grids_dt, double step)
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    assert(grids_dt.size() == m_grids_dt.size() && "This function designed to operate on full system vector<Grid>");
     for (int i : evolved_variables()) grids[i] += step*grids_dt[i];
-    propagateChanges(grids);
 }

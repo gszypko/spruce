@@ -18,13 +18,7 @@ void IdealMHDCons::parseEquationSetConfigs(std::vector<std::string> lhs, std::ve
     }
 }
 
-void IdealMHDCons::applyTimeDerivatives(std::vector<Grid> &grids, double step){
-    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    for (int i : evolved_variables()) grids[i] += step*m_grids_dt[i];
-    propagateChanges(grids);
-}
-
-void IdealMHDCons::computeTimeDerivatives(const std::vector<Grid> &grids){
+void IdealMHDCons::computeTimeDerivativesDerived(const std::vector<Grid> &grids, std::vector<Grid> &grids_dt){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     // PlasmaDomain grid references for more concise notation
     Grid& d_x = m_pd.m_grids[PlasmaDomain::d_x];
@@ -33,7 +27,7 @@ void IdealMHDCons::computeTimeDerivatives(const std::vector<Grid> &grids){
     Grid& be_y = m_pd.m_grids[PlasmaDomain::be_y];
     // continuity equations
     std::vector<Grid> v = {grids[v_x],grids[v_y]};
-    m_grids_dt[rho] = -m_pd.transportDivergence2D(grids[rho],v);
+    grids_dt[rho] = -m_pd.transportDivergence2D(grids[rho],v);
     // viscous forces
     Grid global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/grids[dt].min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
     Grid viscous_force_x = global_visc_coeff*m_pd.laplacian(grids[mom_x]);
@@ -44,23 +38,26 @@ void IdealMHDCons::computeTimeDerivatives(const std::vector<Grid> &grids){
     Grid Txy = grids[b_x]*grids[b_y]/(4.*PI);
     Grid Tyx = grids[b_y]*grids[b_x]/(4.*PI);
     // momentum equations   
-    m_grids_dt[mom_x] =   - m_pd.transportDivergence2D(grids[mom_x], v)
+    grids_dt[mom_x] =   - m_pd.transportDivergence2D(grids[mom_x], v)
                         + m_pd.m_ghost_zone_mask * (grids[rho]*grids[grav_x] + viscous_force_x - m_pd.divergence2D({Txx,Tyx}));
-    m_grids_dt[mom_y] =   - m_pd.transportDivergence2D(grids[mom_y], v)
+    grids_dt[mom_y] =   - m_pd.transportDivergence2D(grids[mom_y], v)
                         + m_pd.m_ghost_zone_mask * (grids[rho]*grids[grav_y] + viscous_force_y - m_pd.divergence2D({Txy,Tyy}));
     // energy equations
     Grid v_dot_B = Grid::DotProduct2D(v,{grids[b_x],grids[b_y]});
     Grid Ux = v_dot_B*grids[b_x]/(4.*PI)-grids[press_tot]*grids[v_x];
     Grid Uy = v_dot_B*grids[b_y]/(4.*PI)-grids[press_tot]*grids[v_y];
-    m_grids_dt[energy] =  - m_pd.transportDivergence2D(grids[energy],v)
+    grids_dt[energy] =  - m_pd.transportDivergence2D(grids[energy],v)
                         + m_pd.divergence2D({Ux,Uy});
     // induction equations
     Grid Yxx = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     Grid Yyy = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     Grid Yxy = grids[v_x]*grids[b_y] - grids[b_x]*grids[v_y];
     Grid Yyx = -1.*Yxy;
-    m_grids_dt[bi_x] = -m_pd.divergence2D({Yxx,Yyx});
-    m_grids_dt[bi_y] = -m_pd.divergence2D({Yyy,Yxy});
+    grids_dt[bi_x] = -m_pd.divergence2D({Yxx,Yyx});
+    grids_dt[bi_y] = -m_pd.divergence2D({Yyy,Yxy});
+
+    // apply ghost zone mask
+    for (int i : evolved_variables()) grids_dt[i] *= m_pd.m_ghost_zone_mask;
 
 }
 

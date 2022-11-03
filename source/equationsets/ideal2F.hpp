@@ -50,8 +50,7 @@ class Ideal2F: public EquationSet {
         std::vector<int> thermal_energies() override { return {i_thermal_energy,e_thermal_energy}; }
         std::vector<int> fields() override { return {}; }
 
-        void applyTimeDerivatives(std::vector<Grid> &grids, double step) override;
-        void computeTimeDerivatives(const std::vector<Grid> &grids) override;
+        void computeTimeDerivativesDerived(const std::vector<Grid> &grids, std::vector<Grid> &grids_dt) override;
         void propagateChanges(std::vector<Grid> &grids) override;
 
     private:

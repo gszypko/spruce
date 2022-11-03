@@ -37,11 +37,11 @@ class EquationSet {
         Grid& grid(int index);
         Grid& grid(const std::string& name);
         std::vector<Grid> allGrids() const;
+        std::vector<Grid> allGridsDT() {return m_grids_dt;};
         std::vector<std::string> allNames() const;
         std::string nameFromIndex(int index) const;
         int indexFromName(std::string name);
         Grid getDT();
-        std::vector<Grid> getTimeDerivatives() {return m_grids_dt;};
         
         // The number of different variables tracked by the EquationSet
         int num_variables();
@@ -89,9 +89,12 @@ class EquationSet {
         virtual std::vector<int> thermal_energies() = 0;
         virtual std::vector<int> fields() = 0;
 
-        std::vector<Grid> computeTimeDerivatives() { return computeTimeDerivatives(m_grids); }
-        void applyTimeDerivatives(const std::vector<Grid> &time_derivatives, double step) { applyTimeDerivatives(m_grids,time_derivatives,step); }
-        void propagateChanges() { propagateChanges(m_grids); }
+        // OVERLOADS
+        void computeTimeDerivatives() { computeTimeDerivatives(m_grids,m_grids_dt); };
+        void computeTimeDerivatives(const std::vector<Grid> &grids) {computeTimeDerivatives(grids,m_grids_dt);};
+        void applyTimeDerivatives(double step) {applyTimeDerivatives(m_grids,m_grids_dt,step);};
+        void applyTimeDerivatives(const std::vector<Grid> &grids_dt,double step) {applyTimeDerivatives(m_grids,grids_dt,step);};
+        void propagateChanges() { propagateChanges(m_grids); };
         void populateVariablesFromState() { populateVariablesFromState(m_grids); };
         void recomputeEvolvedVarsFromStateVars() {recomputeEvolvedVarsFromStateVars(m_grids);};
         void recomputeDerivedVarsFromEvolvedVars() {recomputeDerivedVarsFromEvolvedVars(m_grids);};
@@ -103,12 +106,13 @@ class EquationSet {
         // The argument grids should be a vector<Grid> of the same size and dimensions as
         // the member variable m_grids (this allows for evolution of intermediate steps
         // by the PlasmaDomain, without touching the current "real" state of the system)
-        virtual std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids) = 0;
+        void computeTimeDerivatives(const std::vector<Grid> &grids, std::vector<Grid> &grids_dt);
+        virtual void computeTimeDerivativesDerived(const std::vector<Grid> &grids, std::vector<Grid> &grids_dt) = 0;
         // Apply the time evolution described by the result of computeTimeDerivatives()
         // The argument grids should be a vector<Grid> of the same size and dimensions as
         // the member variable m_grids (this allows for evolution of intermediate steps
         // by the PlasmaDomain, without touching the current "real" state of the system)
-        virtual void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) = 0;
+        void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &grids_dt, double step);
         // Make any changes to quantities derived from the evolved quantities to ensure
         // that all quantities are consistent with one another.
         // The argument grids should be a vector<Grid> of the same size and dimensions as

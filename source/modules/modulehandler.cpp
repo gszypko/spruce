@@ -42,10 +42,10 @@ void ModuleHandler::postIterateModules(double dt)
     }
 }
 
-void ModuleHandler::iterateApplyTimeDerivativesModules(std::vector<Grid> &grids,double dt)
+void ModuleHandler::iterateComputeTimeDerivativesModules(const std::vector<Grid> &grids,std::vector<Grid> grids_dt)
 {
     for(int i=0; i<m_modules.size(); i++){
-        m_modules[i]->applyTimeDerivativesModule(grids,dt);
+        m_modules[i]->computeTimeDerivativesModule(grids,grids_dt);
     }
 }
 

@@ -72,41 +72,46 @@ void PlasmaDomain::advanceTime(bool verbose)
 
 void PlasmaDomain::integrateEuler(double time_step)
 {
-  std::vector<Grid> time_derivatives = m_eqs->computeTimeDerivatives();
-  m_eqs->applyTimeDerivatives(time_derivatives, time_step);
+  m_eqs->computeTimeDerivatives();
+  m_eqs->applyTimeDerivatives(time_step);
 }
 
 void PlasmaDomain::integrateRK2(double time_step)
 {
   // First create copy of system advanced by half the timestep (Euler)...
   m_eqs->computeTimeDerivatives();
-  std::vector<Grid> grids_halfstep = m_eqs->allGrids();
-  m_eqs->applyTimeDerivatives(grids_halfstep, 0.5*time_step);
+  std::vector<Grid> grids_midpoint = m_eqs->allGrids();
+  m_eqs->applyTimeDerivatives(grids_midpoint,m_eqs->allGridsDT(),time_step);
 
   // ...then use that half-advanced system to compute time derivatives to
   // apply to actual system for full time step (second-order R-K, a.k.a. midpoint method)
-  m_eqs->computeTimeDerivatives(grids_halfstep);
+  m_eqs->computeTimeDerivatives(grids_midpoint);
   m_eqs->applyTimeDerivatives(time_step);
 }
 
 void PlasmaDomain::integrateRK4(double time_step)
 {
+  std::vector<Grid> grids_rk= m_eqs->allGrids();
+
   m_eqs->computeTimeDerivatives();
-  std::vector<Grid> k1 = m_eqs->getTimeDerivatives();
-  std::vector<Grid> grids_copy = m_eqs->allGrids();
-  m_eqs->applyTimeDerivatives(grids_copy, k1, 0.5*time_step);
-  std::vector<Grid> k2 = m_eqs->computeTimeDerivatives(grids_copy);
+  std::vector<Grid> k1 = m_eqs->allGridsDT();
 
-  grids_copy = m_eqs->allGrids();
-  m_eqs->applyTimeDerivatives(grids_copy, k2, 0.5*time_step);
-  std::vector<Grid> k3 = m_eqs->computeTimeDerivatives(grids_copy);
+  m_eqs->applyTimeDerivatives(grids_rk, k1, 0.5*time_step);
+  m_eqs->computeTimeDerivatives(grids_rk);
+  std::vector<Grid> k2 = m_eqs->allGrids(); 
 
-  grids_copy = m_eqs->allGrids();
-  m_eqs->applyTimeDerivatives(grids_copy, k3, time_step);
-  std::vector<Grid> k4 = m_eqs->computeTimeDerivatives(grids_copy);
+  grids_rk = m_eqs->allGrids();
+  m_eqs->applyTimeDerivatives(grids_rk, k2, 0.5*time_step);
+  m_eqs->computeTimeDerivatives(grids_rk);
+  std::vector<Grid> k3 = m_eqs->allGrids(); 
+
+  grids_rk = m_eqs->allGrids();
+  m_eqs->applyTimeDerivatives(grids_rk, k3, time_step);
+  m_eqs->computeTimeDerivatives(grids_rk);
+  std::vector<Grid> k4 = m_eqs->allGrids(); 
 
   std::vector<Grid> k_final = k1;
-  for(int i=0; i<k_final.size(); i++)
+  for(int i : m_eqs->evolved_variables())
     k_final[i] = (k1[i] + k4[i])/6.0 + (k2[i] + k3[i])/3.0;
   
   m_eqs->applyTimeDerivatives(k_final, time_step);
