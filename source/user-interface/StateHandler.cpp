@@ -211,7 +211,7 @@ Grid StateHandler::setup_density(const std::unique_ptr<Settings>& pms) const
         n = Grid(pms->getval("Nx"),pms->getval("Ny"),n_max);
     else assert(false && "Density distribution options are: <gaussian>, <exponential>, or <uniform>.");
     // option for adding a central ion hole to the x axis of the plasma
-    if (pms->getopt("n_hole") == "false"){
+    if (pms->getopt("n_hole") == "true"){
         double hole_amp = pms->getval("n_hole_amp");
         double hole_min = 0;
         double hole_size = pms->getval("n_hole_size");

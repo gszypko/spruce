@@ -19,18 +19,18 @@ class IdealMHD: public EquationSet {
         std::vector<std::string> def_var_names() const override{
             return {"rho","temp","mom_x","mom_y","bi_x","bi_y","grav_x","grav_y",
                 "n","press","thermal_energy","v_x","v_y","kinetic_energy",
-                "b_x","b_y","b_mag","b_hat_x","b_hat_y","dt"};
+                "b_x","b_y","b_mag","b_hat_x","b_hat_y","dt","dPdx","dPdy"};
         }
         enum Vars {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y,
                 n,press,thermal_energy,v_x,v_y,kinetic_energy,
-                b_x,b_y,b_mag,b_hat_x,b_hat_y,dt};
+                b_x,b_y,b_mag,b_hat_x,b_hat_y,dt,dPdx,dPdy};
 
-        std::vector<int> state_variables() override {
+        std::vector<int> state_variables() const override {
             return {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};
         }
 
-        std::vector<int> evolved_variables() override {
-            return {rho,mom_x,mom_y,thermal_energy,bi_x,bi_y};
+        std::vector<std::string> evolved_var_names() const override {
+            return {"rho","mom_x","mom_y","thermal_energy","bi_x","bi_y"};
         }
 
         std::vector<int> densities() override { return {rho}; }

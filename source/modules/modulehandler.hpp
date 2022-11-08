@@ -21,7 +21,7 @@ class ModuleHandler {
         void iterateModules(double dt);
         void preIterateModules(double dt);
         void postIterateModules(double dt);
-        void iterateComputeTimeDerivativesModules(const std::vector<Grid> &grids,std::vector<Grid> grids_dt);
+        void iterateComputeTimeDerivativesModules(const std::vector<Grid> &grids,std::vector<Grid>& grids_dt);
         void instantiateModule(const std::string &module_name, std::ifstream &in_file, bool module_active = true);
         bool isModuleName(std::string name) const; //Check if string is valid module name defined within this class
         std::vector<std::string> getCommandLineMessages() const; //Return short messages from Modules to print to command line
@@ -31,7 +31,8 @@ class ModuleHandler {
         PlasmaDomain &m_pd;
         std::vector<std::unique_ptr<Module>> m_modules;
         static inline std::vector<std::string> m_module_names = {
-            "radiative_losses", "thermal_conduction", "ambient_heating", "localized_heating", "field_heating", "sg_filtering","coulomb_explosion","eic_thermalization"
+            "radiative_losses", "thermal_conduction", "ambient_heating", "localized_heating", "field_heating", "sg_filtering",
+            "coulomb_explosion","eic_thermalization", "artificial_viscosity"
         };
 };
 

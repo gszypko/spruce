@@ -53,7 +53,7 @@ void Module::postIterateModule(double dt)
     return;
 }
 
-void Module::computeTimeDerivativesModule(const std::vector<Grid> &grids,std::vector<Grid> grids_dt)
+void Module::computeTimeDerivativesModule(const std::vector<Grid> &grids,std::vector<Grid> &grids_dt)
 {
     return;
 }

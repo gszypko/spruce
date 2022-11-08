@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 
-IdealMHD::IdealMHD(PlasmaDomain &pd): EquationSet(pd,def_var_names()) {}
+IdealMHD::IdealMHD(PlasmaDomain &pd): EquationSet(pd,def_var_names(),evolved_var_names()) {}
 
 void IdealMHD::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) 
 {
@@ -26,6 +26,7 @@ void IdealMHD::setupEquationSetDerived()
 
 void IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid> &grids, std::vector<Grid> &grids_dt){
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    assert(grids_dt.size() == m_grids_dt.size() && "This function designed to operate on full system vector<Grid>");
     // PlasmaDomain grid references for more concise notation
     Grid& d_x = m_pd.m_grids[PlasmaDomain::d_x];
     Grid& d_y = m_pd.m_grids[PlasmaDomain::d_y];
@@ -33,43 +34,26 @@ void IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid> &grids, std
     Grid& be_y = m_pd.m_grids[PlasmaDomain::be_y];
     // continuity equations
     std::vector<Grid> v = {grids[v_x],grids[v_y]};
-    grids_dt[rho] = -m_pd.transportDivergence2D(grids[rho],v);
-    // viscous forces
-    Grid global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/grids[dt];
-    Grid viscous_force_x, viscous_force_y;
-    if (m_viscosity_opt == "momentum"){
-        viscous_force_x = global_visc_coeff*m_pd.laplacian(grids[mom_x]);
-        viscous_force_y = global_visc_coeff*m_pd.laplacian(grids[mom_y]);
-    }
-    else if (m_viscosity_opt == "velocity"){
-        viscous_force_x = global_visc_coeff*grids[rho]*m_pd.laplacian(grids[v_x]);
-        viscous_force_y = global_visc_coeff*grids[rho]*m_pd.laplacian(grids[v_y]);
-    }
-    else{
-        std::cerr << "Viscosity option <" << m_viscosity_opt << "> is not valid." << std::endl;
-        assert(false);
-    }
+    grids_dt[ev2i("rho")] = -m_pd.transportDivergence2D(grids[rho],v);
     // magnetic forces
     Grid curl_db = m_pd.curl2D(grids[bi_x],grids[bi_y])/(4.0*PI);
     std::vector<Grid> external_mag_force = Grid::CrossProductZ2D(curl_db,{be_x,be_y});
     std::vector<Grid> internal_mag_force = Grid::CrossProductZ2D(curl_db,{grids[bi_x],grids[bi_y]});
     // momentum equations   
-    grids_dt[mom_x] =   - m_pd.transportDivergence2D(grids[mom_x], v)
+    grids_dt[ev2i("mom_x")] =   - m_pd.transportDivergence2D(grids[mom_x], v)
                         - m_pd.derivative1D(grids[press], 0)
-                        + grids[rho]*grids[grav_x] + viscous_force_x 
-                        + external_mag_force[0] + internal_mag_force[0];
-    grids_dt[mom_y] =   - m_pd.transportDivergence2D(grids[mom_y], v)
+                        + grids[rho]*grids[grav_x] + external_mag_force[0] + internal_mag_force[0];
+    grids_dt[ev2i("mom_y")] =   - m_pd.transportDivergence2D(grids[mom_y], v)
                         - m_pd.derivative1D(grids[press], 1)
-                        + grids[rho]*grids[grav_y] + viscous_force_y
-                        + external_mag_force[1] + internal_mag_force[1];
+                        + grids[rho]*grids[grav_y] + external_mag_force[1] + internal_mag_force[1];
     // energy equations
-    grids_dt[thermal_energy] =  - m_pd.transportDivergence2D(grids[thermal_energy],v)
+    grids_dt[ev2i("thermal_energy")] =  - m_pd.transportDivergence2D(grids[thermal_energy],v)
                                 - grids[press]*m_pd.divergence2D(v);
     // induction equations
     std::vector<Grid> induction_rhs_external = m_pd.curlZ(Grid::CrossProduct2D(v,{be_x,be_y}));
     std::vector<Grid> induction_rhs_internal = m_pd.curlZ(Grid::CrossProduct2D(v,{grids[bi_x],grids[bi_y]}));
-    grids_dt[bi_x] = induction_rhs_external[0] + induction_rhs_internal[0];
-    grids_dt[bi_y] = induction_rhs_external[1] + induction_rhs_internal[1];
+    grids_dt[ev2i("bi_x")] = induction_rhs_external[0] + induction_rhs_internal[0];
+    grids_dt[ev2i("bi_y")] = induction_rhs_external[1] + induction_rhs_internal[1];
     // characteristic boundary evolution
     std::vector<Grid> char_evolution = computeTimeDerivativesCharacteristicBoundary(grids,
                                                 m_pd.x_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC,
@@ -78,7 +62,7 @@ void IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid> &grids, std
                                                 m_pd.y_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC, m_global_viscosity);
 
     // compute final time derivatives
-    for (int i : evolved_variables()){
+    for (int i=0; i<evolved_var_names().size(); i++){
         grids_dt[i] *= m_pd.m_ghost_zone_mask;
         grids_dt[i] += char_evolution[i];
     }
@@ -109,6 +93,8 @@ void IdealMHD::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids)
     grids[b_mag] = (grids[b_x].square() + grids[b_y].square()).sqrt();
     grids[b_hat_x] = grids[b_x]/grids[b_mag];
     grids[b_hat_y] = grids[b_y]/grids[b_mag];
+    grids[dPdx] = m_pd.derivative1D(grids[press],0);
+    grids[dPdy] = m_pd.derivative1D(grids[press],1);
     catchNullFieldDirection(grids);
 }
 

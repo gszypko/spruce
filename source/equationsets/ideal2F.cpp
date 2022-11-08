@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 
-Ideal2F::Ideal2F(PlasmaDomain &pd): EquationSet(pd,def_var_names()) {}
+Ideal2F::Ideal2F(PlasmaDomain &pd): EquationSet(pd,def_var_names(),evolved_var_names()) {}
 
 void Ideal2F::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs)
 {
@@ -37,25 +37,8 @@ void Ideal2F::computeTimeDerivativesDerived(const std::vector<Grid> &grids, std:
     // continuity equations
     std::vector<Grid> v_i = {grids[i_v_x],grids[i_v_y]};
     std::vector<Grid> v_e = {grids[e_v_x],grids[e_v_y]};
-    grids_dt[i_rho] = -m_pd.transportDivergence2D(grids[i_rho],v_i);
-    grids_dt[e_rho] = -m_pd.transportDivergence2D(grids[e_rho],v_e);
-    // viscous forces
-    Grid i_viscous_force_x, i_viscous_force_y, e_viscous_force_x, e_viscous_force_y;
-    Grid i_global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/ionTimescale();
-    Grid e_global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/grids[dt];
-    if (m_viscosity_opt == "momentum"){
-        i_viscous_force_x = i_global_visc_coeff*m_pd.laplacian(grids[i_mom_x]);
-        i_viscous_force_y = i_global_visc_coeff*m_pd.laplacian(grids[i_mom_y]);
-        e_viscous_force_x = e_global_visc_coeff*m_pd.laplacian(grids[e_mom_x]);
-        e_viscous_force_y = e_global_visc_coeff*m_pd.laplacian(grids[e_mom_y]);
-    }
-    else if (m_viscosity_opt == "velocity"){
-        i_viscous_force_x = i_global_visc_coeff*grids[i_rho]*m_pd.laplacian(grids[i_v_x]);
-        i_viscous_force_y = i_global_visc_coeff*grids[i_rho]*m_pd.laplacian(grids[i_v_y]);
-        e_viscous_force_x = e_global_visc_coeff*grids[e_rho]*m_pd.laplacian(grids[e_v_x]);
-        e_viscous_force_y = e_global_visc_coeff*grids[e_rho]*m_pd.laplacian(grids[e_v_y]);
-    }
-    else assert(false && "m_visc_opt must be either <momentum> or <velocity>.");
+    grids_dt[ev2i("i_rho")] = -m_pd.transportDivergence2D(grids[i_rho],v_i);
+    grids_dt[ev2i("e_rho")] = -m_pd.transportDivergence2D(grids[e_rho],v_e);
     // lorentz forces
     std::vector<Grid> b = {grids[b_x],grids[b_y]};
     std::vector<Grid> i_v_cross_B(2,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
@@ -69,45 +52,45 @@ void Ideal2F::computeTimeDerivativesDerived(const std::vector<Grid> &grids, std:
     Grid e_F_x = -E*grids[e_n]*(grids[E_x] + e_v_cross_B[0]/C);
     Grid e_F_y = -E*grids[e_n]*(grids[E_y] + e_v_cross_B[1]/C); 
     // momentum equations   
-    grids_dt[i_mom_x] = - m_pd.transportDivergence2D(grids[i_mom_x], v_i)
+    grids_dt[ev2i("i_mom_x")] = - m_pd.transportDivergence2D(grids[i_mom_x], v_i)
                         - m_pd.derivative1D(grids[i_press], 0)
-                        + grids[i_rho]*grids[grav_x] + i_viscous_force_x + i_F_x;
-    grids_dt[i_mom_y] = - m_pd.transportDivergence2D(grids[i_mom_y], v_i)
+                        + grids[i_rho]*grids[grav_x] + i_F_x;
+    grids_dt[ev2i("i_mom_y")] = - m_pd.transportDivergence2D(grids[i_mom_y], v_i)
                         - m_pd.derivative1D(grids[i_press], 1)
-                        + grids[i_rho]*grids[grav_y] + i_viscous_force_y + i_F_y;
-    grids_dt[e_mom_x] = - m_pd.transportDivergence2D(grids[e_mom_x], v_e)
+                        + grids[i_rho]*grids[grav_y] + i_F_y;
+    grids_dt[ev2i("e_mom_x")] = - m_pd.transportDivergence2D(grids[e_mom_x], v_e)
                         - m_pd.derivative1D(grids[e_press], 0)
-                        + grids[e_rho]*grids[grav_x] + e_viscous_force_x + e_F_x;
-    grids_dt[e_mom_y] = - m_pd.transportDivergence2D(grids[e_mom_y], v_e)
+                        + grids[e_rho]*grids[grav_x] + e_F_x;
+    grids_dt[ev2i("e_mom_y")] = - m_pd.transportDivergence2D(grids[e_mom_y], v_e)
                         - m_pd.derivative1D(grids[e_press], 1)
-                        + grids[e_rho]*grids[grav_y] + e_viscous_force_y + e_F_y;
+                        + grids[e_rho]*grids[grav_y] + e_F_y;
     // energy equations
-    grids_dt[i_thermal_energy] =   - m_pd.transportDivergence2D(grids[i_thermal_energy],v_i)
+    grids_dt[ev2i("i_thermal_energy")] =   - m_pd.transportDivergence2D(grids[i_thermal_energy],v_i)
                             - grids[i_press]*m_pd.divergence2D(v_i);
-    grids_dt[e_thermal_energy] =   - m_pd.transportDivergence2D(grids[e_thermal_energy],v_e)
+    grids_dt[ev2i("e_thermal_energy")] =   - m_pd.transportDivergence2D(grids[e_thermal_energy],v_e)
                             - grids[e_press]*m_pd.divergence2D(v_e);
     // optionally evolve electromagnetic fields
     if (!m_use_sub_cycling){
         if (!m_remove_curl_terms){
-            grids_dt[E_x] = + C*m_pd.derivative1D(grids[b_z],1) - 4.*PI*grids[j_x];
-            grids_dt[E_y] = - C*m_pd.derivative1D(grids[b_z],0) - 4.*PI*grids[j_y];
-            grids_dt[E_z] = + C*(m_pd.derivative1D(grids[b_y],0) - m_pd.derivative1D(grids[b_x],1));
-            grids_dt[bi_x] = - C*m_pd.derivative1D(grids[E_z],1);
-            grids_dt[bi_y] = + C*m_pd.derivative1D(grids[E_z],0);
-            grids_dt[bi_z] = + C*(m_pd.derivative1D(grids[E_x],1) - m_pd.derivative1D(grids[E_y],0));
+            grids_dt[ev2i("E_x")] = + C*m_pd.derivative1D(grids[b_z],1) - 4.*PI*grids[j_x];
+            grids_dt[ev2i("E_y")] = - C*m_pd.derivative1D(grids[b_z],0) - 4.*PI*grids[j_y];
+            grids_dt[ev2i("E_z")] = + C*(m_pd.derivative1D(grids[b_y],0) - m_pd.derivative1D(grids[b_x],1));
+            grids_dt[ev2i("bi_x")] = - C*m_pd.derivative1D(grids[E_z],1);
+            grids_dt[ev2i("bi_y")] = + C*m_pd.derivative1D(grids[E_z],0);
+            grids_dt[ev2i("bi_z")] = + C*(m_pd.derivative1D(grids[E_x],1) - m_pd.derivative1D(grids[E_y],0));
         }
         else{
-            grids_dt[E_x] = - 4.*PI*grids[j_x];
-            grids_dt[E_y] = - 4.*PI*grids[j_y];
-            grids_dt[E_z] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-            grids_dt[bi_x] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-            grids_dt[bi_y] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-            grids_dt[bi_z] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+            grids_dt[ev2i("E_x")] = - 4.*PI*grids[j_x];
+            grids_dt[ev2i("E_y")] = - 4.*PI*grids[j_y];
+            grids_dt[ev2i("E_z")] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+            grids_dt[ev2i("bi_x")] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+            grids_dt[ev2i("bi_y")] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+            grids_dt[ev2i("bi_z")] = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
         }
     }
 
     // apply ghost zone mask
-    for (int i : evolved_variables()) grids_dt[i] *= m_pd.m_ghost_zone_mask;
+    for (int i=0; i<evolved_var_names().size(); i++) grids_dt[i] *= m_pd.m_ghost_zone_mask;
 }
 
 void Ideal2F::propagateChanges(std::vector<Grid> &grids)

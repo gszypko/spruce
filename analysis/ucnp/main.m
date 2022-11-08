@@ -14,7 +14,7 @@ flags.sim.cmpr_exp_sim = false;
 flags.sim.ion_holes = false;
 flags.sim.hole_orientation = 0;
 
-flags.sim.vars = {'n', 'v_x', 'v_y', 'i_temp', 'e_temp', 'dt'};
+flags.sim.vars = {'n', 'v_x', 'v_y', 'temp', 'dt', 'mom_x_dt', 'dPdx'};
 % flags.sim.vars = {'i_n', 'dn', 'i_v_x', 'i_v_y', 'i_temp', 'e_temp', 'j_x', 'E_x', 'b_mag', 'dt'};
 flags.sim.plot_freq = 1;
 flags.sim.ghost_cells = 2;

@@ -37,12 +37,12 @@ class Ideal2F: public EquationSet {
                 b_x,b_y,b_z,b_mag,b_mag_xy,b_hat_x,b_hat_y,
                 curlE_z,divE,divB,lapEx,E_ideal,divEcond};
 
-        std::vector<int> state_variables() override {
+        std::vector<int> state_variables() const override {
             return {i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,i_temp,e_temp,bi_x,bi_y,bi_z,E_x,E_y,E_z,grav_x,grav_y};
         }
 
-        std::vector<int> evolved_variables() override {
-            return {i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,i_thermal_energy,e_thermal_energy,E_x,E_y,E_z,bi_x,bi_y,bi_z};
+        std::vector<std::string> evolved_var_names() const override {
+            return {"i_rho","e_rho","i_mom_x","i_mom_y","e_mom_x","e_mom_y","i_thermal_energy","e_thermal_energy","E_x","E_y","E_z","bi_x","bi_y","bi_z"};
         }
 
         std::vector<int> densities() override { return {i_rho,e_rho}; }

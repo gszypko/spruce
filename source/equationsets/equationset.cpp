@@ -12,13 +12,16 @@
 #include <fstream>
 
 
-EquationSet::EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names): 
+EquationSet::EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names, std::vector<std::string> var_dt_names): 
     m_pd(pd),
-    m_var_names{var_names}
+    m_var_names{var_names},
+    m_var_dt_names{var_dt_names}
 {
     m_grids = std::vector<Grid>(num_variables(),Grid::Zero(1,1));
+    m_grids_dt = std::vector<Grid>(var_dt_names.size(),Grid::Zero(1,1));
     m_output_flags = std::vector<bool>(num_variables(),false);
     for(int i=0; i<m_var_names.size(); i++) m_var_indices[m_var_names[i]] = i;
+    for(int i=0; i<m_var_dt_names.size(); i++) m_var_dt_indices[m_var_dt_names[i]] = i;
 }
 
 std::unique_ptr<EquationSet> EquationSet::instantiateDefault(PlasmaDomain &pd,const std::string &name)
@@ -89,7 +92,6 @@ void EquationSet::setupEquationSet()
     assert(allStateGridsInitialized() && "All variables specified as state variables for the current EquationSet must be specified in the .state file");
     populateVariablesFromState();
     assert(allGridsInitialized() && "All variables must be initialized by <populateVariablesFromState>.");
-    m_grids_dt = std::vector<Grid>(num_variables(),Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
     setupEquationSetDerived();
     indexFromName("dt"); // this function call is made to ensure that dt is a grid within the equation set, this function throws error if not found
 }
@@ -171,7 +173,7 @@ bool EquationSet::getOutputFlag(std::string name){
     return m_output_flags[indexFromName(name)];
 }
 
-int EquationSet::indexFromName(std::string name){
+int EquationSet::indexFromName(std::string name) const {
     int ind{};
     try { ind = m_var_indices.at(name); }
     catch (const std::out_of_range& e) {
@@ -187,7 +189,7 @@ Grid EquationSet::getDT() {return m_grids[indexFromName("dt")];}
 void EquationSet::computeTimeDerivatives(const std::vector<Grid> &grids, std::vector<Grid> &grids_dt)
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    assert(grids_dt.size() == m_grids_dt.size() && "This function designed to operate on full system vector<Grid>");
+    assert(grids_dt.size() == evolved_var_names().size() && "This function designed to operate on full system vector<Grid>");
     computeTimeDerivativesDerived(grids,grids_dt);
     m_pd.m_module_handler.iterateComputeTimeDerivativesModules(grids,grids_dt);
 }
@@ -196,5 +198,48 @@ void EquationSet::applyTimeDerivatives(std::vector<Grid> &grids, const std::vect
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     assert(grids_dt.size() == m_grids_dt.size() && "This function designed to operate on full system vector<Grid>");
-    for (int i : evolved_variables()) grids[i] += step*grids_dt[i];
+    for (auto i : evolved_var_names()) grids[indexFromName(i)] += step*grids_dt[ev2i(i)];
+    propagateChanges(grids);
+}
+
+bool EquationSet::is_state_var(std::string name) const
+{
+    bool found {false};
+    for (auto i : state_variables()){
+        if (i == indexFromName(name)) found = true;
+    }
+    return found;
+}
+
+bool EquationSet::is_evolved_var(std::string name) const
+{
+    bool found {false};
+    for (auto i : evolved_var_names()){
+        if (i == name) found = true;
+    }
+    return found;
+}
+
+bool EquationSet::is_var(std::string name) const
+{
+    bool found {false};
+    for (auto i : m_var_names){
+        if (i == name) found = true;
+    }
+    return found;
+}
+
+std::string EquationSet::i2ev(int index) const {
+    return m_var_dt_names[index];
+}
+
+int EquationSet::ev2i(std::string name) const {
+    int ind{};
+    try { ind = m_var_dt_indices.at(name); }
+    catch (const std::out_of_range& e) {
+        std::cerr << "Variable name <" << name << "> not recognized\n";
+        assert(false);
+        return 0;
+    }
+    return ind;
 }

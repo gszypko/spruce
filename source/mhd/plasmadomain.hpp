@@ -72,6 +72,7 @@ private: //*********************************************************************
   friend class ThermalConduction;
   friend class CoulombExplosion;
   friend class EICThermalization;
+  friend class Viscosity;
 
   //Friend class declarations (for EquationSets)
   friend class EquationSet;

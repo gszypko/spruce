@@ -22,7 +22,7 @@ class EquationSet {
         static bool isEquationSetName(const std::string& name);
 
         // Construction
-        EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names);
+        EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names, std::vector<std::string> var_dt_names);
         virtual ~EquationSet() {}
         static std::unique_ptr<EquationSet> instantiateDefault(PlasmaDomain &pd,const std::string &name);
         static void instantiateWithConfig(std::unique_ptr<EquationSet>& eqs,PlasmaDomain &pd, std::ifstream &in_file, const std::string &name, bool active);
@@ -40,7 +40,8 @@ class EquationSet {
         std::vector<Grid> allGridsDT() {return m_grids_dt;};
         std::vector<std::string> allNames() const;
         std::string nameFromIndex(int index) const;
-        int indexFromName(std::string name);
+        int indexFromName(std::string name) const;
+        bool is_var(std::string name) const;
         Grid getDT();
         
         // The number of different variables tracked by the EquationSet
@@ -69,11 +70,18 @@ class EquationSet {
 
         // Defines the indices corresponding to all of the state variables for the EquationSet
         // These are the variables that should be written to/read from any .state file
-        virtual std::vector<int> state_variables() = 0;
+        virtual std::vector<int> state_variables() const = 0;
+        bool is_state_var(std::string name) const;
 
         // Defines the indices corresponding to all of the evolved variables for the EquationSet
         // These are the variables that are updated during applyTimeDerivatives
-        virtual std::vector<int> evolved_variables() = 0;
+        virtual std::vector<std::string> evolved_var_names() const {
+            assert(false && "Please override evolved_var_names in derived EquationSet class to define m_var_dt_names");
+            return {};
+        }
+        bool is_evolved_var(std::string name) const;
+        std::string i2ev(int index) const;
+        int ev2i(std::string name) const;
 
         //Vector quantities (momenta and fields) should be formatted as
         //e.g. { {mom1_x,mom1_y},{mom2_x,mom2_y},etc. }
@@ -135,6 +143,8 @@ class EquationSet {
         std::vector<bool> m_output_flags{};
         const std::vector<std::string> m_var_names{};
         std::unordered_map<std::string,int> m_var_indices{};
+        const std::vector<std::string> m_var_dt_names{};
+        std::unordered_map<std::string,int> m_var_dt_indices{};
         virtual void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) = 0;
 };
 
