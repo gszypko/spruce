@@ -24,7 +24,7 @@ class Viscosity : public Module {
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override; // handles configs during construction
         void setupModule(); // to be called in PlasmaDomain constructor - does initial setup of module following config parsing
         // *** Usage
-        Grid constructViscosityGrid(std::string opt, double strength, std::string var_to_diff, std::string var_to_evol, double length, std::string species, const std::vector<Grid>& grids) const;
+        void constructViscosityGrids(const std::vector<Grid>& grids);
         Grid getBoundaryViscosity(double strength,double length) const;
         void computeTimeDerivativesModule(const std::vector<Grid> &grids,std::vector<Grid> &grids_dt);
         std::vector<std::string> config_names() const override {return {"visc_output_to_file","visc_strength","visc_vars_diff","visc_vars_update"};};
@@ -47,9 +47,15 @@ class Viscosity : public Module {
         std::vector<std::string> m_species;
 
         std::vector<Grid> m_grids_dt;
-        std::vector<std::string> m_grid_names;
+        std::vector<Grid> m_grids_lap;
+        std::vector<Grid> m_grids_strength;
+        std::vector<std::string> m_dt_names;
+        std::vector<std::string> m_lap_names;
+        std::vector<std::string> m_strength_names;
 
-        bool m_output_to_file;
+        bool m_output_visc;
+        bool m_output_lap;
+        bool m_output_strength;
 };
 
 #endif

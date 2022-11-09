@@ -5,7 +5,9 @@ Viscosity::Viscosity(PlasmaDomain &pd): Module(pd) {}
 void Viscosity::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs)
 {
     for(int i=0; i<lhs.size(); i++){
-        if(lhs[i] == "visc_output_to_file") m_output_to_file = (rhs[i] == "true");
+        if(lhs[i] == "visc_output_visc") m_output_visc = (rhs[i] == "true");
+        else if(lhs[i] == "visc_output_lap") m_output_lap = (rhs[i] == "true");
+        else if(lhs[i] == "visc_output_strength") m_output_strength = (rhs[i] == "true");
         else if(lhs[i] == "visc_opt") m_inp_visc_opt = rhs[i];
         else if(lhs[i] == "visc_strength") m_inp_strength = rhs[i];
         else if(lhs[i] == "visc_vars_to_diff") m_inp_vars_to_diff = rhs[i];
@@ -68,63 +70,79 @@ void Viscosity::setupModule()
 
     // initialize viscosity grids
     m_grids_dt = std::vector<Grid>(m_num_terms,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
-    m_grid_names.resize(m_num_terms);
-    for (int i=0; i<m_num_terms; i++) m_grid_names[i] = m_vars_to_evol[i] + "_dt";
+    m_grids_lap = std::vector<Grid>(m_num_terms,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
+    m_grids_strength = std::vector<Grid>(m_num_terms,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
+    m_dt_names.resize(m_num_terms);
+    m_lap_names.resize(m_num_terms);
+    m_strength_names.resize(m_num_terms);
+    for (int i=0; i<m_num_terms; i++){
+        m_dt_names[i] = m_vars_to_evol[i] + "_dt";
+        m_lap_names[i] = m_vars_to_evol[i] + "_lap";
+        m_strength_names[i] = m_vars_to_evol[i] + "_str";
+    } 
 }
 
 void Viscosity::computeTimeDerivativesModule(const std::vector<Grid> &grids,std::vector<Grid> &grids_dt)
 {
-    for (int i=0; i<m_num_terms; i++){
-        m_grids_dt[i] = constructViscosityGrid(m_visc_opt[i], m_strength[i],m_vars_to_diff[i],m_vars_to_evol[i],m_length[i],m_species[i],grids);
+    constructViscosityGrids(grids);
+    for (int i=0; i<m_num_terms; i++)
         grids_dt[m_pd.m_eqs->name2evolvedindex(m_vars_to_evol[i])] += m_grids_dt[i]*m_pd.m_ghost_zone_mask;
-    }
+        
 }
 
-Grid Viscosity::constructViscosityGrid(std::string opt,double strength, std::string var_to_diff, std::string var_to_evol, double length, std::string species, const std::vector<Grid>& grids) const
+void Viscosity::constructViscosityGrids(const std::vector<Grid>& grids)
 {
-    // reference to plasma domain grids
-    const Grid& dx = m_pd.grid("d_x");
-    const Grid& dy = m_pd.grid("d_y");
-    const Grid& dt = grids[m_pd.m_eqs->name2index("dt")];
-    const Grid& grid_to_diff = grids[m_pd.m_eqs->name2index(var_to_diff)];
-    double dt_min = dt.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
-    // construct initial portion of viscosity grid of form eps*(dx^2+dy^2)/2/dt*Lap(q)
-    Grid result {(dx.square()+dy.square())/2.};
-    // apply strength constant depending on viscosity type
-    if (opt == "local" || opt == "global") result *= strength;
-    else if (opt == "boundary") result *= getBoundaryViscosity(strength,length);
-    else assert("Viscosity option must be global, local, or boundary.");
-    // apply time information depending on viscosity type
-    if (opt == "local") result /= dt;
-    else if (opt == "boundary" || opt == "global") result /= dt_min;
-    else assert("Viscosity option must be global, local, or boundary.");
-    // apply Laplacian to variable
-    result *= m_pd.laplacian(grid_to_diff);
-    // apply scaling of viscosity grid, depending on relation of evolved variable to differentiated variable
-    if (is_momentum(var_to_evol) && is_velocity(var_to_diff)){
-        // handle scaling for ions
-        if (species == "i"){
-            // ion scaling depends on whether 1F or 2F model
-            if (m_pd.m_eqs->is_var("i_n")) result *= grids[m_pd.m_eqs->name2index("i_n")]*m_pd.m_ion_mass;
-            else result *= grids[m_pd.m_eqs->name2index("n")]*m_pd.m_ion_mass;
-        } // handle scaling for electrons
-        else if (species == "e") result *= grids[m_pd.m_eqs->name2index("e_n")]*M_ELECTRON;
-        else assert("Species must be e or i when applying viscosity to momentum.");
+    for (int i=0; i<m_num_terms; i++){
+        // reference to plasma domain grids
+        const Grid& dx = m_pd.grid("d_x");
+        const Grid& dy = m_pd.grid("d_y");
+        const Grid& dt = grids[m_pd.m_eqs->name2index("dt")];
+        const Grid& grid_to_diff = grids[m_pd.m_eqs->name2index(m_vars_to_diff[i])];
+        double dt_min = dt.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
+        // construct initial portion of viscosity grid of form eps*(dx^2+dy^2)/2/dt*Lap(q)
+        m_grids_dt[i] = (dx.square()+dy.square())/2.;
+        // apply strength constant depending on viscosity type
+        if (m_visc_opt[i] == "local" || m_visc_opt[i] == "global") m_grids_strength[i] = Grid(m_pd.m_xdim,m_pd.m_ydim,m_strength[i]);
+        else if (m_visc_opt[i] == "boundary") m_grids_strength[i] = getBoundaryViscosity(m_strength[i],m_length[i]);
+        else assert("Viscosity option must be global, local, or boundary.");
+        m_grids_dt[i] *= m_grids_strength[i];
+        // apply time information depending on viscosity type
+        if (m_visc_opt[i] == "local") m_grids_dt[i] /= dt;
+        else if (m_visc_opt[i] == "boundary" || m_visc_opt[i] == "global") m_grids_dt[i] /= dt_min;
+        else assert("Viscosity option must be global, local, or boundary.");
+        // apply Laplacian to variable
+        m_grids_lap[i] = m_pd.laplacian(grid_to_diff);
+        m_grids_dt[i] *= m_grids_lap[i];
+        // apply scaling of viscosity grid, depending on relation of evolved variable to differentiated variable
+        if (is_momentum(m_vars_to_evol[i]) && is_velocity(m_vars_to_diff[i])){
+            // handle scaling for ions
+            if (m_species[i] == "i"){
+                // ion scaling depends on whether 1F or 2F model
+                if (m_pd.m_eqs->is_var("i_n")) m_grids_dt[i] *= grids[m_pd.m_eqs->name2index("i_n")]*m_pd.m_ion_mass;
+                else m_grids_dt[i] *= grids[m_pd.m_eqs->name2index("n")]*m_pd.m_ion_mass;
+            } // handle scaling for electrons
+            else if (m_species[i] == "e") m_grids_dt[i] *= grids[m_pd.m_eqs->name2index("e_n")]*M_ELECTRON;
+            else assert("Species must be e or i when applying viscosity to momentum.");
+        }
     }
-
-    // // viscous forces
-    // const Grid& d_x = m_pd.m_grids[PlasmaDomain::d_x];
-    // const Grid& d_y = m_pd.m_grids[PlasmaDomain::d_y];
-    // Grid global_visc_coeff = .1*0.5*(d_x.square()+d_y.square())/dt;
-    // Grid result = global_visc_coeff*m_pd.laplacian(grid_to_diff);
-
-
-    return result;
 }
 
 Grid Viscosity::getBoundaryViscosity(double strength,double length) const
 {
-    return Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    // initialize grids and references to PlasmaDomain grids
+    Grid result = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    const Grid& x = m_pd.grid("pos_x");
+    const Grid& y = m_pd.grid("pos_y");
+    // left boundary
+    result += (-(x - x.min()).abs()/length).exp()*strength;
+    // right boundary
+    result += (-(x - x.max()).abs()/length).exp()*strength;
+    // top boundary
+    result += (-(y - y.max()).abs()/length).exp()*strength;
+    // bottom boundary
+    result += (-(y - y.min()).abs()/length).exp()*strength;
+
+    return result;
 }
 
 bool Viscosity::is_momentum(std::string name) const
@@ -141,10 +159,23 @@ bool Viscosity::is_velocity(std::string name) const
 
 void Viscosity::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids)
 {
-    if (m_output_to_file) {
+    if (m_output_visc) {
         for (int i = 0; i<m_num_terms; i++){
-            var_names.push_back(m_grid_names[i]);
+            var_names.push_back(m_dt_names[i]);
             var_grids.push_back(m_grids_dt[i]);
         }
     }
+    if (m_output_lap){
+        for (int i = 0; i<m_num_terms; i++){
+            var_names.push_back(m_lap_names[i]);
+            var_grids.push_back(m_grids_lap[i]);
+        }
+    }
+    if (m_output_strength){
+        for (int i = 0; i<m_num_terms; i++){
+            var_names.push_back(m_strength_names[i]);
+            var_grids.push_back(m_grids_strength[i]);
+        }
+    }
+        
 }
