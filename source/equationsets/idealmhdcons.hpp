@@ -28,24 +28,21 @@ class IdealMHDCons: public EquationSet {
             return {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};
         }
 
-        std::vector<std::string> evolved_var_names() const override {
-            return {"rho","mom_x","mom_y","energy","bi_x","bi_y"};
+        std::vector<int> evolved_variables() const override {
+            return {rho,mom_x,mom_y,energy,bi_x,bi_y};
         }
 
-        std::vector<int> densities() override { return {rho}; }
-        std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y}}; }
-        std::vector<int> thermal_energies() override { return {thermal_energy}; }
-        std::vector<int> fields() override { return {bi_x,bi_y}; }
-
-        void computeTimeDerivativesDerived(const std::vector<Grid> &grids, std::vector<Grid> &grids_dt) override;
-        void propagateChanges(std::vector<Grid> &grids) override;
+        std::vector<int> densities() const override { return {rho}; }
+        std::vector<std::vector<int>> momenta() const override { return {{mom_x,mom_y}}; }
+        std::vector<int> thermal_energies() const override { return {thermal_energy}; }
+        std::vector<int> fields() const override { return {bi_x,bi_y}; }
 
     private:
-        double m_global_viscosity{0};
-        void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) override;
-        void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) override;
-        void recomputeDT() override;
-        void catchNullFieldDirection(std::vector<Grid> &grids);
+        std::vector<Grid> computeTimeDerivativesDerived(const std::vector<Grid> &grids) const override;
+        void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) const override;
+        void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) const override;
+        void recomputeDT(std::vector<Grid>& grids) const override;
+        void catchNullFieldDirection(std::vector<Grid> &grids) const;
         void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
 };
 

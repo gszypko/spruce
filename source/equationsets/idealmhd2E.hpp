@@ -18,36 +18,34 @@ class IdealMHD2E: public EquationSet {
         std::vector<std::string> def_var_names() const override{
             return {"rho","i_temp","e_temp","mom_x","mom_y","bi_x","bi_y","grav_x","grav_y",
                 "n","i_press","e_press","press","i_thermal_energy","e_thermal_energy","v_x","v_y","kinetic_energy",
-                "b_x","b_y","b_mag","b_hat_x","b_hat_y","dt","dPdx","dPdy"};
+                "b_x","b_y","b_mag","b_hat_x","b_hat_y","dt"};
         }
         enum Vars {rho,i_temp,e_temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y,
                 n,i_press,e_press,press,i_thermal_energy,e_thermal_energy,v_x,v_y,kinetic_energy,
-                b_x,b_y,b_mag,b_hat_x,b_hat_y,dt,dPdx,dPdy};
+                b_x,b_y,b_mag,b_hat_x,b_hat_y,dt};
 
         std::vector<int> state_variables() const override {
             return {rho,i_temp,e_temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};
         }
 
-        std::vector<std::string> evolved_var_names() const override {
-            return {"rho","mom_x","mom_y","i_thermal_energy","e_thermal_energy","bi_x","bi_y"};
+        std::vector<int> evolved_variables() const override {
+            return {rho,mom_x,mom_y,i_thermal_energy,e_thermal_energy,bi_x,bi_y};
         }
 
-        std::vector<int> densities() override { return {rho,rho}; }
-        std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y},{mom_x,mom_y}}; }
-        std::vector<int> thermal_energies() override { return {i_thermal_energy,e_thermal_energy}; }
-        std::vector<int> fields() override { return {bi_x,bi_y}; }
-
-        void computeTimeDerivativesDerived(const std::vector<Grid> &grids, std::vector<Grid> &grids_dt) override;
-        void propagateChanges(std::vector<Grid> &grids) override;
-        void viscosity_mask(Grid& grid) const;
+        std::vector<int> densities() const override { return {rho,rho}; }
+        std::vector<std::vector<int>> momenta() const override { return {{mom_x,mom_y},{mom_x,mom_y}}; }
+        std::vector<int> thermal_energies() const override { return {i_thermal_energy,e_thermal_energy}; }
+        std::vector<int> fields() const override { return {bi_x,bi_y}; }
 
     private:
         double m_global_viscosity{0};
         std::string m_viscosity_opt{"velocity"};
-        void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) override;
-        void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) override;
-        void recomputeDT() override;
-        void catchNullFieldDirection(std::vector<Grid> &grids);
+
+        std::vector<Grid> computeTimeDerivativesDerived(const std::vector<Grid> &grids) const override;
+        void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) const override;
+        void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) const override;
+        void recomputeDT(std::vector<Grid>& grids) const override;
+        void catchNullFieldDirection(std::vector<Grid> &grids) const;
         void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
 };
 

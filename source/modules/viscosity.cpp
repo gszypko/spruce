@@ -75,16 +75,19 @@ void Viscosity::setupModule()
 void Viscosity::computeTimeDerivativesModule(const std::vector<Grid> &grids,std::vector<Grid> &grids_dt)
 {
     for (int i=0; i<m_num_terms; i++){
-        m_grids_dt[i] = constructViscosityGrid(m_visc_opt[i], m_strength[i],m_vars_to_diff[i],m_vars_to_evol[i],m_length[i],m_species[i],grids[m_pd.m_eqs->indexFromName("dt")]);
-        grids_dt[m_pd.m_eqs->indexFromName(m_vars_to_evol[i])] += m_grids_dt[i]*m_pd.m_ghost_zone_mask;
+        m_grids_dt[i] = constructViscosityGrid(m_visc_opt[i], m_strength[i],m_vars_to_diff[i],m_vars_to_evol[i],m_length[i],m_species[i],grids);
+        grids_dt[m_pd.m_eqs->name2evolvedindex(m_vars_to_evol[i])] += m_grids_dt[i]*m_pd.m_ghost_zone_mask;
     }
 }
 
-Grid Viscosity::constructViscosityGrid(std::string opt,double strength, std::string var_to_diff, std::string var_to_evol, double length, std::string species, const Grid& dt) const
+Grid Viscosity::constructViscosityGrid(std::string opt,double strength, std::string var_to_diff, std::string var_to_evol, double length, std::string species, const std::vector<Grid>& grids) const
 {
     // reference to plasma domain grids
-    Grid& dx = m_pd.grid("d_x");
-    Grid& dy = m_pd.grid("d_y");
+    const Grid& dx = m_pd.grid("d_x");
+    const Grid& dy = m_pd.grid("d_y");
+    const Grid& dt = grids[m_pd.m_eqs->name2index("dt")];
+    const Grid& grid_to_diff = grids[m_pd.m_eqs->name2index(var_to_diff)];
+    double dt_min = dt.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
     // construct initial portion of viscosity grid of form eps*(dx^2+dy^2)/2/dt*Lap(q)
     Grid result {(dx.square()+dy.square())/2.};
     // apply strength constant depending on viscosity type
@@ -93,21 +96,29 @@ Grid Viscosity::constructViscosityGrid(std::string opt,double strength, std::str
     else assert("Viscosity option must be global, local, or boundary.");
     // apply time information depending on viscosity type
     if (opt == "local") result /= dt;
-    else if (opt == "boundary" || opt == "global") result /= dt.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
+    else if (opt == "boundary" || opt == "global") result /= dt_min;
     else assert("Viscosity option must be global, local, or boundary.");
     // apply Laplacian to variable
-    result *= m_pd.laplacian(m_pd.m_eqs->grid(var_to_diff));
+    result *= m_pd.laplacian(grid_to_diff);
     // apply scaling of viscosity grid, depending on relation of evolved variable to differentiated variable
     if (is_momentum(var_to_evol) && is_velocity(var_to_diff)){
         // handle scaling for ions
         if (species == "i"){
             // ion scaling depends on whether 1F or 2F model
-            if (m_pd.m_eqs->is_var("i_n")) result *= m_pd.m_eqs->grid("i_n")*m_pd.m_ion_mass;
-            else result *= m_pd.m_eqs->grid("n")*m_pd.m_ion_mass;
+            if (m_pd.m_eqs->is_var("i_n")) result *= grids[m_pd.m_eqs->name2index("i_n")]*m_pd.m_ion_mass;
+            else result *= grids[m_pd.m_eqs->name2index("n")]*m_pd.m_ion_mass;
         } // handle scaling for electrons
-        else if (species == "e") result *= m_pd.m_eqs->grid("e_n")*M_ELECTRON;
+        else if (species == "e") result *= grids[m_pd.m_eqs->name2index("e_n")]*M_ELECTRON;
         else assert("Species must be e or i when applying viscosity to momentum.");
     }
+
+    // // viscous forces
+    // const Grid& d_x = m_pd.m_grids[PlasmaDomain::d_x];
+    // const Grid& d_y = m_pd.m_grids[PlasmaDomain::d_y];
+    // Grid global_visc_coeff = .1*0.5*(d_x.square()+d_y.square())/dt;
+    // Grid result = global_visc_coeff*m_pd.laplacian(grid_to_diff);
+
+
     return result;
 }
 

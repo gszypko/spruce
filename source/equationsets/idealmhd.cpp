@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 
-IdealMHD::IdealMHD(PlasmaDomain &pd): EquationSet(pd,def_var_names(),evolved_var_names()) {}
+IdealMHD::IdealMHD(PlasmaDomain &pd): EquationSet(pd,def_var_names()) {}
 
 void IdealMHD::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) 
 {
@@ -24,36 +24,51 @@ void IdealMHD::setupEquationSetDerived()
     m_guide_field = std::max((m_grids[b_mag].max()),1.0);
 }
 
-void IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid> &grids, std::vector<Grid> &grids_dt){
+std::vector<Grid> IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid> &grids) const
+{
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    assert(grids_dt.size() == m_grids_dt.size() && "This function designed to operate on full system vector<Grid>");
     // PlasmaDomain grid references for more concise notation
-    Grid& d_x = m_pd.m_grids[PlasmaDomain::d_x];
-    Grid& d_y = m_pd.m_grids[PlasmaDomain::d_y];
-    Grid& be_x = m_pd.m_grids[PlasmaDomain::be_x];
-    Grid& be_y = m_pd.m_grids[PlasmaDomain::be_y];
+    const Grid& d_x = m_pd.m_grids[PlasmaDomain::d_x];
+    const Grid& d_y = m_pd.m_grids[PlasmaDomain::d_y];
+    const Grid& be_x = m_pd.m_grids[PlasmaDomain::be_x];
+    const Grid& be_y = m_pd.m_grids[PlasmaDomain::be_y];
     // continuity equations
     std::vector<Grid> v = {grids[v_x],grids[v_y]};
-    grids_dt[ev2i("rho")] = -m_pd.transportDivergence2D(grids[rho],v);
+    Grid d_rho_dt = -m_pd.transportDivergence2D(grids[rho],v);
+    // viscous forces
+    Grid global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/grids[dt];
+    Grid viscous_force_x, viscous_force_y;
+    if (m_viscosity_opt == "momentum"){
+        viscous_force_x = global_visc_coeff*m_pd.laplacian(grids[mom_x]);
+        viscous_force_y = global_visc_coeff*m_pd.laplacian(grids[mom_y]);
+    }
+    else if (m_viscosity_opt == "velocity"){
+        viscous_force_x = global_visc_coeff*grids[rho]*m_pd.laplacian(grids[v_x]);
+        viscous_force_y = global_visc_coeff*grids[rho]*m_pd.laplacian(grids[v_y]);
+    }
+    else{
+        std::cerr << "Viscosity option <" << m_viscosity_opt << "> is not valid." << std::endl;
+        assert(false);
+    }
     // magnetic forces
     Grid curl_db = m_pd.curl2D(grids[bi_x],grids[bi_y])/(4.0*PI);
     std::vector<Grid> external_mag_force = Grid::CrossProductZ2D(curl_db,{be_x,be_y});
     std::vector<Grid> internal_mag_force = Grid::CrossProductZ2D(curl_db,{grids[bi_x],grids[bi_y]});
     // momentum equations   
-    grids_dt[ev2i("mom_x")] =   - m_pd.transportDivergence2D(grids[mom_x], v)
+    Grid d_mom_x_dt =   - m_pd.transportDivergence2D(grids[mom_x], v)
                         - m_pd.derivative1D(grids[press], 0)
-                        + grids[rho]*grids[grav_x] + external_mag_force[0] + internal_mag_force[0];
-    grids_dt[ev2i("mom_y")] =   - m_pd.transportDivergence2D(grids[mom_y], v)
+                        + grids[rho]*grids[grav_x] + external_mag_force[0] + internal_mag_force[0] + viscous_force_x;
+    Grid d_mom_y_dt =   - m_pd.transportDivergence2D(grids[mom_y], v)
                         - m_pd.derivative1D(grids[press], 1)
-                        + grids[rho]*grids[grav_y] + external_mag_force[1] + internal_mag_force[1];
+                        + grids[rho]*grids[grav_y] + external_mag_force[1] + internal_mag_force[1] + viscous_force_y;
     // energy equations
-    grids_dt[ev2i("thermal_energy")] =  - m_pd.transportDivergence2D(grids[thermal_energy],v)
+    Grid d_thermal_energy_dt =  - m_pd.transportDivergence2D(grids[thermal_energy],v)
                                 - grids[press]*m_pd.divergence2D(v);
     // induction equations
     std::vector<Grid> induction_rhs_external = m_pd.curlZ(Grid::CrossProduct2D(v,{be_x,be_y}));
     std::vector<Grid> induction_rhs_internal = m_pd.curlZ(Grid::CrossProduct2D(v,{grids[bi_x],grids[bi_y]}));
-    grids_dt[ev2i("bi_x")] = induction_rhs_external[0] + induction_rhs_internal[0];
-    grids_dt[ev2i("bi_y")] = induction_rhs_external[1] + induction_rhs_internal[1];
+    Grid d_bi_x_dt = induction_rhs_external[0] + induction_rhs_internal[0];
+    Grid d_bi_y_dt = induction_rhs_external[1] + induction_rhs_internal[1];
     // characteristic boundary evolution
     std::vector<Grid> char_evolution = computeTimeDerivativesCharacteristicBoundary(grids,
                                                 m_pd.x_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC,
@@ -62,14 +77,15 @@ void IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid> &grids, std
                                                 m_pd.y_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC, m_global_viscosity);
 
     // compute final time derivatives
-    for (int i=0; i<evolved_var_names().size(); i++){
+    std::vector<Grid> grids_dt {d_rho_dt,d_mom_x_dt,d_mom_y_dt,d_thermal_energy_dt,d_bi_x_dt,d_bi_y_dt};
+    for (int i=0; i<evolved_variables().size(); i++){
         grids_dt[i] *= m_pd.m_ghost_zone_mask;
         grids_dt[i] += char_evolution[i];
     }
-
+    return grids_dt;
 }
 
-void IdealMHD::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids)
+void IdealMHD::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) const
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     grids[n] = (grids[rho]/m_pd.m_ion_mass).max(m_pd.density_min);
@@ -77,7 +93,7 @@ void IdealMHD::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids)
     grids[thermal_energy] = grids[press]/(m_pd.m_adiabatic_index - 1.0);
 }
 
-void IdealMHD::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids)
+void IdealMHD::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) const
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     grids[n] = (grids[rho]/m_pd.m_ion_mass).max(m_pd.density_min);
@@ -93,12 +109,10 @@ void IdealMHD::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids)
     grids[b_mag] = (grids[b_x].square() + grids[b_y].square()).sqrt();
     grids[b_hat_x] = grids[b_x]/grids[b_mag];
     grids[b_hat_y] = grids[b_y]/grids[b_mag];
-    grids[dPdx] = m_pd.derivative1D(grids[press],0);
-    grids[dPdy] = m_pd.derivative1D(grids[press],1);
     catchNullFieldDirection(grids);
 }
 
-void IdealMHD::catchNullFieldDirection(std::vector<Grid> &grids)
+void IdealMHD::catchNullFieldDirection(std::vector<Grid> &grids) const
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     for(int i=0; i<m_pd.m_xdim; i++){
@@ -111,11 +125,12 @@ void IdealMHD::catchNullFieldDirection(std::vector<Grid> &grids)
     }
 }
 
-void IdealMHD::recomputeDT(){
-    Grid c_s = (m_pd.m_adiabatic_index*m_grids[press]/m_grids[rho]).sqrt();
+void IdealMHD::recomputeDT(std::vector<Grid>& grids) const
+{
+    Grid c_s = (m_pd.m_adiabatic_index*grids[press]/grids[rho]).sqrt();
     Grid c_s_sq = c_s.square();
 
-    Grid v_alfven = m_grids[b_mag]/(4.0*PI*m_grids[rho]).sqrt();
+    Grid v_alfven = grids[b_mag]/(4.0*PI*grids[rho]).sqrt();
     Grid v_alfven_sq = v_alfven.square();
     Grid one = Grid::Ones(m_pd.m_xdim,m_pd.m_ydim);
 
@@ -126,23 +141,16 @@ void IdealMHD::recomputeDT(){
 
     //Bulk velocity transit time
     Grid diagonals = (m_pd.m_grids[PlasmaDomain::d_x].square() + m_pd.m_grids[PlasmaDomain::d_y].square()).sqrt();
-    Grid vel_mag = (m_grids[v_x].square() + m_grids[v_y].square()).sqrt();
+    Grid vel_mag = (grids[v_x].square() + grids[v_y].square()).sqrt();
 
     // m_grids[dt] = diagonals/(c_s + v_alfven + v_fast + v_slow + vel_mag);
-    m_grids[dt] = diagonals/(vel_mag + c_s.max(v_alfven).max(v_fast).max(v_slow));
-}
-
-void IdealMHD::propagateChanges(std::vector<Grid> &grids)
-{
-    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    m_pd.updateGhostZones();
-    recomputeDerivedVarsFromEvolvedVars(grids);
-    recomputeDT();
+    grids[dt] = diagonals/(vel_mag + c_s.max(v_alfven).max(v_fast).max(v_slow));
 }
 
 // Returns time derivative from characteristic boundary cond for the quantities
 // {rho, mom_x, mom_y, thermal_energy, b_x, b_y} in that order
-std::vector<Grid> IdealMHD::computeTimeDerivativesCharacteristicBoundary(const std::vector<Grid> &grids, bool x_bound_1, bool x_bound_2, bool y_bound_1, bool y_bound_2, double visc_coeff){
+std::vector<Grid> IdealMHD::computeTimeDerivativesCharacteristicBoundary(const std::vector<Grid> &grids, bool x_bound_1, bool x_bound_2, bool y_bound_1, bool y_bound_2, double visc_coeff) const
+{
     std::vector<std::vector<Grid> > x_lower, x_upper, y_lower, y_upper;
     if(x_bound_1) x_lower = singleBoundaryTermsMOC(grids, 0, true, visc_coeff);
     if(x_bound_2) x_upper = singleBoundaryTermsMOC(grids, 0, false, visc_coeff);
@@ -167,7 +175,8 @@ std::vector<Grid> IdealMHD::computeTimeDerivativesCharacteristicBoundary(const s
 
 // Returns {normal term, parallel term} (in full-sized grid) for single MOC boundary,
 // corresponding to each of {rho, v_x, v_y, b_x, b_y, thermal_energy}
-std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vector<Grid> &grids, int boundary_index, bool boundary_lower, double visc_coeff){
+std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vector<Grid> &grids, int boundary_index, bool boundary_lower, double visc_coeff) const
+{
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     std::vector<int> x_idx, y_idx; //Full extent of boundary's ghost zone region
     std::vector<int> x_idx_interior, y_idx_interior; //Full extent of boundary's ghost zone not overlapping with other ghost zones
@@ -231,8 +240,8 @@ std::vector<std::vector<Grid>> IdealMHD::singleBoundaryTermsMOC(const std::vecto
     Grid R_para = m_b_para/(m_b_para.abs() + std::abs(b_guide));
     Grid R_guide = b_guide/(m_b_para.abs() + std::abs(b_guide));
     Grid c_s_sq = m_pd.m_adiabatic_index*grids[press]/grids[rho];
-    Grid c_a_sq = m_grids[b_mag].square()/(4.0*PI*m_grids[rho]);
-    Grid c_perp_sq = m_b_perp.square()/(4.0*PI*m_grids[rho]);
+    Grid c_a_sq = grids[b_mag].square()/(4.0*PI*grids[rho]);
+    Grid c_perp_sq = m_b_perp.square()/(4.0*PI*grids[rho]);
     Grid c_plus_sq = (c_a_sq + c_s_sq)/2.0 + ((c_a_sq + c_s_sq).square()/4.0 - c_perp_sq*c_s_sq).sqrt();
     Grid c_minus_sq = (c_a_sq + c_s_sq)/2.0 - ((c_a_sq + c_s_sq).square()/4.0 - c_perp_sq*c_s_sq).sqrt();
     Grid alpha_plus_sq = ((c_s_sq - c_minus_sq)/(c_plus_sq - c_minus_sq)).max(0.0);

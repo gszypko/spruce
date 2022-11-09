@@ -152,7 +152,7 @@ void PlasmaDomain::storeGrids()
   for (int i=0; i<m_eqs->num_variables(); i++){
     if (m_eqs->getOutputFlag(i)){
       assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
-      m_data_to_write[m_lines_recorded] = m_eqs->nameFromIndex(i) + '\n';
+      m_data_to_write[m_lines_recorded] = m_eqs->index2name(i) + '\n';
       m_lines_recorded++;
       assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
       m_data_to_write[m_lines_recorded] = m_eqs->grid(i).format(',','\n');
@@ -225,7 +225,7 @@ void PlasmaDomain::writeStateFile(std::string filename_stem,int precision) const
     state_file << m_grids[i].format(',','\n',precision);
   }
   for(int i : m_eqs->state_variables()){
-    state_file << m_eqs->nameFromIndex(i) << std::endl;
+    state_file << m_eqs->index2name(i) << std::endl;
     state_file << m_eqs->grid(i).format(',','\n',precision);
   }
   state_file.close();
