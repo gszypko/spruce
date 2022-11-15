@@ -184,6 +184,8 @@ void Ideal2F::recomputeDT(std::vector<Grid>& grids) const
     Grid dt_EM = dx*dy/(dx+dy)/C;
     grids[dt] = dt_wave.min(dt_v);
     if (!m_use_sub_cycling && !m_remove_curl_terms) grids[dt] = grids[dt].min(dt_EM);
+    // record ion timescale
+    grids[dt_i] = ionTimescale();
 }
 
 // returns timescale of bulk flow and acoustic waves for ions

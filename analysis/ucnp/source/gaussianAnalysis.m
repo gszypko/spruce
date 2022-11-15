@@ -146,7 +146,7 @@ for i = 1:length(s.t)
         s.data(i).xt.n = data.grids.vars(i).i_n(indy,:);
         s.data(i).yt.n = data.grids.vars(i).i_n(:,indx)';
         s.data(i).xt.v = data.grids.vars(i).i_v_x(indy,:);
-        s.data(i).yt.v = data.grids.vars(i).i_v_y(:,indx)';
+        s.data(i).yt.v = s.data(i).xt.v;
         s.data(i).xt.Te = data.grids.vars(i).e_temp(indy,:);
         s.data(i).yt.Te = data.grids.vars(i).e_temp(:,indx)';
     elseif strcmp(data.config.eq_set,{'ideal_mhd_2E'})

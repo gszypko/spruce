@@ -96,9 +96,7 @@ void Viscosity::constructViscosityGrids(const std::vector<Grid>& grids)
         // reference to plasma domain grids
         const Grid& dx = m_pd.grid("d_x");
         const Grid& dy = m_pd.grid("d_y");
-        const Grid& dt = grids[m_pd.m_eqs->name2index("dt")];
         const Grid& grid_to_diff = grids[m_pd.m_eqs->name2index(m_vars_to_diff[i])];
-        double dt_min = dt.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
         // construct initial portion of viscosity grid of form eps*(dx^2+dy^2)/2/dt*Lap(q)
         m_grids_dt[i] = (dx.square()+dy.square())/2.;
         // apply strength constant depending on viscosity type
@@ -107,6 +105,16 @@ void Viscosity::constructViscosityGrids(const std::vector<Grid>& grids)
         else assert("Viscosity option must be global, local, or boundary.");
         m_grids_dt[i] *= m_grids_strength[i];
         // apply time information depending on viscosity type
+        bool is_1F_model = m_pd.m_eqs->timescale().size() == 1;
+        Grid dt; // grid that holds evolution timescale for species that viscosity term is being applied to
+        if (is_1F_model) dt = m_pd.m_eqs->grid("dt"); // the main "dt" grid is used if 1F model
+        else{ // if not 1F model, use timescale() indices to determine electron/ion timescale, as necessary
+            if (m_species[i] == "i") dt = m_pd.m_eqs->grid(m_pd.m_eqs->timescale()[0]);
+            else if (m_species[i] == "e") dt = m_pd.m_eqs->grid(m_pd.m_eqs->timescale()[1]);
+            else assert(false && "Species must be <i> or <e>.");
+        }
+        dt.min(m_pd.epsilon*m_pd.m_eqs->grid("dt")); // ensure that viscosity timescale does not exceed RK algorithm step size
+        double dt_min = dt.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
         if (m_visc_opt[i] == "local") m_grids_dt[i] /= dt;
         else if (m_visc_opt[i] == "boundary" || m_visc_opt[i] == "global") m_grids_dt[i] /= dt_min;
         else assert("Viscosity option must be global, local, or boundary.");
@@ -134,15 +142,16 @@ Grid Viscosity::getBoundaryViscosity(double strength,double length) const
     const Grid& x = m_pd.grid("pos_x");
     const Grid& y = m_pd.grid("pos_y");
     // left boundary
-    result += (-(x - x.min()).abs()/length).exp()*strength;
+    result += (-2.*(x - x.min()).abs()/length).exp()*strength;
     // right boundary
-    result += (-(x - x.max()).abs()/length).exp()*strength;
+    result += (-2.*(x - x.max()).abs()/length).exp()*strength;
     // top boundary
-    result += (-(y - y.max()).abs()/length).exp()*strength;
+    result += (-2.*(y - y.max()).abs()/length).exp()*strength;
     // bottom boundary
-    result += (-(y - y.min()).abs()/length).exp()*strength;
-
-    return result;
+    result += (-2.*(y - y.min()).abs()/length).exp()*strength;
+    // call to function max ensures that viscosity value cannot exceed strength
+    // - this call is necessary because the boundary viscosity term is formed via superposition of many terms
+    return result.max(strength);
 }
 
 bool Viscosity::is_momentum(std::string name) const

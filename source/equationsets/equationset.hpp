@@ -58,6 +58,8 @@ class EquationSet {
         virtual std::vector<int> thermal_energies() const = 0;
         // indices corresponding to the evolved electromagnetic fields
         virtual std::vector<int> fields() const = 0;
+        // indices corresponding to the dt grid for each species
+        virtual std::vector<int> timescale() const = 0;
 
         // ***************** NON-CONST SETTERS
 

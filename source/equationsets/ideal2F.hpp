@@ -25,7 +25,7 @@ class Ideal2F: public EquationSet {
                 "i_temp","e_temp","bi_x","bi_y","bi_z","E_x","E_y","E_z","grav_x","grav_y",
                 "i_n","e_n","i_v_x","i_v_y","e_v_x","e_v_y","j_x","j_y",
                 "i_press","e_press","press","i_thermal_energy","e_thermal_energy",
-                "rho","rho_c","n","dn","dt",
+                "rho","rho_c","n","dn","dt","dt_i",
                 "b_x","b_y","b_z","b_mag","b_mag_xy","b_hat_x","b_hat_y",
                 "curlE_z","divE","divB","lapEx","E_ideal","divEcond"};
         }
@@ -33,7 +33,7 @@ class Ideal2F: public EquationSet {
                 i_temp,e_temp,bi_x,bi_y,bi_z,E_x,E_y,E_z,grav_x,grav_y,
                 i_n,e_n,i_v_x,i_v_y,e_v_x,e_v_y,j_x,j_y,
                 i_press,e_press,press,i_thermal_energy,e_thermal_energy,
-                rho,rho_c,n,dn,dt,
+                rho,rho_c,n,dn,dt,dt_i,
                 b_x,b_y,b_z,b_mag,b_mag_xy,b_hat_x,b_hat_y,
                 curlE_z,divE,divB,lapEx,E_ideal,divEcond};
 
@@ -49,6 +49,7 @@ class Ideal2F: public EquationSet {
         std::vector<std::vector<int>> momenta() const override { return {{i_mom_x,i_mom_y},{e_mom_x,e_mom_y}}; }
         std::vector<int> thermal_energies() const override { return {i_thermal_energy,e_thermal_energy}; }
         std::vector<int> fields() const override { return {}; }
+        std::vector<int> timescale() const override {return {dt_i,dt}; }
 
     private:
         // private members

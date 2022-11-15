@@ -36,6 +36,7 @@ class IdealMHD2E: public EquationSet {
         std::vector<std::vector<int>> momenta() const override { return {{mom_x,mom_y},{mom_x,mom_y}}; }
         std::vector<int> thermal_energies() const override { return {i_thermal_energy,e_thermal_energy}; }
         std::vector<int> fields() const override { return {bi_x,bi_y}; }
+        std::vector<int> timescale() const override {return {dt}; }
 
     private:
         double m_global_viscosity{0};

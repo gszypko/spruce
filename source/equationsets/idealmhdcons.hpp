@@ -36,6 +36,7 @@ class IdealMHDCons: public EquationSet {
         std::vector<std::vector<int>> momenta() const override { return {{mom_x,mom_y}}; }
         std::vector<int> thermal_energies() const override { return {thermal_energy}; }
         std::vector<int> fields() const override { return {bi_x,bi_y}; }
+        std::vector<int> timescale() const override {return {dt}; }
 
     private:
         std::vector<Grid> computeTimeDerivativesDerived(const std::vector<Grid> &grids) const override;

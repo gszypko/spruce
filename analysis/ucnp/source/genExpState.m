@@ -171,7 +171,7 @@ close(fig)
 % information of interest for the given data set
 
 % the end time for the simulation is taken to be equal to the last experimental time point by default
-t_max = max([os.delays])*1e-9; % time in cgs
+t_max = max([os.delays])*1e-9*sqrt(os(1).Te/settings.Te); % time in cgs
 interval = t_max/flags.num_time_pts; % time interval between recording mhd grids
 
 % read config file and replace the two aforementioned lines
