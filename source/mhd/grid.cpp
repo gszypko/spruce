@@ -124,6 +124,10 @@ Grid Grid::log() const {return UnaryOperation(UNARY_LAMBDA(std::log(this_comp)))
 
 Grid Grid::exp() const {return UnaryOperation(UNARY_LAMBDA(std::exp(this_comp)));}
 
+Grid Grid::cos() const {return UnaryOperation(UNARY_LAMBDA(std::cos(this_comp)));}
+
+Grid Grid::sin() const {return UnaryOperation(UNARY_LAMBDA(std::sin(this_comp)));}
+
 Grid Grid::sqrt() const { return UnaryOperation( UNARY_LAMBDA(std::sqrt(this_comp)) ); }
 
 Grid Grid::for_each(const Grid& grid,const std::function<double(double,double)>& fun) const {return ComponentWiseOperation(grid,fun);}

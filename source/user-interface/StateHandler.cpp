@@ -218,5 +218,13 @@ Grid StateHandler::setup_density(const std::unique_ptr<Settings>& pms) const
         Grid n_hole = Grid::Gaussian2D(getgrid("pos_x"),getgrid("pos_y"),hole_amp,hole_min,hole_size,pms->getval("sig_y"),0,0);
         n -= n_hole;
     }
+    if (pms->getopt("n_iaw") == "true"){
+        double iaw_amp = pms->getval("n_iaw_amp");
+        double iaw_sig = pms->getval("n_iaw_sig");
+        double k = 2*PI/iaw_sig;
+        Grid x = getgrid("pos_x");
+        Grid n_iaw = iaw_amp*n*(k*x).sin();
+        n -= n_iaw;
+    }
     return n;
 }

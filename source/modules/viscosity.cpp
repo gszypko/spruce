@@ -142,13 +142,13 @@ Grid Viscosity::getBoundaryViscosity(double strength,double length) const
     const Grid& x = m_pd.grid("pos_x");
     const Grid& y = m_pd.grid("pos_y");
     // left boundary
-    result += (-2.*(x - x.min()).abs()/length).exp()*strength;
+    result += (-2.3*((x - x.min())/length).square()).exp()*strength;
     // right boundary
-    result += (-2.*(x - x.max()).abs()/length).exp()*strength;
+    result += (-2.3*((x - x.max())/length).square()).exp()*strength;
     // top boundary
-    result += (-2.*(y - y.max()).abs()/length).exp()*strength;
+    result += (-2.3*((y - y.max())/length).square()).exp()*strength;
     // bottom boundary
-    result += (-2.*(y - y.min()).abs()/length).exp()*strength;
+    result += (-2.3*((y - y.min())/length).square()).exp()*strength;
     // call to function max ensures that viscosity value cannot exceed strength
     // - this call is necessary because the boundary viscosity term is formed via superposition of many terms
     return result.max(strength);

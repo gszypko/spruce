@@ -2,19 +2,22 @@
 clc, clearvars -except data, close all, f = filesep; setpath;
 
 inp = {'folder';
-    'C:\Users\Grant\OneDrive\Research\mhd\data-expsims\an-mhd-09.26.22\HIH-0\set_13';
+    'C:\Users\grant\OneDrive\Research\mhd\data-sims\11.17.22\set_0';
+    'C:\Users\grant\OneDrive\Research\mhd\data-sims\11.17.22\set_1';
+
       };
 s = spreadsheet2struct(inp,inp(1,:));
 Te = [];
 
 % simulation flags
-flags.sim.plot_grids = false;
-flags.sim.vlasov_analysis = true;
+flags.sim.plot_grids = true;
+flags.sim.vlasov_analysis = false;
 flags.sim.cmpr_exp_sim = false;
 flags.sim.ion_holes = false;
 flags.sim.hole_orientation = 0;
+flags.sim.iaw_analysis = false;
 
-% flags.sim.vars = {'n', 'v_x', 'v_y', 'temp', 'dt', 'mom_x_lap', 'mom_x_dt', 'mom_x_str'};
+% flags.sim.vars = {'n', 'v_x', 'v_y', 'temp', 'dt'};
 flags.sim.vars = {'i_n', 'dn', 'i_v_x', 'j_x', 'i_temp', 'e_temp', 'E_x', 'dt'};
 flags.sim.plot_freq = 1;
 flags.sim.ghost_cells = 2;
@@ -23,7 +26,7 @@ flags.sim.figvis = 'on';
 
 % experimental flags
 flags.exp.gen_state = true; % turns on the script to generate init.state from experimental conditions
-flags.exp.set = 13; % unique set identifier - modifies directory structure as \...\set_XXX
+flags.exp.set = 15; % unique set identifier - modifies directory structure as \...\set_XXX
 flags.exp.num_time_pts = 1000; % sets time interval for recording grids during simulation
 flags.exp.smooth_density = true; % whether or not to apply an SG filter to the density distribution
 flags.exp.sg_imgs_length = 0.01; % length scale (cm) for SG kernel when filtering density distribution
@@ -57,6 +60,7 @@ for i = 1:length(s)
         if flags.sim.vlasov_analysis, gaussianAnalysis(data,flags.sim); end
         if flags.sim.cmpr_exp_sim, compareExpAndSimData(data,flags.sim); end
         if flags.sim.ion_holes, ionHolesAnalysis(data,flags.sim); end
+        if flags.sim.iaw_analysis, iawAnalysis(data,flags.sim); end
     end
     if is_exp_folder
         if ~isempty(Te), flags.exp.Te = Te(i); end

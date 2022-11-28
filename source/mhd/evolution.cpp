@@ -41,7 +41,7 @@ void PlasmaDomain::run(double time_duration,double cluster_time)
   writeToOutFile();
   writeStateFile("end");
   if (m_time >= m_max_time ||  (max_iterations > 0 && m_iter >= max_iterations)){
-    std::cerr << "Simulation successfully reached max simulation time or iterations. Printing this error to end recursive scripts." << std::endl;
+    assert(false && "Simulation successfully reached max simulation time or iterations. Printing this error to end recursive scripts.");
   }
 }
 
