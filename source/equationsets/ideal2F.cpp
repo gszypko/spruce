@@ -23,77 +23,23 @@ void Ideal2F::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<
     }
 }
 
-void Ideal2F::setupEquationSet()
+void Ideal2F::setupEquationSetDerived()
 {
     // do not subcycle if curl terms are not used
     if (m_remove_curl_terms) m_use_sub_cycling = false;
 }
 
-void Ideal2F::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step){
-    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    // evolve fluid variables
-    grids[i_rho] += step*time_derivatives[0];
-    grids[e_rho] += step*time_derivatives[1];
-    grids[i_mom_x] += step*time_derivatives[2];
-    grids[i_mom_y] += step*time_derivatives[3];
-    grids[e_mom_x] += step*time_derivatives[4];
-    grids[e_mom_y] += step*time_derivatives[5];
-    grids[i_thermal_energy] += step*time_derivatives[6];
-    grids[e_thermal_energy] += step*time_derivatives[7];
-    // evolve electromagnetic fields
-    if (m_use_sub_cycling){
-        // compute change in current density
-        Grid j_x_new = E*(grids[i_mom_x]/m_pd.m_ion_mass - grids[e_mom_x]/M_ELECTRON);
-        Grid j_y_new = E*(grids[i_mom_y]/m_pd.m_ion_mass - grids[e_mom_y]/M_ELECTRON);
-        std::vector<Grid> dj = {j_x_new - grids[j_x],j_y_new - grids[j_y]};
-        // use sub-cycling to evolve E and B
-        std::vector<Grid> step_EM = subcycleMaxwell(grids, dj, step);
-        grids[E_x] += step_EM[0];
-        grids[E_y] += step_EM[1];
-        grids[E_z] += step_EM[2];
-        grids[bi_x] += step_EM[3];
-        grids[bi_y] += step_EM[4];
-        grids[bi_z] += step_EM[5];
-    }
-    else{
-        grids[E_x] += step*time_derivatives[8];
-        grids[E_y] += step*time_derivatives[9];
-        grids[E_z] += step*time_derivatives[10];
-        grids[bi_x] += step*time_derivatives[11];
-        grids[bi_y] += step*time_derivatives[12];
-        grids[bi_z] += step*time_derivatives[13];
-    }
-    // propagate changes
-    propagateChanges(grids);
-}
-
-std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids){
+std::vector<Grid> Ideal2F::computeTimeDerivativesDerived(const std::vector<Grid> &grids) const
+{
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     // PlasmaDomain grid references for more concise notation
-    Grid& d_x = m_pd.m_grids[PlasmaDomain::d_x];
-    Grid& d_y = m_pd.m_grids[PlasmaDomain::d_y];
+    const Grid& d_x = m_pd.m_grids[PlasmaDomain::d_x];
+    const Grid& d_y = m_pd.m_grids[PlasmaDomain::d_y];
     // continuity equations
     std::vector<Grid> v_i = {grids[i_v_x],grids[i_v_y]};
     std::vector<Grid> v_e = {grids[e_v_x],grids[e_v_y]};
-    Grid i_d_rho_dt = -m_pd.transportDivergence2D(grids[i_rho],v_i);
-    Grid e_d_rho_dt = -m_pd.transportDivergence2D(grids[e_rho],v_e);
-    // viscous forces
-    Grid i_viscous_force_x, i_viscous_force_y, e_viscous_force_x, e_viscous_force_y;
-    Grid i_global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/ionTimescale();
-    Grid e_global_visc_coeff = m_global_viscosity*0.5*(d_x.square()+d_y.square())/grids[dt];
-    if (m_viscosity_opt == "momentum"){
-        i_viscous_force_x = i_global_visc_coeff*m_pd.laplacian(grids[i_mom_x]);
-        i_viscous_force_y = i_global_visc_coeff*m_pd.laplacian(grids[i_mom_y]);
-        e_viscous_force_x = e_global_visc_coeff*m_pd.laplacian(grids[e_mom_x]);
-        e_viscous_force_y = e_global_visc_coeff*m_pd.laplacian(grids[e_mom_y]);
-    }
-    else if (m_viscosity_opt == "velocity"){
-        i_viscous_force_x = i_global_visc_coeff*grids[i_rho]*m_pd.laplacian(grids[i_v_x]);
-        i_viscous_force_y = i_global_visc_coeff*grids[i_rho]*m_pd.laplacian(grids[i_v_y]);
-        e_viscous_force_x = e_global_visc_coeff*grids[e_rho]*m_pd.laplacian(grids[e_v_x]);
-        e_viscous_force_y = e_global_visc_coeff*grids[e_rho]*m_pd.laplacian(grids[e_v_y]);
-    }
-    else assert(false && "m_visc_opt must be either <momentum> or <velocity>.");
+    Grid d_i_rho_dt = -m_pd.transportDivergence2D(grids[i_rho],v_i);
+    Grid d_e_rho_dt = -m_pd.transportDivergence2D(grids[e_rho],v_e);
     // lorentz forces
     std::vector<Grid> b = {grids[b_x],grids[b_y]};
     std::vector<Grid> i_v_cross_B(2,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
@@ -107,75 +53,51 @@ std::vector<Grid> Ideal2F::computeTimeDerivatives(const std::vector<Grid> &grids
     Grid e_F_x = -E*grids[e_n]*(grids[E_x] + e_v_cross_B[0]/C);
     Grid e_F_y = -E*grids[e_n]*(grids[E_y] + e_v_cross_B[1]/C); 
     // momentum equations   
-    Grid i_d_mom_x_dt = - m_pd.transportDivergence2D(grids[i_mom_x], v_i)
+    Grid d_i_mom_x_dt = - m_pd.transportDivergence2D(grids[i_mom_x], v_i)
                         - m_pd.derivative1D(grids[i_press], 0)
-                        + grids[i_rho]*grids[grav_x] + i_viscous_force_x + i_F_x;
-    Grid i_d_mom_y_dt = - m_pd.transportDivergence2D(grids[i_mom_y], v_i)
+                        + grids[i_rho]*grids[grav_x] + i_F_x;
+    Grid d_i_mom_y_dt = - m_pd.transportDivergence2D(grids[i_mom_y], v_i)
                         - m_pd.derivative1D(grids[i_press], 1)
-                        + grids[i_rho]*grids[grav_y] + i_viscous_force_y + i_F_y;
-    Grid e_d_mom_x_dt = - m_pd.transportDivergence2D(grids[e_mom_x], v_e)
+                        + grids[i_rho]*grids[grav_y] + i_F_y;
+    Grid d_e_mom_x_dt = - m_pd.transportDivergence2D(grids[e_mom_x], v_e)
                         - m_pd.derivative1D(grids[e_press], 0)
-                        + grids[e_rho]*grids[grav_x] + e_viscous_force_x + e_F_x;
-    Grid e_d_mom_y_dt = - m_pd.transportDivergence2D(grids[e_mom_y], v_e)
+                        + grids[e_rho]*grids[grav_x] + e_F_x;
+    Grid d_e_mom_y_dt = - m_pd.transportDivergence2D(grids[e_mom_y], v_e)
                         - m_pd.derivative1D(grids[e_press], 1)
-                        + grids[e_rho]*grids[grav_y] + e_viscous_force_y + e_F_y;
+                        + grids[e_rho]*grids[grav_y] + e_F_y;
     // energy equations
-    Grid i_d_thermal_dt =   - m_pd.transportDivergence2D(grids[i_thermal_energy],v_i)
+    Grid d_i_thermal_energy_dt =   - m_pd.transportDivergence2D(grids[i_thermal_energy],v_i)
                             - grids[i_press]*m_pd.divergence2D(v_i);
-    Grid e_d_thermal_dt =   - m_pd.transportDivergence2D(grids[e_thermal_energy],v_e)
+    Grid d_e_thermal_energy_dt =   - m_pd.transportDivergence2D(grids[e_thermal_energy],v_e)
                             - grids[e_press]*m_pd.divergence2D(v_e);
     // optionally evolve electromagnetic fields
-    Grid dEx_dt, dEy_dt, dEz_dt, dBx_dt, dBy_dt, dBz_dt;
+    Grid d_E_x_dt,d_E_y_dt,d_E_z_dt,d_bi_x_dt,d_bi_y_dt,d_bi_z_dt;
     if (!m_use_sub_cycling){
         if (!m_remove_curl_terms){
-            dEx_dt = + C*m_pd.derivative1D(grids[b_z],1) - 4.*PI*grids[j_x];
-            dEy_dt = - C*m_pd.derivative1D(grids[b_z],0) - 4.*PI*grids[j_y];
-            dEz_dt = + C*(m_pd.derivative1D(grids[b_y],0) - m_pd.derivative1D(grids[b_x],1));
-            dBx_dt = - C*m_pd.derivative1D(grids[E_z],1);
-            dBy_dt = + C*m_pd.derivative1D(grids[E_z],0);
-            dBz_dt = + C*(m_pd.derivative1D(grids[E_x],1) - m_pd.derivative1D(grids[E_y],0));
+            d_E_x_dt = + C*m_pd.derivative1D(grids[b_z],1) - 4.*PI*grids[j_x];
+            d_E_y_dt = - C*m_pd.derivative1D(grids[b_z],0) - 4.*PI*grids[j_y];
+            d_E_z_dt = + C*(m_pd.derivative1D(grids[b_y],0) - m_pd.derivative1D(grids[b_x],1));
+            d_bi_x_dt = - C*m_pd.derivative1D(grids[E_z],1);
+            d_bi_y_dt = + C*m_pd.derivative1D(grids[E_z],0);
+            d_bi_z_dt = + C*(m_pd.derivative1D(grids[E_x],1) - m_pd.derivative1D(grids[E_y],0));
         }
         else{
-            dEx_dt = - 4.*PI*grids[j_x];
-            dEy_dt = - 4.*PI*grids[j_y];
-            dEz_dt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-            dBx_dt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-            dBy_dt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-            dBz_dt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+            d_E_x_dt = - 4.*PI*grids[j_x];
+            d_E_y_dt = - 4.*PI*grids[j_y];
+            d_E_z_dt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+            d_bi_x_dt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+            d_bi_y_dt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+            d_bi_z_dt = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
         }
     }
-    // return time derivatives
-    return {i_d_rho_dt,e_d_rho_dt,i_d_mom_x_dt,i_d_mom_y_dt,e_d_mom_x_dt,e_d_mom_y_dt,i_d_thermal_dt,e_d_thermal_dt, dEx_dt, dEy_dt, dEz_dt, dBx_dt, dBy_dt, dBz_dt};
+
+    // apply ghost zone mask
+    std::vector<Grid> grids_dt {d_i_rho_dt,d_e_rho_dt,d_i_mom_x_dt,d_i_mom_y_dt,d_e_mom_x_dt,d_e_mom_y_dt,d_i_thermal_energy_dt,d_e_thermal_energy_dt,d_E_x_dt,d_E_y_dt,d_E_z_dt,d_bi_x_dt,d_bi_y_dt,d_bi_z_dt};
+    for (int i=0; i<evolved_variables().size(); i++) grids_dt[i] *= m_pd.m_ghost_zone_mask;
+    return grids_dt;
 }
 
-void Ideal2F::populateVariablesFromState(std::vector<Grid> &grids){
-    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    recomputeEvolvedVarsFromStateVars(grids);
-    m_pd.updateGhostZones();
-    recomputeDerivedVarsFromEvolvedVars(grids);
-    recomputeDT();
-}
-
-void Ideal2F::propagateChanges(std::vector<Grid> &grids)
-{
-    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-    enforceMinimums(grids);
-    m_pd.updateGhostZones();
-    recomputeDerivedVarsFromEvolvedVars(grids);
-    recomputeDT();
-}
-
-void Ideal2F::enforceMinimums(std::vector<Grid>& grids)
-{
-    grids[i_n] = (grids[i_rho]/m_pd.m_ion_mass).max(m_pd.density_min);
-    grids[e_n] = (grids[e_rho]/M_ELECTRON).max(m_pd.density_min);
-    grids[i_rho] = grids[i_n]*m_pd.m_ion_mass;
-    grids[e_rho] = grids[e_n]*M_ELECTRON;
-    grids[i_thermal_energy] = grids[i_thermal_energy].max(m_pd.thermal_energy_min);
-    grids[e_thermal_energy] = grids[e_thermal_energy].max(m_pd.thermal_energy_min);
-}
-
-void Ideal2F::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids)
+void Ideal2F::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) const
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     grids[i_n] = grids[i_rho]/m_pd.m_ion_mass;
@@ -187,7 +109,8 @@ void Ideal2F::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids)
     grids[e_thermal_energy] = grids[e_press]/(m_pd.m_adiabatic_index - 1.0);
 }
 
-void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids){
+void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) const
+{
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     grids[i_n] = grids[i_rho]/m_pd.m_ion_mass;
     grids[e_n] = grids[e_rho]/M_ELECTRON;
@@ -224,7 +147,7 @@ void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids){
 
 }
 
-void Ideal2F::catchNullFieldDirection(std::vector<Grid> &grids)
+void Ideal2F::catchNullFieldDirection(std::vector<Grid> &grids) const
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     for(int i=0; i<m_pd.m_xdim; i++){
@@ -237,7 +160,8 @@ void Ideal2F::catchNullFieldDirection(std::vector<Grid> &grids)
     }
 }
 
-void Ideal2F::recomputeDT(){
+void Ideal2F::recomputeDT(std::vector<Grid>& grids) const
+{
     // diagonal grid size
     const Grid& dx = m_pd.m_grids[PlasmaDomain::d_x];
     const Grid& dy = m_pd.m_grids[PlasmaDomain::d_y];
@@ -246,20 +170,22 @@ void Ideal2F::recomputeDT(){
     Grid lambda = dr*2;
     Grid k = 2.*PI/lambda;
     // determine largest fluid velocity
-    Grid v_mag_i = (m_grids[i_v_x].square() + m_grids[i_v_y].square()).sqrt();
-    Grid v_mag_e = (m_grids[e_v_x].square() + m_grids[e_v_y].square()).sqrt();
+    Grid v_mag_i = (grids[i_v_x].square() + grids[i_v_y].square()).sqrt();
+    Grid v_mag_e = (grids[e_v_x].square() + grids[e_v_y].square()).sqrt();
     Grid v = v_mag_e.max(v_mag_i);
     // compute group velocity of Langmuir wave
-    Grid v_th = (K_B*m_grids[e_temp]/M_ELECTRON).sqrt();
-    Grid w_pe = (4*PI*m_grids[e_n]*E*E/M_ELECTRON).sqrt();
+    Grid v_th = (K_B*grids[e_temp]/M_ELECTRON).sqrt();
+    Grid w_pe = (4*PI*grids[e_n]*E*E/M_ELECTRON).sqrt();
     Grid w_L = (3*k.square()*v_th.square()).sqrt();
     Grid v_L = w_L/k;
     // get timesteps
     Grid dt_wave = 1./w_pe;
     Grid dt_v = dr/(v + v_L);
     Grid dt_EM = dx*dy/(dx+dy)/C;
-    m_grids[dt] = dt_wave.min(dt_v);
-    if (!m_use_sub_cycling && !m_remove_curl_terms) m_grids[dt] = m_grids[dt].min(dt_EM);
+    grids[dt] = dt_wave.min(dt_v);
+    if (!m_use_sub_cycling && !m_remove_curl_terms) grids[dt] = grids[dt].min(dt_EM);
+    // record ion timescale
+    grids[dt_i] = ionTimescale();
 }
 
 // returns timescale of bulk flow and acoustic waves for ions

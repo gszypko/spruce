@@ -41,7 +41,7 @@ void PlasmaDomain::run(double time_duration,double cluster_time)
   writeToOutFile();
   writeStateFile("end");
   if (m_time >= m_max_time ||  (max_iterations > 0 && m_iter >= max_iterations)){
-    std::cerr << "Simulation successfully reached max simulation time or iterations. Printing this error to end recursive scripts." << std::endl;
+    assert(false && "Simulation successfully reached max simulation time or iterations. Printing this error to end recursive scripts.");
   }
 }
 
@@ -73,70 +73,70 @@ void PlasmaDomain::advanceTime(bool verbose)
 void PlasmaDomain::integrateEuler(double time_step)
 {
   std::vector<Grid> time_derivatives = m_eqs->computeTimeDerivatives();
-  m_eqs->applyTimeDerivatives(time_derivatives, time_step);
+  m_eqs->applyTimeDerivatives(time_derivatives,time_step);
 }
 
 void PlasmaDomain::integrateRK2(double time_step)
 {
   // First create copy of system advanced by half the timestep (Euler)...
-  std::vector<Grid> time_derivatives_naive = m_eqs->computeTimeDerivatives();
-  std::vector<Grid> grids_halfstep = m_eqs->allGrids();
-  m_eqs->applyTimeDerivatives(grids_halfstep, time_derivatives_naive, 0.5*time_step);
+  std::vector<Grid> time_derivatives = m_eqs->computeTimeDerivatives();
+  std::vector<Grid> grids_midpoint = m_eqs->allGrids();
+  m_eqs->applyTimeDerivatives(grids_midpoint,time_derivatives,0.5*time_step);
 
   // ...then use that half-advanced system to compute time derivatives to
   // apply to actual system for full time step (second-order R-K, a.k.a. midpoint method)
-  std::vector<Grid> time_derivatives = m_eqs->computeTimeDerivatives(grids_halfstep);
-  m_eqs->applyTimeDerivatives(time_derivatives, time_step);
+  time_derivatives = m_eqs->computeTimeDerivatives(grids_midpoint);
+  m_eqs->applyTimeDerivatives(time_derivatives,time_step);
 }
 
 void PlasmaDomain::integrateRK4(double time_step)
 {
   std::vector<Grid> k1 = m_eqs->computeTimeDerivatives();
 
-  std::vector<Grid> grids_copy = m_eqs->allGrids();
-  m_eqs->applyTimeDerivatives(grids_copy, k1, 0.5*time_step);
-  std::vector<Grid> k2 = m_eqs->computeTimeDerivatives(grids_copy);
+  std::vector<Grid> grids_rk= m_eqs->allGrids();
+  m_eqs->applyTimeDerivatives(grids_rk, k1, 0.5*time_step);
+  std::vector<Grid> k2 = m_eqs->computeTimeDerivatives(grids_rk);
 
-  grids_copy = m_eqs->allGrids();
-  m_eqs->applyTimeDerivatives(grids_copy, k2, 0.5*time_step);
-  std::vector<Grid> k3 = m_eqs->computeTimeDerivatives(grids_copy);
+  grids_rk = m_eqs->allGrids();
+  m_eqs->applyTimeDerivatives(grids_rk, k2, 0.5*time_step);
+  std::vector<Grid> k3 = m_eqs->computeTimeDerivatives(grids_rk);
 
-  grids_copy = m_eqs->allGrids();
-  m_eqs->applyTimeDerivatives(grids_copy, k3, time_step);
-  std::vector<Grid> k4 = m_eqs->computeTimeDerivatives(grids_copy);
+  grids_rk = m_eqs->allGrids();
+  m_eqs->applyTimeDerivatives(grids_rk, k3, time_step);
+  std::vector<Grid> k4 =  m_eqs->computeTimeDerivatives(grids_rk);
 
   std::vector<Grid> k_final = k1;
-  for(int i=0; i<k_final.size(); i++)
+  for(int i=0; i<m_eqs->evolved_variables().size(); i++)
     k_final[i] = (k1[i] + k4[i])/6.0 + (k2[i] + k3[i])/3.0;
   
   m_eqs->applyTimeDerivatives(k_final, time_step);
 }
 
-void PlasmaDomain::updateGhostZones()
+void PlasmaDomain::updateGhostZones(std::vector<Grid>& grids) const
 {
   if(x_bound_1 != BoundaryCondition::Periodic && x_bound_1 != BoundaryCondition::OpenMoC){
-    if(x_bound_1 == BoundaryCondition::Open) for(int j=m_yl; j<=m_yu; j++) openBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
-    else if(x_bound_1 == BoundaryCondition::Reflect) for(int j=m_yl; j<=m_yu; j++) reflectBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
-    else if(x_bound_1 == BoundaryCondition::Fixed) for(int j=0; j<m_ydim; j++) fixedBoundaryExtrapolate(0, 1, 2, 3, j, j, j, j);
-    else if (x_bound_1 == BoundaryCondition::OpenUCNP) for(int j=m_yl; j<=m_yu; j++) ucnpBoundaryExtrapolate(Boundary::xl,j);
+    if(x_bound_1 == BoundaryCondition::Open) for(int j=m_yl; j<=m_yu; j++) openBoundaryExtrapolate(grids, 0, 1, 2, 3, j, j, j, j);
+    else if(x_bound_1 == BoundaryCondition::Reflect) for(int j=m_yl; j<=m_yu; j++) reflectBoundaryExtrapolate(grids, 0, 1, 2, 3, j, j, j, j);
+    else if(x_bound_1 == BoundaryCondition::Fixed) for(int j=0; j<m_ydim; j++) fixedBoundaryExtrapolate(grids, 0, 1, 2, 3, j, j, j, j);
+    else if (x_bound_1 == BoundaryCondition::OpenUCNP) for(int j=m_yl; j<=m_yu; j++) ucnpBoundaryExtrapolate(grids, Boundary::xl,j);
   }
   if(x_bound_2 != BoundaryCondition::Periodic && x_bound_2 != BoundaryCondition::OpenMoC){
-    if(x_bound_2 == BoundaryCondition::Open) for(int j=m_yl; j<=m_yu; j++) openBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
-    else if(x_bound_2 == BoundaryCondition::Reflect) for(int j=m_yl; j<=m_yu; j++) reflectBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
-    else if(x_bound_2 == BoundaryCondition::Fixed) for(int j=0; j<m_ydim; j++) fixedBoundaryExtrapolate(m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
-    else if (x_bound_2 == BoundaryCondition::OpenUCNP) for(int j=m_yl; j<=m_yu; j++) ucnpBoundaryExtrapolate(Boundary::xu,j);
+    if(x_bound_2 == BoundaryCondition::Open) for(int j=m_yl; j<=m_yu; j++) openBoundaryExtrapolate(grids, m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
+    else if(x_bound_2 == BoundaryCondition::Reflect) for(int j=m_yl; j<=m_yu; j++) reflectBoundaryExtrapolate(grids, m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
+    else if(x_bound_2 == BoundaryCondition::Fixed) for(int j=0; j<m_ydim; j++) fixedBoundaryExtrapolate(grids, m_xdim-1, m_xdim-2, m_xdim-3, m_xdim-4, j, j, j, j);
+    else if (x_bound_2 == BoundaryCondition::OpenUCNP) for(int j=m_yl; j<=m_yu; j++) ucnpBoundaryExtrapolate(grids, Boundary::xu,j);
   }
   if(y_bound_1 != BoundaryCondition::Periodic && y_bound_1 != BoundaryCondition::OpenMoC){
-    if(y_bound_1 == BoundaryCondition::Open) for(int i=m_xl; i<=m_xu; i++) openBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
-    else if(y_bound_1 == BoundaryCondition::Reflect) for(int i=m_xl; i<=m_xu; i++) reflectBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
-    else if(y_bound_1 == BoundaryCondition::Fixed) for(int i=0; i<m_xdim; i++) fixedBoundaryExtrapolate(i, i, i, i, 0, 1, 2, 3);
-    else if (y_bound_1 == BoundaryCondition::OpenUCNP) for(int j=m_xl; j<=m_xu; j++) ucnpBoundaryExtrapolate(Boundary::yl,j);
+    if(y_bound_1 == BoundaryCondition::Open) for(int i=m_xl; i<=m_xu; i++) openBoundaryExtrapolate(grids, i, i, i, i, 0, 1, 2, 3);
+    else if(y_bound_1 == BoundaryCondition::Reflect) for(int i=m_xl; i<=m_xu; i++) reflectBoundaryExtrapolate(grids, i, i, i, i, 0, 1, 2, 3);
+    else if(y_bound_1 == BoundaryCondition::Fixed) for(int i=0; i<m_xdim; i++) fixedBoundaryExtrapolate(grids, i, i, i, i, 0, 1, 2, 3);
+    else if (y_bound_1 == BoundaryCondition::OpenUCNP) for(int j=m_xl; j<=m_xu; j++) ucnpBoundaryExtrapolate(grids, Boundary::yl,j);
   }
   if(y_bound_2 != BoundaryCondition::Periodic && y_bound_2 != BoundaryCondition::OpenMoC){
-    if(y_bound_2 == BoundaryCondition::Open) for(int i=m_xl; i<=m_xu; i++) openBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
-    else if(y_bound_2 == BoundaryCondition::Reflect) for(int i=m_xl; i<=m_xu; i++) reflectBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
-    else if(y_bound_2 == BoundaryCondition::Fixed) for(int i=0; i<m_xdim; i++) fixedBoundaryExtrapolate(i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
-    else if (y_bound_2 == BoundaryCondition::OpenUCNP) for(int j=m_xl; j<=m_xu; j++) ucnpBoundaryExtrapolate(Boundary::yu,j);
+    if(y_bound_2 == BoundaryCondition::Open) for(int i=m_xl; i<=m_xu; i++) openBoundaryExtrapolate(grids, i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
+    else if(y_bound_2 == BoundaryCondition::Reflect) for(int i=m_xl; i<=m_xu; i++) reflectBoundaryExtrapolate(grids, i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
+    else if(y_bound_2 == BoundaryCondition::Fixed) for(int i=0; i<m_xdim; i++) fixedBoundaryExtrapolate(grids, i, i, i, i, m_ydim-1, m_ydim-2, m_ydim-3, m_ydim-4);
+    else if (y_bound_2 == BoundaryCondition::OpenUCNP) for(int j=m_xl; j<=m_xu; j++) ucnpBoundaryExtrapolate(grids, Boundary::yu,j);
   }
 }
 
@@ -144,7 +144,7 @@ void PlasmaDomain::updateGhostZones()
 //assuming that (i1,j1) is at the edge of the domain and (i4,j4) is on the interior
 //Assumes two ghost zones (i.e. N_GHOST == 2), will abort if not
 //Meant to be called repeatedly during advanceTime; energy is handled, not temperature
-void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
+void PlasmaDomain::openBoundaryExtrapolate(std::vector<Grid>& grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4) const
 {
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
   assert((i1 == i2 || j1 == j2) && "Points to extrapolate must be x-aligned or y-aligned");
@@ -217,7 +217,7 @@ void PlasmaDomain::openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j
 //Matches the thermal energy and mass density of the closest interior (i.e. non-ghost) cell
 //throughout the ghost zone and halts advection at the boundary
 //Assumes two ghost zones (i.e. N_GHOST == 2), will abort if not
-void PlasmaDomain::reflectBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
+void PlasmaDomain::reflectBoundaryExtrapolate(std::vector<Grid>& grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4) const
 {
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
   // Grid &m_rho = grids[rho], &m_thermal_energy = grids[thermal_energy], &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y];
@@ -246,7 +246,7 @@ void PlasmaDomain::reflectBoundaryExtrapolate(int i1, int i2, int i3, int i4, in
 //assuming that (i1,j1) is at the edge of the domain and (i4,j4) is on the interior
 //Halts all advection at the boundary; leaves all other quantities in the ghost zones fixed
 //Assumes two ghost zones (i.e. N_GHOST == 2), will abort if not
-void PlasmaDomain::fixedBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4)
+void PlasmaDomain::fixedBoundaryExtrapolate(std::vector<Grid>& grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4) const
 {
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
   // Grid &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y];
@@ -267,7 +267,7 @@ void PlasmaDomain::fixedBoundaryExtrapolate(int i1, int i2, int i3, int i4, int 
   // nearest interior cell given by (m_xl/m_xu, index) or (index, m_yl,m_yu)
   // boundary cells are indexed 0 -> m_xl-1 or m_xu+1 -> m_xdim-1
   // current implementation simply copies values from nearest interior cell into boundary cell
-void PlasmaDomain::ucnpBoundaryExtrapolate(Boundary bndry,int index)
+void PlasmaDomain::ucnpBoundaryExtrapolate(std::vector<Grid>& grids, Boundary bndry,int index) const
 {
   int int_x, int_y, bnd_x,bnd_y; // indices corresponding to nearest interior cell
   for (int i=0; i<N_GHOST; i++){ // for each boundary cell

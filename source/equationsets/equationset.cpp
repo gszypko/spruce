@@ -3,6 +3,7 @@
 #include "idealmhdcons.hpp"
 #include "idealmhd2E.hpp"
 #include "ideal2F.hpp"
+#include "plasmadomain.hpp"
 #include "utils.hpp"
 #include <iostream>
 #include <algorithm>
@@ -11,7 +12,7 @@
 #include <fstream>
 
 
-EquationSet::EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names): 
+EquationSet::EquationSet(PlasmaDomain &pd, std::vector<std::string> var_names):
     m_pd(pd),
     m_var_names{var_names}
 {
@@ -83,9 +84,27 @@ void EquationSet::configureEquationSet(std::ifstream &in_file)
     parseEquationSetConfigs(lhs_strings,rhs_strings);
 }
 
+void EquationSet::setupEquationSet()
+{
+    assert(allStateGridsInitialized() && "All variables specified as state variables for the current EquationSet must be specified in the .state file");
+    populateVariablesFromState();
+    assert(allGridsInitialized() && "All variables must be initialized by <populateVariablesFromState>.");
+    setupEquationSetDerived();
+    name2index("dt"); // this function call is made to ensure that dt is a grid within the equation set, this function throws error if not found
+}
+
+void EquationSet::populateVariablesFromState(std::vector<Grid>& grids) const
+{
+    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    recomputeEvolvedVarsFromStateVars(grids);
+    m_pd.updateGhostZones(grids);
+    recomputeDerivedVarsFromEvolvedVars(grids);
+    recomputeDT(grids);
+}
+
 // any steps required for setup after instantiation of module but before iteration of grids
 // typical use is to instantiate sizes of internal grids and compute any grids that are constant in time
-void EquationSet::setupEquationSet()
+void EquationSet::setupEquationSetDerived()
 {
     return;
 }
@@ -96,20 +115,22 @@ Grid& EquationSet::grid(int index) {
 }
 
 Grid& EquationSet::grid(const std::string& name) {
-    int index = indexFromName(name);
+    int index = name2index(name);
     return grid(index);
 }
 
-bool EquationSet::allGridsInitialized() {
+bool EquationSet::allGridsInitialized() const 
+{
     for(const Grid& g : m_grids){
         if(g.size() == 1) return false;
     }
     return true;
 }
 
-bool EquationSet::allStateGridsInitialized() {
-    for(int i : state_variables()){
-        if(grid(i).size() == 1) return false;
+bool EquationSet::allStateGridsInitialized() const 
+{
+    for (int i : state_variables()){
+        if (m_grids[i].size() == 1) return false;
     }
     return true;
 }
@@ -122,15 +143,16 @@ std::vector<std::string> EquationSet::allNames() const {
     return m_var_names;
 }
 
-std::string EquationSet::nameFromIndex(int index) const {
+std::string EquationSet::index2name(int index) const {
     return m_var_names[index];
 }
 
-int EquationSet::num_variables() {
+int EquationSet::num_variables() const {
     return m_var_names.size();
 }
 
-int EquationSet::num_species() {
+int EquationSet::num_species() const 
+{
     assert(densities().size() == momenta().size() && momenta().size() == thermal_energies().size() && \
             "Each species must have an entry each in densities, momenta, thermal_energies, and fields");
     return densities().size();
@@ -141,18 +163,14 @@ void EquationSet::setOutputFlag(int index, bool flag){
 }
 
 void EquationSet::setOutputFlag(std::string name, bool flag){
-    m_output_flags[indexFromName(name)] = flag;
+    m_output_flags[name2index(name)] = flag;
 }
 
-bool EquationSet::getOutputFlag(int index){
-    return m_output_flags[index];
-}
+bool EquationSet::getOutputFlag(int index) const { return m_output_flags[index]; }
 
-bool EquationSet::getOutputFlag(std::string name){
-    return m_output_flags[indexFromName(name)];
-}
+bool EquationSet::getOutputFlag(std::string name) const { return m_output_flags[name2index(name)]; }
 
-int EquationSet::indexFromName(std::string name){
+int EquationSet::name2index(std::string name) const {
     int ind{};
     try { ind = m_var_indices.at(name); }
     catch (const std::out_of_range& e) {
@@ -163,3 +181,71 @@ int EquationSet::indexFromName(std::string name){
     return ind;
 }
 
+int EquationSet::name2evolvedindex(std::string name) const
+{
+    int result{-1};
+    for (int i=0; i<evolved_variables().size(); i++){
+        std::string evolved_name = index2name(evolved_variables()[i]);
+        if (name == evolved_name){
+            result = i;
+            break;
+        }
+    }
+    assert(result!=-1 && "<name> does not correspond to an evolved variable.");
+    return result;
+}
+
+Grid EquationSet::getDT() const {return m_grids[name2index("dt")];}
+
+std::vector<Grid> EquationSet::computeTimeDerivatives(const std::vector<Grid> &grids) const
+{
+    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    std::vector<Grid> time_derivatives = computeTimeDerivativesDerived(grids);
+    m_pd.m_module_handler.iterateComputeTimeDerivativesModules(grids,time_derivatives);
+    return time_derivatives;
+}
+
+void EquationSet::propagateChanges(std::vector<Grid>& grids) const
+{
+    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    m_pd.updateGhostZones(grids);
+    recomputeDerivedVarsFromEvolvedVars(grids);
+    recomputeDT(grids);
+}
+
+void EquationSet::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &grids_dt, double step) const
+{
+    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    std::vector<int> evol_vars = evolved_variables();
+    for (int i=0; i<evol_vars.size(); i++){
+        grids[evol_vars[i]] += step*grids_dt[i];
+    } 
+    propagateChanges(grids);
+}
+
+bool EquationSet::is_state_var(std::string name) const
+{
+    bool found {false};
+    for (auto i : state_variables()){
+        if (i == name2index(name)) found = true;
+    }
+    return found;
+}
+
+bool EquationSet::is_evolved_var(std::string name) const
+{
+    bool found {false};
+    for (int i : evolved_variables()){
+        if (index2name(i) == name) found = true;
+    }
+    return found;
+}
+
+bool EquationSet::is_var(std::string name) const
+{
+    bool found {false};
+    for (auto i : m_var_names){
+        if (i == name) found = true;
+    }
+    return found;
+}

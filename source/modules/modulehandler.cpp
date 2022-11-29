@@ -11,6 +11,7 @@
 #include "sgfilter.hpp"
 #include "coulomb_explosion.hpp"
 #include "eic_thermalization.hpp"
+#include "viscosity.hpp"
 
 ModuleHandler::ModuleHandler(PlasmaDomain &pd): m_pd(pd) {}
 
@@ -40,6 +41,12 @@ void ModuleHandler::postIterateModules(double dt)
     for(int i=0; i<m_modules.size(); i++){
         m_modules[i]->postIterateModule(dt);
     }
+}
+
+void ModuleHandler::iterateComputeTimeDerivativesModules(const std::vector<Grid> &grids,std::vector<Grid>& grids_dt)
+{
+    for (int i=0; i<m_modules.size(); i++)
+        m_modules[i]->computeTimeDerivativesModule(grids,grids_dt);
 }
 
 bool ModuleHandler::isModuleName(std::string name) const
@@ -75,6 +82,7 @@ void ModuleHandler::instantiateModule(const std::string &module_name, std::ifstr
     else if(module_name == "sg_filtering") m_modules.push_back(std::unique_ptr<Module>(new SGFilter(m_pd)));
     else if(module_name == "coulomb_explosion") m_modules.push_back(std::unique_ptr<Module>(new CoulombExplosion(m_pd)));
     else if(module_name == "eic_thermalization") m_modules.push_back(std::unique_ptr<Module>(new EICThermalization(m_pd)));
+    else if(module_name == "artificial_viscosity") m_modules.push_back(std::unique_ptr<Module>(new Viscosity(m_pd)));
     else assert(false && "Module name was not recognized");
     m_modules.back()->configureModule(in_file);
 }

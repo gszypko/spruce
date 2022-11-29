@@ -47,12 +47,10 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   #endif
   assert(allInternalGridsInitialized() && "All internal grid quantities for PlasmaDomain must be initialized");
   assert(validateCellSizesAndPositions(m_grids[d_x],m_grids[pos_x],0) && validateCellSizesAndPositions(m_grids[d_y],m_grids[pos_y],1) && "Cell sizes and positions must correspond");
-  assert(m_eqs->allStateGridsInitialized() && "All variables specified as state variables for the current EquationSet must be specified in the .state file");
   computeIterationBounds();
   m_sg = SavitzkyGolay(m_sg_opt,Grid::Zero(m_xdim,m_ydim));
-  m_eqs->populateVariablesFromState();
-  m_module_handler.setupModules();
   m_eqs->setupEquationSet();
+  m_module_handler.setupModules();
   
   // overwrite the init.state file if new simulation with overwrite flag
   if(!continue_mode && m_overwrite_init){

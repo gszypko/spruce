@@ -24,28 +24,29 @@ class IdealMHD2E: public EquationSet {
                 n,i_press,e_press,press,i_thermal_energy,e_thermal_energy,v_x,v_y,kinetic_energy,
                 b_x,b_y,b_mag,b_hat_x,b_hat_y,dt};
 
-        std::vector<int> state_variables() override {
+        std::vector<int> state_variables() const override {
             return {rho,i_temp,e_temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};
         }
-        std::vector<int> densities() override { return {rho,rho}; }
-        std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y},{mom_x,mom_y}}; }
-        std::vector<int> thermal_energies() override { return {i_thermal_energy,e_thermal_energy}; }
-        std::vector<int> fields() override { return {bi_x,bi_y}; }
 
-        void populateVariablesFromState(std::vector<Grid> &grids) override;
-        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids) override;
-        void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
-        void propagateChanges(std::vector<Grid> &grids) override;
-        Grid getDT() override {return m_grids[dt];}
-        void viscosity_mask(Grid& grid) const;
+        std::vector<int> evolved_variables() const override {
+            return {rho,mom_x,mom_y,i_thermal_energy,e_thermal_energy,bi_x,bi_y};
+        }
+
+        std::vector<int> densities() const override { return {rho,rho}; }
+        std::vector<std::vector<int>> momenta() const override { return {{mom_x,mom_y},{mom_x,mom_y}}; }
+        std::vector<int> thermal_energies() const override { return {i_thermal_energy,e_thermal_energy}; }
+        std::vector<int> fields() const override { return {bi_x,bi_y}; }
+        std::vector<int> timescale() const override {return {dt}; }
 
     private:
         double m_global_viscosity{0};
         std::string m_viscosity_opt{"velocity"};
-        void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids);
-        void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids);
-        void catchNullFieldDirection(std::vector<Grid> &grids);
-        void recomputeDT();
+
+        std::vector<Grid> computeTimeDerivativesDerived(const std::vector<Grid> &grids) const override;
+        void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) const override;
+        void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) const override;
+        void recomputeDT(std::vector<Grid>& grids) const override;
+        void catchNullFieldDirection(std::vector<Grid> &grids) const;
         void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
 };
 

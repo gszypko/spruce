@@ -24,32 +24,26 @@ class IdealMHDCons: public EquationSet {
                 n,v_x,v_y,kinetic_energy,b_x,b_y,b_mag,mag_energy,b_hat_x,b_hat_y,
                 thermal_energy,press,press_tot,energy,dt};
 
-        std::vector<int> state_variables() override {
+        std::vector<int> state_variables() const override {
             return {rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y};
         }
-        std::vector<int> densities() override { return {rho}; }
-        std::vector<std::vector<int>> momenta() override { return {{mom_x,mom_y}}; }
-        std::vector<int> thermal_energies() override { return {thermal_energy}; }
-        std::vector<int> fields() override { return {bi_x,bi_y}; }
 
-        Grid getDT() override;
-        void populateVariablesFromState(std::vector<Grid> &grids) override;
-        std::vector<Grid> computeTimeDerivatives(const std::vector<Grid> &grids) override;
-        void applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step) override;
-        void propagateChanges(std::vector<Grid> &grids) override;
+        std::vector<int> evolved_variables() const override {
+            return {rho,mom_x,mom_y,energy,bi_x,bi_y};
+        }
+
+        std::vector<int> densities() const override { return {rho}; }
+        std::vector<std::vector<int>> momenta() const override { return {{mom_x,mom_y}}; }
+        std::vector<int> thermal_energies() const override { return {thermal_energy}; }
+        std::vector<int> fields() const override { return {bi_x,bi_y}; }
+        std::vector<int> timescale() const override {return {dt}; }
 
     private:
-        double m_global_viscosity{0};
-        void enforceMinimums(std::vector<Grid>& grids);
-        void recomputeDT();
-        void computeConstantTerms(std::vector<Grid> &grids);
-        void recomputeDerivedVariables(std::vector<Grid> &grids);
-        void recomputeNumberDensity(std::vector<Grid> &grids);
-        void recomputeKineticEnergy(std::vector<Grid> &grids);
-        void recomputeMagneticEnergy(std::vector<Grid> &grids);
-        void recomputeThermalEnergy(std::vector<Grid> &grids);
-        void recomputeTemperature(std::vector<Grid> &grids);
-        void recomputeThermalEnergyFromTemp(std::vector<Grid> &grids);
+        std::vector<Grid> computeTimeDerivativesDerived(const std::vector<Grid> &grids) const override;
+        void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) const override;
+        void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) const override;
+        void recomputeDT(std::vector<Grid>& grids) const override;
+        void catchNullFieldDirection(std::vector<Grid> &grids) const;
         void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
 };
 

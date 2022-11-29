@@ -72,6 +72,7 @@ private: //*********************************************************************
   friend class ThermalConduction;
   friend class CoulombExplosion;
   friend class EICThermalization;
+  friend class Viscosity;
 
   //Friend class declarations (for EquationSets)
   friend class EquationSet;
@@ -144,12 +145,12 @@ private: //*********************************************************************
 
   //******************** PRIVATE FUNCTION DECLARATIONS *************************************************************
 
-  void updateGhostZones();
+  void updateGhostZones(std::vector<Grid>& grids) const;
 
-  void openBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
-  void reflectBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
-  void fixedBoundaryExtrapolate(int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4);
-  void ucnpBoundaryExtrapolate(Boundary bndry,int index);
+  void openBoundaryExtrapolate(std::vector<Grid>& grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4) const;
+  void reflectBoundaryExtrapolate(std::vector<Grid>& grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4) const;
+  void fixedBoundaryExtrapolate(std::vector<Grid>& grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4) const;
+  void ucnpBoundaryExtrapolate(std::vector<Grid>& grids, Boundary bndry,int index) const;
 
   void computeIterationBounds();
   bool allInternalGridsInitialized();

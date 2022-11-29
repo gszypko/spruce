@@ -9,7 +9,7 @@ StateHandler::StateHandler(const std::string& eqn_set_name):
 {
     m_eqs = EquationSet::instantiateDefault(m_pd,m_eqn_set_name);
     for (const auto& name : PlasmaDomain::m_gridnames) m_gridnames.push_back(name);
-    for (const auto& ind : m_eqs->state_variables()) m_gridnames.push_back(m_eqs->nameFromIndex(ind));
+    for (const auto& ind : m_eqs->state_variables()) m_gridnames.push_back(m_eqs->index2name(ind));
     m_grids.resize(m_gridnames.size(),Grid::Zero(1,1));
     m_grids_initialized.resize(m_gridnames.size(),false);
 }
@@ -211,12 +211,20 @@ Grid StateHandler::setup_density(const std::unique_ptr<Settings>& pms) const
         n = Grid(pms->getval("Nx"),pms->getval("Ny"),n_max);
     else assert(false && "Density distribution options are: <gaussian>, <exponential>, or <uniform>.");
     // option for adding a central ion hole to the x axis of the plasma
-    if (pms->getopt("n_hole") == "on"){
+    if (pms->getopt("n_hole") == "true"){
         double hole_amp = pms->getval("n_hole_amp");
         double hole_min = 0;
         double hole_size = pms->getval("n_hole_size");
         Grid n_hole = Grid::Gaussian2D(getgrid("pos_x"),getgrid("pos_y"),hole_amp,hole_min,hole_size,pms->getval("sig_y"),0,0);
         n -= n_hole;
+    }
+    if (pms->getopt("n_iaw") == "true"){
+        double iaw_amp = pms->getval("n_iaw_amp");
+        double iaw_sig = pms->getval("n_iaw_sig");
+        double k = 2*PI/iaw_sig;
+        Grid x = getgrid("pos_x");
+        Grid n_iaw = iaw_amp*n*(k*x).sin();
+        n -= n_iaw;
     }
     return n;
 }
