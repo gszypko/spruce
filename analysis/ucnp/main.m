@@ -2,7 +2,9 @@
 clc, clearvars -except data, close all, f = filesep; setpath;
 
 inp = {'folder';
-    'C:\Users\Grant\OneDrive\Research\mhd\data-sims\11.15.22\set_3';
+    'C:\Users\Grant\OneDrive\Research\mhd\data-sims\11.15.22\set_0';
+    'C:\Users\Grant\OneDrive\Research\mhd\data-sims\11.15.22\set_1';
+    'C:\Users\Grant\OneDrive\Research\mhd\data-sims\11.15.22\set_2';
       };
 s = spreadsheet2struct(inp,inp(1,:));
 Te = [];
@@ -11,11 +13,11 @@ Te = [];
 flags.sim.plot_grids = false;
 flags.sim.vlasov_analysis = false;
 flags.sim.cmpr_exp_sim = false;
+flags.sim.iaw_analysis = true;
 flags.sim.ion_holes = false;
 flags.sim.hole_orientation = 0;
-flags.sim.iaw_analysis = true;
 
-flags.sim.vars = {'n', 'v_x', 'v_y', 'temp', 'dt'};
+flags.sim.vars = {'n', 'v_x', 'v_y', 'i_temp', 'e_temp', 'dt'};
 % flags.sim.vars = {'i_n', 'dn', 'i_v_x', 'j_x', 'i_temp', 'e_temp', 'E_x', 'dt'};
 flags.sim.plot_freq = 1;
 flags.sim.ghost_cells = 2;
