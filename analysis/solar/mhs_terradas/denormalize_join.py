@@ -9,10 +9,10 @@ import os
 import sys
 
 BETA = 0.004
-b_0 = [-125.0,20.0] #G
+b_0 = [-125.0*30.0,20.0*30.0] #G
 press_00 = [BETA*b_0[0]**2/(8.0*np.pi),BETA*b_0[1]**2/(8.0*np.pi)]
 T_C = 1.0e6 #K
-G = 2.748e4 #cm s^-2 CUT IN HALF SINCE ADDING THE TWO SOLUTIONS TOGETHER IN FULL
+G = 2.748e4 #cm s^-2
 MU = 0.5*1.6726e-24 #g
 K_B = 1.3807e-16 #erg K^-1
 H = K_B*T_C/MU/G
@@ -91,10 +91,12 @@ for this_var in vars:
     zero = np.zeros((xdim[counter],ydim[counter]))
     one = np.ones((xdim[counter],ydim[counter]))
     this_var["rho"] = this_var["press"]/this_var["temp"]
-    for name in ["grav_x","mom_x","mom_y","be_x","be_y"]:
+    for name in ["grav_x","mom_x","mom_y","mom_z","be_x","be_y"]:
         this_var[name] = zero
     for name in ["grav_y"]:
         this_var[name] = -1.0*one
+    for name in ["bi_z"]:
+        this_var[name] = 0.01*one
     this_var["bi_x"] = this_var["b0_x"] + BETA/2*this_var["b1_x"]
     this_var["bi_y"] = this_var["b0_y"] + BETA/2*this_var["b1_y"]
     for name in ["press","b0_x","b0_y","b1_x","b1_y"]:
@@ -117,9 +119,9 @@ with open(out_path+"/"+out_filename, 'w', newline='') as f:
     writer.writerow(["adiabatic_index"])
     writer.writerow([str(GAMMA)])
     writer.writerow(["t=0"])
-    names = ["d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","be_x","be_y","bi_x","bi_y","grav_x","grav_y"]
-    mults = [[H,H,H,H,press_00[0]*MU/K_B/T_C,T_C,zero,zero,b_0[0],b_0[0],b_0[0],b_0[0],G,G],\
-                [H,H,H,H,press_00[1]*MU/K_B/T_C,T_C,zero,zero,b_0[1],b_0[1],b_0[1],b_0[1],G,G]]
+    names = ["d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","mom_z","be_x","be_y","bi_x","bi_y","bi_z","grav_x","grav_y"]
+    mults = [[H,H,H,H,press_00[0]*MU/K_B/T_C,T_C,zero,zero,zero,b_0[0],b_0[0],b_0[0],b_0[0],b_0[0],G,G],\
+                [H,H,H,H,press_00[1]*MU/K_B/T_C,T_C,zero,zero,zero,b_0[1],b_0[1],b_0[1],b_0[1],b_0[1],G,G]]
     for i in range(len(names)):
         name = names[i]
         ar_var = mults[0][i]*(vars[0][name])

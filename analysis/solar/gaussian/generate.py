@@ -29,10 +29,12 @@ MAX_TEMP = 1.0e6
 MAX_RHO = 1.0e-14
 MIN_RHO = 1.0e-18
 
-BE_X = 100.0/np.sqrt(2.0)
-BE_Y = 100.0/np.sqrt(2.0)
+BE_X = 0.0#100.0/np.sqrt(2.0)
+BE_Y = 3.0#1.0/np.sqrt(2.0)#1.0#100.0/np.sqrt(2.0)
+BE_Z = 3.0#1.0/np.sqrt(2.0)#1.0
 BI_X = 0.0
 BI_Y = 0.0
+BI_Z = 0.0
 
 G = 0
 #G = -5.0e4
@@ -64,8 +66,8 @@ with open(out_directory+"/"+filename, 'w', newline='') as f:
     writer.writerow(["adiabatic_index"])
     writer.writerow([str(GAMMA)])
     writer.writerow(["t=0"])
-    names = ["d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","be_x","be_y","bi_x","bi_y","grav_x","grav_y"]
-    vars = [dx*one,dz*one,x_2d,z_2d,rho,MAX_TEMP*one,zero,zero,BE_X*one,BE_Y*one,BI_X*one,BI_Y*one,zero,G*one]
+    names = ["d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","mom_z","be_x","be_y","be_z","bi_x","bi_y","bi_z","grav_x","grav_y"]
+    vars = [dx*one,dz*one,x_2d,z_2d,rho,MAX_TEMP*one,zero,zero,zero,BE_X*one,BE_Y*one,BE_Z*one,BI_X*one,BI_Y*one,BI_Z*one,zero,G*one]
     for i in range(len(names)):
         writer.writerow([names[i]])
         writer.writerows(vars[i])

@@ -25,12 +25,12 @@ if not os.path.exists(out_directory):
     os.makedirs(out_directory)
 
 DOMAIN_WIDTH = 8.0
-DOMAIN_HEIGHT = 4.0
+DOMAIN_HEIGHT = 8.0
 X_DIM = 202
-Z_DIM = 102
+Z_DIM = 202
 # N_GHOST = 1
 
-X_1 = 2.25 #location of center for CH; location of one magnetic pole for AR
+X_1 = -2.0 #location of center for CH; location of one magnetic pole for AR
 X_2 = 1.75 #location of other magnetic pole for AR; not used for CH
 B_1_MULT = -1.0
 B_2_MULT = 1.0
