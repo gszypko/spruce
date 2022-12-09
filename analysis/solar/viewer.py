@@ -10,15 +10,8 @@ from matplotlib.image import NonUniformImage
 import sys
 import argparse
 import aia_response as aia
+from viewer_lib import *
 import os
-
-def read_grid(in_file,xdim,ydim,xl,yl,xu,yu):
-  result = []
-  for i in range(xdim):
-    row = in_file.readline().split(',')[yl:yu]
-    if i >= xl and i < xu:
-      result.append(row)
-  return np.asarray(result).astype(np.float64)
 
 fullnames = {
   'rho': "Density",
@@ -30,10 +23,12 @@ fullnames = {
   'bi': "Induced Magnetic Field",
   'bi_x': "X Induced Magnetic Field",
   'bi_y': "Y Induced Magnetic Field",
+  'bi_z': "Z Induced Magnetic Field",
   'b': "Magnetic Field",
   'v': "Velocity",
   'v_x': "X Velocity",
   'v_y': "Y Velocity",
+  'v_z': "Z Velocity",
   'dt': "CFL Timestep",
   'dt_thermal': "Thermal Conduction Timestep",
   'dt_rad': "Radiative Losses Timestep",
@@ -54,16 +49,18 @@ fullunits = {
   'bi': r'G',
   'bi_x': r'G',
   'bi_y': r'G',
+  'bi_z': r'G',
   'b': r'G',
   'v': r'cm s$^{-1}$',
   'v_x': r'cm s$^{-1}$',
   'v_y': r'cm s$^{-1}$',
+  'v_z': r'cm s$^{-1}$',
   'dt': r's',
   'dt_thermal': r's',
   'dt_rad': r's',
   'n': r'cm$^{-3}$',
   'beta': r'',
-  'div_be': r'G cm$^{-1}$',
+  'div_b': r'G cm$^{-1}$',
   'div_bi': r'G cm$^{-1}$',
   'b_mag': r'G',
   'field_heating': r'erg cm$^{-3}$ s$^{-1}$'
@@ -79,6 +76,7 @@ parser = argparse.ArgumentParser(description='View the output from mhdtoy.')
 parser.add_argument('filename', help="the name of the file output from mhdtoy")
 parser.add_argument('timestep', type=float, help="the interval (in simulation time units) between frames of output animation")
 parser.add_argument('contourvar', help="the simulation variable to display as a contour plot")
+parser.add_argument('-D', '--diff_file', help="plot the difference of the contourvar quantity with a different output file")
 parser.add_argument('-v', '--vector', help="designates vector variable to overlay over contour plot", choices=['b','v','be','bi'])
 parser.add_argument('-s', '--start', help="designates simulation time to begin plotting",type=float,default=0.0)
 parser.add_argument('-e', '--end', help="designates simulation time to end plotting",type=float,default=-1.0)
@@ -119,12 +117,10 @@ vec_mode = args.vecmode
 start_time = args.start
 end_time = args.end
 
-input_file = open(args.filename)
-
 #construct path to text file containing streamline plotting start points
 outpath = args.filename.split("/")[:-1]
 startpointfile = ""
-for folder in outpath: startpointfile+= folder + "/"
+for folder in outpath: startpointfile += folder + "/"
 startpointfile += f"startpoints_{args.vector}.txt"
 
 display_interval = float(args.timestep)
@@ -133,8 +129,12 @@ output_var = args.contourvar
 # Define any contour quantities that require multiple file values
 file_var_names = np.array([output_var])
 if output_var == "beta":
+  # file_var_names = np.array(["press","bi_x","bi_y","bi_z"])
   file_var_names = np.array(["press","bi_x","bi_y"])
 if output_var == "b_mag":
+  # file_var_names = np.array(["bi_x","bi_y","bi_z"])
+  file_var_names = np.array(["bi_x","bi_y"])
+if output_var in ["div_b","div_bi"]:
   file_var_names = np.array(["bi_x","bi_y"])
 if aia.is_filter(output_var):
   file_var_names = np.array(["n","temp"])
@@ -142,15 +142,6 @@ vec_var = args.vector
 file_vec_name = vec_var
 if vec_var == "b":
   file_vec_name = "bi"
-
-line = input_file.readline()
-while line[0] == '#' or len(line) == 0:
-  line = input_file.readline()
-#determine grid size
-assert line == "xdim,ydim\n"
-dim = input_file.readline().split(',')
-xdim = int(dim[0])
-ydim = int(dim[1])
 
 num_ghost = 2
 if args.ghost_zones: num_ghost = 0
@@ -160,125 +151,52 @@ xu_ghost = num_ghost
 yl_ghost = num_ghost
 yu_ghost = num_ghost
 
-xdim_view = xdim - (xl_ghost + xu_ghost)
-ydim_view = ydim - (yl_ghost + yu_ghost)
+xdim, ydim, X, Y, file_vars, vec_x, vec_y, bx, by, bz, t =\
+  extract_data_from_file(args.filename, file_var_names, display_interval, xl_ghost, xu_ghost, yl_ghost, yu_ghost, start_time, end_time, file_vec_name)
+
+if args.diff_file is not None:
+  xdim_diff, ydim_diff, foo, foo, file_vars_diff, foo, foo, foo, foo, foo, t_diff =\
+    extract_data_from_file(args.diff_file, file_var_names, display_interval, xl_ghost, xu_ghost, yl_ghost, yu_ghost, start_time, end_time)
+  assert xdim_diff == xdim and ydim_diff == ydim
+  file_vars_interp = [ [] for v in file_var_names ]
+  for i_base in range(len(t)):
+    t_base = t[i_base]
+    i_diff = np.searchsorted(t_diff,t_base)
+    i_diff_lower = min(len(t_diff)-1,max(0,i_diff))
+    i_diff_upper = max(0,min(len(t_diff)-1,i_diff))
+    for name_idx in range(len(file_var_names)):
+      val_lower = file_vars_diff[name_idx][i_diff_lower]
+      val_upper = file_vars_diff[name_idx][i_diff_upper]
+      if i_diff_lower == i_diff_upper:
+        interp = val_lower
+      else:
+        t_diff_upper = t[i_diff_upper]
+        t_diff_lower = t[i_diff_lower]
+        interp = (val_lower*(t_diff_upper - t_base) + val_upper*(t_base - t_diff_lower))/(t_diff_upper - t_diff_lower)
+      file_vars_interp[name_idx].append(interp)
+  file_vars_diff = file_vars_interp
 
 xl = 0 + xl_ghost
 xu = xdim - xu_ghost
 yl = 0 + yl_ghost
 yu = ydim - yu_ghost
+xdim_view = xdim - (xl_ghost + xu_ghost)
+ydim_view = ydim - (yl_ghost + yu_ghost)
 
-
-#read in grid cell positions
-assert input_file.readline() == "pos_x\n"
-X = read_grid(input_file,xdim,ydim,xl,yl,xu,yu)/1.0e8
-assert input_file.readline() == "pos_y\n"
-Y = read_grid(input_file,xdim,ydim,xl,yl,xu,yu)/1.0e8
+x = X[:,0]
+y = Y[0,:]
 
 x_min = X[0][0]
 x_max = X[-1][0]
 y_min = Y[0][0]
 y_max = Y[0][-1]
 
-assert input_file.readline() == "be_x\n"
-bx = read_grid(input_file,xdim,ydim,xl,yl,xu,yu)
-assert input_file.readline() == "be_y\n"
-by = read_grid(input_file,xdim,ydim,xl,yl,xu,yu)
-
-file_vars = [ [] for v in file_var_names ]
-vec_x = []
-vec_y = []
-t = []
-output_number = 0
-line = ""
-
-time = -1.0
-while True:
-  #read through to next time step (or file end)
-  line = input_file.readline()
-  while line and line[0:2] != "t=":
-    line = input_file.readline()
-  if not line:
-    break
-  time = float(line.split('=')[1])
-
-  while time < start_time:
-    line = input_file.readline()
-    while line and line[0:2] != "t=":
-      line = input_file.readline()
-    if not line:
-      break
-    time = float(line.split('=')[1])
-  if not line:
-    break
-
-  if end_time > 0.0 and time > end_time+1.0:
-    break
-
-  # var_found = False
-  vars_found = np.array([ False for v in file_var_names ]) #all set to false initially
-  vec_x_found = (file_vec_name == None or file_vec_name == "be")
-  vec_y_found = (file_vec_name == None or file_vec_name == "be")
-  # collect all necessary data at the current time step
-  while not (np.all(vars_found) and vec_x_found and vec_y_found):
-    line = input_file.readline()
-    while line and not (np.any(line.rstrip() == file_var_names) or line.rstrip() == (str(file_vec_name)+"_x") or line.rstrip() == (str(file_vec_name)+"_y")):
-      if line[0:2] == "t=" and not np.all(vars_found):
-        sys.exit("Specified output variable(s) not found in file")
-      if line[0:2] == "t=" and not (vec_x_found and vec_y_found):
-        sys.exit("Specified output vector not found in file")
-      line = input_file.readline()
-    if not line:
-      break
-
-    curr_data = []
-    if np.any(line.rstrip() == file_var_names): 
-      curr_data.append("var")
-      var_location = np.argwhere(line.rstrip() == file_var_names)
-      assert len(var_location) == 1
-      var_index = var_location[0][0]
-      assert vars_found[var_index] == False
-      vars_found[var_index] = True
-    if line.rstrip() == (str(file_vec_name)+"_x"): 
-      curr_data.append("vec_x")
-      vec_x_found = True
-    if line.rstrip() == (str(file_vec_name)+"_y"): 
-      curr_data.append("vec_y")
-      vec_y_found = True
-    
-    if output_number == 0 or display_interval == 0 or ((time - t[0])/display_interval >= output_number and not math.isinf(t[-1])):
-      if (np.all(vars_found) and vec_x_found and vec_y_found):
-        output_number += 1
-        t.append(time)
-      this_var = read_grid(input_file,xdim,ydim,xl,yl,xu,yu)
-      if "var" in curr_data:
-        file_vars[var_index].append(this_var)
-      if "vec_x" in curr_data:
-        vec_x.append(this_var)
-      if "vec_y" in curr_data:
-        vec_y.append(this_var)
-
-  if not line:
-    break
-
-input_file.close()
-
 # Apply any post-reading calculations for contourvars that combine multiple variables
-var = []
-if output_var == "beta":
-  for i in range(len(file_vars[0])):
-    mag_press = ((bx+file_vars[1][i])**2 + (by+file_vars[2][i])**2)/(8.0*np.pi)
-    var.append(file_vars[0][i]/mag_press)
-elif output_var == "b_mag":
-  for i in range(len(file_vars[0])):
-    field_mag = np.sqrt((bx+file_vars[0][i])**2 + (by+file_vars[1][i])**2)
-    var.append(field_mag)
-elif aia.is_filter(output_var):
-  for i in range(len(file_vars[0])):
-    resp = aia.response(output_var,file_vars[1][i])
-    var.append(np.sqrt((file_vars[0][i])**2*resp))
-else:
-  var = file_vars[0]
+var = apply_contour_computation(output_var, file_vars, x, y, bx, by, bz)
+if args.diff_file is not None:
+  var_diff = apply_contour_computation(output_var, file_vars_diff, x, y, bx, by, bz)
+  for i in range(len(var)):
+    var[i] = var[i] - var_diff[i]
 
 if vec_var == "b":
   for i in range(len(vec_x)):
@@ -289,14 +207,12 @@ if vec_var != None and vec_var != "be" and len(var) > len(vec_x):
   print("pop!")
   var.pop()
 
-if output_var in ["rho","b_mag"]:
-  for i in range(len(var)):
-    var[i] = np.ma.masked_where(var[i]<=1.0e-30, var[i])
+# if output_var in ["rho","b_mag"]:
+#   for i in range(len(var)):
+#     var[i] = np.ma.masked_where(var[i]<=1.0e-30, var[i])
 
 fig, ax = plt.subplots()
 frame = 0
-x = X[:,0]
-y = Y[0,:]
 
 if vec_mode == "stream":
   avg_space_x = np.abs(np.mean([x[i+1] - x[i] for i in range(len(x)-1)]))
@@ -307,9 +223,9 @@ if vec_mode == "stream":
 max_v = np.finfo(np.float_).min
 min_v = np.finfo(np.float_).max
 for i in range(len(var)):
-  curr_max = np.nanmax(var[i][xl:xu,yl:yu])
+  curr_max = np.nanmax(var[i])
   if np.isfinite(curr_max): max_v = np.fmax(max_v,curr_max)
-  curr_min = np.nanmin(var[i][xl:xu,yl:yu])
+  curr_min = np.nanmin(var[i])
   if np.isfinite(curr_min): min_v = np.fmin(min_v,curr_min)
 
 if args.low_colorbar is not None:
@@ -337,24 +253,28 @@ if vec_var != None:
     min_v_vec = 0.0
 
 # Set contour bar scaling (linear, log, etc)
-if output_var in ["rad","dt","dt_thermal","dt_rad","field_heating","b_mag"]: #variables that can go to zero
+if args.diff_file is not None or output_var in ["div_bi","div_be"]:
+  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+    interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-20, base=10))
+elif output_var in ["rad","dt","dt_thermal","dt_rad","field_heating","b_mag"]: #variables that can go to zero
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-8, base=10))
-elif output_var in ["div_bi","div_be"]:
-  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-    interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-22, base=10))
-elif output_var in ["v_x","v_y","bi_x","bi_y"]: #variables with negative and positive values
-  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-    interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-2, base=10))
 elif aia.is_filter(output_var):
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest')
-else:
+else: # output_var in ["v_x","v_y","v_z","bi_x","bi_y"]: #variables with negative and positive values
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-    interpolation='nearest', norm=matplotlib.colors.LogNorm())
+    interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-2, base=10))
+# else:
+#   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+#     interpolation='nearest', norm=matplotlib.colors.LogNorm())
 
 # Construct custom colorbar
-if output_var == "beta":
+# if args.diff_file is not None:
+#   colors = [(0.0,(0.1,0.1,1.0)),(0.5,(1.0,1.0,1.0)),(1.0,(1.0,0.1,0.1))]
+#   div_cmap = LinearSegmentedColormap.from_list('light_rwb',colors)
+#   im.set_cmap(div_cmap)
+if output_var == "beta" and args.diff_file is None:
   logrange = np.log10(max_v) - np.log10(min_v)
   one_pos = (np.log10(1.0) - np.log10(min_v))/logrange
   small_range = min(abs(one_pos),abs(1.0-one_pos))
@@ -370,10 +290,6 @@ if output_var == "beta":
     colors = [(0.0,bott_color),(max(middle,0.0),(0.9,0.2,0.0)),(1.0,(0.4,0.1,0.0))]
   beta_cmap = LinearSegmentedColormap.from_list('beta_diverge',colors)
   im.set_cmap(beta_cmap)
-elif output_var in ["div_bi","div_be"]:
-  colors = [(0.0,(0.5,0.5,1.0)),(0.5,(1.0,1.0,1.0)),(1.0,(1.0,0.5,0.5))]
-  div_cmap = LinearSegmentedColormap.from_list('light_rwb',colors)
-  im.set_cmap(div_cmap)
 elif aia.is_filter(output_var):
   im.set_cmap(aia.colormap(output_var))
 
@@ -481,7 +397,7 @@ if vec_var != None:
                 width = 0.005, headwidth=3, headlength=3, headaxislength=2.5, \
                   pivot='mid', norm=matplotlib.colors.SymLogNorm(linthresh=1e-4, base=10))
     vec_colorbar = fig.colorbar(quiv)
-    vec_colorbar.set_label(fullnames[vec_var]+ fullunits[vec_var])
+    vec_colorbar.set_label(fullnames[vec_var]+ fullunits.get(vec_var,""))
     vector_color_axes = fig.axes[-1]
     quiv.set_clim(vmin=min_v_vec,vmax=max_v_vec)
 
@@ -498,11 +414,13 @@ def updatefig(*args_arg):
       frame = (frame + 1)%len(var)
     im.set_data(x,y,np.transpose(var[frame]))
     plot_title = ""
+    if args.diff_file is not None:
+      plot_title += "Difference in "
     if not args.no_varname:
       if args.full_varname: plot_title += fullnames[output_var]
       else: plot_title += output_var
     if not args.no_units:
-      plot_title += fullunits[output_var]
+      plot_title += fullunits.get(output_var,"")
     if args.time_label:
       if len(plot_title) != 0: plot_title += ", "
       if args.time_label_rounded: plot_title += "t="+str(round(t[frame]))+" s"
@@ -516,7 +434,7 @@ def updatefig(*args_arg):
       if vec_mode == "quiver":
         vector_color_axes.cla()
         vec_colorbar = fig.colorbar(quiv, cax=vector_color_axes)
-        vec_colorbar.set_label(fullnames[vec_var]+ fullunits[vec_var])
+        vec_colorbar.set_label(fullnames[vec_var]+ fullunits.get(vec_var,""))
         norm = np.sqrt(this_vec_x**2 + this_vec_y**2)
         np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
         np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
@@ -603,6 +521,12 @@ def advancetime(event):
     updatefig()
     fig.canvas.draw_idle()
 
+def keypresshandler(event):
+  if args.interactive:
+    advancetime(event)
+  if args.streampoint_record:
+    savestreampoints(event)
+
 def displayinfo(event):
   global fig
   global x,y
@@ -611,25 +535,22 @@ def displayinfo(event):
   if event.xdata is None or event.ydata is None:
     fig.suptitle("")
   else:
-    xround = round(event.xdata)
-    yround = round(event.ydata)
     xidx = min(np.searchsorted(x,event.xdata),xdim-1)
     if xidx != 0:
       xidx = xidx if (event.xdata-x[xidx-1])>(x[xidx]-event.xdata) else xidx-1
     yidx = min(np.searchsorted(y,event.ydata),ydim-1)
     if yidx != 0:
       yidx = yidx if (event.ydata-y[yidx-1])>(y[yidx]-event.ydata) else yidx-1
-    fig.suptitle(f"{var[frame][xidx,yidx]:.3e} at ({xround},{yround})",x=0.1,ha='left')
+    fig.suptitle(f"{var[frame][xidx,yidx]:.3e} at ({xidx},{yidx})",x=0.1,ha='left')
   fig.canvas.draw_idle()
 
 
-
+if args.interactive or args.streampoint_record:
+  cid = fig.canvas.mpl_connect('key_press_event', keypresshandler)
 if args.interactive:
-  cid = fig.canvas.mpl_connect('key_press_event', advancetime)
   cid = fig.canvas.mpl_connect('motion_notify_event', displayinfo)
-elif args.streampoint_record:
+if args.streampoint_record:
   cid = fig.canvas.mpl_connect('button_press_event', modifystreampoints)
-  cid = fig.canvas.mpl_connect('key_press_event', savestreampoints)
 else:
   ani = animation.FuncAnimation(fig, updatefig, frames=len(var), repeat=args.realtime, interval=100, blit=False)
 
