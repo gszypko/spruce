@@ -15,8 +15,8 @@ class PlasmaDomain;
 class Viscosity : public Module {
     public:
         // *** Variable Types
-        std::vector<std::string> m_momenta {"mom_x","mom_y","i_mom_x","i_mom_y","e_mom_x","e_mom_y"}; // possible momentum density variables across all equation sets
-        std::vector<std::string> m_velocities {"v_x","v_y","i_v_x","i_v_y","e_v_x","e_v_y"}; // possible velocity variables across all equation sets
+        std::vector<std::string> m_momenta {"mom_x","mom_y","mom_z","i_mom_x","i_mom_y","e_mom_x","e_mom_y"}; // possible momentum density variables across all equation sets
+        std::vector<std::string> m_velocities {"v_x","v_y","v_z","i_v_x","i_v_y","e_v_x","e_v_y"}; // possible velocity variables across all equation sets
         bool is_momentum(std::string name) const; // check whether variable name is a momentum variable
         bool is_velocity(std::string name) const; // check whether variable name is a velocity variable
         // *** Construction

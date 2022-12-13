@@ -132,6 +132,10 @@ void Viscosity::constructViscosityGrids(const std::vector<Grid>& grids)
             else if (m_species[i] == "e") m_grids_dt[i] *= grids[m_pd.m_eqs->name2index("e_n")]*M_ELECTRON;
             else assert("Species must be e or i when applying viscosity to momentum.");
         }
+        else{
+            if(!is_momentum(m_vars_to_evol[i])) std::cerr << m_vars_to_evol[i] << " not recognized by viscosity module\n";
+            if(!is_velocity(m_vars_to_diff[i])) std::cerr << m_vars_to_diff[i] << " not recognized by viscosity module\n";
+        }
     }
 }
 
