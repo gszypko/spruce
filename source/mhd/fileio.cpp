@@ -131,7 +131,7 @@ void PlasmaDomain::outputPreamble()
   }
   out_file << "xdim,ydim" << std::endl;
   out_file << m_xdim << "," << m_ydim << std::endl;
-  for (int v : {pos_x,pos_y,be_x,be_y}){
+  for (int v : {pos_x,pos_y,be_x,be_y,be_z}){
     out_file << m_gridnames[v] << std::endl;
     out_file << m_grids[v].format(',','\n');
   }

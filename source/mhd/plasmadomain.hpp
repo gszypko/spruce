@@ -32,8 +32,8 @@ public: //**********************************************************************
   };
 
   // Internal Grids
-  enum Grids {d_x,d_y,pos_x,pos_y,be_x,be_y};
-  static const inline std::vector<std::string> m_gridnames = {"d_x","d_y","pos_x","pos_y","be_x","be_y"};
+  enum Grids {d_x,d_y,pos_x,pos_y,be_x,be_y,be_z};
+  static const inline std::vector<std::string> m_gridnames = {"d_x","d_y","pos_x","pos_y","be_x","be_y","be_z"};
   std::vector<Grid> m_grids{m_gridnames.size()};
 
   // Config Names
@@ -178,6 +178,7 @@ private: //*********************************************************************
   //if "index"==0, or i,j and i,j-1 if "index"==1
   Grid upwindSurface(const Grid &cell_center, const Grid &vel, const int index) { return upwindSurface(cell_center, vel, index, m_xl, m_yl, m_xu, m_yu); }
   Grid upwindSurface(const Grid &cell_center, const Grid &vel, const int index, int xl, int yl, int xu, int yu);
+  Grid upwindSurfaceDirected(const Grid &cell_center, const bool vel_positive, const int index, int xl, int yl, int xu, int yu);
 
   //Compute divergence of scalar quantity times velocity using Barton's method
   //Meant for advection terms
@@ -185,7 +186,8 @@ private: //*********************************************************************
   Grid transportDivergence2D(const Grid &quantity, const std::vector<Grid> &vel, int xl, int yl, int xu, int yu);
   //Compute 1D derivative using Barton's method, for transport terms
   Grid transportDerivative1D(const Grid &quantity, const Grid &vel, const int index) { return transportDerivative1D(quantity,vel,index,m_xl,m_yl,m_xu,m_yu); }
-  Grid transportDerivative1D(const Grid &quantity, const Grid &vel, const int index, int xl, int yl, int xu, int yu);
+  Grid transportDerivative1D(const Grid &quantity, const Grid &vel, const int index, int xl, int yl, int xu, int yu, bool multiply_vel = true);
+  Grid characteristicBartonDerivative1D(const Grid &quantity, const bool positive_forward, const int index, int xl, int yl, int xu, int yu);
 
   //Compute divergence of vector quantity a_x,a_y
   Grid divergence2D(const Grid& a_x, const Grid& a_y){ return divergence2D(a_x, a_y, m_xl, m_yl, m_xu, m_yu); }
@@ -203,7 +205,8 @@ private: //*********************************************************************
   //When false, 'backward' is taken to mean 'in the direction of increasing indices'
   Grid derivative1DBackward(const Grid &quantity, bool positive_forward, const int index){ return derivative1DBackward(quantity,positive_forward,index, m_xl, m_yl, m_xu, m_yu); }
   Grid derivative1DBackward(const Grid &quantity, bool positive_forward, const int index, int xl, int yl, int xu, int yu);
-
+  Grid derivative1DBackward2ndOrder(const Grid &quantity, bool positive_forward, const int index, int xl, int yl, int xu, int yu);
+  
   //Compute single-direction second derivative
   Grid secondDerivative1D(const Grid &quantity, const int index) { return secondDerivative1D(quantity, index, m_xl, m_yl, m_xu, m_yu); }
   Grid secondDerivative1D(const Grid &quantity, const int index, int xl, int yl, int xu, int yu);
