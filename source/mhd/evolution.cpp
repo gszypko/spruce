@@ -254,9 +254,16 @@ void PlasmaDomain::fixedBoundaryExtrapolate(std::vector<Grid>& grids, int i1, in
   // m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
   for(std::vector<int> mom : m_eqs->momenta()){
     for(int v : mom){
-      m_eqs->grid(v)(i1,j1) = 0.0;
-      m_eqs->grid(v)(i2,j2) = 0.0;
-      m_eqs->grid(v)(i3,j3) = 0.0;
+      // m_eqs->grid(v)(i1,j1) = 0.0;
+      // m_eqs->grid(v)(i2,j2) = 0.0;
+      // m_eqs->grid(v)(i3,j3) = 0.0;
+      
+      if(m_eqs->index2name(v).back() == 'x'){
+        if(j1 == j2) m_eqs->grid(v)(i3,j3) = 0.0;
+      }else if(m_eqs->index2name(v).back() == 'y'){
+        if(i1 == i2) m_eqs->grid(v)(i3,j3) = 0.0;
+      }
+      
     }
   }
 }
