@@ -80,7 +80,7 @@ double Grid::min(int il, int jl, int iu, int ju) const
   return curr_min;
 }
 
-// returns a grid where all elements smaller than b have been replaced by b
+// returns a grid containing the elementwise minimum with b
 Grid Grid::min(double b) const { return ScalarOperation( b, SCALAR_LAMBDA(std::min(this_comp,scalar)) ); }
 
 // returns a grid where each element is the minimum element
