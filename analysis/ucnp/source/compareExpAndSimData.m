@@ -5,11 +5,19 @@ f = filesep;
 base_folder = extractBefore(data.folder,[f 'set_']);
 load([base_folder f 'os.mat'],'os');
 
+% compute tau_exp for simulation and experiment
+fit_exp = fitImgWithGaussian(os(1).imgs.xRelInMM/10,os(1).imgs.yRelInMM/10,os(1).imgs.density);
+fit_sim = fitImgWithGaussian(data.grids.x_vec,data.grids.y_vec,data.grids.vars(1).i_n);
+sig_exp = (fit_exp.sigx*fit_exp.sigy^2)^(1/3);
+sig_sim = (fit_sim.sigx*fit_sim.sigy)^(1/2);
+tau_exp = getTauExp(sig_exp,os(1).Te);
+tau_sim = getTauExp(sig_sim,data.Te);
+
 % find indices of simulation time points that are closest to experimental time points
 % ind_t(i) holds the index of data.grids.vars corresponding to experimental time point os(i).delays
 ind_t = zeros(size(os)); 
 for i = 1:length([os.delays])
-    [~,ind_t(i)] = min(abs(os(i).delays*1e-9 - data.grids.time));
+    [~,ind_t(i)] = min(abs(os(i).delays*1e-9 + os(1).delays*1e-9 - data.grids.time));
 end
 
 % create struct to hold info to be plotted
@@ -18,6 +26,7 @@ imgs(length([os.delays])).t = [];
 interpolate_sims = false;
 for i = 1:length([os.delays])
     imgs(i).t = os(i).delays*1e-9;
+    
     imgs(i).time_fac = sqrt(1+imgs(i).t^2/data.tau^2);
     if max(data.grids.x_vec) > max(os(i).imgs.xRelInMM/10), interpolate_sims = true; end
     if interpolate_sims
@@ -31,7 +40,7 @@ for i = 1:length([os.delays])
         imgs(i).y = data.grids.y_vec;
         [imgs(i).X, imgs(i).Y] = meshgrid(imgs(i).x, imgs(i).y);
         imgs(i).n_exp = interp2(os(i).imgs.xRelInMM/10,os(i).imgs.yRelInMM/10,os(i).imgs.density,imgs(i).X,imgs(i).Y)*1e8;
-        imgs(i).n_sim = data.grids.vars(ind_t(i)).n;
+        imgs(i).n_sim = data.grids.vars(ind_t(i)).i_n;
     end
     imgs(i).n_res = imgs(i).n_sim - imgs(i).n_exp;
     
@@ -49,7 +58,7 @@ for i = 1:length([os.delays])
 end
 
 % plot density with residuals
-colvar = {'n_sim','n_exp','n_res'};
+colvar = {'n_sim_norm','n_exp_norm','n_res_norm'};
 colstr = {'Sim','Exp','Sim - Exp'};
 num = length(colvar);
 [fig,ax,an] = open_subplot(num,'Visible',flags.figvis);
@@ -77,9 +86,9 @@ for k = 1:length([imgs.t])
             if i == size(ax,1), xlabel('x (cm)'), end
             if j == 1, ylabel('y (cm)'), end
             title(colstr{j},'FontWeight','normal')
-            if strcmp(colvar{j},'n_sim'), cmax = max(zdata,[],'all'); end
-            if strcmp(colvar{j},'n_exp'), cax.CLim = [0 cmax]; end
-            if strcmp(colvar{j},'n_res'), cax.CLim = [-cmax cmax]/4; end
+            if j==1, cmax = max(zdata,[],'all'); end
+            if j==2, cax.CLim = [0 cmax]; end
+            if j==3, cax.CLim = [-cmax cmax]/4; end
 
         end
     end
@@ -101,10 +110,10 @@ for i = 1:length([os.delays])
     map(i).y = os(i).map.y/10;
     [map(i).X, map(i).Y] = meshgrid(map(i).x, map(i).y);
     map(i).n_exp = os(i).map.nFit*1e8;
-    map(i).n_sim = interp2(data.grids.pos_x,data.grids.pos_y,data.grids.vars(ind_t(i)).n,map(i).X,map(i).Y);
+    map(i).n_sim = interp2(data.grids.pos_x,data.grids.pos_y,imgs(i).n_sim,map(i).X,map(i).Y);
     map(i).n_res = map(i).n_sim - map(i).n_exp;
     map(i).v_exp = os(i).map.vExp*100;
-    map(i).v_sim = interp2(data.grids.pos_x,data.grids.pos_y,data.grids.vars(ind_t(i)).v_x,map(i).X,map(i).Y);
+    map(i).v_sim = interp2(data.grids.pos_x,data.grids.pos_y,data.grids.vars(ind_t(i)).i_v_x,map(i).X,map(i).Y);
     map(i).v_res = map(i).v_sim - map(i).v_exp;
     fit_exp = fitImgWithGaussian(map(i).x,map(i).y,map(i).n_exp);
     fit_sim = fitImgWithGaussian(map(i).x,map(i).y,map(i).n_sim);

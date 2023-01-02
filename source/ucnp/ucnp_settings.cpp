@@ -63,7 +63,7 @@ double UCNP::get_characteristic(std::string str) const
     {   case w_pi: return phys::plasma_freq(getval("n"),getval("m_i"));
         case w_pe: return phys::plasma_freq(getval("n"),E);
         case l_deb: return phys::debye_length(getval("n"),getval("Te"));
-        case sig: return pow(getval("sig_x")*pow(getval("sig_y"),2.0),1./3.);
+        case sig: return pow(getval("sig_x")*getval("sig_y"),1./2.);
         case tau_exp: return phys::tau_exp(get_characteristic("sig"),getval("m_i"),getval("Te")+getval("Ti"));
         case a: return phys::wigner_seitz_radius(getval("n"));
         default: return -1.;

@@ -6,8 +6,8 @@ s(length(data.grids.time)).t = [];
 for i = 1:length([data.grids.time])
     s(i).t = data.grids.time(i);
     s(i).x = data.grids.x_vec;
-    [~,indx] = min(abs(s(i).x));
-    s(i).n = data.grids.vars(i).n(indx,:);
+    [~,indy] = min(abs(data.grids.y_vec));
+    s(i).n = data.grids.vars(i).n(indy,:);
     s(i).gam = sqrt(1+s(i).t^2/data.tau^2);
 end
 
@@ -94,6 +94,7 @@ for i = 1:length([s.t])
     s(i).A = x(1);
     s(i).k = x(2);
     s(i).lam = 2*pi/s(i).k;
+    s(i).phi = x(3);
 end
 
 % Plot Density Perturbation
@@ -176,5 +177,33 @@ an.String = [str1 dlm str2];
 filepath = [data.folder filesep 'iaw-length-evol.png'];
 saveas(fig,filepath);
 close(fig)
+
+%% Fit for Dispersion Relation
+    function [amp] = amp_fun(t,A0,g0,w0,tau)
+        temp = @(t) w0.*integral(@(tp) 1./(1+tp.^2./tau^2),0,t);
+        phi = zeros(size(t));
+        for i = 1:length(t)
+            phi(i) = temp(t(i));
+        end
+        amp = A0.*exp(-g0.*t).*abs(cos(phi));
+    end
+fun = @(c,d) amp_fun(d,c(1),c(2),c(3),data.tau);
+x0 = []; lb = []; ub = [];
+x0(1) = s(1).A; lb(1) = x0(1)/2; ub(1) = x0(1)*2;
+x0(2) = 0.2/data.tau; lb(2) = 0; ub(2) = 2*x0(2);
+cs = getSoundSpeed(data.settings.m_i,data.settings.Ti,data.settings.Te,data.settings.adiabatic_index);
+x0(3) = s(1).k*cs/2; lb(3) = x0(3)/10; ub(3) = x0(3)*10;
+xdata = [s.t];
+ydata = [s.A];
+num = 1;
+[fig,ax,an] = open_subplot(num,'Visible',flags.figvis);
+an.Position = [0.1595    0.9117    0.7230    0.0801];
+cax = get_axis(fig,ax{1});
+hold on
+plot(xdata,ydata)
+plot(xdata,fun(x0,xdata))
+x = lsqcurvefit(fun,x0,xdata,ydata,lb,ub);
+plot(xdata,fun(x,xdata))
+legend({'data','guess','fit'})
 
 end
