@@ -151,7 +151,7 @@ Grid Viscosity::getBoundaryViscosity(double strength,double length) const
     result += (-2.3*((y - y.min())/length).square()).exp()*strength;
     // call to function max ensures that viscosity value cannot exceed strength
     // - this call is necessary because the boundary viscosity term is formed via superposition of many terms
-    return result.max(strength);
+    return result.min(strength);
 }
 
 bool Viscosity::is_momentum(std::string name) const
