@@ -121,9 +121,9 @@ void StateHandler::setup(const std::unique_ptr<Settings>& pms)
     setgrid("pos_y",pos_y);
     // external magnetic fields
     AntiHelmholtz quad(30.,120.,pms->getval("dBdx"),CurrentLoop::ax_x);
-    std::vector<Grid> B(2.);
-    for (int i = 0; i < B.size(); i++){ // for each B-field component (x and y)
-        B[i] = Grid::Zero(getvar("xdim"),getvar("ydim")); // initialize that component
+    std::vector<Grid> B(3.);
+    for (int i = 0; i < B.size(); i++){ // for each B-field component (x, y, z)
+        B[i] = Grid::Zero(getvar("xdim"),getvar("ydim")); // initialize that component with zeros
         for (int j = 0; j < B[i].rows(); j++){
             for (int k = 0; k < B[i].cols(); k++){
                 std::vector<long double> Bquad = quad.get_field({pos_x(j,k),pos_y(j,k),0.});
@@ -133,6 +133,7 @@ void StateHandler::setup(const std::unique_ptr<Settings>& pms)
     } 
     setgrid("be_x",B[0]);
     setgrid("be_y",B[1]);
+    setgrid("be_z",B[2]);
     //*** initialize grids for equation set
     if (m_eqn_set_name == "ideal_mhd") setup_idealmhd(pms);
     else if (m_eqn_set_name == "ideal_mhd_cons") setup_idealmhdcons(pms);

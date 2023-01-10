@@ -47,15 +47,18 @@ class Viscosity : public Module {
         std::vector<std::string> m_species;
 
         std::vector<Grid> m_grids_dt;
-        std::vector<Grid> m_grids_lap;
         std::vector<Grid> m_grids_strength;
+        std::vector<Grid> m_grids_lap;
+        std::vector<Grid> m_grids_dqdt;
         std::vector<std::string> m_dt_names;
-        std::vector<std::string> m_lap_names;
         std::vector<std::string> m_strength_names;
+        std::vector<std::string> m_lap_names;
+        std::vector<std::string> m_dqdt_names;
 
         bool m_output_visc;
         bool m_output_lap;
         bool m_output_strength;
+        bool m_output_timescale;
 };
 
 #endif

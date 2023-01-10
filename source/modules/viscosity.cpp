@@ -8,6 +8,7 @@ void Viscosity::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std
         if(lhs[i] == "visc_output_visc") m_output_visc = (rhs[i] == "true");
         else if(lhs[i] == "visc_output_lap") m_output_lap = (rhs[i] == "true");
         else if(lhs[i] == "visc_output_strength") m_output_strength = (rhs[i] == "true");
+        else if(lhs[i] == "visc_output_timescale") m_output_timescale = (rhs[i] == "true");
         else if(lhs[i] == "visc_opt") m_inp_visc_opt = rhs[i];
         else if(lhs[i] == "visc_strength") m_inp_strength = rhs[i];
         else if(lhs[i] == "visc_vars_to_diff") m_inp_vars_to_diff = rhs[i];
@@ -72,13 +73,16 @@ void Viscosity::setupModule()
     m_grids_dt = std::vector<Grid>(m_num_terms,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
     m_grids_lap = std::vector<Grid>(m_num_terms,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
     m_grids_strength = std::vector<Grid>(m_num_terms,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
+    m_grids_dqdt = std::vector<Grid>(m_num_terms,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
     m_dt_names.resize(m_num_terms);
     m_lap_names.resize(m_num_terms);
     m_strength_names.resize(m_num_terms);
+    m_dqdt_names.resize(m_num_terms);
     for (int i=0; i<m_num_terms; i++){
         m_dt_names[i] = m_vars_to_evol[i] + "_dt";
         m_lap_names[i] = m_vars_to_evol[i] + "_lap";
         m_strength_names[i] = m_vars_to_evol[i] + "_str";
+        m_dqdt_names[i] = m_vars_to_evol[i] + "_dqdt";
     } 
 }
 
@@ -86,7 +90,7 @@ void Viscosity::computeTimeDerivativesModule(const std::vector<Grid> &grids,std:
 {
     constructViscosityGrids(grids);
     for (int i=0; i<m_num_terms; i++)
-        grids_dt[m_pd.m_eqs->name2evolvedindex(m_vars_to_evol[i])] += m_grids_dt[i]*m_pd.m_ghost_zone_mask;
+        grids_dt[m_pd.m_eqs->name2evolvedindex(m_vars_to_evol[i])] += m_grids_dqdt[i]*m_pd.m_ghost_zone_mask;
         
 }
 
@@ -96,15 +100,13 @@ void Viscosity::constructViscosityGrids(const std::vector<Grid>& grids)
         // reference to plasma domain grids
         const Grid& dx = m_pd.grid("d_x");
         const Grid& dy = m_pd.grid("d_y");
-        const Grid& grid_to_diff = grids[m_pd.m_eqs->name2index(m_vars_to_diff[i])];
-        // construct initial portion of viscosity grid of form eps*(dx^2+dy^2)/2/dt*Lap(q)
-        m_grids_dt[i] = (dx.square()+dy.square())/2.;
-        // apply strength constant depending on viscosity type
+
+        // determine viscosity strength factor
         if (m_visc_opt[i] == "local" || m_visc_opt[i] == "global") m_grids_strength[i] = Grid(m_pd.m_xdim,m_pd.m_ydim,m_strength[i]);
         else if (m_visc_opt[i] == "boundary") m_grids_strength[i] = getBoundaryViscosity(m_strength[i],m_length[i]);
         else assert("Viscosity option must be global, local, or boundary.");
-        m_grids_dt[i] *= m_grids_strength[i];
-        // apply time information depending on viscosity type
+
+        // determine timescale to base viscosity off of
         bool is_1F_model = m_pd.m_eqs->timescale().size() == 1;
         Grid dt; // grid that holds evolution timescale for species that viscosity term is being applied to
         if (is_1F_model) dt = m_pd.m_eqs->grid("dt"); // the main "dt" grid is used if 1F model
@@ -113,29 +115,42 @@ void Viscosity::constructViscosityGrids(const std::vector<Grid>& grids)
             else if (m_species[i] == "e") dt = m_pd.m_eqs->grid(m_pd.m_eqs->timescale()[1]);
             else assert(false && "Species must be <i> or <e>.");
         }
-        dt.min(m_pd.epsilon*m_pd.m_eqs->grid("dt")); // ensure that viscosity timescale does not exceed RK algorithm step size
         double dt_min = dt.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
-        if (m_visc_opt[i] == "local") m_grids_dt[i] /= dt;
-        else if (m_visc_opt[i] == "boundary" || m_visc_opt[i] == "global") m_grids_dt[i] /= dt_min;
+        if (m_visc_opt[i] == "local") m_grids_dt[i] = dt;
+        else if (m_visc_opt[i] == "boundary" || m_visc_opt[i] == "global") m_grids_dt[i] = Grid(m_pd.m_xdim,m_pd.m_ydim,dt_min);
         else assert("Viscosity option must be global, local, or boundary.");
-        // apply Laplacian to variable
+
+        // compute viscosity coefficient and impose maximum
+        Grid visc_coeff = m_grids_strength[i]*(dx.square()+dy.square())/2./m_grids_dt[i];
+        double rk_timestep = m_pd.epsilon*m_pd.m_eqs->getDT().min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
+        Grid visc_max = (dx.square()+dy.square())/2./rk_timestep;
+        visc_coeff.min(visc_max);
+
+        // compute Laplacian of variable to differentiate
+        const Grid& grid_to_diff = grids[m_pd.m_eqs->name2index(m_vars_to_diff[i])];
         m_grids_lap[i] = m_pd.laplacian(grid_to_diff);
-        m_grids_dt[i] *= m_grids_lap[i];
-        // apply scaling of viscosity grid, depending on relation of evolved variable to differentiated variable
-        if (is_momentum(m_vars_to_evol[i]) && is_velocity(m_vars_to_diff[i])){
-            // handle scaling for ions
-            if (m_species[i] == "i"){
-                // ion scaling depends on whether 1F or 2F model
-                if (m_pd.m_eqs->is_var("i_n")) m_grids_dt[i] *= grids[m_pd.m_eqs->name2index("i_n")]*m_pd.m_ion_mass;
-                else m_grids_dt[i] *= grids[m_pd.m_eqs->name2index("n")]*m_pd.m_ion_mass;
-            } // handle scaling for electrons
-            else if (m_species[i] == "e") m_grids_dt[i] *= grids[m_pd.m_eqs->name2index("e_n")]*M_ELECTRON;
-            else assert("Species must be e or i when applying viscosity to momentum.");
+        
+        // apply scaling of viscosity grid when applying viscosity to momentum density
+        Grid scale_fac = Grid::Ones(m_pd.m_xdim,m_pd.m_ydim);
+        if (is_momentum(m_vars_to_evol[i])){
+            if (is_velocity(m_vars_to_diff[i])){
+                // handle scaling for ions
+                if (m_species[i] == "i"){
+                    // ion scaling depends on whether 1F or 2F model
+                    if (m_pd.m_eqs->is_var("i_n")) scale_fac = grids[m_pd.m_eqs->name2index("i_n")]*m_pd.m_ion_mass;
+                    else scale_fac = grids[m_pd.m_eqs->name2index("n")]*m_pd.m_ion_mass;
+                } // handle scaling for electrons
+                else if (m_species[i] == "e") scale_fac = grids[m_pd.m_eqs->name2index("e_n")]*M_ELECTRON;
+                else assert("Species must be e or i when applying viscosity to momentum.");
+            }
+            else{
+                if(!is_momentum(m_vars_to_diff[i])) std::cerr << "Variable being differentiated is not consistent with variable viscosity is applied to.\n";
+            }
         }
-        else{
-            if(!is_momentum(m_vars_to_evol[i])) std::cerr << m_vars_to_evol[i] << " not recognized by viscosity module\n";
-            if(!is_velocity(m_vars_to_diff[i])) std::cerr << m_vars_to_diff[i] << " not recognized by viscosity module\n";
-        }
+
+        // compute final viscosity term
+        m_grids_dqdt[i] = visc_coeff*m_grids_lap[i]*scale_fac;
+
     }
 }
 
@@ -174,8 +189,8 @@ void Viscosity::fileOutput(std::vector<std::string>& var_names, std::vector<Grid
 {
     if (m_output_visc) {
         for (int i = 0; i<m_num_terms; i++){
-            var_names.push_back(m_dt_names[i]);
-            var_grids.push_back(m_grids_dt[i]);
+            var_names.push_back(m_dqdt_names[i]);
+            var_grids.push_back(m_grids_dqdt[i]);
         }
     }
     if (m_output_lap){
@@ -190,5 +205,10 @@ void Viscosity::fileOutput(std::vector<std::string>& var_names, std::vector<Grid
             var_grids.push_back(m_grids_strength[i]);
         }
     }
-        
+    if (m_output_timescale){
+        for (int i = 0; i<m_num_terms; i++){
+            var_names.push_back(m_dt_names[i]);
+            var_grids.push_back(m_grids_dt[i]);
+        }
+    }  
 }

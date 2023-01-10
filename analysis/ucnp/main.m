@@ -2,21 +2,21 @@
 clc, clearvars -except data, close all, f = filesep; setpath;
 
 inp = {'folder';
-    'C:\Users\grant\OneDrive\Research\mhd\data-expsims\an-mhd-09.26.22\HIH-0\set_17';
+    'C:\Users\grant\OneDrive\Research\mhd\data-sims\01.02.23\set_2';
       };
 s = spreadsheet2struct(inp,inp(1,:));
-Te = [29.2 20.5 39.1];
+Te = [];
 
 % simulation flags
-flags.sim.plot_grids = false;
+flags.sim.plot_grids = true;
 flags.sim.vlasov_analysis = false;
-flags.sim.cmpr_exp_sim = true;
+flags.sim.cmpr_exp_sim = false;
 flags.sim.iaw_analysis = false;
 flags.sim.ion_holes = false;
 flags.sim.hole_orientation = 0;
 
 % flags.sim.vars = {'n', 'v_x', 'v_y', 'i_temp', 'e_temp', 'dt'};
-flags.sim.vars = {'i_n', 'dn', 'i_v_x', 'j_x', 'i_temp', 'e_temp', 'E_x', 'dt'};
+flags.sim.vars = {'i_n', 'dn', 'i_v_x', 'j_x', 'i_temp', 'e_temp', 'E_x', 'dt','e_mom_x_dt','e_mom_x_lap','e_mom_x_str','e_mom_x_dqdt'};
 flags.sim.plot_freq = 1;
 flags.sim.ghost_cells = 2;
 flags.sim.eic_opt = true;
@@ -53,7 +53,7 @@ for i = 1:length(s)
     
     % run flagged options
     if is_sim_folder
-%         data = loadData(s(i).folder,flags.sim);
+        data = loadData(s(i).folder,flags.sim);
         if flags.sim.plot_grids, plotGridEvol(data,flags.sim); end
         if flags.sim.vlasov_analysis, gaussianAnalysis(data,flags.sim); end
         if flags.sim.cmpr_exp_sim, compareExpAndSimData(data,flags.sim); end
