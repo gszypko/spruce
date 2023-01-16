@@ -249,21 +249,11 @@ void PlasmaDomain::reflectBoundaryExtrapolate(std::vector<Grid>& grids, int i1, 
 void PlasmaDomain::fixedBoundaryExtrapolate(std::vector<Grid>& grids, int i1, int i2, int i3, int i4, int j1, int j2, int j3, int j4) const
 {
   assert(N_GHOST == 2 && "This function assumes two ghost zones");
-  // Grid &m_mom_x = grids[mom_x], &m_mom_y = grids[mom_y];
-  // m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0;
-  // m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
   for(std::vector<int> mom : m_eqs->momenta()){
     for(int v : mom){
-      // m_eqs->grid(v)(i1,j1) = 0.0;
-      // m_eqs->grid(v)(i2,j2) = 0.0;
-      // m_eqs->grid(v)(i3,j3) = 0.0;
-      
-      if(m_eqs->index2name(v).back() == 'x'){
-        if(j1 == j2) m_eqs->grid(v)(i3,j3) = 0.0;
-      }else if(m_eqs->index2name(v).back() == 'y'){
-        if(i1 == i2) m_eqs->grid(v)(i3,j3) = 0.0;
-      }
-      
+      m_eqs->grid(v)(i1,j1) = 0.0;
+      m_eqs->grid(v)(i2,j2) = 0.0;
+      m_eqs->grid(v)(i3,j3) = 0.0;
     }
   }
 }
