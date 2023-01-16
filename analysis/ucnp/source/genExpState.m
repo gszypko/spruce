@@ -388,6 +388,7 @@ grids.pos_x = X;
 grids.pos_y = Y;
 grids.be_x = zeros(size(X));
 grids.be_y = zeros(size(X));
+grids.be_z = zeros(size(X));
 if strcmp(eq_set,'ideal_mhd')
     grids.rho = settings.m_i.*state.n_sg;
     grids.temp = settings.Te*ones(size(X));

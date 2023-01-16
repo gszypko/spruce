@@ -2,10 +2,11 @@
 clc, clearvars -except data, close all, f = filesep; setpath;
 
 inp = {'folder';
-    'C:\Users\grant\OneDrive\Research\mhd\data-sims\01.02.23\set_2';
+    'C:\Users\Grant\OneDrive\Research\mhd\data-expsims\an-mhd-09.26.22\HIH-0\set_18';
+    'C:\Users\Grant\OneDrive\Research\mhd\data-expsims\an-mhd-09.26.22\HIH-2\set_18';
       };
 s = spreadsheet2struct(inp,inp(1,:));
-Te = [];
+Te = [100 100];
 
 % simulation flags
 flags.sim.plot_grids = true;
@@ -16,7 +17,7 @@ flags.sim.ion_holes = false;
 flags.sim.hole_orientation = 0;
 
 % flags.sim.vars = {'n', 'v_x', 'v_y', 'i_temp', 'e_temp', 'dt'};
-flags.sim.vars = {'i_n', 'dn', 'i_v_x', 'j_x', 'i_temp', 'e_temp', 'E_x', 'dt','e_mom_x_dt','e_mom_x_lap','e_mom_x_str','e_mom_x_dqdt'};
+flags.sim.vars = {'i_n', 'dn', 'i_v_x', 'j_x', 'i_temp', 'e_temp', 'E_x', 'dt'};
 flags.sim.plot_freq = 1;
 flags.sim.ghost_cells = 2;
 flags.sim.eic_opt = true;
@@ -24,11 +25,11 @@ flags.sim.figvis = 'on';
 
 % experimental flags
 flags.exp.gen_state = true; % turns on the script to generate init.state from experimental conditions
-flags.exp.set = 17; % unique set identifier - modifies directory structure as \...\set_XXX
+flags.exp.set = 18; % unique set identifier - modifies directory structure as \...\set_XXX
 flags.exp.num_time_pts = 1000; % sets time interval for recording grids during simulation
 flags.exp.smooth_density = true; % whether or not to apply an SG filter to the density distribution
 flags.exp.sg_imgs_length = 0.02; % length scale (cm) for SG kernel when filtering density distribution
-flags.exp.sim_window = [.5 .5]; % [x y] domain limits in cm, symmetric about zero
+flags.exp.sim_window = [.55 .55]; % [x y] domain limits in cm, symmetric about zero
 flags.exp.exp_window = [.55 .55]; % [x y] experimental domain limits in cm, symmetric about zero
 flags.exp.sg_back_length = .05;
 flags.exp.Nx = 301; % number of points on x axis for simulation domain
