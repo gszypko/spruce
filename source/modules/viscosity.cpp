@@ -116,8 +116,8 @@ void Viscosity::constructViscosityGrids(const std::vector<Grid>& grids)
             else assert(false && "Species must be <i> or <e>.");
         }
         double dt_min = dt.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
-        if (m_visc_opt[i] == "local") m_grids_dt[i] = dt;
-        else if (m_visc_opt[i] == "boundary" || m_visc_opt[i] == "global") m_grids_dt[i] = Grid(m_pd.m_xdim,m_pd.m_ydim,dt_min);
+        if (m_visc_opt[i] == "boundary" || m_visc_opt[i] == "local") m_grids_dt[i] = dt;
+        else if (m_visc_opt[i] == "global") m_grids_dt[i] = Grid(m_pd.m_xdim,m_pd.m_ydim,dt_min);
         else assert("Viscosity option must be global, local, or boundary.");
 
         // compute viscosity coefficient and impose maximum

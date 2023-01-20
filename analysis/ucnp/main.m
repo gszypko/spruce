@@ -2,22 +2,22 @@
 clc, clearvars -except data, close all, f = filesep; setpath;
 
 inp = {'folder';
-    'C:\Users\Grant\OneDrive\Research\mhd\data-expsims\an-mhd-09.26.22\HIH-0\set_18';
-    'C:\Users\Grant\OneDrive\Research\mhd\data-expsims\an-mhd-09.26.22\HIH-2\set_18';
+    'C:\Users\grant\OneDrive\Research\mhd\data-sims\01.18.23\set_0';
+    'C:\Users\grant\OneDrive\Research\mhd\data-sims\01.18.23\set_1';
       };
 s = spreadsheet2struct(inp,inp(1,:));
 Te = [100 100];
 
 % simulation flags
 flags.sim.plot_grids = true;
-flags.sim.vlasov_analysis = false;
+flags.sim.vlasov_analysis = true;
 flags.sim.cmpr_exp_sim = false;
 flags.sim.iaw_analysis = false;
 flags.sim.ion_holes = false;
 flags.sim.hole_orientation = 0;
 
-% flags.sim.vars = {'n', 'v_x', 'v_y', 'i_temp', 'e_temp', 'dt'};
-flags.sim.vars = {'i_n', 'dn', 'i_v_x', 'j_x', 'i_temp', 'e_temp', 'E_x', 'dt'};
+flags.sim.vars = {'n', 'v_x', 'v_y', 'temp', 'dt'};
+% flags.sim.vars = {'i_n', 'dn', 'i_v_x', 'e_v_x', 'i_temp', 'e_temp', 'E_x', 'dt'};
 flags.sim.plot_freq = 1;
 flags.sim.ghost_cells = 2;
 flags.sim.eic_opt = true;
@@ -67,3 +67,5 @@ for i = 1:length(s)
     end
 end
 disp('Analysis Complete.')
+
+

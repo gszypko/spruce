@@ -64,7 +64,12 @@ for i = 1:length(data.grids.time)
     l = get_line_specs(length(lgdstr));
 
     cax = get_axis(fig,ax{1});
-    imagesc(x,y,fit(i).img./1e8)
+    if data.grids.is_uniform
+        zdata = fit(i).img;
+    else
+        zdata = data.grids.uni_grid(fit(i).img);
+    end
+    imagesc(x,y,zdata./1e8)
     cax.PlotBoxAspectRatio = [1 1 1];
     cax.YDir = 'Normal';
     shading interp
@@ -73,7 +78,12 @@ for i = 1:length(data.grids.time)
     ylabel('y (cm)')
     
     cax = get_axis(fig,ax{3});
-    imagesc(x,y,fit(i).imgfit./1e8);
+    if data.grids.is_uniform
+        zdata = fit(i).imgfit;
+    else
+        zdata = data.grids.uni_grid(fit(i).imgfit);
+    end
+    imagesc(x,y,zdata./1e8);
     cax.PlotBoxAspectRatio = [1 1 1];
     cax.YDir = 'Normal';
     shading interp
@@ -81,7 +91,12 @@ for i = 1:length(data.grids.time)
     xlabel('x (cm)')
 
     cax = get_axis(fig,ax{5});
-    imagesc(x,y,fit(i).imgres./1e8);
+    if data.grids.is_uniform
+        zdata = fit(i).imgres;
+    else
+        zdata = data.grids.uni_grid(fit(i).imgres);
+    end
+    imagesc(x,y,zdata./1e8);
     cax.PlotBoxAspectRatio = [1 1 1];
     cax.YDir = 'Normal';
     shading interp

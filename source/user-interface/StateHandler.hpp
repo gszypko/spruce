@@ -47,6 +47,8 @@ private:
     std::vector<std::string> m_gridnames;
     std::vector<Grid> m_grids;
     std::vector<bool> m_grids_initialized;
+    // *** Non-Uniform Grid Generation
+    void getNonUniformGrids(int N, double r_lim, double A, double B, Grid& dr);
 };
 
 #endif

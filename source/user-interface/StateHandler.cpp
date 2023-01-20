@@ -107,11 +107,19 @@ void StateHandler::setup(const std::unique_ptr<Settings>& pms)
     setvar("ion_mass",pms->getval("m_i"));
     setvar("adiabatic_index",pms->getval("gam"));
     setvar("time",0.);
+
     //*** initialize grids for plasma domain
     // position grids
-    Grid d_x, d_y, pos_x, pos_y;
-    Grid dx_vec = Grid(1,getvar("xdim"),2*pms->getval("x_lim")/(getvar("xdim")-1));
-    Grid dy_vec = Grid(1,getvar("ydim"),2*pms->getval("y_lim")/(getvar("ydim")-1));
+    Grid d_x, d_y, pos_x, pos_y, dx_vec, dy_vec;
+    if (pms->getopt("grid_opt") == "uniform"){
+        dx_vec = Grid(1,getvar("xdim"),2*pms->getval("x_lim")/(getvar("xdim")-1));
+        dy_vec = Grid(1,getvar("ydim"),2*pms->getval("y_lim")/(getvar("ydim")-1));
+    }
+    else if (pms->getopt("grid_opt") == "non-uniform"){
+        getNonUniformGrids(getvar("xdim"),pms->getval("x_lim"),pms->getval("grid_growth"),pms->getval("grid_spread"),dx_vec);
+        getNonUniformGrids(getvar("ydim"),pms->getval("y_lim"),pms->getval("grid_growth"),pms->getval("grid_spread"),dy_vec);
+    }
+    else assert(false && "<grid_opt> must be <uniform> or <non-uniform>.");
     Grid::MeshGrid(dx_vec,dy_vec,d_x,d_y);
     pos_x = PlasmaDomain::convertCellSizesToCellPositions(d_x,0,"center");
     pos_y = PlasmaDomain::convertCellSizesToCellPositions(d_y,1,"center");   
@@ -119,6 +127,7 @@ void StateHandler::setup(const std::unique_ptr<Settings>& pms)
     setgrid("d_y",d_y);
     setgrid("pos_x",pos_x);
     setgrid("pos_y",pos_y);
+
     // external magnetic fields
     AntiHelmholtz quad(30.,120.,pms->getval("dBdx"),CurrentLoop::ax_x);
     std::vector<Grid> B(3.);
@@ -134,6 +143,7 @@ void StateHandler::setup(const std::unique_ptr<Settings>& pms)
     setgrid("be_x",B[0]);
     setgrid("be_y",B[1]);
     setgrid("be_z",B[2]);
+
     //*** initialize grids for equation set
     if (m_eqn_set_name == "ideal_mhd") setup_idealmhd(pms);
     else if (m_eqn_set_name == "ideal_mhd_cons") setup_idealmhdcons(pms);
@@ -150,8 +160,10 @@ void StateHandler::setup_idealmhd(const std::unique_ptr<Settings>& pms)
     setgrid("temp",Grid(getvar("xdim"),getvar("ydim"),pms->getval("Te")));
     setgrid("mom_x",zeros);
     setgrid("mom_y",zeros);
+    setgrid("mom_z",zeros);
     setgrid("bi_x",zeros);
     setgrid("bi_y",zeros);
+    setgrid("bi_z",zeros);
     setgrid("grav_x",zeros);
     setgrid("grav_y",zeros);
 }
@@ -203,7 +215,8 @@ Grid StateHandler::setup_density(const std::unique_ptr<Settings>& pms) const
     double n_max { pms->getval("n") };
     double n_min { pms->getval("n_min") };
     Grid n{Grid::Zero(getvar("xdim"),getvar("ydim"))};
-    // choose overall density distribution for plasma
+    
+    // PLASMA BASE DENSITY DISTRIBUTION
     if (pms->getopt("n_dist") == "gaussian") 
         n = Grid::Gaussian2D(getgrid("pos_x"),getgrid("pos_y"),n_max,n_min,pms->getval("sig_x"),pms->getval("sig_y"),0,0);
     else if (pms->getopt("n_dist")=="exponential") 
@@ -211,7 +224,8 @@ Grid StateHandler::setup_density(const std::unique_ptr<Settings>& pms) const
     else if (pms->getopt("n_dist") == "uniform")
         n = Grid(pms->getval("Nx"),pms->getval("Ny"),n_max);
     else assert(false && "Density distribution options are: <gaussian>, <exponential>, or <uniform>.");
-    // option for adding a central ion hole to the x axis of the plasma
+    
+    // ION HOLE 
     if (pms->getopt("n_hole") == "true"){
         double hole_amp = pms->getval("n_hole_amp");
         double hole_min = 0;
@@ -219,6 +233,8 @@ Grid StateHandler::setup_density(const std::unique_ptr<Settings>& pms) const
         Grid n_hole = Grid::Gaussian2D(getgrid("pos_x"),getgrid("pos_y"),hole_amp,hole_min,hole_size,pms->getval("sig_y"),0,0);
         n -= n_hole;
     }
+    
+    // ION ACOUSTIC WAVES
     if (pms->getopt("n_iaw") == "true"){
         double iaw_amp = pms->getval("n_iaw_amp");
         double iaw_sig = pms->getval("n_iaw_sig");
@@ -228,4 +244,40 @@ Grid StateHandler::setup_density(const std::unique_ptr<Settings>& pms) const
         n -= n_iaw;
     }
     return n;
+}
+
+void StateHandler::getNonUniformGrids(int N, double r_lim, double A, double B, Grid& dr)
+{
+    // check that inputs are valid
+    assert(A>1 && "The growth factor must be greater than one.");
+    assert(B<1 && B>0  && "The spread factor must be positive and less than one.");
+    assert(N%2 != 0 && "Number of grids must be odd for this function because it assumes a central grid cell exists.");
+
+    // initialize grid position and spacing vectors
+    dr = Grid::Zero(1,N);
+    Grid r = Grid::Zero(1,N);
+    dr(N/2) = 1.;
+    r(N/2) = 0.;
+
+    // iterate through growth function
+    for (int i=N/2+1; i<dr.size(); i++){
+        dr(i) = 1. + A*(dr(i-1)-B);
+        r(i) = r(i-1) + (dr(i-1)+dr(i))/2.;
+    }
+
+    // normalize r to lie between 0 and 1, normalize dr by same factor
+    double norm_fac {r.max()};
+    r /= norm_fac;
+    dr /= norm_fac;
+
+    // normalize spacing and position to real units
+    r *= r_lim;
+    dr *= r_lim;
+
+    // reflect the positions across the central grid cell
+    for (int i=0; i<N/2; i++){
+        r(i) = r(N-1-i);
+        dr(i) = dr(N-1-i);
+    }
+
 }

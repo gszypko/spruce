@@ -65,4 +65,20 @@ out.time = [out.vars.time];
 out.x_vec = out.pos_x(1,:);
 out.y_vec = out.pos_y(:,1)';
 
+% check if grids are uniform or non-uniform
+dx = diff(out.x_vec);
+dy = diff(out.y_vec);
+uniform_threshold = .001;
+ind_x = min(abs(dx - mean(dx)) < uniform_threshold*mean(dx));
+ind_y = min(abs(dy - mean(dy)) < uniform_threshold*mean(dy));
+out.is_uniform = ind_x && ind_y;
+
+% handle when grids are non-uniform
+out.Nx_uni = (max(out.x_vec)-min(out.x_vec))/min(diff(out.x_vec));
+out.Ny_uni = (max(out.y_vec)-min(out.y_vec))/min(diff(out.y_vec));
+out.x_uni = linspace(min(out.x_vec),max(out.x_vec),out.Nx_uni);
+out.y_uni = linspace(min(out.y_vec),max(out.y_vec),out.Ny_uni);
+[X_uni,Y_uni] = meshgrid(out.x_uni,out.y_uni);
+out.uni_grid = @(var) interp2(out.x_vec,out.y_vec,var,X_uni,Y_uni);
+
 end

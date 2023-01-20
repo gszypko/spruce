@@ -23,12 +23,14 @@ imgfilt = imgfilt./normfac;
 
 % define fit model
 % c: [n0 x0 y0 sigX sigY offset]
-fitmodel = @(c,data) gaussian2D(c,data);
+fitmodel = @(c,data) gaussian2D([c 0],data);
 
 % initial guess for plasma center
-imgint = sum(imgfilt,'all');
-x0 = sum(sum(imgfilt,1).*xfilt,2)/imgint;
-y0 = sum(sum(imgfilt,2).*yfilt',1)/imgint;
+imgintx = trapz(xfilt,imgfilt,2);
+imginty = trapz(yfilt,imgfilt,1);
+imgintxy = trapz(yfilt,trapz(xfilt,imgfilt,2));
+x0 = trapz(xfilt,xfilt.*imginty)/imgintxy;
+y0 = trapz(yfilt,yfilt.*imgintx')/imgintxy;
 
 % initial guess for amplitude
 offset = min(imgfilt,[],'all');
@@ -38,19 +40,15 @@ amp = max(imgfilt,[],'all') - offset;
 [X,Y] = meshgrid(xbin,ybin);
 grid = [X(:) Y(:)];
 ind = imgfilt(:) > (amp/2 + offset);
-sigx = (max(grid(ind,1)) - min(grid(ind,1)))/(2*sqrt(2*log(2)));
-sigy = (max(grid(ind,2)) - min(grid(ind,2)))/(2*sqrt(2*log(2)));
+sigx = sqrt(trapz(xfilt,(xfilt-x0).^2.*imginty)/imgintxy);
+sigy = sqrt(trapz(yfilt,(yfilt-y0).^2.*imgintx')/imgintxy);
 
 % define initial guesses and parameter bounds
 p0(1) = amp; lb(1) = amp/5; ub(1) = amp*5;
-p0(2) = x0; lb(2) = min(xbin); ub(2) = max(xbin);
-p0(3) = y0; lb(3) = min(ybin); ub(3) = max(ybin);
+p0(2) = x0; lb(2) = min(xbin)/3; ub(2) = max(xbin)/3;
+p0(3) = y0; lb(3) = min(ybin)/3; ub(3) = max(ybin)/3;
 p0(4) = sigx; lb(4) = sigx/5; ub(4) = sigx*5;
 p0(5) = sigy; lb(5) = sigy/5; ub(5) = sigy*5;
-p0(6) = offset; lb(6) = offset - amp/10; ub(6) = offset + amp/10; 
-if offset_opt
-    p0(6) = 0; lb(6) = 0; ub(6) = 0;
-end
 
 % format data for fit
 data = grid;
@@ -82,12 +80,5 @@ fit.sigx = p(4);
 fit.sigxErr = pse(4);
 fit.sigy = p(5);
 fit.sigyErr = pse(5);
-if offset_opt
-    fit.offset = 0;
-    fit.offsetErr = 0;
-else 
-    fit.offset = p(6)*normfac;
-    fit.offsetErr = pse(6)*normfac;
-end
 
 end

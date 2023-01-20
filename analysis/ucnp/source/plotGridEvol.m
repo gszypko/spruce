@@ -5,13 +5,17 @@ f = filesep;
 data.grids.vars = data.grids.vars(1:flags.plot_freq:end);
 data.grids.time = data.grids.time(1:flags.plot_freq:end);
 
-% determine grid names and strings for plotting
+% get list of grid names from folder
 [grid_names,grid_str] = readGridNames(data.folder);
+
+% check that user specified the variables to be plotted
 if isfield(flags,'vars')
     if isempty(flags.vars)
         error('Variables must be specified.')
     end
 end
+
+% determine the label string for each variable to be plotted
 varnames = flags.vars;
 varstr = varnames;
 for i = 1:length(varnames)
@@ -38,9 +42,15 @@ for k = 1:length([data.grids.vars.time])
             if iter > num, break, end
 
             cax = get_axis(fig,ax{i,j});
-            xdata = data.grids.x_vec;
-            ydata = data.grids.y_vec;
-            zdata = data.grids.vars(k).(varnames{iter});
+            if data.grids.is_uniform
+                xdata = data.grids.x_vec;
+                ydata = data.grids.y_vec;
+                zdata = data.grids.vars(k).(varnames{iter});
+            else
+                xdata = data.grids.x_uni;
+                ydata = data.grids.y_uni;
+                zdata = data.grids.uni_grid(data.grids.vars(k).(varnames{iter}));
+            end
             imagesc(xdata,ydata,zdata)
             colorbar
             cax.YDir = 'Normal';

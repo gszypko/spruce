@@ -46,23 +46,6 @@ std::vector<Grid> IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid
     // continuity equations
     std::vector<Grid> v = {grids[v_x],grids[v_y]};
     Grid d_rho_dt = -m_pd.transportDivergence2D(grids[rho],v);
-    // viscous forces
-    // double global_visc_coeff = m_global_viscosity*0.5*((d_x.square()+d_y.square())/grids[dt]).min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
-    // Grid viscous_force_x, viscous_force_y, viscous_force_z;
-    // if (m_viscosity_opt == "momentum"){
-    //     viscous_force_x = global_visc_coeff*m_pd.laplacian(grids[mom_x]);
-    //     viscous_force_y = global_visc_coeff*m_pd.laplacian(grids[mom_y]);
-    //     viscous_force_y = global_visc_coeff*m_pd.laplacian(grids[mom_z]);
-    // }
-    // else if (m_viscosity_opt == "velocity"){
-    //     viscous_force_x = global_visc_coeff*grids[rho]*m_pd.laplacian(grids[v_x]);
-    //     viscous_force_y = global_visc_coeff*grids[rho]*m_pd.laplacian(grids[v_y]);
-    //     viscous_force_z = global_visc_coeff*grids[rho]*m_pd.laplacian(grids[v_z]);
-    // }
-    // else{
-    //     std::cerr << "Viscosity option <" << m_viscosity_opt << "> is not valid." << std::endl;
-    //     assert(false);
-    // }
     // magnetic forces
     Grid curl_db = m_pd.curl2D(grids[bi_x],grids[bi_y])/(4.0*PI);
     std::vector<Grid> external_mag_force = Grid::CrossProductZ2D(curl_db,{be_x,be_y});
@@ -74,16 +57,15 @@ std::vector<Grid> IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid
     // momentum equations   
     Grid d_mom_x_dt =   - m_pd.transportDivergence2D(grids[mom_x], v)
                         - m_pd.derivative1D(grids[press], 0)
-                        + grids[rho]*grids[grav_x] //+ viscous_force_x 
+                        + grids[rho]*grids[grav_x]
                         + external_mag_force[0] + internal_mag_force[0]
                         + internal_z_mag_force[0] + external_z_mag_force[0];
     Grid d_mom_y_dt =   - m_pd.transportDivergence2D(grids[mom_y], v)
                         - m_pd.derivative1D(grids[press], 1)
-                        + grids[rho]*grids[grav_y] //+ viscous_force_y
+                        + grids[rho]*grids[grav_y]
                         + external_mag_force[1] + internal_mag_force[1]
                         + internal_z_mag_force[1] + external_z_mag_force[1];
     Grid d_mom_z_dt =   - m_pd.transportDivergence2D(grids[mom_z], v)
-                        //+ viscous_force_z 
                         + mag_force_z_external + mag_force_z_internal;
     // energy equations
     Grid d_thermal_energy_dt =  - m_pd.transportDivergence2D(grids[thermal_energy],v)
