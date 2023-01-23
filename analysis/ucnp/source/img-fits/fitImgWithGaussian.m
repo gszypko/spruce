@@ -1,10 +1,8 @@
-function [fit] = fitImgWithGaussian(x,y,img,offset_opt)
+function [fit] = fitImgWithGaussian(x,y,img,offset)
 % x (1xn double): x pos - varies with column number
 % y (1xm double): y pos - varies with row number
 % img (mxn double): image img(m,n) corresponds to x(n) and y(m)
-% offset_opt (boolean): (true) fix offset to zero (false) fit offset
-
-if nargin < 4, offset_opt = false; end
+% offset (double): if empty, fit for offset, if given, fix offset
 
 %% Bin and Normalize Image For Speed
 [xbin,ybin,imgbin] = binImgForFit(x,y,img,250);
@@ -23,7 +21,11 @@ imgfilt = imgfilt./normfac;
 
 % define fit model
 % c: [n0 x0 y0 sigX sigY offset]
-fitmodel = @(c,data) gaussian2D([c 0],data);
+if nargin < 4
+    fitmodel = @(c,data) gaussian2D(c,data);
+else 
+    fitmodel = @(c,data) gaussian2D([c offset./normfac],data);
+end
 
 % initial guess for plasma center
 imgintx = trapz(xfilt,imgfilt,2);
@@ -33,13 +35,12 @@ x0 = trapz(xfilt,xfilt.*imginty)/imgintxy;
 y0 = trapz(yfilt,yfilt.*imgintx')/imgintxy;
 
 % initial guess for amplitude
-offset = min(imgfilt,[],'all');
-amp = max(imgfilt,[],'all') - offset;
+min_val = min(imgfilt,[],'all');
+amp = max(imgfilt,[],'all') - min_val;
 
 % initial guess for widths
 [X,Y] = meshgrid(xbin,ybin);
 grid = [X(:) Y(:)];
-ind = imgfilt(:) > (amp/2 + offset);
 sigx = sqrt(trapz(xfilt,(xfilt-x0).^2.*imginty)/imgintxy);
 sigy = sqrt(trapz(yfilt,(yfilt-y0).^2.*imgintx')/imgintxy);
 
@@ -49,6 +50,7 @@ p0(2) = x0; lb(2) = min(xbin)/3; ub(2) = max(xbin)/3;
 p0(3) = y0; lb(3) = min(ybin)/3; ub(3) = max(ybin)/3;
 p0(4) = sigx; lb(4) = sigx/5; ub(4) = sigx*5;
 p0(5) = sigy; lb(5) = sigy/5; ub(5) = sigy*5;
+if nargin < 4, p0(6) = min_val; lb(6) = -amp/2; ub(6) = amp/2; end
 
 % format data for fit
 data = grid;
@@ -69,6 +71,7 @@ fit.img = img;
 fit.imgguess = reshape(fitmodel(p0,[X(:) Y(:)]),size(img,1),size(img,2)).*normfac;
 fit.imgfit = reshape(fitmodel(p,[X(:) Y(:)]),size(img,1),size(img,2)).*normfac;
 fit.imgres = fit.imgfit - fit.img;
+fit.fit = @(X,Y) reshape(fitmodel(p,[X(:) Y(:)]),size(X,1),size(X,2)).*normfac;
 
 fit.amp = p(1).*normfac;
 fit.ampErr = pse(1).*normfac;
@@ -80,5 +83,11 @@ fit.sigx = p(4);
 fit.sigxErr = pse(4);
 fit.sigy = p(5);
 fit.sigyErr = pse(5);
+if nargin < 4
+    fit.offset = p(6);
+    fit.offsetErr = pse(6);
+else
+    fit.offset = offset;
+end
 
 end

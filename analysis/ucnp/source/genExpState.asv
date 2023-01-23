@@ -177,7 +177,7 @@ else
     [state.y,state.dy] = getNonUniformGrids(flags.num_grids,flags.sim_domain(2),flags.grid_growth,flags.grid_spread);
 end
 [state.X,state.Y] = meshgrid(state.x,state.y);
-[state.dX,state.dY] = meshgrid(state.dx,state.dy);
+[state.d]
 
 % interpolate density onto grid
 if flags.apply_sg_filt
@@ -278,8 +278,8 @@ saveas(fig,[set_path f 'init-n.png']);
 close(fig)
 
 % vars that need to be generated
-grids.d_x = state.dX;
-grids.d_y = state.dY;
+grids.d_x = mean(diff(x))*ones(size(X));
+grids.d_y = mean(diff(y))*ones(size(Y));
 grids.pos_x = state.X;
 grids.pos_y = state.Y;
 grids.be_x = zeros(size(state.X));
@@ -290,10 +290,8 @@ if strcmp(eq_set,'ideal_mhd')
     grids.temp = settings.Te*ones(size(state.X));
     grids.mom_x = zeros(size(state.X));
     grids.mom_y = zeros(size(state.X));
-    grids.mom_z = zeros(size(state.X));
     grids.bi_x = zeros(size(state.X));
     grids.bi_y = zeros(size(state.X));
-    grids.bi_z = zeros(size(state.X));
     grids.grav_x = zeros(size(state.X));
     grids.grav_y = zeros(size(state.X));
 elseif strcmp(eq_set,'ideal_2F')

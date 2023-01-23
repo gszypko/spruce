@@ -2,7 +2,7 @@
 clc, clearvars -except data, close all, f = filesep; setpath;
 
 inp = {'folder';
-    'C:\Users\Grant\OneDrive\Research\mhd\data-expsims\an-mhd-09.26.22\HIH-0';
+    'C:\Users\Grant\OneDrive\Research\mhd\data-expsims\an-mhd-09.26.22\HIH-0\set_20';
       };
 s = spreadsheet2struct(inp,inp(1,:));
 
