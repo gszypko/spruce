@@ -107,6 +107,7 @@ private: //*********************************************************************
 
   // variables relevant for boundary conditions
   int m_xl, m_xu, m_yl, m_yu; //Lower and upper bounds for diff'l operations on the domain (excluding ghost zones)
+  int m_xl_dt, m_xu_dt, m_yl_dt, m_yu_dt; //Lower and upper bounds for computing time step (excluding necessary ghost zones)
   Grid m_ghost_zone_mask; //Equals 0 inside ghost zones and 1 everywhere else; for multiplying to negate values in ghost zones
   BoundaryCondition x_bound_1, x_bound_2, y_bound_1, y_bound_2;
   double open_boundary_strength{0.0}; // multiple of local sound speed added to velocity at boundary surface

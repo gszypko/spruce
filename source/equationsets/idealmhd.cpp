@@ -70,19 +70,7 @@ std::vector<Grid> IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid
     // energy equations
     Grid d_thermal_energy_dt =  - m_pd.transportDivergence2D(grids[thermal_energy],v)
                                 - grids[press]*m_pd.divergence2D(v);
-    // induction equations
-    // std::vector<Grid> induction_rhs_external = m_pd.curlZ(Grid::CrossProduct2D(v,{be_x,be_y}));
-    // std::vector<Grid> induction_rhs_internal = m_pd.curlZ(Grid::CrossProduct2D(v,{grids[bi_x],grids[bi_y]}));
-    // std::vector<Grid> vz_cross_be = Grid::CrossProductZ2D(grids[v_z],{be_x,be_y});
-    // std::vector<Grid> vz_cross_bi = Grid::CrossProductZ2D(grids[v_z],{grids[bi_x],grids[bi_y]});
-    // std::vector<Grid> vxy_cross_bi = Grid::CrossProduct2DZ(v,grids[bi_z]);
-    // Grid induction_rhs_z_external = m_pd.curl2D(vz_cross_be[0],vz_cross_be[1]);
-    // Grid induction_rhs_z_internal = m_pd.curl2D(vz_cross_bi[0],vz_cross_bi[1]);
-    // Grid induction_rhs_z_z = m_pd.curl2D(vxy_cross_bi[0],vxy_cross_bi[1]);
-    // Grid d_bi_x_dt = induction_rhs_external[0] + induction_rhs_internal[0];
-    // Grid d_bi_y_dt = induction_rhs_external[1] + induction_rhs_internal[1];
-    // Grid d_bi_z_dt = induction_rhs_z_external + induction_rhs_z_internal + induction_rhs_z_z;
-    
+    // induction equations    
     Grid d_bi_x_dt = - m_pd.transportDivergence2D(grids[bi_x],v) - m_pd.transportDivergence2D(be_x,v)
                      + (grids[bi_x] + be_x)*m_pd.derivative1D(grids[v_x],0)
                      + (grids[bi_y] + be_y)*m_pd.derivative1D(grids[v_x],1);
@@ -94,7 +82,7 @@ std::vector<Grid> IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid
                      + (grids[bi_y] + be_y)*m_pd.derivative1D(grids[v_z],1);
     
     // characteristic boundary evolution
-    double global_visc_coeff = m_global_viscosity*0.5*((d_x.square()+d_y.square())/grids[dt]).min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
+    double global_visc_coeff = m_global_viscosity*0.5*((d_x.square()+d_y.square())/grids[dt]).min(m_pd.m_xl_dt,m_pd.m_yl_dt,m_pd.m_xu_dt,m_pd.m_yu_dt);
     std::vector<Grid> char_evolution = computeTimeDerivativesCharacteristicBoundary(grids,
                                                 m_pd.x_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC,
                                                 m_pd.x_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC,
@@ -110,22 +98,6 @@ std::vector<Grid> IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid
     }
     return grids_dt;
 }
-
-// void IdealMHD::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step){
-//     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-//     grids[rho] += step*time_derivatives[0];
-//     grids[mom_x] += step*time_derivatives[1];
-//     grids[mom_y] += step*time_derivatives[2];
-//     grids[mom_z] += step*time_derivatives[3];
-//     grids[thermal_energy] += step*time_derivatives[4];
-//     grids[bi_x] += step*time_derivatives[5];
-//     grids[bi_y] += step*time_derivatives[6];
-//     grids[bi_z] += step*time_derivatives[7];
-//     if(moc_mom_limiting) applyMomThresholdingMoC(grids);
-//     if(moc_b_limiting) applyBThresholdingMoC(grids);
-//     propagateChanges(grids);
-// }
-
 
 void IdealMHD::applyBThresholdingMoC(std::vector<Grid> &grids){
     std::vector<int> be = {PlasmaDomain::be_x,PlasmaDomain::be_y,PlasmaDomain::be_z};
