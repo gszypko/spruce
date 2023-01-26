@@ -29,7 +29,7 @@ for i = 1:length([os.delays])
     
     % determine number of kernels to be used with SG filter
     dx = mean(diff(imgs(i).x));
-    dy = mean(diff(os(i).imgs.yRelInMM))/10;
+    dy = mean(diff(imgs(i).y));
     sg_kx = ceil(flags.sg_filt_length/dx/2)*2+1;
     sg_ky = ceil(flags.sg_filt_length/dy/2)*2+1;
     if sg_kx < 5, sg_kx = 5; end
@@ -109,15 +109,17 @@ for i = 1:length([imgs.t])
     results = fitImgWithGaussian(imgs(i).x,imgs(i).y,imgs(i).n);
     fit(i).sig_x = results.sigx;
     fit(i).sig_y = results.sigy;
-    fit(i).sig = (fit(i).sig_x*fit(i).sig_y^2)^(1/3); % 1/3 because this is the experimental data
+    fit(i).sig_2D = (fit(i).sig_x*fit(i).sig_y)^(1/2); % 1/3 because this is the experimental data
+    fit(i).sig_3D = (fit(i).sig_x*fit(i).sig_y^2)^(1/3); % 1/3 because this is the experimental data
 end
 
-tau = @(Te) getTauExp(fit(1).sig,Te);
-fitmodel = @(c,data) fit(1).sig*sqrt(1+data.^2/tau(c)^2);
+tau_2D = @(Te) getTauExp(fit(1).sig_2D,Te);
+tau_3D = @(Te) getTauExp(fit(1).sig_3D,Te);
+fitmodel = @(c,data) fit(1).sig_3D*sqrt(1+data.^2/tau_3D(c)^2);
 p0 = settings.Te;
 data = [imgs.t];
 data = data';
-zdata = [fit.sig]';
+zdata = [fit.sig_3D]';
 Te = lsqcurvefit(fitmodel,p0,data,zdata);
 
 num = 1;
@@ -125,8 +127,8 @@ num = 1;
 an.Position = [0.1479    0.8056    0.5164    0.1020];
 hold on
 l = get_line_specs(2);  
-plot(data./tau(Te),fitmodel(Te,data),'LineWidth',2,'MarkerSize',4,'Color',l(1).col,'MarkerFaceColor',l(1).col,'MarkerEdgeColor',l(1).col)
-plot(data./tau(Te),[fit.sig],'o','LineWidth',2,'MarkerSize',4,'Color',l(2).col,'MarkerFaceColor',l(2).col,'MarkerEdgeColor',l(2).col)
+plot(data./tau_3D(Te),fitmodel(Te,data),'LineWidth',2,'MarkerSize',4,'Color',l(1).col,'MarkerFaceColor',l(1).col,'MarkerEdgeColor',l(1).col)
+plot(data./tau_3D(Te),[fit.sig_3D],'o','LineWidth',2,'MarkerSize',4,'Color',l(2).col,'MarkerFaceColor',l(2).col,'MarkerEdgeColor',l(2).col)
 an.String = ['T_e = ' num2str(Te) ' K'];
 saveas(fig,[path f 'Te.png']);
 close(fig)
@@ -153,11 +155,13 @@ for i = 1:size(ax,1)
         xdata = n_fit.x;
         ydata = n_fit.y;
         zdata = n_fit.(fields{iter});
+        if j == 2, clim = max(zdata,[],'all'); end
         imagesc(xdata,ydata,zdata)
         colorbar
         cax.YDir = 'Normal';
         cax.PlotBoxAspectRatio = [1 1 1];
         cax.FontSize = 10;
+        if j == 3, cax.CLim = [-clim/10 clim/10]; end
         if i == size(ax,1), xlabel('x (cm)'), end
         if j == 1, ylabel('y (cm)'), end
         title(fields_text{iter},'FontWeight','normal')
@@ -165,19 +169,15 @@ for i = 1:size(ax,1)
 end
 close(fig)
 
-%% Interpolate Image onto Larger, Non-Uniform Domain
-% generate domain positions
-if flags.is_uniform
-    state.x = linspace(-flags.sim_domain(1),flags.sim_domain(1),flags.num_grids);
-    state.y = linspace(-flags.sim_domain(2),flags.sim_domain(2),flags.num_grids);
-    state.dx = mean(diff(state.x)).*ones(size(state.x));
-    state.dy = mean(diff(state.y)).*ones(size(state.y));
-else
-    [state.x,state.dx] = getNonUniformGrids(flags.num_grids,flags.sim_domain(1),flags.grid_growth,flags.grid_spread);
-    [state.y,state.dy] = getNonUniformGrids(flags.num_grids,flags.sim_domain(2),flags.grid_growth,flags.grid_spread);
-end
-[state.X,state.Y] = meshgrid(state.x,state.y);
-[state.dX,state.dY] = meshgrid(state.dx,state.dy);
+%% Interpolate Image onto Larger, Non-Uniform Domain and Apply SG Filter to Background
+% interpolate data onto larger uniform grid, apply sg filter, then interpolate onto non-uniform domain if necessary
+
+% create uniform domain for sg smoothing
+x = linspace(-flags.sim_domain(1),flags.sim_domain(1),flags.num_grids);
+y = linspace(-flags.sim_domain(2),flags.sim_domain(2),flags.num_grids);
+dx = mean(diff(x)).*ones(size(x));
+dy = mean(diff(y)).*ones(size(y));
+[X,Y] = meshgrid(x,y);
 
 % interpolate density onto grid
 if flags.apply_sg_filt
@@ -185,14 +185,57 @@ if flags.apply_sg_filt
 else
     n_for_interpolation = imgs(1).n;
 end
-state.n = interp2(imgs(1).x,imgs(1).y,n_for_interpolation,state.X,state.Y);
+n = interp2(imgs(1).x,imgs(1).y,n_for_interpolation,X,Y);
+n_bgd = n_fit.fit(X,Y);
+for i = 1:length(y)
+    for j = 1:length(x)
+        if isnan(n(i,j)) || n(i,j) < flags.n_min
+            n(i,j) = n_bgd(i,j);
+        end
+    end
+end
 
-% fill in background cells
-n_bgd = n_fit.fit(state.X,state.Y);
-for i = 1:length(state.y)
-    for j = 1:length(state.x)
-        if isnan(state.n(i,j))
-            state.n(i,j) = n_bgd(i,j);
+% determine number of kernels to be used with SG filter
+dx = mean(dx);
+dy = mean(dy);
+sg_kx = ceil(flags.sg_bgd_length/dx/2)*2+1;
+sg_ky = ceil(flags.sg_bgd_length/dy/2)*2+1;
+if sg_kx < 5, sg_kx = 5; end
+if sg_ky < 5, sg_ky = 5; end
+sg_bx = floor(sg_kx/2);
+sg_by = floor(sg_ky/2);
+
+% use sg filter on density images
+n_sg = sgfilt2D(n,sg_kx,sg_ky,3,3);
+for i = 1:size(n_sg,1)
+    for j = 1:size(n_sg,2)
+        if n_sg(i,j) < flags.n_min
+            n_sg(i,j) = flags.n_min;
+        end
+    end
+end
+
+% generate domain positions
+if flags.is_uniform
+    state.x = x;
+    state.y = y;
+    state.dx = dx;
+    state.dy = dy;
+else
+    [state.x,state.dx] = getNonUniformGrids(flags.num_grids,flags.sim_domain(1),flags.grid_growth,flags.grid_spread);
+    [state.y,state.dy] = getNonUniformGrids(flags.num_grids,flags.sim_domain(2),flags.grid_growth,flags.grid_spread);
+end
+[state.X,state.Y] = meshgrid(state.x,state.y);
+[state.dX,state.dY] = meshgrid(state.dx,state.dy);
+state.R = sqrt(state.X.^2+state.Y.^2);
+state.n = interp2(x,y,n,state.X,state.Y);
+
+if flags.apply_sg_bgd
+    for i = 1:size(n_sg,1)
+        for j = 1:size(n_sg,2)
+            if state.R(i,j) > flags.sg_radius
+                state.n(i,j) = n_bgd(i,j);
+            end
         end
     end
 end
@@ -203,7 +246,11 @@ end
 
 % the end time for the simulation is taken to be equal to the last experimental time point by default
 if isempty(flags.Te), flags.Te = Te; end
-t_max = max([imgs.t])*sqrt(os(1).Te/flags.Te); % time in cgs
+if isempty(flags.t_max)
+    t_max = max([imgs.t])*sqrt(os(1).Te/flags.Te); % time in cgs
+else
+    t_max = flags.t_max*tau_2D(flags.Te);
+end
 interval = t_max/flags.num_time_pts; % time interval between recording mhd grids
 
 % read config file and replace the two aforementioned lines
@@ -229,7 +276,7 @@ x = os(ind_t).map.x;
 y = os(ind_t).map.y;
 [X,Y] = meshgrid(x,y);
 r = sqrt((X - n_fit.x0).^2+(Y - n_fit.y0).^2);
-sig = (n_fit.sigx*n_fit.sigy^2)^(1/3);
+sig = (n_fit.sigx*n_fit.sigy)^(1/2);
 ind_c = r < sig/5;
 
 % determine values to go into plasma.settings file
@@ -342,7 +389,7 @@ for i = 1:length(fields)
     state_data{iter} = fields{i};
     for j = 1:size(grids.(fields{i}),2)
         iter = iter + 1;
-        allOneString = sprintf('%.9g,', grids.(fields{i})(:,j)');
+        allOneString = sprintf('%.15g,', grids.(fields{i})(:,j)');
         allOneString = allOneString(1:end-1);% strip final comma
         state_data{iter} = allOneString;
     end

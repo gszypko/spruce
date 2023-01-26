@@ -2,9 +2,9 @@ clc, clear, setpath; close all
 
 N = 301; % total number of grid cells along a given dimension
 sig = 0.1; % RMS plasma size
-r_max = 7.5*sig; % the spatial extent of the grid is [-1 1]*r_max
+r_max = 10*sig; % the spatial extent of the grid is [-1 1]*r_max
 A = 1.06; % multiplicative growth factor for grid cells
-B = .99994; % secondary growth factor
+B = .9999; % secondary growth factor
 [x,dx] = getNonUniformGrids(N,r_max,A,B,true);
 x = x./sig;
 dx = dx./sig;
@@ -17,7 +17,7 @@ plot(x,dx,'.')
 hold on
 y = [0.1 0.1];
 plot([min(x) max(x)],[0.1 0.1])
-plot([3 3],[0 1])
+plot([3 3 -3 -3],[0 1 1 0])
 
 xlabel('r / \sigma')
 ylabel('dr / \sigma')
