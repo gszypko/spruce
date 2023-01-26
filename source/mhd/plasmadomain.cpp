@@ -127,6 +127,7 @@ Grid& PlasmaDomain::grid(const std::string& name)
 //Compute lower and upper x- and y- indicies for differential operations
 //from boundary conditions, to exclude ghost zones. Results stored in m_xl, m_xu, m_yl, m_yu
 //Also generates m_ghost_zone_mask Grid.
+//Also determines m_xl_dt, m_xu_dt, m_yl_dt, m_yu_dt, i.e. bounds for timestep computation
 void PlasmaDomain::computeIterationBounds()
 {
   assert(m_xdim > 2*N_GHOST && m_ydim > 2*N_GHOST && "Grid too small for ghost zones");
@@ -144,6 +145,12 @@ void PlasmaDomain::computeIterationBounds()
       m_ghost_zone_mask(i,j) = 1.0;
     }
   }
+  m_xl_dt = m_xl, m_yl_dt = m_yl, m_xu_dt = m_xu, m_yu_dt = m_yu;
+  if(x_bound_1==BoundaryCondition::OpenMoC) m_xl_dt -= N_GHOST;
+  if(x_bound_2==BoundaryCondition::OpenMoC) m_xu_dt += N_GHOST;
+  if(y_bound_1==BoundaryCondition::OpenMoC) m_yl_dt -= N_GHOST;
+  if(y_bound_2==BoundaryCondition::OpenMoC) m_yu_dt += N_GHOST;
+
 }
 
 //Takes not-necessarily-uniform cell sizes d_x and d_y and converts to cell center positions,

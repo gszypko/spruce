@@ -16,13 +16,21 @@ void IdealMHD::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector
         else if (lhs[i] == "viscosity_opt") m_viscosity_opt = rhs[i];
         else if (lhs[i] == "moc_b_limiting") moc_b_limiting = (rhs[i] == "true");
         else if (lhs[i] == "moc_mom_limiting") moc_mom_limiting = (rhs[i] == "true");
-        else if (lhs[i] == "moc_b_lim_threshold"){
-            moc_b_lim_threshold = stod(rhs[i]);
-            assert(moc_b_lim_threshold <= 1.0 && "MoC B field threshold should be <=1.0");
+        else if (lhs[i] == "moc_b_lower_lim"){
+            moc_b_lower_lim = stod(rhs[i]);
+            assert(moc_b_lower_lim <= 1.0 && "MoC B field lower threshold should be <=1.0");
         }
-        else if (lhs[i] == "moc_mom_lim_threshold"){
-            moc_mom_lim_threshold = stod(rhs[i]);
-            assert(moc_mom_lim_threshold <= 1.0 && "MoC momentum threshold should be <=1.0");
+        else if (lhs[i] == "moc_b_upper_lim"){
+            moc_b_upper_lim = stod(rhs[i]);
+            assert(moc_b_upper_lim >= 1.0 && "MoC B field upper threshold should be >=1.0");
+        }
+        else if (lhs[i] == "moc_mom_lower_lim"){
+            moc_mom_lower_lim = stod(rhs[i]);
+            assert(moc_mom_lower_lim <= 1.0 && "MoC momentum threshold should be <=1.0");
+        }
+        else if (lhs[i] == "moc_mom_upper_lim"){
+            moc_mom_upper_lim = stod(rhs[i]);
+            assert(moc_mom_upper_lim >= 1.0 && "MoC momentum threshold should be >=1.0");
         }
         else{
             std::cerr << lhs[i] << " is not recognized for this equation set." << std::endl;
@@ -70,19 +78,7 @@ std::vector<Grid> IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid
     // energy equations
     Grid d_thermal_energy_dt =  - m_pd.transportDivergence2D(grids[thermal_energy],v)
                                 - grids[press]*m_pd.divergence2D(v);
-    // induction equations
-    // std::vector<Grid> induction_rhs_external = m_pd.curlZ(Grid::CrossProduct2D(v,{be_x,be_y}));
-    // std::vector<Grid> induction_rhs_internal = m_pd.curlZ(Grid::CrossProduct2D(v,{grids[bi_x],grids[bi_y]}));
-    // std::vector<Grid> vz_cross_be = Grid::CrossProductZ2D(grids[v_z],{be_x,be_y});
-    // std::vector<Grid> vz_cross_bi = Grid::CrossProductZ2D(grids[v_z],{grids[bi_x],grids[bi_y]});
-    // std::vector<Grid> vxy_cross_bi = Grid::CrossProduct2DZ(v,grids[bi_z]);
-    // Grid induction_rhs_z_external = m_pd.curl2D(vz_cross_be[0],vz_cross_be[1]);
-    // Grid induction_rhs_z_internal = m_pd.curl2D(vz_cross_bi[0],vz_cross_bi[1]);
-    // Grid induction_rhs_z_z = m_pd.curl2D(vxy_cross_bi[0],vxy_cross_bi[1]);
-    // Grid d_bi_x_dt = induction_rhs_external[0] + induction_rhs_internal[0];
-    // Grid d_bi_y_dt = induction_rhs_external[1] + induction_rhs_internal[1];
-    // Grid d_bi_z_dt = induction_rhs_z_external + induction_rhs_z_internal + induction_rhs_z_z;
-    
+    // induction equations    
     Grid d_bi_x_dt = - m_pd.transportDivergence2D(grids[bi_x],v) - m_pd.transportDivergence2D(be_x,v)
                      + (grids[bi_x] + be_x)*m_pd.derivative1D(grids[v_x],0)
                      + (grids[bi_y] + be_y)*m_pd.derivative1D(grids[v_x],1);
@@ -94,7 +90,7 @@ std::vector<Grid> IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid
                      + (grids[bi_y] + be_y)*m_pd.derivative1D(grids[v_z],1);
     
     // characteristic boundary evolution
-    double global_visc_coeff = m_global_viscosity*0.5*((d_x.square()+d_y.square())/grids[dt]).min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
+    double global_visc_coeff = m_global_viscosity*0.5*((d_x.square()+d_y.square())/grids[dt]).min(m_pd.m_xl_dt,m_pd.m_yl_dt,m_pd.m_xu_dt,m_pd.m_yu_dt);
     std::vector<Grid> char_evolution = computeTimeDerivativesCharacteristicBoundary(grids,
                                                 m_pd.x_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC,
                                                 m_pd.x_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC,
@@ -111,23 +107,7 @@ std::vector<Grid> IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid
     return grids_dt;
 }
 
-// void IdealMHD::applyTimeDerivatives(std::vector<Grid> &grids, const std::vector<Grid> &time_derivatives, double step){
-//     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
-//     grids[rho] += step*time_derivatives[0];
-//     grids[mom_x] += step*time_derivatives[1];
-//     grids[mom_y] += step*time_derivatives[2];
-//     grids[mom_z] += step*time_derivatives[3];
-//     grids[thermal_energy] += step*time_derivatives[4];
-//     grids[bi_x] += step*time_derivatives[5];
-//     grids[bi_y] += step*time_derivatives[6];
-//     grids[bi_z] += step*time_derivatives[7];
-//     if(moc_mom_limiting) applyMomThresholdingMoC(grids);
-//     if(moc_b_limiting) applyBThresholdingMoC(grids);
-//     propagateChanges(grids);
-// }
-
-
-void IdealMHD::applyBThresholdingMoC(std::vector<Grid> &grids){
+void IdealMHD::applyBThresholdingMoC(std::vector<Grid> &grids) const{
     std::vector<int> be = {PlasmaDomain::be_x,PlasmaDomain::be_y,PlasmaDomain::be_z};
     std::vector<int> bi = {bi_x,bi_y,bi_z};
     for(int n : {0,1,2}){
@@ -136,69 +116,109 @@ void IdealMHD::applyBThresholdingMoC(std::vector<Grid> &grids){
         if(m_pd.x_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC){
             for(int j=0; j<m_pd.m_ydim; j++){
                 for(int k=0; k<N_GHOST+1; k++){
-                    if(this_be(N_GHOST+1,j)+this_bi(N_GHOST+1,j) >= 0.0) this_bi(k,j) = std::max(this_bi(k,j),moc_b_lim_threshold*(this_be(N_GHOST+1,j)+this_bi(N_GHOST+1,j)) - this_be(k,j));
-                    else this_bi(k,j) = std::min(this_bi(k,j),moc_b_lim_threshold*(this_be(N_GHOST+1,j)+this_bi(N_GHOST+1,j)) - this_be(k,j));
+                    double reference = this_be(N_GHOST+1,j)+this_bi(N_GHOST+1,j);
+                    double floor = moc_b_lower_lim*reference - this_be(k,j);
+                    double ceil = moc_b_upper_lim*reference - this_be(k,j);
+                    if(reference >= 0.0)
+                        this_bi(k,j) = std::min(std::max(this_bi(k,j),floor),ceil);
+                    else
+                        this_bi(k,j) = std::max(std::min(this_bi(k,j),floor),ceil);
                 }
             }
         }
         if(m_pd.x_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC){
             for(int j=0; j<m_pd.m_ydim; j++){
                 for(int k=0; k<N_GHOST+1; k++){
-                    if(this_be(m_pd.m_xdim-2-N_GHOST,j)+this_bi(m_pd.m_xdim-2-N_GHOST,j) >= 0.0) this_bi(m_pd.m_xdim-1-k,j) = std::max(this_bi(m_pd.m_xdim-1-k,j),moc_b_lim_threshold*(this_be(m_pd.m_xdim-2-N_GHOST,j)+this_bi(m_pd.m_xdim-2-N_GHOST,j))-this_be(m_pd.m_xdim-1-k,j));
-                    else this_bi(m_pd.m_xdim-1-k,j) = std::min(this_bi(m_pd.m_xdim-1-k,j),moc_b_lim_threshold*(this_be(m_pd.m_xdim-2-N_GHOST,j)+this_bi(m_pd.m_xdim-2-N_GHOST,j))-this_be(m_pd.m_xdim-1-k,j));
+                    double reference = this_be(m_pd.m_xdim-2-N_GHOST,j)+this_bi(m_pd.m_xdim-2-N_GHOST,j);
+                    double floor = moc_b_lower_lim*reference - this_be(m_pd.m_xdim-1-k,j);
+                    double ceil = moc_b_upper_lim*reference - this_be(m_pd.m_xdim-1-k,j);
+                    if(reference >= 0.0)
+                        this_bi(m_pd.m_xdim-1-k,j) = std::min(std::max(this_bi(m_pd.m_xdim-1-k,j),floor),ceil);
+                    else
+                        this_bi(m_pd.m_xdim-1-k,j) = std::max(std::min(this_bi(m_pd.m_xdim-1-k,j),floor),ceil);
                 }
             }
         }
         if(m_pd.y_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC){
             for(int i=0; i<m_pd.m_xdim; i++){
                 for(int k=0; k<N_GHOST+1; k++){
-                    if(this_be(i,N_GHOST+1)+this_bi(i,N_GHOST+1) >= 0.0) this_bi(i,k) = std::max(this_bi(i,k),moc_b_lim_threshold*(this_be(i,N_GHOST+1)+this_bi(i,N_GHOST+1))-this_be(i,k));
-                    else this_bi(i,k) = std::min(this_bi(i,k),moc_b_lim_threshold*(this_be(i,N_GHOST+1)+this_bi(i,N_GHOST+1))-this_be(i,k));
+                    double reference = this_be(i,N_GHOST+1)+this_bi(i,N_GHOST+1);
+                    double floor = moc_b_lower_lim*reference - this_be(i,k);
+                    double ceil = moc_b_upper_lim*reference - this_be(i,k);
+                    if(reference >= 0.0)
+                        this_bi(i,k) = std::min(std::max(this_bi(i,k),floor),ceil);
+                    else
+                        this_bi(i,k) = std::max(std::min(this_bi(i,k),floor),ceil);
                 }
             }
         }
         if(m_pd.y_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC){
             for(int i=0; i<m_pd.m_xdim; i++){
                 for(int k=0; k<N_GHOST+1; k++){
-                    if(this_be(i,m_pd.m_xdim-2-N_GHOST)+this_bi(i,m_pd.m_xdim-2-N_GHOST) >= 0.0) this_bi(i,m_pd.m_ydim-1-k) = std::max(this_bi(i,m_pd.m_ydim-1-k),moc_b_lim_threshold*(this_be(i,m_pd.m_xdim-2-N_GHOST)+this_bi(i,m_pd.m_xdim-2-N_GHOST))-this_be(i,m_pd.m_ydim-1-k));
-                    else this_bi(i,m_pd.m_ydim-1-k) = std::min(this_bi(i,m_pd.m_ydim-1-k),moc_b_lim_threshold*(this_be(i,m_pd.m_xdim-2-N_GHOST)+this_bi(i,m_pd.m_xdim-2-N_GHOST))-this_be(i,m_pd.m_ydim-1-k));
+                    double reference = this_be(i,m_pd.m_xdim-2-N_GHOST)+this_bi(i,m_pd.m_xdim-2-N_GHOST);
+                    double floor = moc_b_lower_lim*reference - this_be(i,m_pd.m_ydim-1-k);
+                    double ceil = moc_b_upper_lim*reference - this_be(i,m_pd.m_ydim-1-k);
+                    if(reference >= 0.0)
+                        this_bi(i,m_pd.m_ydim-1-k) = std::min(std::max(this_bi(i,m_pd.m_ydim-1-k),floor),ceil);
+                    else
+                        this_bi(i,m_pd.m_ydim-1-k) = std::max(std::min(this_bi(i,m_pd.m_ydim-1-k),floor),ceil);
                 }
             }
         }
     }
 }
 
-void IdealMHD::applyMomThresholdingMoC(std::vector<Grid> &grids){
+void IdealMHD::applyMomThresholdingMoC(std::vector<Grid> &grids) const{
     for(int v : {mom_x,mom_y,mom_z}){
         if(m_pd.x_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC){
             for(int j=0; j<m_pd.m_ydim; j++){
                 for(int k=0; k<N_GHOST+1; k++){
-                    if(grids[v](N_GHOST+1,j) >= 0.0) grids[v](k,j) = std::max(grids[v](k,j),moc_mom_lim_threshold*grids[v](N_GHOST+1,j));
-                    else grids[v](k,j) = std::min(grids[v](k,j),moc_mom_lim_threshold*grids[v](N_GHOST+1,j));
+                    double reference = grids[v](N_GHOST+1,j);
+                    double floor = moc_mom_lower_lim*reference;
+                    double ceil = moc_mom_upper_lim*reference;
+                    if(reference >= 0.0)
+                        grids[v](k,j) = std::min(std::max(grids[v](k,j),floor),ceil);
+                    else
+                        grids[v](k,j) = std::max(std::min(grids[v](k,j),floor),ceil);
                 }
             }
         }
         if(m_pd.x_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC){
             for(int j=0; j<m_pd.m_ydim; j++){
                 for(int k=0; k<N_GHOST+1; k++){
-                    if(grids[v](m_pd.m_xdim-2-N_GHOST,j) >= 0.0) grids[v](m_pd.m_xdim-1-k,j) = std::max(grids[v](m_pd.m_xdim-1-k,j),moc_mom_lim_threshold*grids[v](m_pd.m_xdim-2-N_GHOST,j));
-                    else grids[v](m_pd.m_xdim-1-k,j) = std::min(grids[v](m_pd.m_xdim-1-k,j),moc_mom_lim_threshold*grids[v](m_pd.m_xdim-2-N_GHOST,j));
+                    double reference = grids[v](m_pd.m_xdim-2-N_GHOST,j);
+                    double floor = moc_mom_lower_lim*reference;
+                    double ceil = moc_mom_upper_lim*reference;
+                    if(reference >= 0.0)
+                        grids[v](m_pd.m_xdim-1-k,j) = std::min(std::max(grids[v](m_pd.m_xdim-1-k,j),floor),ceil);
+                    else
+                        grids[v](m_pd.m_xdim-1-k,j) = std::max(std::min(grids[v](m_pd.m_xdim-1-k,j),floor),ceil);
                 }
             }
         }
         if(m_pd.y_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC){
             for(int i=0; i<m_pd.m_xdim; i++){
                 for(int k=0; k<N_GHOST+1; k++){
-                    if(grids[v](i,N_GHOST+1) >= 0.0) grids[v](i,k) = std::max(grids[v](i,k),moc_mom_lim_threshold*grids[v](i,N_GHOST+1));
-                    else grids[v](i,k) = std::min(grids[v](i,k),moc_mom_lim_threshold*grids[v](i,N_GHOST+1));
+                    double reference = grids[v](i,N_GHOST+1);
+                    double floor = moc_mom_lower_lim*reference;
+                    double ceil = moc_mom_upper_lim*reference;
+                    if(reference >= 0.0)
+                        grids[v](i,k) = std::min(std::max(grids[v](i,k),floor),ceil);
+                    else
+                        grids[v](i,k) = std::max(std::min(grids[v](i,k),floor),ceil);
                 }
             }
         }
         if(m_pd.y_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC){
             for(int i=0; i<m_pd.m_xdim; i++){
                 for(int k=0; k<N_GHOST+1; k++){
-                    if(grids[v](i,m_pd.m_ydim-2-N_GHOST) >= 0.0) grids[v](i,m_pd.m_ydim-1-k) = std::max(grids[v](i,m_pd.m_ydim-1-k),moc_mom_lim_threshold*grids[v](i,m_pd.m_ydim-2-N_GHOST));
-                    else grids[v](i,m_pd.m_ydim-1-k) = std::min(grids[v](i,m_pd.m_ydim-1-k),moc_mom_lim_threshold*grids[v](i,m_pd.m_ydim-2-N_GHOST));
+                    double reference = grids[v](i,m_pd.m_ydim-2-N_GHOST);
+                    double floor = moc_mom_lower_lim*reference;
+                    double ceil = moc_mom_upper_lim*reference;
+                    if(reference >= 0.0)
+                        grids[v](i,m_pd.m_ydim-1-k) = std::min(std::max(grids[v](i,m_pd.m_ydim-1-k),floor),ceil);
+                    else
+                        grids[v](i,m_pd.m_ydim-1-k) = std::max(std::min(grids[v](i,m_pd.m_ydim-1-k),floor),ceil);
                 }
             }
         }
@@ -217,6 +237,8 @@ void IdealMHD::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) const
 void IdealMHD::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) const
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    if(moc_mom_limiting) applyMomThresholdingMoC(grids);
+    if(moc_b_limiting) applyBThresholdingMoC(grids);
     grids[n] = (grids[rho]/m_pd.m_ion_mass).max(m_pd.density_min);
     grids[rho] = grids[n]*m_pd.m_ion_mass;
     grids[v_x] = grids[mom_x]/grids[rho];

@@ -115,14 +115,14 @@ void Viscosity::constructViscosityGrids(const std::vector<Grid>& grids)
             else if (m_species[i] == "e") dt = m_pd.m_eqs->grid(m_pd.m_eqs->timescale()[1]);
             else assert(false && "Species must be <i> or <e>.");
         }
-        double dt_min = dt.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
+        double dt_min = dt.min(m_pd.m_xl_dt,m_pd.m_yl_dt,m_pd.m_xu_dt,m_pd.m_yu_dt);
         if (m_visc_opt[i] == "boundary" || m_visc_opt[i] == "local") m_grids_dt[i] = dt;
         else if (m_visc_opt[i] == "global") m_grids_dt[i] = Grid(m_pd.m_xdim,m_pd.m_ydim,dt_min);
         else assert("Viscosity option must be global, local, or boundary.");
 
         // compute viscosity coefficient and impose maximum
         Grid visc_coeff = m_grids_strength[i]*(dx.square()+dy.square())/2./m_grids_dt[i];
-        double rk_timestep = m_pd.epsilon*m_pd.m_eqs->getDT().min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
+        double rk_timestep = m_pd.epsilon*m_pd.m_eqs->getDT().min(m_pd.m_xl_dt,m_pd.m_yl_dt,m_pd.m_xu_dt,m_pd.m_yu_dt);
         Grid visc_max = (dx.square()+dy.square())/2./rk_timestep;
         visc_coeff.min(visc_max);
 

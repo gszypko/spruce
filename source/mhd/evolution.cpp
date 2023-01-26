@@ -48,7 +48,7 @@ void PlasmaDomain::run(double time_duration,double cluster_time)
 void PlasmaDomain::advanceTime(bool verbose)
 {
   // determine timestep for this iteration
-  double step_size = epsilon*m_eqs->getDT().min(m_xl,m_yl,m_xu,m_yu);
+  double step_size = epsilon*m_eqs->getDT().min(m_xl_dt,m_yl_dt,m_xu_dt,m_yu_dt);
 
   // iterate module functions
   m_module_handler.preIterateModules(step_size);

@@ -52,11 +52,13 @@ class IdealMHD: public EquationSet {
         std::vector<std::vector<Grid>> singleBoundaryTermsMOC(const std::vector<Grid> &grids, int boundary_index, bool boundary_lower, double visc_coeff) const;
         void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
         bool moc_b_limiting{false};
-        double moc_b_lim_threshold{0.1}; //Larger values lead to stricter thresholding. Should be <=1.0, can be negative.
+        double moc_b_lower_lim{0.1}; //Smallest fraction of nearest interior value allowed in MoC ghost zone. Larger values lead to stricter thresholding. Should be <=1.0, can be negative.
+        double moc_b_upper_lim{10.0}; //Largest multiple of nearest interior value allowed in MoC ghost zone. Larger values lead to stricter thresholding. Should be >=1.0.
         bool moc_mom_limiting{false};
-        double moc_mom_lim_threshold{0.1}; //Larger values lead to stricter thresholding. Should be <=1.0, can be negative.
-        void applyBThresholdingMoC(std::vector<Grid> &grids);
-        void applyMomThresholdingMoC(std::vector<Grid> &grids);
+        double moc_mom_lower_lim{0.1}; //Smallest fraction of nearest interior value allowed in MoC ghost zone. Larger values lead to stricter thresholding. Should be <=1.0, can be negative.
+        double moc_mom_upper_lim{10.0}; //Largest multiple of nearest interior value allowed in MoC ghost zone. Larger values lead to stricter thresholding. Should be >=1.0.
+        void applyBThresholdingMoC(std::vector<Grid> &grids) const;
+        void applyMomThresholdingMoC(std::vector<Grid> &grids) const;
 };
 
 #endif
