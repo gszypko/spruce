@@ -28,7 +28,7 @@ vals = vals(1:iter);
 
 % reformat file contents into output structure
 out = struct;
-q = {'n','n_min','sig_x','sig_y','Ti','Te','dBdx','x_lim','y_lim','Nx','Ny','m_i','gam','n_dist','n_iaw_sig'};
+q = {'n','n_min','sig_x','sig_y','Ti','Te','dBdx','x_lim','y_lim','Nx','Ny','m_i','adiabatic_index','n_dist','n_iaw_sig'};
 qstr = {'n','n_min','sig_x','sig_y','Ti','Te','dBdx','x_lim','y_lim','Nx','Ny','m_i','adiabatic_index','n_dist','n_iaw_sig'};
 specified = zeros(size(q));
 for i = 1:length(names)

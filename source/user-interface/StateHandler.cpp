@@ -112,8 +112,8 @@ void StateHandler::setup(const std::unique_ptr<Settings>& pms)
     // position grids
     Grid d_x, d_y, pos_x, pos_y, dx_vec, dy_vec;
     if (pms->getopt("grid_opt") == "uniform"){
-        dx_vec = Grid(1,getvar("xdim"),2*pms->getval("x_lim")/(getvar("xdim")-1));
-        dy_vec = Grid(1,getvar("ydim"),2*pms->getval("y_lim")/(getvar("ydim")-1));
+        dx_vec = Grid(1,getvar("xdim"),2*pms->getval("x_lim")/(getvar("xdim")));
+        dy_vec = Grid(1,getvar("ydim"),2*pms->getval("y_lim")/(getvar("ydim")));
     }
     else if (pms->getopt("grid_opt") == "non-uniform"){
         getNonUniformGrids(getvar("xdim"),pms->getval("x_lim"),pms->getval("grid_growth"),pms->getval("grid_spread"),dx_vec);

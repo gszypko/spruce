@@ -1,64 +1,69 @@
-function [out] = readOutFile(path,Ng)
+function [out] = readOutFile(path,Ng,grids_to_load,time_window,time_interval)
 % directory (string): full path to directory containing 'plasma.settings'
-% opt (bool): (true) trim ghost cells from matrices (false) do not
-% out (struct): fields of <out> contain plasma quantities in cgs units, see below
+% Ng (int): number of ghost cells to remove from domain edges
 
 % ensure that plasma.settings file exists
 if ~endsWith(path,'.out'), error('File extension must be .out'); end
 
 
-% read in contents from file
+% read contents from file
 C = readfile(path);
+
+% read preamble
 dlm = ',';
 temp = split(C{2},dlm);
 out.Nx = str2double(temp{1}) - 2*Ng;
 out.Ny = str2double(temp{2}) - 2*Ng;
-zeromat = zeros(out.Ny,out.Nx);
 
-static_vars = {'pos_x','pos_y','be_x','be_y'};
-static_ind = zeros(size(static_vars));
-iter = 0;
+% read plasma domain grids
+static_vars = {'pos_x','pos_y','be_x','be_y','be_z'};
+static_vars_found = 0;
 for i = 1:length(C)
     ind = find(strcmp(C{i},static_vars), 1);
     if ~isempty(ind)
-        iter = iter + 1;
-        static_ind(iter) = i;
-        if iter == length(static_vars)
+        static_vars_found = static_vars_found + 1;
+        out.(static_vars{ind}) = getgrid(C,i,Ng,out.Nx,out.Ny);
+        if static_vars_found == length(static_vars)
             break
         end
     end
 end
 
-for i = 1:length(static_vars)
-    grid = zeromat;
-    iter = 0;
-    for j = static_ind(i)+1+Ng:static_ind(i)+Ng+out.Nx
-        iter = iter + 1;
-        temp = split(C{j},dlm);
-        line = sscanf(sprintf(' %s',temp{:}),'%f',[1,Inf]);
-        grid(:,iter) = line(Ng+1:end-Ng);
-    end
-    out.(static_vars{i}) = grid;
-end
-
-iter_t = 0;
+% determine indices for each time point
+time_ind = zeros(1,1e4);
+time_iter = 0;
 for i = 1:length(C)
     if startsWith(C{i},'t=')
-        time_start = i;
-        break
+        time_iter = time_iter + 1;
+        time_ind(time_iter) = i;
     end
 end
+time_ind = time_ind(1:time_iter);
+total_num_time_points = length(time_ind);
 
-for i = time_start:length(C)
-    if startsWith(C{i},'t=')
-        disp(['Loading Grids: ' num2str(floor(i/length(C)*100)) '%'])
-        iter_t = iter_t + 1;
-        out.vars(iter_t).time = str2double(extractAfter(C{i},'t='));
-    else
-        if length(split(C{i},dlm)) == 1
-            out.vars(iter_t).(C{i}) = getgrid(C,i,Ng,out.Nx,out.Ny);
+% trim time window and apply interval using inputs
+time_start = round(time_window(1)*time_iter/100+1);
+time_end = round(time_window(2)*time_iter/100);
+time_ind = time_ind(time_start:time_interval:time_end);
+time_ind_interval = unique(diff(time_ind));
+if length(time_ind_interval)>1, error('Time index spacing is not uniform.'); end
+
+% load chosen time points and variables
+for i = 1:length(time_ind)
+    disp(['Loading Grids for Time Point: ' num2str(i) '/' num2str(length(time_ind))])
+    out.vars(i).time = str2double(extractAfter(C{time_ind(i)},'t='));
+    vars_found = 0;
+    for j = time_ind(i)+1:time_ind(i)+time_ind_interval-1
+        ind = find(strcmp(C{j},grids_to_load));
+        if length(ind)==1
+            out.vars(i).(grids_to_load{ind}) = getgrid(C,j,Ng,out.Nx,out.Ny);
+            vars_found = vars_found + 1;
+            if vars_found == length(grids_to_load)
+                break
+            end
         end
-    end      
+    end
+    if vars_found ~= length(grids_to_load), error('Not all grids were found.'); end
 end
 
 out.time = [out.vars.time];

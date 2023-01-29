@@ -1,10 +1,6 @@
 function [] = plotGridEvol(data,flags)
 f = filesep;
 
-% handle plot frequency
-data.grids.vars = data.grids.vars(1:flags.plot_freq:end);
-data.grids.time = data.grids.time(1:flags.plot_freq:end);
-
 % get list of grid names from folder
 [grid_names,grid_str] = readGridNames(data.folder);
 

@@ -1,8 +1,5 @@
 function [] = gaussianAnalysis(data,flags)
 %% Handle Inputs
-% handle plot frequency 
-data.grids.vars = data.grids.vars(1:flags.plot_freq:end);
-data.grids.time = data.grids.time(1:flags.plot_freq:end);
 
 % set up save directories
 f = filesep;
