@@ -14,7 +14,7 @@ Rx = @(x,y,t) x.*cosd(t) - y.*sind(t);
 Ry = @(x,y,t) x.*sind(t) + y.*cosd(t);
 
 % fit with ordinary 2D Gaussian to get initial guesses for overall density distribution
-fit_g = fitImgWithGaussian(x,y,n,true);
+fit_g = fitImgWithGaussian(x,y,n,0);
 
 % define fit model (2D Gaussian and hole with arbitrary principle axes
 G2D = @(x,y,t,A,x0,y0,sigx,sigy) A.*exp(-(Rx(x,y,t)-x0).^2./(2*sigx^2)-(Ry(x,y,t)-y0).^2./(2*sigy^2));

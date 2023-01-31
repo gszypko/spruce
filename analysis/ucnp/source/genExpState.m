@@ -74,9 +74,9 @@ for k = 1:length([imgs.t])
             if iter > num, break, end
 
             cax = get_axis(fig,ax{i,j});
-            xdata = imgs(i).x;
-            ydata = imgs(i).y;
-            zdata = imgs(i).(fields{j})./1e8;
+            xdata = imgs(k).x;
+            ydata = imgs(k).y;
+            zdata = imgs(k).(fields{j})./1e8;
             imagesc(xdata,ydata,zdata)
             colorbar
             cax.YDir = 'Normal';
@@ -99,38 +99,6 @@ for k = 1:length([imgs.t])
     % save figure
     saveas(fig,[path f 'imgs-' num2str(k) '.png']);
 end
-close(fig)
-
-%% Extract Te From Size Evolution
-fit = struct;
-fit(length([imgs.t])).sig_x = [];
-fit(length([imgs.t])).sig_y = [];
-for i = 1:length([imgs.t])
-    results = fitImgWithGaussian(imgs(i).x,imgs(i).y,imgs(i).n);
-    fit(i).sig_x = results.sigx;
-    fit(i).sig_y = results.sigy;
-    fit(i).sig_2D = (fit(i).sig_x*fit(i).sig_y)^(1/2); % 1/3 because this is the experimental data
-    fit(i).sig_3D = (fit(i).sig_x*fit(i).sig_y^2)^(1/3); % 1/3 because this is the experimental data
-end
-
-tau_2D = @(Te) getTauExp(fit(1).sig_2D,Te);
-tau_3D = @(Te) getTauExp(fit(1).sig_3D,Te);
-fitmodel = @(c,data) fit(1).sig_3D*sqrt(1+data.^2/tau_3D(c)^2);
-p0 = settings.Te;
-data = [imgs.t];
-data = data';
-zdata = [fit.sig_3D]';
-Te = lsqcurvefit(fitmodel,p0,data,zdata);
-
-num = 1;
-[fig,~,an] = open_subplot(num,'Visible',flags.figvis);
-an.Position = [0.1479    0.8056    0.5164    0.1020];
-hold on
-l = get_line_specs(2);  
-plot(data./tau_3D(Te),fitmodel(Te,data),'LineWidth',2,'MarkerSize',4,'Color',l(1).col,'MarkerFaceColor',l(1).col,'MarkerEdgeColor',l(1).col)
-plot(data./tau_3D(Te),[fit.sig_3D],'o','LineWidth',2,'MarkerSize',4,'Color',l(2).col,'MarkerFaceColor',l(2).col,'MarkerEdgeColor',l(2).col)
-an.String = ['T_e = ' num2str(Te) ' K'];
-saveas(fig,[path f 'Te.png']);
 close(fig)
 
 %% Obtain State Background with Fit to Image
@@ -168,6 +136,62 @@ for i = 1:size(ax,1)
     end
 end
 close(fig)
+
+%% Extract Te From Size Evolution
+
+% get central ion temperature from LIF fits
+[~,ind_t] = min([os.delays]);
+x = os(ind_t).map.x;
+y = os(ind_t).map.y;
+[X,Y] = meshgrid(x,y);
+r = sqrt((X - n_fit.x0).^2+(Y - n_fit.y0).^2);
+sig = (n_fit.sigx*n_fit.sigy)^(1/2);
+ind_c = r < sig/5;
+Ti_from_lif = mean(os(ind_t).map.Ti(ind_c));
+
+% extract sizes from fit
+fit = struct;
+fit(length([imgs.t])).sig_x = [];
+fit(length([imgs.t])).sig_y = [];
+for i = 1:length([imgs.t])
+    results = fitImgWithGaussian(imgs(i).x,imgs(i).y,imgs(i).n);
+    fit(i).sig_x = results.sigx;
+    fit(i).sig_y = results.sigy;
+    fit(i).sig_2D = (fit(i).sig_x*fit(i).sig_y)^(1/2); % 1/3 because this is the experimental data
+    fit(i).sig_3D = (fit(i).sig_x*fit(i).sig_y^2)^(1/3); % 1/3 because this is the experimental data
+end
+
+tau_2D = @(T) getTauExp(fit(1).sig_2D,T);
+tau_3D = @(T) getTauExp(fit(1).sig_3D,T);
+fitmodel = @(c,data) fit(1).sig_3D*sqrt(1+data.^2/tau_3D(c)^2);
+p0 = settings.Te;
+data = [imgs.t];
+data = data';
+zdata = [fit.sig_3D]';
+T_fit = lsqcurvefit(fitmodel,p0,data,zdata,0,200);
+Te_fit = T_fit - Ti_from_lif;
+
+num = 1;
+[fig,~,an] = open_subplot(num,'Visible',flags.figvis);
+an.Position = [0.1479    0.8056    0.5164    0.1020];
+hold on
+l = get_line_specs(2);  
+plot(data./tau_3D(T_fit),fitmodel(T_fit,data),'LineWidth',2,'MarkerSize',4,'Color',l(1).col,'MarkerFaceColor',l(1).col,'MarkerEdgeColor',l(1).col)
+plot(data./tau_3D(T_fit),[fit.sig_3D],'o','LineWidth',2,'MarkerSize',4,'Color',l(2).col,'MarkerFaceColor',l(2).col,'MarkerEdgeColor',l(2).col)
+xlabel('t / \tau')
+ylabel('\sigma (cm)')
+an.String = ['T_e = ' num2str(Te_fit) ' K'];
+grid on 
+grid minor
+saveas(fig,[path f 'Te.png']);
+close(fig)
+
+% decide which electron temperature to use
+if isempty(flags.Te)
+    Te_for_files = Te_fit;
+else
+    Te_for_files = flags.Te;
+end
 
 %% Interpolate Image onto Larger, Non-Uniform Domain and Apply SG Filter to Background
 % interpolate data onto larger uniform grid, apply sg filter, then interpolate onto non-uniform domain if necessary
@@ -240,49 +264,18 @@ if flags.apply_sg_bgd
     end
 end
 
-%% Handle Config File
-% need to update the duration and time_output_interval lines of the .config file to be consistent with the temporal of
-% information of interest for the given data set
-
-% the end time for the simulation is taken to be equal to the last experimental time point by default
-if isempty(flags.Te), flags.Te = Te; end
-if isempty(flags.t_max)
-    t_max = max([imgs.t])*sqrt(os(1).Te/flags.Te); % time in cgs
-else
-    t_max = flags.t_max*tau_2D(flags.Te);
-end
-interval = t_max/flags.num_time_pts; % time interval between recording mhd grids
-
-% read config file and replace the two aforementioned lines
-C = readfile(flags.config_path);
-ind = find(startsWith(C,'duration'));
-if length(ind) ~= 1, error('duration line not found'); end
-C{ind} = ['duration = ' num2str(t_max)];
-ind = find(startsWith(C,'time_output_interval'));
-if length(ind) ~= 1, error('time_output_interval line not found'); end
-C{ind} = ['time_output_interval = ' num2str(interval)];
-
-% write .config file
-writecell(C,config_path,'QuoteStrings','none');
-movefile(config_path,[extractBefore(config_path,'.txt') '.config']);
-
 %% Handle Settings File
 % need to copy .settings path into set path, but first must determine the central value of n, Ti, and Te and the plasma size
 % on each axis
 
-% find cells nearest the plasma center for LIF fits
-[~,ind_t] = min([os.delays]);
-x = os(ind_t).map.x;
-y = os(ind_t).map.y;
-[X,Y] = meshgrid(x,y);
-r = sqrt((X - n_fit.x0).^2+(Y - n_fit.y0).^2);
-sig = (n_fit.sigx*n_fit.sigy)^(1/2);
-ind_c = r < sig/5;
-
 % determine values to go into plasma.settings file
 settings.n = n_fit.amp;
-settings.Ti = mean(os(ind_t).map.Ti(ind_c));
-settings.Te = flags.Te;
+if strcmp(eq_set,'ideal_mhd') || strcmp(eq_set,'ideal_mhd_cons')
+    settings.Ti = Te_for_files;
+else
+    settings.Ti = Ti_from_lif;
+end
+settings.Te = Te_for_files;
 settings.sig_x = n_fit.sigx;
 settings.sig_y = n_fit.sigy;
 settings.x_lim = flags.sim_domain(1);
@@ -300,6 +293,32 @@ end
 settings_data(i+1:end) = []; % remove excess cells
 writecell(settings_data,settings_path,'QuoteStrings','none');
 movefile(settings_path,[extractBefore(settings_path,'.txt') '.settings']);
+
+%% Handle Config File
+% need to update the duration and time_output_interval lines of the .config file to be consistent with the temporal of
+% information of interest for the given data set
+
+% the end time for the simulation is taken to be equal to the last experimental time point by default
+total_temp = settings.Te + settings.Ti;
+if isempty(flags.t_max)
+    t_max = max([imgs.t])*sqrt(os(1).Te/total_temp); % time in cgs
+else
+    t_max = flags.t_max*tau_2D(total_temp);
+end
+interval = t_max/flags.num_time_pts; % time interval between recording mhd grids
+
+% read config file and replace the two aforementioned lines
+C = readfile(flags.config_path);
+ind = find(startsWith(C,'duration'));
+if length(ind) ~= 1, error('duration line not found'); end
+C{ind} = ['duration = ' num2str(t_max)];
+ind = find(startsWith(C,'time_output_interval'));
+if length(ind) ~= 1, error('time_output_interval line not found'); end
+C{ind} = ['time_output_interval = ' num2str(interval)];
+
+% write .config file
+writecell(C,config_path,'QuoteStrings','none');
+movefile(config_path,[extractBefore(config_path,'.txt') '.config']);
 
 %% Write State File
 

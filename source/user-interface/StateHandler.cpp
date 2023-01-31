@@ -105,7 +105,7 @@ void StateHandler::setup(const std::unique_ptr<Settings>& pms)
     setvar("xdim",pms->getval("Nx"));
     setvar("ydim",pms->getval("Ny"));
     setvar("ion_mass",pms->getval("m_i"));
-    setvar("adiabatic_index",pms->getval("gam"));
+    setvar("adiabatic_index",pms->getval("adiabatic_index"));
     setvar("time",0.);
 
     //*** initialize grids for plasma domain

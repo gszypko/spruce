@@ -2,9 +2,9 @@ clc, clear, setpath; close all
 
 N = 301; % total number of grid cells along a given dimension
 sig = 0.1; % RMS plasma size
-r_max = 10*sig; % the spatial extent of the grid is [-1 1]*r_max
-A = 1.06; % multiplicative growth factor for grid cells
-B = .9999; % secondary growth factor
+r_max = 6*sig; % the spatial extent of the grid is [-1 1]*r_max
+A = 1.07; % multiplicative growth factor for grid cells
+B = 0.99999; % secondary growth factor
 [x,dx] = getNonUniformGrids(N,r_max,A,B,true);
 x = x./sig;
 dx = dx./sig;
@@ -26,6 +26,7 @@ grid minor
 
 yyaxis right
 plot(x(2:end),abs(diff(dx)./dx(2:end)),'.')
+xlim([min(x) max(x)])
 ylim([0 .1])
 ylabel('Fractional Change in dr')
 

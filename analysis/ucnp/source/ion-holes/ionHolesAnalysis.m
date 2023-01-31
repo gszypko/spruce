@@ -138,4 +138,5 @@ xlabel('t/\tau')
 ylabel('Hole Pos. (cm)')
 saveas(fig,[data.folder filesep 'hole-prop.png'])
 close(fig)
+
 end
