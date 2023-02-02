@@ -1,5 +1,5 @@
-# mhdtoy
-A two-dimensional MHD simulation with support for modular physics components.
+# SPRUCE (Simulating Plasmas with modulaR flUid CodE)
+A (multi-)fluid plasma simulation code for your favorite plasma. Supports customizing the fluid model used and adding additional physics with a flexible module system.
 
 # Compiling
 This code was only developed using the GNU g++ compiler. Support for other C++ compilers is not guaranteed, but the code was developed across Windows, Linux, and macOS systems and so should be usable from any of the above.
@@ -9,7 +9,7 @@ The included Makefile can be used to compile by invoking `make` from the command
 Compiling in this way will generate a directory named `obj` to contain the object (`.o`) file for each source file, with an additional subdirectory `obj/.deps` to contain the dependency (`.d`) files that are generated automatically on compilation. This should allow for more efficient recompiling by only recompiling the source files that have changed, then linking with the older, but still up-to-date, object files. `make clean` will delete the executable and clear out the `obj` directory to allow for a clean slate, in case any issues arise.
 
 # Running
-`mhdtoy` can be run in two different modes, depending on the method used to specify the initial state of the simulation run.
+`SPRUCE` can be run in two different modes, depending on the method used to specify the initial state of the simulation run.
 
 The resulting simulation will be output as a time series to the file `mhd.out` in the run's output directory. Other files written to the output directory are:
 - `init.state`: contains the full initial state of the system; if an `init.state` in the output directory was used to initialize the run, it will not be overwritten; otherwise, an existing `init.state` in the output directory will be overwritten by the initial state from a command-line-specified one.
@@ -167,7 +167,7 @@ where the bracketed text is replaced as follows:
 
 # Modules
 
-`mhdtoy` is designed to allow for the implementation of `Module`s that encompass physics phenomena outside of the base MHD physics of the simulation. These Modules can be easily activated, deactivated, and reconfigured without modifying the base MHD functionality. This is meant to be the primary method for the user to customize the run-time behavior of the code.
+`SPRUCE` is designed to allow for the implementation of `Module`s that encompass physics phenomena outside of the base MHD physics of the simulation. These Modules can be easily activated, deactivated, and reconfigured without modifying the base MHD functionality. This is meant to be the primary method for the user to customize the run-time behavior of the code.
 
 ## Basic Modular Structure
 
