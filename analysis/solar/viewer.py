@@ -2,12 +2,11 @@
 
 from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
-import math
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.image import NonUniformImage
-import sys
+from scipy.interpolate import LinearNDInterpolator
 import argparse
 import aia_response as aia
 from viewer_lib import *
@@ -92,6 +91,7 @@ parser.add_argument('-t', '--time_label', help="inserts the time into the plot t
 parser.add_argument('-tr', '--time_label_rounded', help="when -t is specified, rounds the time to the nearest integer", action='store_true')
 parser.add_argument('-d', '--dark_mode', help="renders using a black background and white text", action='store_true')
 parser.add_argument('-r', '--realtime', help="render in real time, instead of writing out to a video file", action='store_true')
+parser.add_argument('-sa', '--sandbox', help="plot according to the sandbox area in the script", action='store_true')
 parser.add_argument('-S', '--serif', help="render using a serif font", action='store_true')
 parser.add_argument('-fv', '--full_varname', help="use full variable name in title, instead of abbreviation", action='store_true')
 parser.add_argument('-nv', '--no_varname', help="omit variable name from title", action='store_true')
@@ -105,8 +105,15 @@ parser.add_argument('-nc', '--no_colorbar', help="omit colorbar for contour quan
 parser.add_argument('-nt','--no_ticks', help="omits labels along the x- and y-axes", action='store_true')
 parser.add_argument('-i','--interactive',help="manually control the time stepping of the plot \
                     (with left and right arrow keys) and investigate contour values by mousing over",action='store_true')
+parser.add_argument('-E','--equal_aspect',help="enforce an equal aspect ratio on the plotted data",action='store_true')
 args = parser.parse_args()
 
+line_thickness = 1.0
+arrow_size = 1.0
+
+# matplotlib.rcParams.update({'figure.dpi': 300.0})
+# matplotlib.rcParams.update({'figure.autolayout': True})
+# matplotlib.rcParams.update({'font.family': 'Helvetica'})
 matplotlib.rcParams.update({'font.size': args.font_size})
 if args.dark_mode: plt.style.use('dark_background')
 if args.serif: matplotlib.rcParams.update({'font.family': 'serif'})
@@ -136,6 +143,8 @@ if output_var == "b_mag":
   file_var_names = np.array(["bi_x","bi_y"])
 if output_var in ["div_b","div_bi"]:
   file_var_names = np.array(["bi_x","bi_y"])
+if args.sandbox:
+  file_var_names = np.array(["press","bi_x","bi_y","n"])
 if aia.is_filter(output_var):
   file_var_names = np.array(["n","temp"])
 vec_var = args.vector
@@ -207,18 +216,255 @@ if vec_var != None and vec_var != "be" and len(var) > len(vec_x):
   print("pop!")
   var.pop()
 
+if vec_mode == "stream":
+  min_space_x = np.abs(np.min([x[i+1] - x[i] for i in range(len(x)-1)]))
+  x_eq = np.asarray([x[0] + i*min_space_x for i in range(math.ceil((x_max - x_min)/min_space_x))])
+  min_space_y = np.abs(np.min([y[i+1] - y[i] for i in range(len(y)-1)]))
+  y_eq = np.asarray([y[0] + i*min_space_y for i in range(math.ceil((y_max - y_min)/min_space_y))])
+
 # if output_var in ["rho","b_mag"]:
 #   for i in range(len(var)):
 #     var[i] = np.ma.masked_where(var[i]<=1.0e-30, var[i])
 
+# ################## SANDBOX AREA ###################
+# if args.sandbox:
+#   line_thickness = 0.6
+#   arrow_size = 0.6
+#   matplotlib.rcParams.update({'font.size': 10})
+#   matplotlib.rcParams.update({'figure.dpi': 580.0})
+#   fig, axs = plt.subplots(2,6,figsize=(8.0,3.0))
+#   fig.subplots_adjust(hspace=-0.2, wspace=0.15)
+#   # fig.subplots_adjust(hspace=0.0, wspace=0.0)
+#   index = 0
+#   fig.supxlabel("x (Mm)")
+#   fig.supylabel("y (Mm)",x=0.04)
+
+#   beta = []
+#   n = []
+#   for i in range(len(var)):
+#     mag_press = ((bx+file_vars[1][i])**2 + (by+file_vars[2][i])**2)/(8.0*np.pi)
+#     beta.append(file_vars[0][i]/mag_press)
+#     n.append(file_vars[3][i])
+#   # plasma beta
+#   max_beta = np.finfo(np.float_).min
+#   min_beta = np.finfo(np.float_).max
+#   max_n = np.finfo(np.float_).min
+#   min_n = np.finfo(np.float_).max
+#   for i in range(len(var)):
+#     curr_max_beta = np.nanmax(beta[i])
+#     if np.isfinite(curr_max_beta): max_beta = np.fmax(max_beta,curr_max_beta)
+#     curr_min_beta = np.nanmin(beta[i])
+#     if np.isfinite(curr_min_beta): min_beta = np.fmin(min_beta,curr_min_beta)
+#     curr_max_n = np.nanmax(n[i])
+#     if np.isfinite(curr_max_n): max_n = np.fmax(max_n,curr_max_n)
+#     curr_min_n = np.nanmin(n[i])
+#     if np.isfinite(curr_min_n): min_n = np.fmin(min_n,curr_min_n)
+#   logrange = np.log10(max_beta) - np.log10(min_beta)
+#   one_pos = (np.log10(1.0) - np.log10(min_beta))/logrange
+#   small_range = min(abs(one_pos),abs(1.0-one_pos))
+#   large_range = max(abs(one_pos),abs(1.0-one_pos))
+#   if np.log10(max_beta)*np.log10(min_beta) < 0.0:
+#     one_pos_color = (1.0,1.0,1.0)
+#     zero_color = (0.0,0.1,0.4)
+#     one_color = (0.4,0.1,0.0)
+#     half_color_low = (0.0,0.2,0.9)
+#     half_color_high = (0.9,0.2,0.0)
+#     xp = [0.0,0.5*large_range]
+#     if one_pos < 0.5:
+#       if one_pos < 1.0/3.0:
+#         s = one_pos
+#         fp = [[1.0,half_color_low[0]],[1.0,half_color_low[1]],[1.0,half_color_low[2]]]
+#         colors = [(0.0,[np.interp(s,xp,fp[0]),np.interp(s,xp,fp[1]),np.interp(s,xp,fp[2])]),\
+#                   (one_pos,one_pos_color),(one_pos+0.5*large_range,half_color_high),(1.0,one_color)]
+#       else:
+#         s = one_pos-0.5*large_range
+#         fp = [[half_color_low[0],zero_color[0]],[half_color_low[1],zero_color[1]],[half_color_low[2],zero_color[2]]]
+#         colors = [(0.0,[np.interp(s,xp,fp[0]),np.interp(s,xp,fp[1]),np.interp(s,xp,fp[2])]),\
+#                   (one_pos-0.5*large_range,half_color_low),(one_pos,one_pos_color),(one_pos+0.5*large_range,half_color_high),(1.0,one_color)]
+#     elif one_pos > 0.5:
+#       if one_pos > 2.0/3.0:
+#         s = 1.0-one_pos
+#         fp = [[1.0,half_color_high[0]],[1.0,half_color_high[1]],[1.0,half_color_high[2]]]
+#         colors = [(0.0,zero_color),(one_pos-0.5*large_range,half_color_low),(one_pos,one_pos_color),\
+#                   (1.0,[np.interp(s,xp,fp[0]),np.interp(s,xp,fp[1]),np.interp(s,xp,fp[2])])]
+#       else:
+#         s = 1.0-one_pos-0.5*large_range
+#         fp = [[half_color_high[0],one_color[0]],[half_color_high[1],one_color[1]],[half_color_high[2],one_color[2]]]
+#         colors = [(0.0,zero_color),(one_pos-0.5*large_range,half_color_low),(one_pos,one_pos_color),(one_pos+0.5*large_range,half_color_high),\
+#                   (1.0,[np.interp(s,xp,fp[0]),np.interp(s,xp,fp[1]),np.interp(s,xp,fp[2])])]
+#     else:
+#       colors = [(0.0,zero_color),(one_pos-0.5*small_range,half_color_low),(one_pos,one_pos_color),(one_pos+0.5*small_range,half_color_high),(1.0,one_color)]
+#   elif np.log10(max_beta) < 0.0:
+#     middle = 0.5*one_pos
+#     top_color = [np.interp(1.0,[middle,one_pos],[0.0,1.0]), np.interp(1.0,[middle,one_pos],[0.2,1.0]), np.interp(1.0,[middle,one_pos],[0.9,1.0])]
+#     colors = [(0.0,(0.0,0.1,0.4)),(min(middle,1.0),(0.0,0.2,0.9)),(1.0,top_color)]
+#   elif np.log10(max_beta) > 0.0:
+#     middle = 1.0 - 0.5*(1.0-one_pos)
+#     bott_color = [np.interp(0.0,[one_pos,middle],[1.0,0.9]), np.interp(0.0,[one_pos,middle],[1.0,0.2]), np.interp(0.0,[one_pos,middle],[1.0,0.0])]
+#     colors = [(0.0,bott_color),(max(middle,0.0),(0.9,0.2,0.0)),(1.0,(0.4,0.1,0.0))]
+#   beta_cmap = LinearSegmentedColormap.from_list('beta_diverge',colors)
+
+#   im1 = None
+#   for ax in axs[0]:
+#     im = NonUniformImage(ax, animated=False, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+#       interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-20, base=10))
+#     if index == 0: im1 = im
+#     im.set_cmap(beta_cmap)
+#     im.set_data(x,y,np.transpose(beta[index]))
+#     im.set_clim(vmin=min_beta,vmax=max_beta)
+#     ax.add_image(im)
+#     ax.set_xlim(x_min, x_max)
+#     ax.set_ylim(y_min, y_max)
+#     ax.set_title("t="+str(round(t[index] - t[0]))+" s")
+#     if index > 0:
+#       ax.yaxis.set_ticklabels([])
+#     # if index == 5:
+#     #   fig.colorbar(im)
+#     # ax.xaxis.set_ticklabels([])
+#     ax.tick_params(axis='both', which='both', labelsize=6)
+#     ax.label_outer()
+
+#     if vec_var != None:
+#       if vec_var == "be":
+#         this_vec_x = bx
+#         this_vec_y = by
+#       else:
+#         this_vec_x = vec_x[index].copy()
+#         this_vec_y = vec_y[index].copy()
+#       norm = np.sqrt(this_vec_x**2 + this_vec_y**2)
+#       np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
+#       np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
+#       if vec_mode == "stream":
+#         if os.path.exists(startpointfile) or args.streampoint_override is not None:
+#           start_pts=[]
+#           input_filename = ""
+#           if args.streampoint_override is not None:
+#             input_filename = args.streampoint_override
+#           else:
+#             input_filename = startpointfile
+#           with open(input_filename) as f:
+#             line = f.readline()
+#             while line:
+#               if line[0] != "#" and line != '':
+#                 start_pts.append(line.split(","))
+#                 start_pts[-1] = [float(s) for s in start_pts[-1]]
+#               line = f.readline()
+#         else:
+#           if args.stream_number is None:
+#             num_points = 11
+#           else:
+#             num_points = args.stream_number
+#           if args.uniform_stream:
+#             stream_points = np.linspace(x[1],x[-2],num_points)
+#           else:
+#             if args.stream_power is None:
+#               if this_vec_y[1,1]*this_vec_y[-2,1] < 0.0:
+#                 print("loop detected")
+#                 num_points = int(num_points*2)
+#                 stream_pow = 1
+#               else:
+#                 stream_pow = 2
+#             else:
+#               stream_pow = args.stream_power
+#             norm_normalized = norm[:,0]**stream_pow/np.trapz(norm[:,0]**stream_pow)
+#             cdf = [np.trapz(norm_normalized[:(i+1)]) for i in range(len(norm_normalized))]
+#             stream_points = np.interp(np.linspace(0.05,0.95,num=num_points),cdf,x)
+#           start_pts=np.column_stack((stream_points,y_eq[0]*np.ones_like(stream_points)))
+#         start_pts = np.asarray(start_pts)
+#         stream = ax.streamplot(x_eq,y_eq,this_vec_x.transpose(),this_vec_y.transpose(),\
+#           start_points=start_pts,\
+#             color=(0.0,0.0,0.0),broken_streamlines=False,linewidth=line_thickness,arrowstyle='->',arrowsize=arrow_size,maxlength=10.0)
+#         stream.lines.set(pickradius=2.0)
+#     ax.set_aspect('equal')
+
+#     index += 1
+
+#   index = 0
+#   im2 = None
+#   # density
+#   for ax in axs[1]:
+#     im = NonUniformImage(ax, animated=False, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+#       interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-20, base=10))
+#     if index == 0: im2 = im
+#     im.set_data(x,y,np.transpose(n[index]))
+#     im.set_clim(vmin=min_n,vmax=max_n)
+#     ax.add_image(im)
+#     ax.set_xlim(x_min, x_max)
+#     ax.set_ylim(y_min, y_max)
+#     # ax.set_title(str(index))
+#     if index > 0:
+#       ax.yaxis.set_ticklabels([])
+#     ax.tick_params(axis='both', which='both', labelsize=6)
+#     ax.label_outer()
+
+#     if vec_var != None:
+#       if vec_var == "be":
+#         this_vec_x = bx
+#         this_vec_y = by
+#       else:
+#         this_vec_x = vec_x[index].copy()
+#         this_vec_y = vec_y[index].copy()
+#       norm = np.sqrt(this_vec_x**2 + this_vec_y**2)
+#       np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
+#       np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
+#       if vec_mode == "stream":
+#         if os.path.exists(startpointfile) or args.streampoint_override is not None:
+#           start_pts=[]
+#           input_filename = ""
+#           if args.streampoint_override is not None:
+#             input_filename = args.streampoint_override
+#           else:
+#             input_filename = startpointfile
+#           with open(input_filename) as f:
+#             line = f.readline()
+#             while line:
+#               if line[0] != "#" and line != '':
+#                 start_pts.append(line.split(","))
+#                 start_pts[-1] = [float(s) for s in start_pts[-1]]
+#               line = f.readline()
+#         else:
+#           if args.stream_number is None:
+#             num_points = 11
+#           else:
+#             num_points = args.stream_number
+#           if args.uniform_stream:
+#             stream_points = np.linspace(x[1],x[-2],num_points)
+#           else:
+#             if args.stream_power is None:
+#               if this_vec_y[1,1]*this_vec_y[-2,1] < 0.0:
+#                 print("loop detected")
+#                 num_points = int(num_points*2)
+#                 stream_pow = 1
+#               else:
+#                 stream_pow = 2
+#             else:
+#               stream_pow = args.stream_power
+#             norm_normalized = norm[:,0]**stream_pow/np.trapz(norm[:,0]**stream_pow)
+#             cdf = [np.trapz(norm_normalized[:(i+1)]) for i in range(len(norm_normalized))]
+#             stream_points = np.interp(np.linspace(0.05,0.95,num=num_points),cdf,x)
+#           start_pts=np.column_stack((stream_points,y_eq[0]*np.ones_like(stream_points)))
+#         start_pts = np.asarray(start_pts)
+#         stream = ax.streamplot(x_eq,y_eq,this_vec_x.transpose(),this_vec_y.transpose(),\
+#           start_points=start_pts,\
+#             color=(0.0,0.0,0.0),broken_streamlines=False,linewidth=line_thickness,arrowstyle='->',arrowsize=arrow_size,maxlength=10.0)
+#         stream.lines.set(pickradius=2.0)
+#     index += 1
+#     ax.set_aspect('equal')
+#   # plt.tight_layout()
+#   fig.subplots_adjust(left=0.1,right=0.895)
+#   cax1 = plt.axes([0.91, 0.514, 0.01, 0.305])
+#   cbar1 = fig.colorbar(im1,cax=cax1,label="Plasma Beta")
+#   for label in cbar1.ax.yaxis.get_ticklabels()[::2]:
+#     label.set_visible(False)
+#   cax2 = plt.axes([0.91, 0.172, 0.01, 0.305])
+#   cbar2 = fig.colorbar(im2,cax=cax2,label="Num. Density")
+#   plt.savefig("testing_200heat.png")
+#   exit()
+# ###############################################
+
 fig, ax = plt.subplots()
 frame = 0
 
-if vec_mode == "stream":
-  avg_space_x = np.abs(np.mean([x[i+1] - x[i] for i in range(len(x)-1)]))
-  x_eq = np.asarray([x[0] + i*avg_space_x for i in range(len(x))])
-  avg_space_y = np.abs(np.mean([y[i+1] - y[i] for i in range(len(y)-1)]))
-  y_eq = np.asarray([y[0] + i*avg_space_y for i in range(len(y))])
 
 max_v = np.finfo(np.float_).min
 min_v = np.finfo(np.float_).max
@@ -253,9 +499,9 @@ if vec_var != None:
     min_v_vec = 0.0
 
 # Set contour bar scaling (linear, log, etc)
-if args.diff_file is not None or output_var in ["div_bi","div_be"]:
+if args.diff_file is not None or output_var in ["beta","div_bi","div_be"]:
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-    interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-20, base=10))
+    interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-100, base=10))
 elif output_var in ["rad","dt","dt_thermal","dt_rad","field_heating","b_mag"]: #variables that can go to zero
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-8, base=10))
@@ -269,6 +515,8 @@ else: # output_var in ["v_x","v_y","v_z","bi_x","bi_y"]: #variables with negativ
 #   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
 #     interpolation='nearest', norm=matplotlib.colors.LogNorm())
 
+im.set_clim(vmin=min_v,vmax=max_v)
+
 # Construct custom colorbar
 # if args.diff_file is not None:
 #   colors = [(0.0,(0.1,0.1,1.0)),(0.5,(1.0,1.0,1.0)),(1.0,(1.0,0.1,0.1))]
@@ -278,8 +526,38 @@ if output_var == "beta" and args.diff_file is None:
   logrange = np.log10(max_v) - np.log10(min_v)
   one_pos = (np.log10(1.0) - np.log10(min_v))/logrange
   small_range = min(abs(one_pos),abs(1.0-one_pos))
+  large_range = max(abs(one_pos),abs(1.0-one_pos))
   if np.log10(max_v)*np.log10(min_v) < 0.0:
-    colors = [(0.0,(0.0,0.1,0.4)),(one_pos-0.5*small_range,(0.0,0.2,0.9)),(one_pos,(1.0,1.0,1.0)),(one_pos+0.5*small_range,(0.9,0.2,0.0)),(1.0,(0.4,0.1,0.0))]
+    one_pos_color = (1.0,1.0,1.0)
+    zero_color = (0.0,0.1,0.4)
+    one_color = (0.4,0.1,0.0)
+    half_color_low = (0.0,0.2,0.9)
+    half_color_high = (0.9,0.2,0.0)
+    xp = [0.0,0.5*large_range]
+    if one_pos < 0.5:
+      if one_pos < 1.0/3.0:
+        s = one_pos
+        fp = [[1.0,half_color_low[0]],[1.0,half_color_low[1]],[1.0,half_color_low[2]]]
+        colors = [(0.0,[np.interp(s,xp,fp[0]),np.interp(s,xp,fp[1]),np.interp(s,xp,fp[2])]),\
+                  (one_pos,one_pos_color),(one_pos+0.5*large_range,half_color_high),(1.0,one_color)]
+      else:
+        s = one_pos-0.5*large_range
+        fp = [[half_color_low[0],zero_color[0]],[half_color_low[1],zero_color[1]],[half_color_low[2],zero_color[2]]]
+        colors = [(0.0,[np.interp(s,xp,fp[0]),np.interp(s,xp,fp[1]),np.interp(s,xp,fp[2])]),\
+                  (one_pos-0.5*large_range,half_color_low),(one_pos,one_pos_color),(one_pos+0.5*large_range,half_color_high),(1.0,one_color)]
+    if one_pos > 0.5:
+      if one_pos > 2.0/3.0:
+        s = 1.0-one_pos
+        fp = [[1.0,half_color_high[0]],[1.0,half_color_high[1]],[1.0,half_color_high[2]]]
+        colors = [(0.0,zero_color),(one_pos-0.5*large_range,half_color_low),(one_pos,one_pos_color),\
+                  (1.0,[np.interp(s,xp,fp[0]),np.interp(s,xp,fp[1]),np.interp(s,xp,fp[2])])]
+      else:
+        s = 1.0-one_pos-0.5*large_range
+        fp = [[half_color_high[0],one_color[0]],[half_color_high[1],one_color[1]],[half_color_high[2],one_color[2]]]
+        colors = [(0.0,zero_color),(one_pos-0.5*large_range,half_color_low),(one_pos,one_pos_color),(one_pos+0.5*large_range,half_color_high),\
+                  (1.0,[np.interp(s,xp,fp[0]),np.interp(s,xp,fp[1]),np.interp(s,xp,fp[2])])]
+    else:
+      colors = [(0.0,zero_color),(one_pos-0.5*small_range,half_color_low),(one_pos,one_pos_color),(one_pos+0.5*small_range,half_color_high),(1.0,one_color)]
   elif np.log10(max_v) < 0.0:
     middle = 0.5*one_pos
     top_color = [np.interp(1.0,[middle,one_pos],[0.0,1.0]), np.interp(1.0,[middle,one_pos],[0.2,1.0]), np.interp(1.0,[middle,one_pos],[0.9,1.0])]
@@ -294,10 +572,10 @@ elif aia.is_filter(output_var):
   im.set_cmap(aia.colormap(output_var))
 
 im.set_data(x,y,np.transpose(var[frame]))
-im.set_clim(vmin=min_v,vmax=max_v)
 ax.add_image(im)
-if args.colorbar_location in ["bottom","top"]:
+if args.equal_aspect:
   ax.set_aspect('equal')
+
 ax.set(xlim=(x_min,x_max), ylim=(y_min,y_max), title=output_var+", t="+str(t[frame]))
 if args.no_ticks:
   ax.set(xticks=[],yticks=[])
@@ -344,10 +622,17 @@ if vec_var != None:
   else:
     this_vec_x = vec_x[frame].copy()
     this_vec_y = vec_y[frame].copy()
-  norm = np.sqrt(this_vec_x**2 + this_vec_y**2)
-  np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
-  np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
+
   if vec_mode == "stream":
+    interp_x = LinearNDInterpolator(list(zip(X.flatten(), Y.flatten())), this_vec_x.flatten(),fill_value=0.0)
+    interp_y = LinearNDInterpolator(list(zip(X.flatten(), Y.flatten())), this_vec_y.flatten(),fill_value=0.0)
+    x_eq_grid, y_eq_grid = np.meshgrid(x_eq,y_eq)
+    this_vec_x = interp_x(x_eq_grid, y_eq_grid)
+    this_vec_y = interp_y(x_eq_grid, y_eq_grid)
+    
+    norm = np.sqrt(this_vec_x**2 + this_vec_y**2)
+    np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
+    np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
     if os.path.exists(startpointfile) or args.streampoint_override is not None:
       start_pts=[]
       input_filename = ""
@@ -363,33 +648,36 @@ if vec_var != None:
             start_pts[-1] = [float(s) for s in start_pts[-1]]
           line = f.readline()
     else:
-      if args.stream_number is None:
-        num_points = 11
-      else:
-        num_points = args.stream_number
-      if args.uniform_stream:
-        stream_points = np.linspace(x[1],x[-2],num_points)
-      else:
-        if args.stream_power is None:
-          if this_vec_y[1,1]*this_vec_y[-2,1] < 0.0:
-            print("loop detected")
-            num_points = int(num_points*2)
-            stream_pow = 1
-          else:
-            stream_pow = 2
-        else:
-          stream_pow = args.stream_power
-        norm_normalized = norm[:,0]**stream_pow/np.trapz(norm[:,0]**stream_pow)
-        cdf = [np.trapz(norm_normalized[:(i+1)]) for i in range(len(norm_normalized))]
-        stream_points = np.interp(np.linspace(0.05,0.95,num=num_points),cdf,x)
-      start_pts=np.column_stack((stream_points,y_eq[0]*np.ones_like(stream_points)))
+      start_pts=[[x[0],y[0]]]
+      # if args.stream_number is None:
+      #   num_points = 11
+      # else:
+      #   num_points = args.stream_number
+      # if args.uniform_stream:
+      #   stream_points = np.linspace(x[1],x[-2],num_points)
+      # else:
+      #   if args.stream_power is None:
+      #     if this_vec_y[1,1]*this_vec_y[-2,1] < 0.0:
+      #       print("loop detected")
+      #       num_points = int(num_points*2)
+      #       stream_pow = 1
+      #     else:
+      #       stream_pow = 2
+      #   else:
+      #     stream_pow = args.stream_power
+      #   norm_normalized = norm[:,0]**stream_pow/np.trapz(norm[:,0]**stream_pow)
+      #   cdf = [np.trapz(norm_normalized[:(i+1)]) for i in range(len(norm_normalized))]
+      #   stream_points = np.interp(np.linspace(0.05,0.95,num=num_points),cdf,x)
+      # start_pts=np.column_stack((stream_points,y_eq[0]*np.ones_like(stream_points)))
     start_pts = np.asarray(start_pts)
     print(start_pts)
-    stream = ax.streamplot(x_eq,y_eq,this_vec_x.transpose(),this_vec_y.transpose(),\
-      start_points=start_pts,\
-        color=(0.0,0.0,0.0,1.0),density=(xdim_view/10,ydim_view/10),linewidth=2.0,arrowstyle='->',arrowsize=1.5,maxlength=10.0)
+    stream = ax.streamplot(x_eq,y_eq,this_vec_x,this_vec_y,start_points=start_pts,\
+        color=(0.0,0.0,0.0),broken_streamlines=False,linewidth=line_thickness,arrowstyle='->',arrowsize=arrow_size,maxlength=10.0)
     stream.lines.set(pickradius=2.0)
   else:
+    norm = np.sqrt(this_vec_x**2 + this_vec_y**2)
+    np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
+    np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
     assert vec_mode == "quiver"
     quiv = ax.quiver(X[x_vec_indices, y_vec_indices], Y[x_vec_indices, y_vec_indices], \
         this_vec_x[x_vec_indices, y_vec_indices], this_vec_y[x_vec_indices, y_vec_indices], norm[x_vec_indices, y_vec_indices], \
@@ -443,14 +731,18 @@ def updatefig(*args_arg):
               norm[x_vec_indices, y_vec_indices])
       else:
         assert vec_mode == "stream"
+        interp_x = LinearNDInterpolator(list(zip(X.flatten(), Y.flatten())), this_vec_x.flatten(),fill_value=0.0)
+        interp_y = LinearNDInterpolator(list(zip(X.flatten(), Y.flatten())), this_vec_y.flatten(),fill_value=0.0)
+        x_eq_grid, y_eq_grid = np.meshgrid(x_eq,y_eq)
+        this_vec_x = interp_x(x_eq_grid, y_eq_grid)
+        this_vec_y = interp_y(x_eq_grid, y_eq_grid)
         stream.lines.remove()
         for art in ax.get_children():
           if not isinstance(art, matplotlib.patches.FancyArrowPatch):
             continue
           art.remove()
-        stream = ax.streamplot(x_eq,y_eq,this_vec_x.transpose(),this_vec_y.transpose(),\
-          start_points=start_pts,\
-            color=(0.0,0.0,0.0,1.0),density=(xdim_view/10,ydim_view/10),linewidth=2.0,arrowstyle='->',arrowsize=1.5,maxlength=10.0)
+        stream = ax.streamplot(x_eq,y_eq,this_vec_x,this_vec_y,start_points=start_pts,\
+            color=(0.0,0.0,0.0),broken_streamlines=False,linewidth=line_thickness,arrowstyle='->',arrowsize=arrow_size,maxlength=10.0)
         if not args.streampoint_record:
           print("frame " + str(frame) + " plotted")
     plt.tight_layout()
@@ -468,7 +760,7 @@ def extract_separate_lines(segments):
     this_line=[segments[i][0]]
     this_line_segments=[segments[i]]
     i+=1
-    while i<len(segments) and np.max((abs(segments[i][0,0]-segments[i-1][1,0]),abs(segments[i][0,1]-segments[i-1][1,1])))<1.0:
+    while i<len(segments) and np.sqrt(((segments[i][0,0]-segments[i-1][1,0])**2+(segments[i][0,1]-segments[i-1][1,1])**2))<0.01:
       this_line.append(segments[i][0])
       this_line_segments.append(segments[i])
       i+= 1
@@ -488,10 +780,22 @@ def modifystreampoints(event):
       segments = stream.lines.get_segments()
       lines, line_segments = extract_separate_lines(segments)
       for l in range(len(lines)):
-        single_line = matplotlib.collections.LineCollection(line_segments[l],pickradius=5.0,transform=ax.transData)
+        single_line = matplotlib.collections.LineCollection(line_segments[l],pickradius=2.0,transform=ax.transData)
         if single_line.contains(event)[0]:
           print("Deleting existing line")
-          start_pts = np.delete(start_pts,l,axis=0)
+          segs = single_line.get_segments()
+          for j in range(len(segs)):
+            segs[j] = segs[j].tolist()
+          segs_flat = [sublist[0] for sublist in segs]
+          curr_min_dist = np.finfo(np.float_).max
+          curr_best_k = -1
+          for k in range(len(start_pts)):
+            curr_pt = start_pts[k]
+            closest_dist = min([np.sqrt((curr_pt[0]-line_pt[0])**2 + (curr_pt[1]-line_pt[1])**2) for line_pt in segs_flat])
+            if closest_dist < curr_min_dist:
+              curr_min_dist = closest_dist
+              curr_best_k = k
+          start_pts = np.delete(start_pts,curr_best_k,axis=0)
     else:
       print("Adding new line")
       start_pts = np.append(start_pts,[[ix, iy]],axis=0)
@@ -499,16 +803,15 @@ def modifystreampoints(event):
   fig.canvas.draw_idle()
 
 def savestreampoints(event):
-  if(event.key == "0"):
-    global stream
-    global args
-    global startpointfile
-    segments = stream.lines.get_segments()
-    lines = extract_separate_lines(segments)[0]
-    print(f"Saving {len(lines)} lines to {startpointfile}...")
-    with open(startpointfile, 'w') as f:
-      for l in lines:
-        f.write(f"{l[0][0]},{l[0][1]}\n")
+  global stream
+  global args
+  global startpointfile
+  segments = stream.lines.get_segments()
+  lines = extract_separate_lines(segments)[0]
+  print(f"Saving {len(lines)} lines to {startpointfile}...")
+  with open(startpointfile, 'w') as f:
+    for l in lines:
+      f.write(f"{l[-1][0]},{l[-1][1]}\n")
 
 def advancetime(event):
   global frame
@@ -525,7 +828,10 @@ def keypresshandler(event):
   if args.interactive:
     advancetime(event)
   if args.streampoint_record:
-    savestreampoints(event)
+    if(event.key == "0"):
+      savestreampoints(event)
+    elif(event.key == "9"):
+      drawautofieldlines()
 
 def displayinfo(event):
   global fig
@@ -544,6 +850,40 @@ def displayinfo(event):
     fig.suptitle(f"{var[frame][xidx,yidx]:.3e} at ({xidx},{yidx})",x=0.1,ha='left')
   fig.canvas.draw_idle()
 
+def drawautofieldlines():
+  global start_pts
+  global stream
+  global fig
+  global ax
+  global x_min, x_max
+  global y_min, y_max
+  num_cells_x = 3
+  num_cells_y = 6
+  dx = (x_max - x_min)/num_cells_x
+  dy = (y_max - y_min)/num_cells_y
+  curr_x = x_min + 0.5*dx
+  curr_y = y_max - 0.5*dy
+  while curr_y > y_min:
+    curr_x = x_min + 0.5*dx
+    while curr_x < x_max:
+      min_d = (ax.transData.transform((x_min + min(dx,dy), 0))[0] - ax.transData.transform((x_min, 0))[0])*0.5
+      pix_pos = ax.transData.transform((curr_x, curr_y))
+      faux_me = matplotlib.backend_bases.MouseEvent('button_press_event', fig.canvas, pix_pos[0], pix_pos[1])
+      segments = stream.lines.get_segments()
+      lines, line_segments = extract_separate_lines(segments)
+      covered = False
+      for l in range(len(lines)):
+        single_line = matplotlib.collections.LineCollection(line_segments[l],pickradius=0.5*min_d,transform=ax.transData)
+        if single_line.contains(faux_me)[0]:
+          covered = True
+          break
+      if not covered:
+        start_pts = np.append(start_pts,[[curr_x, curr_y]],axis=0)
+        updatefig()
+        fig.canvas.draw_idle()
+      curr_x += dx
+    curr_y -= dy
+  
 
 if args.interactive or args.streampoint_record:
   cid = fig.canvas.mpl_connect('key_press_event', keypresshandler)

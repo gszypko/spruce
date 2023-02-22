@@ -9,7 +9,7 @@ import os
 import sys
 
 BETA = 0.004
-B_0 = 200.0 #G
+B_0 = 20.0*30.0 #G
 PRESS_00 = BETA*B_0**2/(8.0*np.pi) #dyn cm^-2
 T_C = 1.0e6 #K
 G = 2.748e4 #cm s^-2
@@ -68,7 +68,7 @@ with open(in_filename, newline='') as f:
 zero = np.zeros((xdim,ydim))
 one = np.ones((xdim,ydim))
 vars["rho"] = vars["press"]/vars["temp"]
-for name in ["grav_x","mom_x","mom_y","mom_z","be_x","be_y"]:
+for name in ["grav_x","mom_x","mom_y","mom_z","be_x","be_y","be_z"]:
     vars[name] = zero
 for name in ["grav_y"]:
     vars[name] = -1.0*one
@@ -92,8 +92,8 @@ with open(out_path+"/"+out_filename, 'w', newline='') as f:
     writer.writerow(["adiabatic_index"])
     writer.writerow([str(GAMMA)])
     writer.writerow(["t=0"])
-    names = ["d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","mom_z","be_x","be_y","bi_x","bi_y","bi_z","grav_x","grav_y"]
-    mults = [H,H,H,H,PRESS_00*MU/K_B/T_C,T_C,zero,zero,zero,B_0,B_0,B_0,B_0,B_0,G,G]
+    names = ["d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","mom_z","be_x","be_y","be_z","bi_x","bi_y","bi_z","grav_x","grav_y"]
+    mults = [H,H,H,H,PRESS_00*MU/K_B/T_C,T_C,zero,zero,zero,B_0,B_0,B_0,B_0,B_0,B_0,G,G]
     for i in range(len(names)):
         name = names[i]
         mult = mults[i]

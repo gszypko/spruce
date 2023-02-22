@@ -15,39 +15,40 @@ The resulting simulation will be output as a time series to the file `mhd.out` i
 - `init.state`: contains the full initial state of the system; if an `init.state` in the output directory was used to initialize the run, it will not be overwritten; otherwise, an existing `init.state` in the output directory will be overwritten by the initial state from a command-line-specified one.
 - `end.state`: contains the full final state of the system
 - A copy of the `.config` file used for the run
-- `plasma.settings`: (if run in Problem Generator Mode) encodes the particular `settings` used for the run. Note that this is not the same as the original `.settings` file if multiple sets of `settings` are possible from that file, depending on the specified `job_index`
 
 ### Input Mode
 
-A user-generated set of grids, in the form of a `.state` file, can be specified to initialize the simulation. See below for more details on formatting a `.state` file. Running in this mode requires the following syntax:
+A user-generated set of grids, in the form of a `.state` file, can be specified to initialize the simulation. See below for more details on formatting a `.state` file. Running in this mode requires the following syntax (assuming the executable is located in the `objects/` directory and is named `run`, as is the default in the Makefile):
 
-`./run -m input [-o out_directory] [-s state_file] [-c config_file] [-d time_duration]`
+`objects/run -m input [-o out_directory] [-s state_file] [-c config_file] [-d time_duration]`
 - `-m` or `--mode` (Required) specifies the mode in which to run the simulation. Use `-m input` or `--mode input` to run in this mode.
 - `-o` or `--output` (Required) specifies the name of the directory to which all output will be written. If the directory does not exist it will be created, and existing simulation outputs in that directory will be overwritten. 
 - `-s` or `--state` (Optional) specifies the `.state` file to be used to initialize the simulation run. If not specified, the program will look for a file named `init.state` inside of `out_directory` to use instead.
 - `-c` or `--config` (Optional) specifies the `.config` file to be used for configuring the simulation run. If not specified, the program will look for a `.config` file inside of `out_directory` to use instead. (There can only be one `.config` file in `out_directory` if this is the case.)
-- `-d` or `--duration` (Optional) specifies how long the simulation is to be continued, in units of simulation time. Providing this argument will override any duration specified in the `state_file` file used for input
+- `-d` or `--duration` (Optional) specifies how long the simulation is to be continued, in simulated time (seconds). Providing this argument will override any duration specified in the `state_file` file used for input
 
 ### Continue Mode
 
 Any previous run can be continued from where it left off, appending to the existing output files. Running in this mode requires the following syntax:
 
-`./run -m continue [-o prev_out_directory] [-d time_duration]`
+`objects/run -m continue [-o prev_out_directory] [-d time_duration]`
 - `-m` or `--mode` (Required) specifies the mode in which to run the simulation. Use `-m continue` or `--mode continue` to run in this mode.
 - `-o` or `--output` (Required) specifies the `out_directory` of the previous simulation run to be continued.
-- `-d` or `--duration` (Required) specifies how long the simulation is to be continued, in units of simulation time.
+- `-d` or `--duration` (Required) specifies how long the simulation is to be continued, in simulated time (seconds).
 
 # The State File
-
-The variables that need to be specified throughout the simulation domain at run-time are `{d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,be_x,be_y,bi_x,bi_y,grav_x,grav_y}`. These are
+The variables that need to be specified throughout the simulation domain at run-time depend on the EquationSet being used. All `.state` files must specify, at a minimum, the variables `{d_x,d_y,pos_x,pos_y,be_x,be_y,be_z}`. These are
 - `d_x` and `d_y`: The width of each cell, in cm, in the x- and y-directions respectively. In the current implementation these need not be uniform, but they can only change along the corresponding direction. That is, `d_x` must be the same for all y-values given a corresponding x-value, and likewise for `d_y`.
 - `pos_x` and `pos_y`: The positions of each cell's center, in cm, in the x- and y-directions. These must correspond to the given `d_x` and `d_y` such that `pos_x[i+1,j]` = `pos_x[i,j]+0.5*d_x[i,j]+0.5*d_x[i+1,j]`, and so on. Note that these quantities are not used for the purposes of the simulation--all calculations use `d_x` and `d_y`--but they allow the user to specify the origin of their system.
+- `be_x`, `be_y`, and `be_z`: The "external" magnetic field, in gauss. Any magnetic field assigned to `be` **must be a potential field**, i.e., curl(be) = 0. Note that `be_z` is the out-of-plane component.
+
+`{d_x,d_y,pos_x,pos_y,rho,temp,mom_x,mom_y,mom_z,be_x,be_y,be_z,bi_x,bi_y,grav_x,grav_y}`
 - `rho`: The mass density, in g cm^-3.
 - `temp`: The temperature, in K
 - `mom_x` and `mom_y`: The momentum density, in erg cm^-3
-- `be_x` and `be_y`: The external magnetic field, in gauss. This magnetic field is held constant, and can act on the plasma but cannot be acted on by it.
 - `bi_x` and `bi_y`: The induced magnetic field, in gauss. This is the magnetic field generated by motion of the plasma. A self-consistent MHD equilibrium, for instance, should have its field specified using `bi_x` and `bi_y` while `be_x` and `be_y` are set to zero.
 - `grav_x` and `grav_y`: The acceleration due to gravity at each position, in cm s^-2.
+
 
 The state file must be formatted as follows:
 ```
@@ -102,7 +103,6 @@ The `.config` file determines the base runtime behavior of the simulation. Each 
 
 ### Safety factors
 - `epsilon`: Decimal between 0.0 and 1.0. Specifies the epsilon used when computing the time step for the current MHD iteration. Multiplied into the upper bound given by the CFL condition to give the time step.
-- `epsilon_viscous`: Decimal between 0.0 and 1.0. Specifies the strength of the artificial viscosity in the simulation.
 
 ### Variable lower bounds
 - `rho_min`: Decimal. Minimum allowed value for the mass density.
@@ -142,6 +142,8 @@ be_x
 [be_x]
 be_y
 [be_y]
+be_z
+[be_z]
 t=[time]
 [variable name]
 [variable grid]
@@ -165,9 +167,51 @@ where the bracketed text is replaced as follows:
 - `variable name`: One of the variable names specified in `output_flags`.
 - `variable grid`: The values of the immediately previous `variable name` specified at every position in the simulation grid. This is formatted the same way as in the `.state` file; see [above](#the-state-file) for details.
 
+# Equation Sets
+
+Each simulation run must have an EquationSet, which describes the system of PDEs to be solved during the simulation, specified in the Config file. The EquationSet tracks the set of fluid and field quantities and defines how those quantities evolve in time. EquationSets can also have a set of EquationSet configs, which modify the behavior of the EquationSet itself. For instance, to use the IdealMHD EquationSet, your Config file might include:
+
+```
+ideal_mhd = true
+{
+    moc_b_limiting = true
+    moc_mom_limiting = true
+    moc_b_lower_lim = 0.5
+    moc_mom_lower_lim = 0.5
+    moc_b_upper_lim = 2.0
+    moc_mom_upper_lim = 2.0
+}
+```
+
+The State file must define a set of quantities required by the EquationSet, in addition to the basic required quantities. The currently-implemented EquationSets, along with the corresponding required State variables, are listed here:
+
+- IdealMHD (`ideal_mhd`)
+    * `{rho,temp,mom_x,mom_y,mom_z,bi_x,bi_y,bi_z,grav_x,grav_y}`
+- Ideal2F (Ideal Two-Fluid) (`ideal_2F`)
+    * `{i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,i_temp,e_temp,bi_x,bi_y,bi_z,E_x,E_y,E_z,grav_x,grav_y}`
+- IdealMHD2E (Ideal MHD Two-Energy) (`ideal_mhd_2E`)
+    * `{rho,i_temp,e_temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y}`
+- IdealMHDCons (Conservative Ideal MHD) (`ideal_mhd_cons`)
+    * `{rho,temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y}`
+
+The EquationSets can be found in `source/equationsets/`.
+
 # Modules
 
-`SPRUCE` is designed to allow for the implementation of `Module`s that encompass physics phenomena outside of the base MHD physics of the simulation. These Modules can be easily activated, deactivated, and reconfigured without modifying the base MHD functionality. This is meant to be the primary method for the user to customize the run-time behavior of the code.
+`SPRUCE` is designed to allow for the implementation of `Module`s that encompass physics phenomena outside of the base MHD physics of the simulation. These Modules can be easily activated, deactivated, and reconfigured without modifying the base MHD functionality. This is meant to be the primary method for the user to customize the run-time behavior of the code. 
+
+Currently implemented Modules include:
+- Ambient Heating
+- Field Heating
+- Localized Heating
+- Radiative Losses
+- Thermal Conduction
+- Coulomb Explosion
+- EIC Thermalization
+- Savitzky-Golay Filtering
+- Viscosity
+
+The Modules can be found in `source/modules/`.
 
 ## Basic Modular Structure
 
