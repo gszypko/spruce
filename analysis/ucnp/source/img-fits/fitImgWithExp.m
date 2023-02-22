@@ -1,4 +1,4 @@
-function [fit] = fitImgWithGaussian(x,y,img,offset)
+function [fit] = fitImgWithExp(x,y,img,offset)
 % x (1xn double): x pos - varies with column number
 % y (1xm double): y pos - varies with row number
 % img (mxn double): image img(m,n) corresponds to x(n) and y(m)
@@ -17,14 +17,14 @@ normfac = max(imgfilt,[],'all');
 imgbin = imgbin./normfac;
 imgfilt = imgfilt./normfac;
 
-%% Fit Image with 2D Gaussian
+%% Fit Image with Exponential
 
 % define fit model
 % c: [n0 x0 y0 sigX sigY offset]
 if nargin < 4
-    fitmodel = @(c,data) gaussian2D(c,data);
+    fitmodel = @(c,data) exp2D(c,data);
 else 
-    fitmodel = @(c,data) gaussian2D([c offset./normfac],data);
+    fitmodel = @(c,data) exp2D([c offset./normfac],data);
 end
 
 % initial guess for plasma center
@@ -41,8 +41,8 @@ amp = max(imgfilt,[],'all') - min_val;
 % initial guess for widths
 [X,Y] = meshgrid(xbin,ybin);
 grid = [X(:) Y(:)];
-sigx = sqrt(trapz(xfilt,(xfilt-x0).^2.*imginty)/imgintxy);
-sigy = sqrt(trapz(yfilt,(yfilt-y0).^2.*imgintx')/imgintxy);
+sigx = sqrt(trapz(xfilt,(xfilt-x0).^2.*imginty)/imgintxy)/sqrt(2);
+sigy = sqrt(trapz(yfilt,(yfilt-y0).^2.*imgintx')/imgintxy)/sqrt(2);
 
 % define initial guesses and parameter bounds
 p0(1) = amp; lb(1) = amp/5; ub(1) = amp*5;

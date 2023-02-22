@@ -39,30 +39,40 @@ for i = 1:length(C)
     end
 end
 time_ind = time_ind(1:time_iter);
-total_num_time_points = length(time_ind);
 
 % trim time window and apply interval using inputs
 time_start = round(time_window(1)*time_iter/100+1);
 time_end = round(time_window(2)*time_iter/100);
 time_ind = time_ind(time_start:time_interval:time_end);
-time_ind_interval = unique(diff(time_ind));
+time_ind_interval = unique(diff(time_ind))/time_interval;
 if length(time_ind_interval)>1, error('Time index spacing is not uniform.'); end
+C(1:time_ind(1)-1) = [];
+time_ind = time_ind - time_ind(1) + 1;
 
-% load chosen time points and variables
+% load the required grids for the chosen time points
 for i = 1:length(time_ind)
     disp(['Loading Grids for Time Point: ' num2str(i) '/' num2str(length(time_ind))])
     out.vars(i).time = str2double(extractAfter(C{time_ind(i)},'t='));
+    % begin reading grids for this time point
     vars_found = 0;
     for j = time_ind(i)+1:time_ind(i)+time_ind_interval-1
+        % identify if current line corresponds to variable name
         ind = find(strcmp(C{j},grids_to_load));
         if length(ind)==1
             out.vars(i).(grids_to_load{ind}) = getgrid(C,j,Ng,out.Nx,out.Ny);
             vars_found = vars_found + 1;
+            % terminate grid reading for this time point if all variables found
             if vars_found == length(grids_to_load)
+                % trim contents of mhd.out file 'C' to save on RAM
+                if i ~= length(time_ind)
+                    C(1:time_ind(i+1)-1) = [];
+                    time_ind = time_ind - time_ind(i+1) + 1;
+                end
                 break
             end
         end
     end
+    % ensure that all variables were found for this time point
     if vars_found ~= length(grids_to_load), error('Not all grids were found.'); end
 end
 

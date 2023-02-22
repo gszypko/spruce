@@ -1,13 +1,6 @@
 % opening a subplot
-row = 2; 
-col = 2; 
-num = row*col;
-[fig,ax,an] = open_subplot(row,col,num);
-fig.Position = [471.6667  349.0000  754.0000  574.6667];
-move_ax(ax(1:end-1,:),0,.05)
-an.Position = [0.1595    0.9084    0.7230    0.0801];
-
-% updating axis information
+num = 1;
+[fig,ax,an] = open_subplot(num);
 iter = 0;
 for i = 1:size(ax,1)
     for j = 1:size(ax,2)
@@ -23,10 +16,22 @@ for i = 1:size(ax,1)
         colorbar;
         cax.YDir = 'Normal';
         cax.PlotBoxAspectRatio = [1 1 1];
-        cax.FontSize = 12;
+
+        hold off
+        l = get_line_specs(length(vars));
+        for k = 1:length(vars)
+            xdata = [];
+            ydata = [];
+            plot(xdata,ydata,'LineWidth',2,'MarkerSize',4,'Color',l(k).col,'MarkerFaceColor',l(k).col,'MarkerEdgeColor',l(k).col)
+            hold on
+        end
+
+        cax.FontSize = 11;
         if i == size(ax,1), xlabel('label'), end
         if j == 1, ylabel('label'), end
         title('title','FontWeight','normal')
     end
 end
 an.String = [];
+
+lgd = legend(vars);

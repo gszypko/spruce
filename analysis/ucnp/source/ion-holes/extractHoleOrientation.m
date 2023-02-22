@@ -63,7 +63,7 @@ xdata = [X(:) Y(:)];
 p.n = reshape(n,length(p.y),length(p.x));
 p.n0 = reshape(fun(c0,xdata),length(p.y),length(p.x));
 p.nFit = reshape(fun(c,xdata),length(p.y),length(p.x));
-p.nRes = sgfilt2D(p.nFit-p.n,5,5,3,3);
+p.nRes = sgfilt2D(p.nFit-p.n,3,3,1,1);
 
 % plot fit data
 q = {'n','n0','nFit','nRes'};

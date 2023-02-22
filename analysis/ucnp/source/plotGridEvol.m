@@ -55,6 +55,9 @@ for k = 1:length([data.grids.vars.time])
             if i == size(ax,1), xlabel('x (cm)'), end
             if j == 1, ylabel('y (cm)'), end
             title(varstr{iter},'FontWeight','normal')
+            cmin = min(zdata,[],'all');
+            cmax = max(zdata,[],'all')*1.001;
+            if cmax ~= 0, cax.CLim = [cmin cmax]; end
         end
     end
 

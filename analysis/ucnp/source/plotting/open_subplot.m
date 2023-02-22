@@ -21,12 +21,13 @@ for i = 1:row
         if iter > num - 1, break, end
         iter = iter + 1;
         ax{i,j} = subplot(row,col,iter);
+        ax{i,j}.PlotBoxAspectRatio = [1 1 1];
     end
 end
 
 % create annotation
 an = annotation('textbox');
-an.Position = [0.1595    0.9514    0.7230    0.0371];
+an.Position = [0.1479    0.8056    0.5164    0.1020];
 an.HorizontalAlignment = 'center';
 an.VerticalAlignment = 'middle';
 an.LineStyle = 'none';

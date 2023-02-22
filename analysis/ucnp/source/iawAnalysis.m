@@ -191,7 +191,7 @@ fun = @(c,d) amp_fun(d,c(1),c(2),c(3),data.tau);
 x0 = []; lb = []; ub = [];
 x0(1) = s(1).A; lb(1) = x0(1)/2; ub(1) = x0(1)*2;
 x0(2) = 0.2/data.tau; lb(2) = 0; ub(2) = 2*x0(2);
-cs = getSoundSpeed(data.settings.m_i,data.settings.Ti,data.settings.Te,data.settings.adiabatic_index);
+cs = getSoundSpeed(data.settings.m_i,data.settings.Ti,data.settings.Te,data.adiabatic_index_e,data.adiabatic_index_i);
 x0(3) = s(1).k*cs/2; lb(3) = x0(3)/10; ub(3) = x0(3)*10;
 xdata = [s.t];
 ydata = [s.A];

@@ -1,4 +1,4 @@
-function [r] = ionHoleProp(t,v,Ti,Te,m_i,gam)
+function [r] = ionHoleProp(t,v,Ti,Te,m_i,gam_e,gam_i)
 % t (vector): time points to return hole position for
 % sig (double): initial geometric mean of plasma size
 % tau (double): hydrodynamic expansion timescale
@@ -11,7 +11,7 @@ function [r] = ionHoleProp(t,v,Ti,Te,m_i,gam)
 % speed of sound Cs = dP/drho (i.e., change in total pressure w.r.t. mass density)
 % 'gam' can be varied depending on the adiabaticity of the plasma
 
-Cs = @(t,r) sqrt(gam*cts.cgs.kB*(Te(t,r)+Ti(t,r))/m_i);
+Cs = @(t,r) sqrt(cts.cgs.kB*(gam_e*Te(t,r)+gam_i*Ti(t,r))/m_i);
 odefun = @(t,r) v(t,r) + Cs(t,r);
 r0 = 0;
 if length(t) == 1

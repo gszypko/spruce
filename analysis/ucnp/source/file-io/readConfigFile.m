@@ -25,8 +25,34 @@ for i = 1:length(C)
     end
 end
 
-% output results
-out = struct;
+% identify if EIC option is on or off
+ind = startsWith(C,'eic_thermalization');
+eic_opt = C(ind);
+if length(eic_opt) > 1, error('More than one config exists for <eic_thermalization>.'); end
+eic_opt = strtrim(extractAfter(eic_opt,'='));
+if strcmp(eic_opt,'true'), eic_opt = true;
+elseif strcmp(eic_opt,'false'), eic_opt = false;
+else, error('<eic_thermalization> config must be either <true> or <false>.');
+end
 out.eq_set = active_eqn_set;
+out.eic_opt = eic_opt;
+
+% identify global temperature option
+out.global_temp_e = false;
+out.global_temp_i = false;
+ind = startsWith(C,'global_temperature');
+global_temp = C(ind);
+if length(global_temp) > 1, error('More than one config exists for <global_temperature>.'); end
+global_temp = strtrim(extractAfter(global_temp,'='));
+if strcmp(global_temp,'true')
+    ind = contains(C,'gt_species');
+    species = strtrim(extractAfter(C(ind),'='));
+    species = strsplit(species{1},',');
+    for i = 1:length(species)
+        if strcmp(species{i},'e'), out.global_temp_e = true;
+        elseif strcmp(species{i},'i'), out.global_temp_i = true;
+        end
+    end
+end
 
 end

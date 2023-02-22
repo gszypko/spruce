@@ -6,21 +6,26 @@ data.settings = readSettingsFile([folder f 'plasma.settings']);
 data.config = readConfigFile([folder f 'ucnp.config']);
 data.state.init = readStateFile([folder f 'init.state'],flags.ghost_cells,data.config.eq_set);
 
+% determine adiabatic indices for each species
+data.adiabatic_index_e = data.settings.adiabatic_index;
+data.adiabatic_index_i = data.settings.adiabatic_index;
+if data.config.global_temp_e, data.adiabatic_index_e = 1; end
+if data.config.global_temp_i, data.adiabatic_index_i = 1; end
+
 % determine grids to be loaded from mhd.out
 grids_to_load = {''};
+if max(strcmp({'ideal_mhd','ideal_mhd_cons'},data.config.eq_set))
+    base_grids = {'n','v_x','v_y','temp'};
+elseif max(strcmp({'ideal_2F'},data.config.eq_set))
+    base_grids = {'i_n','i_v_x','i_v_y','i_temp','e_temp'};
+elseif strcmp(data.config.eq_set,{'ideal_mhd_2E'})
+    base_grids = {'n','v_x','v_y','i_temp','e_temp'};
+end
+grids_to_load = [grids_to_load base_grids];
 if flags.plot_grids
     grids_to_load = [grids_to_load flags.vars]; 
 end
-if flags.vlasov_analysis
-    if max(strcmp({'ideal_mhd','ideal_mhd_cons'},data.config.eq_set))
-        vlasov_grids = {'n','v_x','v_y','temp'};
-    elseif max(strcmp({'ideal_2F','ideal_mhd_2E'},data.config.eq_set))
-        vlasov_grids = {'i_n','i_v_x','i_v_y','i_temp','e_temp'};
-    elseif strcmp(data.config.eq_set,{'ideal_mhd_2E'})
-        vlasov_grids = {'n','v_x','v_y','i_temp','e_temp'};
-    end
-    grids_to_load = [grids_to_load vlasov_grids];
-end
+
 grids_to_load = grids_to_load(~strcmp(grids_to_load,''));
 grids_to_load = unique(grids_to_load);
 
