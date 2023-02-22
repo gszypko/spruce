@@ -169,10 +169,12 @@ Grid Grid::Trapz(const Grid& x,const Grid& y)
   if (x.rows()==1) int_row = true;
   else if (x.cols()==1) int_col = true;
   else assert(false);
+
   // ensure that sizes of <x> and <y> are suitable for integration along that dimension
-  int not_integrated,integrated;
+  int not_integrated; // number of elements along the dimension that is not integrated
+  int integrated; // number of elements along the dimension that is 
+  std::function<double(size_t,size_t)> get_y; // first input is non-integrated index, second is integrated index
   Grid result;
-  std::function<double(size_t,size_t)> get_y;
   if (int_row){
     assert(x.cols()==y.cols());
     not_integrated = y.rows();
@@ -197,13 +199,13 @@ Grid Grid::Trapz(const Grid& x,const Grid& y)
   return result;
 }
 
-Grid Grid::Trapz2D(const Grid& x,const Grid& y,const Grid& z)
+double Grid::Trapz2D(const Grid& x,const Grid& y,const Grid& z)
 {
   assert(x.rows()==z.rows() && x.cols()==1);
   assert(y.cols()==z.cols() && y.rows()==1);
   Grid z_int_x = Trapz(x,z);
   Grid z_int_xy = Trapz(y,z_int_x);
-  return z_int_xy;
+  return z_int_xy(0);
 }
 
 Grid Grid::TrapzCum(const Grid& x, const Grid& y)

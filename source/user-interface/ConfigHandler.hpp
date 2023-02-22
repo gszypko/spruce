@@ -28,7 +28,7 @@ public:
     std::string eqs_set_name() {return m_eqn_set_name;}
 private:
     // *** Members
-    const std::vector<std::string> module_names {"eic_thermalization","coulomb_explosion"};
+    const std::vector<std::string> module_names {"eic_thermalization","coulomb_explosion","global_temperature","viscosity"};
     PlasmaDomain m_pd; // defualt-initialized PlasmaDomain class, used to get list of config names
     const fs::path m_config_path{}; // relative or full path to .config file
     std::vector<std::string> m_config_data{}; // each element contains one un-modified line of the .config file

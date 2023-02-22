@@ -33,9 +33,14 @@ class IdealMHD: public EquationSet {
             return {rho,mom_x,mom_y,mom_z,thermal_energy,bi_x,bi_y,bi_z};
         }
 
+        std::vector<std::string> species() const override {return {"i"};}
         std::vector<int> densities() const override { return {rho}; }
+        std::vector<int> number_densities() const override { return {n}; }
         std::vector<std::vector<int>> momenta() const override { return {{mom_x,mom_y}}; }
+        std::vector<std::vector<int>> velocities() const override { return {{v_x,v_y}}; }
         std::vector<int> thermal_energies() const override { return {thermal_energy}; }
+        std::vector<int> pressures() const override { return {press}; }
+        std::vector<int> temperatures() const override { return {temp}; }
         std::vector<int> fields() const override { return {bi_x,bi_y}; }
         std::vector<int> timescale() const override {return {dt}; }
 
@@ -43,9 +48,9 @@ class IdealMHD: public EquationSet {
         double m_global_viscosity{0};
         std::string m_viscosity_opt{"velocity"};
         std::vector<Grid> computeTimeDerivativesDerived(const std::vector<Grid>& grids) const override;
-        void setupEquationSetDerived() override;
         void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) const override;
         void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) const override;
+        void enforceMinimums(std::vector<Grid>& grids) const override;
         void catchNullFieldDirection(std::vector<Grid> &grids) const;
         void recomputeDT(std::vector<Grid>& grids) const override;
         std::vector<Grid> computeTimeDerivativesCharacteristicBoundary(const std::vector<Grid> &grids, bool x_bound_1, bool x_bound_2, bool y_bound_1, bool y_bound_2, double visc_coeff) const;

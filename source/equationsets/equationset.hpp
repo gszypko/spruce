@@ -51,11 +51,21 @@ class EquationSet {
         // ***************** VARIABLE INDICES FOR EVOLVED VARIABLES
 
         // indices corresponding to the evolved density of each plasma species (i.e., {i_rho,e_rho} for a 2F model)
+        virtual std::vector<std::string> species() const = 0;
+        // indices corresponding to the evolved density of each plasma species (i.e., {i_rho,e_rho} for a 2F model)
         virtual std::vector<int> densities() const = 0;
+        // indices corresponding to the evolved density of each plasma species (i.e., {i_rho,e_rho} for a 2F model)
+        virtual std::vector<int> number_densities() const = 0;
         // vector of indices to the evolved momenta for each plasma species (i.e., {{i_mom_x,i_mom_y},{e_mom_x,e_mom_y}} for a 2F model)
         virtual std::vector<std::vector<int>> momenta() const = 0;
+        // vector of indices to the velocity for each plasma species (i.e., {{i_v_x,i_v_y},{e_v_x,e_v_y}} for a 2F model)
+        virtual std::vector<std::vector<int>> velocities() const = 0;
         // indices corresponding to the evolved thermal energy of each plasma species (i.e., {i_thermal_energy,e_thermal_energy} for a 2F model)
         virtual std::vector<int> thermal_energies() const = 0;
+        // indices corresponding to the evolved pressures of each plasma species (i.e., {i_thermal_energy,e_thermal_energy} for a 2F model)
+        virtual std::vector<int> pressures() const = 0;
+        // indices corresponding to the evolved thermal energy of each plasma species (i.e., {i_thermal_energy,e_thermal_energy} for a 2F model)
+        virtual std::vector<int> temperatures() const = 0;
         // indices corresponding to the evolved electromagnetic fields
         virtual std::vector<int> fields() const = 0;
         // indices corresponding to the dt grid for each species
@@ -122,6 +132,10 @@ class EquationSet {
         void propagateChanges(std::vector<Grid>& grids) const;
         // Overload for propagating changes to m_grids
         void propagateChanges() { propagateChanges(m_grids); };
+        // enforce minimums to grids
+        virtual void enforceMinimums(std::vector<Grid>& grids) const = 0;
+        // enforce minimums to grids
+        void enforceMinimums() {enforceMinimums(m_grids); };
         
     protected:
         // reference to the top-level simulation class

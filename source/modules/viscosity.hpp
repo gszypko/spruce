@@ -15,10 +15,10 @@ class PlasmaDomain;
 class Viscosity : public Module {
     public:
         // *** Variable Types
-        std::vector<std::string> m_momenta {"mom_x","mom_y","mom_z","i_mom_x","i_mom_y","e_mom_x","e_mom_y"}; // possible momentum density variables across all equation sets
-        std::vector<std::string> m_velocities {"v_x","v_y","v_z","i_v_x","i_v_y","e_v_x","e_v_y"}; // possible velocity variables across all equation sets
         bool is_momentum(std::string name) const; // check whether variable name is a momentum variable
         bool is_velocity(std::string name) const; // check whether variable name is a velocity variable
+        bool is_thermal_energy(std::string name) const; // check whether variable name is a velocity variable
+        bool is_temperature(std::string name) const; // check whether variable name is a velocity variable
         // *** Construction
         Viscosity(PlasmaDomain &pd);
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override; // handles configs during construction
@@ -50,15 +50,20 @@ class Viscosity : public Module {
         std::vector<Grid> m_grids_strength;
         std::vector<Grid> m_grids_lap;
         std::vector<Grid> m_grids_dqdt;
-        std::vector<std::string> m_dt_names;
-        std::vector<std::string> m_strength_names;
-        std::vector<std::string> m_lap_names;
-        std::vector<std::string> m_dqdt_names;
+        std::vector<std::string> m_dt_names; // <name>_dt
+        std::vector<std::string> m_strength_names; // <name>_str
+        std::vector<std::string> m_lap_names; // <name>_lap
+        std::vector<std::string> m_dqdt_names; // <name>_dqdt
 
         bool m_output_visc;
         bool m_output_lap;
         bool m_output_strength;
         bool m_output_timescale;
+
+        std::vector<std::string> m_momenta; // possible momentum density variables
+        std::vector<std::string> m_velocities; // possible velocity variables
+        std::vector<std::string> m_thermal_energies; // possible thermal energy variables
+        std::vector<std::string> m_temperatures; // possible temperature variables
 };
 
 #endif

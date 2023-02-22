@@ -97,6 +97,15 @@ std::vector<Grid> Ideal2F::computeTimeDerivativesDerived(const std::vector<Grid>
     return grids_dt;
 }
 
+void Ideal2F::enforceMinimums(std::vector<Grid>& grids) const
+{
+    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    grids[i_rho] = m_pd.m_ion_mass*(grids[i_rho]/m_pd.m_ion_mass).max(m_pd.density_min);
+    grids[e_rho] = M_ELECTRON*(grids[e_rho]/M_ELECTRON).max(m_pd.density_min);
+    grids[i_thermal_energy] = grids[i_thermal_energy].max(m_pd.thermal_energy_min);
+    grids[e_thermal_energy] = grids[e_thermal_energy].max(m_pd.thermal_energy_min);
+}
+
 void Ideal2F::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) const
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");

@@ -3,6 +3,8 @@
 #include <cassert>
 #include "eic_thermalization.hpp"
 #include "coulomb_explosion.hpp"
+#include "global_temperature.hpp"
+#include "viscosity.hpp"
 #include <sstream>
 
 ConfigHandler::ConfigHandler(fs::path config_path): 
@@ -36,6 +38,8 @@ void ConfigHandler::instantiate_modules()
     for (const auto& name : module_names){
         if (name == "eic_thermalization") m_modules.push_back(std::unique_ptr<Module>(new EICThermalization(m_pd)));
         else if (name == "coulomb_explosion") m_modules.push_back(std::unique_ptr<Module>(new CoulombExplosion(m_pd)));
+        else if (name == "global_temperature") m_modules.push_back(std::unique_ptr<Module>(new GlobalTemperature(m_pd)));
+        else if (name == "viscosity") m_modules.push_back(std::unique_ptr<Module>(new Viscosity(m_pd)));
         else assert(false && "Module name not recognized.");
     }
 }

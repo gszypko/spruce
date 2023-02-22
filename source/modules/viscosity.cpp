@@ -17,6 +17,16 @@ void Viscosity::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std
         else if(lhs[i] == "visc_species") m_inp_species = rhs[i];
         else std::cerr << lhs[i] << " config not recognized.\n";
     }
+
+    // get variable names from equation set
+    for (auto vec : m_pd.m_eqs->momenta()){
+        for (auto ind : vec) m_momenta.push_back(m_pd.m_eqs->index2name(ind));
+    } 
+    for (auto vec : m_pd.m_eqs->velocities()){
+        for (auto ind : vec) m_velocities.push_back(m_pd.m_eqs->index2name(ind));
+    }
+    for (auto ind : m_pd.m_eqs->thermal_energies()) m_thermal_energies.push_back(m_pd.m_eqs->index2name(ind));
+    for (auto ind : m_pd.m_eqs->temperatures()) m_temperatures.push_back(m_pd.m_eqs->index2name(ind));
 }
 
 void Viscosity::setupModule()
@@ -64,7 +74,7 @@ void Viscosity::setupModule()
     for (int i=0; i<m_num_terms; i++) m_species[i] = temp[i];
 
     // ensure that options are compatible with current equation set
-    for (auto val : m_strength) assert(val<=1 && "Strength constants must be less than or equal to one.");
+    for (auto val : m_strength) assert(val<=1 && "Strength constants must be less than or equal 1.");
     for (auto name : m_vars_to_diff) assert(m_pd.m_eqs->is_var(name) && "Each variable to differentiate must be a valid variable within the chosen equation set.");
     for (auto name : m_vars_to_evol) assert(m_pd.m_eqs->is_evolved_var(name) && "Each variable to evolve must be a valid evolved variable within the chosen equation set.");
     for (auto val : m_length) assert(val>=0 && "Length constants must greater than or equal to zero.");
@@ -123,7 +133,7 @@ void Viscosity::constructViscosityGrids(const std::vector<Grid>& grids)
         // compute viscosity coefficient and impose maximum
         Grid visc_coeff = m_grids_strength[i]*(dx.square()+dy.square())/2./m_grids_dt[i];
         double rk_timestep = m_pd.epsilon*m_pd.m_eqs->getDT().min(m_pd.m_xl_dt,m_pd.m_yl_dt,m_pd.m_xu_dt,m_pd.m_yu_dt);
-        Grid visc_max = (dx.square()+dy.square())/2./rk_timestep;
+        Grid visc_max = (dx.square()+dy.square())/(2./rk_timestep);
         visc_coeff.min(visc_max);
 
         // compute Laplacian of variable to differentiate
@@ -141,6 +151,21 @@ void Viscosity::constructViscosityGrids(const std::vector<Grid>& grids)
                     else scale_fac = grids[m_pd.m_eqs->name2index("n")]*m_pd.m_ion_mass;
                 } // handle scaling for electrons
                 else if (m_species[i] == "e") scale_fac = grids[m_pd.m_eqs->name2index("e_n")]*M_ELECTRON;
+                else assert("Species must be e or i when applying viscosity to momentum.");
+            }
+            else{
+                if(!is_momentum(m_vars_to_diff[i])) std::cerr << "Variable being differentiated is not consistent with variable viscosity is applied to.\n";
+            }
+        }
+        if (is_thermal_energy(m_vars_to_evol[i])){
+            if (is_temperature(m_vars_to_diff[i])){
+                // handle scaling for ions
+                if (m_species[i] == "i"){
+                    // ion scaling depends on whether 1F or 2F model
+                    if (m_pd.m_eqs->is_var("i_n")) scale_fac = grids[m_pd.m_eqs->name2index("i_n")]*(K_B/(m_pd.m_adiabatic_index-1));
+                    else scale_fac = grids[m_pd.m_eqs->name2index("n")]*(K_B/(m_pd.m_adiabatic_index-1));
+                } // handle scaling for electrons
+                else if (m_species[i] == "e") scale_fac = grids[m_pd.m_eqs->name2index("n")]*(K_B/(m_pd.m_adiabatic_index-1));
                 else assert("Species must be e or i when applying viscosity to momentum.");
             }
             else{
@@ -183,6 +208,18 @@ bool Viscosity::is_velocity(std::string name) const
 {
     auto it = std::find(m_velocities.begin(),m_velocities.end(),name);
     return it != m_velocities.end();
+}
+
+bool Viscosity::is_thermal_energy(std::string name) const
+{
+    auto it = std::find(m_thermal_energies.begin(),m_thermal_energies.end(),name);
+    return it != m_thermal_energies.end();
+}
+
+bool Viscosity::is_temperature(std::string name) const
+{
+    auto it = std::find(m_temperatures.begin(),m_temperatures.end(),name);
+    return it != m_temperatures.end();
 }
 
 void Viscosity::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids)

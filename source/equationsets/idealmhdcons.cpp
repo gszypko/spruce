@@ -85,6 +85,13 @@ void IdealMHDCons::catchNullFieldDirection(std::vector<Grid> &grids) const
     }
 }
 
+void IdealMHDCons::enforceMinimums(std::vector<Grid>& grids) const
+{
+    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    grids[rho] = m_pd.m_ion_mass*(grids[rho]/m_pd.m_ion_mass).max(m_pd.density_min);
+    grids[thermal_energy] = grids[thermal_energy].max(m_pd.thermal_energy_min);
+}
+
 void IdealMHDCons::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) const
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");

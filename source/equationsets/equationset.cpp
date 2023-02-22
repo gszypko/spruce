@@ -153,9 +153,12 @@ int EquationSet::num_variables() const {
 
 int EquationSet::num_species() const 
 {
-    assert(densities().size() == momenta().size() && momenta().size() == thermal_energies().size() && \
-            "Each species must have an entry each in densities, momenta, thermal_energies, and fields");
-    return densities().size();
+    assert(species().size() == densities().size() && "There must be a density index for each species.");
+    assert(species().size() == momenta().size() && "There must be a momentum density index for each species.");
+    assert(species().size() == velocities().size() && "There must be a momentum velocity index for each species.");
+    assert(species().size() == thermal_energies().size() && "There must be a thermal energy index for each species.");
+    assert(species().size() == temperatures().size() && "There must be a temperature index for each species.");
+    return species().size();
 }
 
 void EquationSet::setOutputFlag(int index, bool flag){
@@ -208,7 +211,9 @@ std::vector<Grid> EquationSet::computeTimeDerivatives(const std::vector<Grid> &g
 void EquationSet::propagateChanges(std::vector<Grid>& grids) const
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    enforceMinimums(grids);
     m_pd.updateGhostZones(grids);
+    m_pd.m_module_handler.iteratePreRecomputeDerivedModule(grids);
     recomputeDerivedVarsFromEvolvedVars(grids);
     recomputeDT(grids);
 }

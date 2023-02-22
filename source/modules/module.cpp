@@ -58,6 +58,11 @@ void Module::computeTimeDerivativesModule(const std::vector<Grid> &grids,std::ve
     return;
 }
 
+void Module::preRecomputeDerivedModule(std::vector<Grid>& grids) const
+{
+    return;
+}
+
 std::string Module::commandLineMessage() const
 {
     return "";

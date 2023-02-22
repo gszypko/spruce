@@ -33,7 +33,9 @@ Settings::str_vec UCNP::get_dependencies(std::string str) const
         case w_pe: return {"n"};
         case l_deb: return {"n","Te"};
         case sig: return {"sig_x","sig_y"};
-        case tau_exp: return {"m_i","Te","Ti"};
+        case tau: return {"m_i","Te","Ti","sig_x","sig_y"};
+        case tau_x: return {"m_i","Te","Ti","sig_x"};
+        case tau_y: return {"m_i","Te","Ti","sig_y"};
         case a: return {"n"};
         default: return {""};
     }
@@ -64,7 +66,9 @@ double UCNP::get_characteristic(std::string str) const
         case w_pe: return phys::plasma_freq(getval("n"),E);
         case l_deb: return phys::debye_length(getval("n"),getval("Te"));
         case sig: return pow(getval("sig_x")*getval("sig_y"),1./2.);
-        case tau_exp: return phys::tau_exp(get_characteristic("sig"),getval("m_i"),getval("Te")+getval("Ti"));
+        case tau: return phys::tau_exp(get_characteristic("sig"),getval("m_i"),getval("Te")+getval("Ti"));
+        case tau_x: return phys::tau_exp(getval("sig_x"),getval("m_i"),getval("Te")+getval("Ti"));
+        case tau_y: return phys::tau_exp(getval("sig_y"),getval("m_i"),getval("Te")+getval("Ti"));
         case a: return phys::wigner_seitz_radius(getval("n"));
         default: return -1.;
     }

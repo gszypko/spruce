@@ -45,9 +45,14 @@ class Ideal2F: public EquationSet {
             return {i_rho,e_rho,i_mom_x,i_mom_y,e_mom_x,e_mom_y,i_thermal_energy,e_thermal_energy,E_x,E_y,E_z,bi_x,bi_y,bi_z};
         }
 
+        std::vector<std::string> species() const override {return {"i","e"};}
         std::vector<int> densities() const override { return {i_rho,e_rho}; }
+        std::vector<int> number_densities() const override { return {i_n,e_n}; }
         std::vector<std::vector<int>> momenta() const override { return {{i_mom_x,i_mom_y},{e_mom_x,e_mom_y}}; }
+        std::vector<std::vector<int>> velocities() const override { return {{i_v_x,i_v_y},{e_v_x,e_v_y}}; }
         std::vector<int> thermal_energies() const override { return {i_thermal_energy,e_thermal_energy}; }
+        std::vector<int> pressures() const override { return {i_press,e_press}; }
+        std::vector<int> temperatures() const override { return {i_temp,e_temp}; }
         std::vector<int> fields() const override { return {E_x,E_y,E_z}; }
         std::vector<int> timescale() const override {return {dt_i,dt}; }
 
@@ -73,6 +78,7 @@ class Ideal2F: public EquationSet {
         void smooth_vars(std::vector<Grid> &grids) const;
         void populate_boundary(Grid& grid) const;
         void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
+        void enforceMinimums(std::vector<Grid>& grids) const override;
 };
 
 #endif

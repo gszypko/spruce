@@ -58,7 +58,7 @@ public:
   // *** New Math
   Grid vectorise(const Grid& grid,int dim=1) const;
   static Grid Trapz(const Grid& x,const Grid& y);
-  static Grid Trapz2D(const Grid& x,const Grid& y,const Grid& z);
+  static double Trapz2D(const Grid& x,const Grid& y,const Grid& z);
   static Grid TrapzCum(const Grid& x, const Grid& y);
   static Grid Bin1D(const Grid& indep,const Grid& dep, const Grid& bin_edges);
   static Grid Bin1D(const Grid& indep,const Grid& dep, double N, Grid& bins);

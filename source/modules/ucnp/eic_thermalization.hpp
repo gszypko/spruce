@@ -19,16 +19,13 @@ class EICThermalization : public Module {
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
         // *** Usage
         void setupModule() override;
-        void postIterateModule(double dt) override;
-        void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) override;
-        std::vector<std::string> config_names() const override {return {"eic_output_to_file"};};
+        void computeTimeDerivativesModule(const std::vector<Grid> &grids,std::vector<Grid> &grids_dt);
     private:
         // *** Members
-        std::vector<std::string> m_eqset_grids {"i_thermal_energy","e_thermal_energy","n","e_temp"};
+        std::vector<std::string> m_eqset_grids {"i_thermal_energy","e_thermal_energy","rho"};
         std::vector<std::string> m_var_names {"a","w_pe","Gam_e","Lam_e","gam_ei","nu_ei","dEdt","dEdEi"};
         enum Vars {a,w_pe,Gam_e,Lam_e,gam_ei,nu_ei,dEdt,dEdEi,num_vars};
         std::vector<Grid> m_vars;
-        bool m_output_to_file;
 };
 
 #endif

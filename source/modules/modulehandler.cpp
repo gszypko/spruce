@@ -12,6 +12,7 @@
 #include "coulomb_explosion.hpp"
 #include "eic_thermalization.hpp"
 #include "viscosity.hpp"
+#include "global_temperature.hpp"
 
 ModuleHandler::ModuleHandler(PlasmaDomain &pd): m_pd(pd) {}
 
@@ -49,6 +50,12 @@ void ModuleHandler::iterateComputeTimeDerivativesModules(const std::vector<Grid>
         m_modules[i]->computeTimeDerivativesModule(grids,grids_dt);
 }
 
+void ModuleHandler::iteratePreRecomputeDerivedModule(std::vector<Grid>& grids) const
+{
+    for (int i=0; i<m_modules.size(); i++)
+        m_modules[i]->preRecomputeDerivedModule(grids);
+}
+
 bool ModuleHandler::isModuleName(std::string name) const
 {
     auto it = std::find(m_module_names.begin(),m_module_names.end(),name);
@@ -83,6 +90,7 @@ void ModuleHandler::instantiateModule(const std::string &module_name, std::ifstr
     else if(module_name == "coulomb_explosion") m_modules.push_back(std::unique_ptr<Module>(new CoulombExplosion(m_pd)));
     else if(module_name == "eic_thermalization") m_modules.push_back(std::unique_ptr<Module>(new EICThermalization(m_pd)));
     else if(module_name == "artificial_viscosity") m_modules.push_back(std::unique_ptr<Module>(new Viscosity(m_pd)));
+    else if(module_name == "global_temperature") m_modules.push_back(std::unique_ptr<Module>(new GlobalTemperature(m_pd)));
     else assert(false && "Module name was not recognized");
     m_modules.back()->configureModule(in_file);
 }

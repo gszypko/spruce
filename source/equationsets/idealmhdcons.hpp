@@ -32,9 +32,14 @@ class IdealMHDCons: public EquationSet {
             return {rho,mom_x,mom_y,energy,bi_x,bi_y};
         }
 
+        std::vector<std::string> species() const override {return {"i"};}
         std::vector<int> densities() const override { return {rho}; }
+        std::vector<int> number_densities() const override { return {n}; }
         std::vector<std::vector<int>> momenta() const override { return {{mom_x,mom_y}}; }
+        std::vector<std::vector<int>> velocities() const override { return {{v_x,v_y}}; }
         std::vector<int> thermal_energies() const override { return {thermal_energy}; }
+        std::vector<int> pressures() const override { return {press}; }
+        std::vector<int> temperatures() const override { return {temp}; }
         std::vector<int> fields() const override { return {bi_x,bi_y}; }
         std::vector<int> timescale() const override {return {dt}; }
 
@@ -45,6 +50,7 @@ class IdealMHDCons: public EquationSet {
         void recomputeDT(std::vector<Grid>& grids) const override;
         void catchNullFieldDirection(std::vector<Grid> &grids) const;
         void parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
+        void enforceMinimums(std::vector<Grid>& grids) const override;
 };
 
 #endif

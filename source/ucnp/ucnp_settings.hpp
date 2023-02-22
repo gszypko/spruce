@@ -16,8 +16,8 @@ public:
     void update_variables();
 private:
     // *** Members
-    const str_vec m_plasma_characteristics {"w_pi","w_pe","l_deb","sig","tau_exp","a"};
-    enum Vars {w_pi,w_pe,l_deb,sig,tau_exp,a};
+    const str_vec m_plasma_characteristics {"w_pi","w_pe","l_deb","sig","tau","tau_x","tau_y","a"};
+    enum Vars {w_pi,w_pe,l_deb,sig,tau,tau_x,tau_y,a};
 };
 
 #endif

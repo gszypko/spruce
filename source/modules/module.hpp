@@ -33,9 +33,12 @@ class Module {
         //All modules are guaranteed to run this function after all of them
         //run iterateModule() and postIterateModule()
         virtual void postIterateModule(double dt);
-        //Module function to be called during the applyTimeDerivatives function of the 
+        //Module function to be called during the computeTimeDerivatives function of the 
         //equation sets.
         virtual void computeTimeDerivativesModule(const std::vector<Grid> &grids,std::vector<Grid> &grids_dt);
+        //Module function to be called during the propagateChanges function of the 
+        //equation sets after the changes have been propagated
+        virtual void preRecomputeDerivedModule(std::vector<Grid>& grids) const;
         //Returns a short message to print to stdout related to the most recent iteration
         //of the Module. Should not include any line breaks.
         //Default behavior is no message; override in derived Module classes to customize.

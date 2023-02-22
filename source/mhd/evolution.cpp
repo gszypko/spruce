@@ -20,6 +20,9 @@ void PlasmaDomain::run(double time_duration,double cluster_time)
   }
   
   // run loop for advanceTime
+  #if VERBOSE
+  std::cout << "Begining simulation...\n";
+  #endif
   while (m_time < m_max_time && (max_iterations < 0 || m_iter < max_iterations)){
     // advance time and note the time iteration before and after stepping
     int old_time_iter = (int)(m_time/m_time_output_interval);

@@ -58,6 +58,13 @@ std::vector<Grid> IdealMHD2E::computeTimeDerivativesDerived(const std::vector<Gr
     return grids_dt;
 }
 
+void IdealMHD2E::enforceMinimums(std::vector<Grid>& grids) const
+{
+    assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
+    grids[rho] = m_pd.m_ion_mass*(grids[rho]/m_pd.m_ion_mass).max(m_pd.density_min);
+    grids[i_thermal_energy] = grids[i_thermal_energy].max(m_pd.thermal_energy_min);
+    grids[e_thermal_energy] = grids[e_thermal_energy].max(m_pd.thermal_energy_min);
+}
 
 void IdealMHD2E::recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) const
 {
