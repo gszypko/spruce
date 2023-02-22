@@ -133,7 +133,7 @@ void Viscosity::constructViscosityGrids(const std::vector<Grid>& grids)
         // compute viscosity coefficient and impose maximum
         Grid visc_coeff = m_grids_strength[i]*(dx.square()+dy.square())/2./m_grids_dt[i];
         double rk_timestep = m_pd.epsilon*m_pd.m_eqs->getDT().min(m_pd.m_xl_dt,m_pd.m_yl_dt,m_pd.m_xu_dt,m_pd.m_yu_dt);
-        Grid visc_max = (dx.square()+dy.square())/(2./rk_timestep);
+        Grid visc_max = (dx.square()+dy.square())/2./rk_timestep;
         visc_coeff.min(visc_max);
 
         // compute Laplacian of variable to differentiate
