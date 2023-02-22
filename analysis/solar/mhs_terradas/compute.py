@@ -5,32 +5,43 @@
 # active region magnetic field structure
 # Output (normalized.txt) should be fed to mhs_terradas/denormalize.py
 # to generate a .state file in physical units
-# Implementation of J., T., R., S., R., O., et al. 2022, A&A, http://arxiv.org/abs/2202.06800
+# Implementation of J. Terradas et al. 2022, A&A, http://arxiv.org/abs/2202.06800
 
 import scipy.special as sp
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.image import NonUniformImage
+from scipy.interpolate import LinearNDInterpolator
+import matplotlib
 import sys
 import os
 import csv
 
-if len(sys.argv) != 4:
-    print("Need to specify output directory, ACTIVE_REGION, GAUSSIAN")
+if len(sys.argv) != 3:
+    print("Need to specify output directory, ACTIVE_REGION")
     exit()
 out_directory = sys.argv[1]
 ACTIVE_REGION = sys.argv[2] == "T"
-GAUSSIAN = sys.argv[3] == "T"
+# GAUSSIAN = sys.argv[3] == "T"
+GAUSSIAN = True
 
 if not os.path.exists(out_directory):
     os.makedirs(out_directory)
 
 DOMAIN_WIDTH = 8.0
-DOMAIN_HEIGHT = 8.0
+DOMAIN_HEIGHT = 12.0
 X_DIM = 202
-Z_DIM = 202
+Z_DIM = 302
 # N_GHOST = 1
 
-X_1 = -2.0 #location of center for CH; location of one magnetic pole for AR
+# Z_NONUNIFORM_START = 101
+# Z_NONUNIFORM_FACTOR = 1.005
+# Z_NONUNIFORM_FACTOR_FACTOR = 1.001
+Z_NONUNIFORM_START = 302
+Z_NONUNIFORM_FACTOR = 1.0
+Z_NONUNIFORM_FACTOR_FACTOR = 1.0
+
+X_1 = 2.25 #location of center for CH; location of one magnetic pole for AR
 X_2 = 1.75 #location of other magnetic pole for AR; not used for CH
 B_1_MULT = -1.0
 B_2_MULT = 1.0
@@ -161,7 +172,7 @@ def compute_a1(f1,f2,t_bins,s_bins,x,z):
             s_arg = (1.0-s)/s
             sum += f1[i,j]*np.log( ((x-t_arg)**2 + (z-s_arg)**2)/((x-t_arg)**2 + (z+s_arg)**2) ) +\
                     f2[i,j]*np.log( ((x+t_arg)**2 + (z-s_arg)**2)/((x+t_arg)**2 + (z+s_arg)**2) )
-    print(str(-1.0/(4.0*np.pi)*sum))
+    # print(str(-1.0/(4.0*np.pi)*sum))
     return -1.0/(4.0*np.pi)*sum
 
 def precompute_f(t_bins,s_bins,a_ref):
@@ -186,10 +197,26 @@ def precompute_f(t_bins,s_bins,a_ref):
 # z = np.linspace(-N_GHOST*DOMAIN_HEIGHT/Z_DIM,DOMAIN_HEIGHT*(1.0 + N_GHOST/Z_DIM),Z_DIM + 2*N_GHOST)
 x = np.linspace(-DOMAIN_WIDTH/2.0,DOMAIN_WIDTH/2.0,X_DIM)
 z = np.linspace(0.0,DOMAIN_HEIGHT,Z_DIM)
-dx = (x[-1]-x[0])/(x.shape[0]-1)
-dz = (z[-1]-z[0])/(z.shape[0]-1)
-x_2d = np.outer(x,np.ones_like(z))
+
+dx_1d = (x[-1]-x[0])/(x.shape[0]-1)*np.ones_like(x)
+dz_1d = (z[-1]-z[0])/(z.shape[0]-1)*np.ones_like(z)
+
+base_dz = dz_1d[0]
+curr_dz = base_dz
+curr_factor = Z_NONUNIFORM_FACTOR
+for k in range(Z_NONUNIFORM_START,Z_DIM):
+    curr_dz *= curr_factor
+    dz_1d[k] = curr_dz
+    z[k] = z[k-1] + 0.5*dz_1d[k-1] + 0.5*curr_dz
+    curr_factor *= Z_NONUNIFORM_FACTOR_FACTOR
+print(dz_1d)
+
 z_2d = np.outer(np.ones_like(x),z)
+x_2d = np.outer(x,np.ones_like(z))
+dx_2d = np.outer(dx_1d,np.ones_like(z))
+dz_2d = np.outer(np.ones_like(x),dz_1d)
+zero = np.zeros_like(x_2d)
+one = np.ones_like(x_2d)
 
 # Computing full-domain A and B from boundary
 full_a0 = compute_a0_from_boundary(x_2d,z_2d)
@@ -206,15 +233,42 @@ cdf = [np.trapz(full_b0_mag_norm[:(i+1)]) for i in range(len(full_b0_mag_norm))]
 if ACTIVE_REGION: stream_points = np.interp(np.linspace(0.55,0.95,num=17),cdf,x)
 else: stream_points = np.interp(np.linspace(0.05,0.95,num=17),cdf,x)
 
-plt.figure(3)
-plt.imshow(np.transpose(full_a0),origin='lower',extent=(x[0]-0.5*dx,x[-1]+0.5*dx,z[0]-0.5*dz,z[-1]+0.5*dz))
-plt.colorbar(label=r'$A/B_0h$')
-plt.streamplot(x,z,full_b0[0].transpose(),full_b0[1].transpose(),start_points=np.column_stack((stream_points,np.zeros_like(stream_points))),color=(0.0,0.0,0.0,0.2),density=100,linewidth=1.0,arrowstyle='->',maxlength=100.0)
+plot_extent = (x[0]-0.5*dx_1d[0],x[-1]+0.5*dx_1d[-1],z[0]-0.5*dz_1d[0],z[-1]+0.5*dz_1d[-1])
+
+x_uniform = np.arange(min(x)+dx_1d[0], max(x), dx_1d[0])
+z_uniform = np.arange(min(z)+dz_1d[0], max(z), dz_1d[0])
+x_uniform_grid, z_uniform_grid = np.meshgrid(x_uniform, z_uniform)  # 2D grid for interpolation
+x_grid, z_grid = np.meshgrid(x, z)  # 2D grid for interpolation
+
+interp_x = LinearNDInterpolator(list(zip(x_grid.flatten(), z_grid.flatten())), full_b0[0].transpose().flatten(),fill_value=0.0)
+interp_z = LinearNDInterpolator(list(zip(x_grid.flatten(), z_grid.flatten())), full_b0[1].transpose().flatten(),fill_value=0.0)
+full_b0_x_uniform = interp_x(x_uniform_grid, z_uniform_grid)
+full_b0_z_uniform = interp_z(x_uniform_grid, z_uniform_grid)
+
+# plt.subplots()
+# plt.imshow(np.transpose(full_a0),origin='lower',extent=plot_extent)
+fig, ax = plt.subplots()
+im = NonUniformImage(ax, animated=False, origin='lower', extent=plot_extent,\
+    interpolation='nearest')
+im.set_clim(vmin=np.min(full_a0),vmax=np.max(full_a0))
+im.set_data(x,z,np.transpose(full_a0))
+# im.set_data(x,z,np.transpose(full_b0[0]))
+# im.set_data(x,z,np.transpose(full_b0[1]))
+ax.add_image(im)
+# ax.set_aspect('equal')
+ax.set(xlim=(x[0],x[-1]), ylim=(z[0],z[-1]))
+fig.colorbar(im,label=r'$A/B_0h$')
+# ax.streamplot(x,z,full_b0[0].transpose(),full_b0[1].transpose(),start_points=np.column_stack((stream_points,np.zeros_like(stream_points))),color=(0.0,0.0,0.0,0.2),density=100,linewidth=1.0,arrowstyle='->',maxlength=100.0)
+ax.streamplot(x_uniform,z_uniform,\
+    full_b0_x_uniform,full_b0_z_uniform,\
+        start_points=np.column_stack((stream_points,z[1]*np.ones_like(stream_points))),\
+            color=(0.0,0.0,0.0,0.2),broken_streamlines=False,linewidth=1.0,arrowstyle='->')
 plt.title("Potential Field")
 plt.xlabel(r'$x/h$')
 plt.ylabel(r'$z/h$')
 plt.tight_layout()
 plt.savefig(out_directory+"/potential.png")
+
 
 full_a1 = np.zeros_like(full_a0)
 t_bins = 200
@@ -227,13 +281,15 @@ for i in range(full_a1.shape[0]):
 full_b1 = compute_b(full_a1,x,z)
 
 # Computing pressure and temperature according to Terradas profile
-plt.figure(1)
 temp = temperature(full_a0,z_2d,a_ref)
 press = np.zeros_like(temp)
 for i in range(press.shape[0]):
     for j in range(press.shape[1]):
         press[i,j] = pressure(full_a0[i,j],z_2d[i,j],a_ref)
-plt.imshow(np.transpose(temp),origin='lower',extent=(x[0]-0.5*dx,x[-1]+0.5*dx,z[0]-0.5*dz,z[-1]+0.5*dz))
+
+
+plt.figure(1)
+plt.imshow(np.transpose(temp),origin='lower',extent=plot_extent)
 plt.title("Temperature")
 plt.xlabel(r'$x/h$')
 plt.ylabel(r'$z/h$')
@@ -242,7 +298,7 @@ plt.tight_layout()
 plt.savefig(out_directory+"/temperature.png")
 
 plt.figure(2)
-plt.imshow(np.transpose(press),origin='lower',extent=(x[0]-0.5*dx,x[-1]+0.5*dx,z[0]-0.5*dz,z[-1]+0.5*dz))
+plt.imshow(np.transpose(press),origin='lower',extent=plot_extent)
 plt.title("Pressure")
 plt.xlabel(r'$x/h$')
 plt.ylabel(r'$z/h$')
@@ -250,8 +306,6 @@ plt.colorbar(label=r'$p/p_{00}$')
 plt.tight_layout()
 plt.savefig(out_directory+"/pressure.png")
 
-zero = np.zeros_like(x_2d)
-one = np.ones_like(x_2d)
 with open(out_directory+"/normalized.txt", 'w', newline='') as f:
     writer = csv.writer(f)
     labels = ["#","CHI"]
@@ -277,7 +331,7 @@ with open(out_directory+"/normalized.txt", 'w', newline='') as f:
 
     writer.writerow([str(X_DIM-2),str(Z_DIM-2)])
     names = ["d_x","d_y","pos_x","pos_y","press","temp","b0_x","b0_y","b1_x","b1_y"]
-    grids = [dx*one,dz*one,x_2d,z_2d,press,temp,full_b0[0],full_b0[1],full_b1[0],full_b1[1]]
+    grids = [dx_2d,dz_2d,x_2d,z_2d,press,temp,full_b0[0],full_b0[1],full_b1[0],full_b1[1]]
     for i in range(len(names)):
         writer.writerow([names[i]])
         writer.writerows(grids[i][1:-1,1:-1])
