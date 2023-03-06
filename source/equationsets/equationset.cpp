@@ -97,6 +97,7 @@ void EquationSet::populateVariablesFromState(std::vector<Grid>& grids) const
 {
     assert(grids.size() == m_grids.size() && "This function designed to operate on full system vector<Grid>");
     recomputeEvolvedVarsFromStateVars(grids);
+    enforceMinimums(grids);
     m_pd.updateGhostZones(grids);
     recomputeDerivedVarsFromEvolvedVars(grids);
     recomputeDT(grids);

@@ -37,6 +37,7 @@ Settings::str_vec UCNP::get_dependencies(std::string str) const
         case tau_x: return {"m_i","Te","Ti","sig_x"};
         case tau_y: return {"m_i","Te","Ti","sig_y"};
         case a: return {"n"};
+        case w_pe_inv: return {"n"};
         default: return {""};
     }
 }
@@ -63,13 +64,14 @@ double UCNP::get_characteristic(std::string str) const
     int loc = std::distance(m_plasma_characteristics.begin(),it);
     switch (loc)
     {   case w_pi: return phys::plasma_freq(getval("n"),getval("m_i"));
-        case w_pe: return phys::plasma_freq(getval("n"),E);
+        case w_pe: return phys::plasma_freq(getval("n"),M_ELECTRON);
         case l_deb: return phys::debye_length(getval("n"),getval("Te"));
         case sig: return pow(getval("sig_x")*getval("sig_y"),1./2.);
         case tau: return phys::tau_exp(get_characteristic("sig"),getval("m_i"),getval("Te")+getval("Ti"));
         case tau_x: return phys::tau_exp(getval("sig_x"),getval("m_i"),getval("Te")+getval("Ti"));
         case tau_y: return phys::tau_exp(getval("sig_y"),getval("m_i"),getval("Te")+getval("Ti"));
         case a: return phys::wigner_seitz_radius(getval("n"));
+        case w_pe_inv: return 1./phys::plasma_freq(getval("n"),M_ELECTRON);
         default: return -1.;
     }
 }

@@ -13,9 +13,7 @@ void Ideal2F::parseEquationSetConfigs(std::vector<std::string> lhs, std::vector<
         if (lhs[i] == "use_sub_cycling") m_use_sub_cycling = (rhs[i] == "true");
         else if (lhs[i] == "epsilon_courant") m_epsilon_courant = stod(rhs[i]);
         else if (lhs[i] == "verbose_2F") m_verbose = (rhs[i] == "true");
-        else if (lhs[i] == "viscosity_opt") m_viscosity_opt = rhs[i];
         else if (lhs[i] == "remove_curl_terms") m_remove_curl_terms = (rhs[i] == "true");
-        else if (lhs[i] == "global_viscosity") m_global_viscosity = stod(rhs[i]);
         else{
             std::cerr << lhs[i] << " is not recognized for this equation set." << std::endl;
             assert(false);
@@ -132,8 +130,8 @@ void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) cons
     grids[i_press] = (m_pd.m_adiabatic_index - 1.0)*grids[i_thermal_energy];
     grids[e_press] = (m_pd.m_adiabatic_index - 1.0)*grids[e_thermal_energy];
     grids[press] = grids[i_press] + grids[e_press];
-    grids[i_temp] = (grids[i_press]/(K_B*grids[i_n])).max(m_pd.temp_min);
-    grids[e_temp] = (grids[e_press]/(K_B*grids[e_n])).max(m_pd.temp_min);
+    grids[i_temp] = grids[i_press]/(K_B*grids[i_n]);
+    grids[e_temp] = grids[e_press]/(K_B*grids[e_n]);
     grids[b_x] = m_pd.m_grids[PlasmaDomain::be_x] + grids[bi_x];
     grids[b_y] = m_pd.m_grids[PlasmaDomain::be_y] + grids[bi_y];
     grids[b_z] = grids[bi_z]; // code assumes be_z = 0 for now
@@ -149,9 +147,7 @@ void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) cons
     grids[divE] = m_pd.divergence2D({grids[E_x],grids[E_y]});
     grids[divB] = m_pd.divergence2D({grids[b_x],grids[b_y]});
     grids[curlE_z] = -(m_pd.derivative1D(grids[E_x],1) - m_pd.derivative1D(grids[E_y],0));
-    // grids[lapEx] = m_pd.laplacian(grids[E_x]);
-    // populate_boundary(grids[lapEx]);
-    // grids[E_ideal] = (M_ELECTRON*m_pd.derivative1D(grids[i_press], 0) - m_pd.m_ion_mass*m_pd.derivative1D(grids[e_press], 0))/(M_ELECTRON+m_pd.m_ion_mass)/E/grids[i_n];
+    grids[E_1F_x] = (M_ELECTRON*m_pd.derivative1D(grids[i_press], 0) - m_pd.m_ion_mass*m_pd.derivative1D(grids[e_press], 0))/(M_ELECTRON+m_pd.m_ion_mass)/E/grids[i_n];
     // grids[divEcond] = grids[divE] - 4.*PI*grids[rho_c];
 }
 
@@ -184,13 +180,13 @@ void Ideal2F::recomputeDT(std::vector<Grid>& grids) const
     // compute group velocity of Langmuir wave
     Grid v_th = (K_B*grids[e_temp]/M_ELECTRON).sqrt();
     Grid w_pe = (4*PI*grids[e_n]*E*E/M_ELECTRON).sqrt();
-    Grid w_L = (3*k.square()*v_th.square()).sqrt();
+    Grid w_th = (3*k.square()*v_th.square()).sqrt();
+    Grid w_L = (w_pe.square()+w_th.square()).sqrt();
     Grid v_L = w_L/k;
     // get timesteps
-    Grid dt_wave = 1./w_pe;
     Grid dt_v = dr/(v + v_L);
     Grid dt_EM = dx*dy/(dx+dy)/C;
-    grids[dt] = dt_wave.min(dt_v);
+    grids[dt] = dt_v;
     if (!m_use_sub_cycling && !m_remove_curl_terms) grids[dt] = grids[dt].min(dt_EM);
     // record ion timescale
     grids[dt_i] = ionTimescale();

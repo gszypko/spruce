@@ -18,7 +18,7 @@ class IdealMHD2E: public EquationSet {
         std::vector<std::string> def_var_names() const override{
             return {"rho","i_temp","e_temp","mom_x","mom_y","bi_x","bi_y","grav_x","grav_y",
                 "n","i_press","e_press","press","i_thermal_energy","e_thermal_energy","v_x","v_y","kinetic_energy",
-                "b_x","b_y","b_mag","b_hat_x","b_hat_y","dt","dPdx","a_x","e_temp_g"};
+                "b_x","b_y","b_mag","b_hat_x","b_hat_y","dt"};
         }
         enum Vars {rho,i_temp,e_temp,mom_x,mom_y,bi_x,bi_y,grav_x,grav_y,
                 n,i_press,e_press,press,i_thermal_energy,e_thermal_energy,v_x,v_y,kinetic_energy,
