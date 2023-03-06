@@ -23,6 +23,23 @@ if exp_file_found
         os(i).delays = (os(i).delays + os(i).tE/2)*1e-9;
     end
 end
+os = os([os.delays] < 22e-6);
+
+% find indices of simulation time points that are closest to experimental time points
+% ind_t(i) holds the index of data.grids.vars corresponding to experimental time point os(i).delays
+closest_time_point = zeros(size(os)); 
+for i = 1:length([os.delays])
+    [~,closest_time_point(i)] = min(abs(os(i).delays - data.grids.time));
+end
+
+% select which time points to plot
+t = [os.delays];
+t_plot = [os.delays];
+ind_t_plot = zeros(size(t_plot));
+for i = 1:length(t_plot)
+    [~,ind_t_plot(i)] = min(abs(t - t_plot(i)));
+end
+t_plot = t(ind_t_plot);
 
 %% Create Structure of Information
 
@@ -84,7 +101,7 @@ s.sig_x0 = gauss_fit.sigx_g;
 s.sig_y0 = gauss_fit.sigy_g;
 s.tau_hole = getTauExp(gauss_fit.sigx_g,data.Te+data.Ti);
 
-clearvars -except s Rx Ry gauss_fit exp_file_found
+clearvars -except s Rx Ry gauss_fit exp_file_found t_plot closest_time_point ind_t_plot
 
 %% Project Data on Grid Aligned with Ion Hole Propagation Axis
 
@@ -223,21 +240,21 @@ else
 end
 
 lc = l(1);
-plot([s.sim_hole.t]./s.tau_hole,[s.sim_hole.p_xL],'LineWidth',2,'MarkerSize',2,'Color',lc.col,'MarkerFaceColor',lc.col,'MarkerEdgeColor',lc.col)
+plot([s.sim_hole.t].*1e6,[s.sim_hole.p_xL],'LineWidth',2,'MarkerSize',2,'Color',lc.col,'MarkerFaceColor',lc.col,'MarkerEdgeColor',lc.col)
 lc = l(2);
-plot([s.sim_hole.t]./s.tau_hole,[s.sim_hole.p_xR],'LineWidth',2,'MarkerSize',2,'Color',lc.col,'MarkerFaceColor',lc.col,'MarkerEdgeColor',lc.col)
+plot([s.sim_hole.t].*1e6,[s.sim_hole.p_xR],'LineWidth',2,'MarkerSize',2,'Color',lc.col,'MarkerFaceColor',lc.col,'MarkerEdgeColor',lc.col)
 xan = s.sim_int.hole([s.sim_hole.t]);
 xan_l = xan + mean([s.sim_hole(1).p_xL s.sim_hole(1).p_xR]);
 xan_r = -xan + mean([s.sim_hole(1).p_xL s.sim_hole(1).p_xR]);
 lc = l(3);
-plot([s.sim_hole.t]./s.tau_hole,xan_l,'LineWidth',2,'MarkerSize',2,'Color',lc.col,'MarkerFaceColor',lc.col,'MarkerEdgeColor',lc.col)
+plot([s.sim_hole.t].*1e6,xan_l,'LineWidth',2,'MarkerSize',2,'Color',lc.col,'MarkerFaceColor',lc.col,'MarkerEdgeColor',lc.col)
 lc = l(4);
-plot([s.sim_hole.t]./s.tau_hole,xan_r,'LineWidth',2,'MarkerSize',2,'Color',lc.col,'MarkerFaceColor',lc.col,'MarkerEdgeColor',lc.col)
+plot([s.sim_hole.t].*1e6,xan_r,'LineWidth',2,'MarkerSize',2,'Color',lc.col,'MarkerFaceColor',lc.col,'MarkerEdgeColor',lc.col)
 if exp_file_found
     lc = l(5);
-    plot([s.exp_hole.t]./s.tau_hole,[s.exp_hole.p_xL],'LineWidth',2,'MarkerSize',2,'Color',lc.col,'MarkerFaceColor',lc.col,'MarkerEdgeColor',lc.col)
+    plot([s.exp_hole.t].*1e6,[s.exp_hole.p_xL],'o','LineWidth',2,'MarkerSize',4,'Color',lc.col,'MarkerFaceColor',lc.col,'MarkerEdgeColor',lc.col)
     lc = l(6);
-    plot([s.exp_hole.t]./s.tau_hole,[s.exp_hole.p_xR],'LineWidth',2,'MarkerSize',2,'Color',lc.col,'MarkerFaceColor',lc.col,'MarkerEdgeColor',lc.col)
+    plot([s.exp_hole.t].*1e6,[s.exp_hole.p_xR],'o','LineWidth',2,'MarkerSize',4,'Color',lc.col,'MarkerFaceColor',lc.col,'MarkerEdgeColor',lc.col)
     xan = s.exp_int.hole([s.exp_hole.t]);
     xan_l = xan + mean([s.exp_hole(1).p_xL s.exp_hole(1).p_xR]);
     xan_r = -xan + mean([s.exp_hole(1).p_xL s.exp_hole(1).p_xR]);
@@ -251,11 +268,49 @@ end
 
 
 lgd.Position = [0.7255    0.2929    0.2291    0.4417];
-xlabel('t/\tau')
+xlabel('t (\mus)')
 ylabel('Hole Pos. (cm)')
 saveas(fig,[s.folder filesep 'hole-prop.png'])
 close(fig)
 
 % save([s.folder filesep 'ion-hole-data.mat'],'s');
+
+%%
+
+% opening a subplot
+num = length(t_plot);
+[fig,ax,an] = open_subplot(num);
+iter = 0;
+for i = 1:size(ax,1)
+    for j = 1:size(ax,2)
+        iter = iter + 1;
+        if iter > num, break, end
+        
+        cax = get_axis(fig,ax{i,j});
+
+        hold off
+        l = get_line_specs(length(fields_1D));
+        xdata = [s.(fields_1D{1})(closest_time_point(ind_t_plot(iter))).r];
+        ydata = [s.(fields_1D{1})(closest_time_point(ind_t_plot(iter))).n];
+        ydata = ydata./max(ydata);
+        plot(xdata,ydata,'LineWidth',2,'MarkerSize',4,'Color',l(1).col,'MarkerFaceColor',l(1).col,'MarkerEdgeColor',l(1).col)
+        hold on
+        xdata = [s.(fields_1D{2})(ind_t_plot(iter)).r];
+        ydata = [s.(fields_1D{2})(ind_t_plot(iter)).n];
+        ydata = ydata./max(ydata);
+        plot(xdata,ydata,'LineWidth',2,'MarkerSize',4,'Color',l(2).col,'MarkerFaceColor',l(2).col,'MarkerEdgeColor',l(2).col)
+        hold on
+
+        cax.FontSize = 11;
+        if i == size(ax,1), xlabel('r (cm)'), end
+        if j == 1, ylabel('n / n_0'), end
+        title(['t = ' num2str(s.sim_1D(closest_time_point(ind_t_plot(iter))).t*1e6,'%.2g') ' \mus'],'FontWeight','normal')
+        ylim([0 1.1].*max(ydata))
+    end
+end
+an.String = [];
+
+lgd = legend({'Sim','Exp'});
+lgd.Position = [0.793153505527392,0.380132906369903,0.108849558323886,0.067314489047856];
 
 end

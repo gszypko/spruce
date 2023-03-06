@@ -55,7 +55,7 @@ for i = 1:length(data.grids.time)
     imgfitx = fit(i).imgfit(indy,:);
     imgfity = fit(i).imgfit(:,indx)';
     
-    lgdstr = {'MHD','Fit'};
+    lgdstr = {'Simulation','Fit'};
     l = get_line_specs(length(lgdstr));
 
     cax = get_axis(fig,ax{1});
@@ -71,6 +71,7 @@ for i = 1:length(data.grids.time)
     cb = colorbar;
     xlabel('x (cm)')
     ylabel('y (cm)')
+    title('Simulation','FontWeight','normal')
     
     cax = get_axis(fig,ax{3});
     if data.grids.is_uniform
@@ -84,6 +85,7 @@ for i = 1:length(data.grids.time)
     shading interp
     cb = colorbar;
     xlabel('x (cm)')
+    title('Fit','FontWeight','normal')
 
     cax = get_axis(fig,ax{5});
     if data.grids.is_uniform
@@ -98,6 +100,7 @@ for i = 1:length(data.grids.time)
     cb = colorbar;
     cb.Label.String = 'n (10^8 cm^-^3)';
     xlabel('x (cm)')
+    title('Residual','FontWeight','normal')
 
     cax = get_axis(fig,ax{2});
     plot(x,imgx./1e8,'LineWidth',2,'MarkerSize',4,'Color',l(1).col,'MarkerFaceColor',l(1).col,'MarkerEdgeColor',l(1).col)
@@ -120,8 +123,8 @@ for i = 1:length(data.grids.time)
     lgd.Position = [0.735103990127022,0.127535831274251,0.072661043511578,0.060403964650340];
     xlabel('y (cm)')
 
-    str1 = ['t = ' num2str(data.grids.time(i)*1e6,'%.2g') ' \mus = ' num2str(data.grids.time(i)/s.tau,'%.2g') ' \tau_{exp}'];
-    str2 = ['n_{max} = ' num2str(fit(i).amp/1e8,'%.2g') '\times10^8 cm^{-3}'];
+    str1 = ['t = ' num2str(data.grids.time(i)*1e6,'%.2g') ' \mus = ' num2str(data.grids.time(i)/s.tau,'%.2g') ' \tau'];
+    str2 = ['n_0 = ' num2str(fit(i).amp/1e8,'%.2g') '\times10^8 cm^{-3}'];
     str3 = ['\sigma_x = ' num2str(fit(i).sigx*10,'%.2g') ' \pm ' num2str(fit(i).sigxErr*10,'%.2g') ' mm'];
     str4 = ['\sigma_y = ' num2str(fit(i).sigy*10,'%.2g') ' \pm ' num2str(fit(i).sigyErr*10,'%.2g') ' mm'];
     an.String = {str1,str2,str3,str4};
@@ -365,11 +368,11 @@ write_video([data.folder f 'velocity-fits'],frames);
 
 
 q = {'data','theory'};
-qstr{1} = 'MHD';
+qstr{1} = 'Simulation';
 if data.config.eic_opt, qstr{2} = 'Vlasov';
 else, qstr{2} = 'Vlasov w/EIC'; end
-colvar = {'n2','sig','sigx','sigy','Ti','Te'};
-colstr = {'n_2_D (10^8 cm^-^3)','\sigma (cm)','\sigma_x (cm)','\sigma_y (cm)','T_i (K)','T_e (K)'};
+colvar = {'sigx','sigy','sig','n2','Ti','Te'};
+colstr = {'\sigma_x (cm)','\sigma_y (cm)','\sigma (cm)','n_0 (10^8 cm^-^3)','T_i (K)','T_e (K)'};
 num = length(colvar);
 [fig,ax,an,row,col] = open_subplot(num,'Visible',flags.figvis);
 an.Position = [0.1567    0.8909    0.7230    0.0801];
@@ -395,7 +398,7 @@ for i = 1:row
         grid on
         grid minor
 
-        if i == row, xlabel('t / \tau_{exp}'), end
+        if i == row, xlabel('t / \tau'), end
         ylabel(colstr{iter})
     end
 end

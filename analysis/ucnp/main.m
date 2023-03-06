@@ -2,16 +2,15 @@
 clc, clearvars -except data, close all, f = filesep; setpath;
 
 inp = {'folder';
-'C:\Users\grant\OneDrive\Research\mhd\data-expsims\an-mhd-02.08.23-gauss-e1\HIH-0\set_12';    
-
+    'C:\Users\grant\OneDrive\Research\mhd\data-expsims\an-mhd-02.08.23-gauss-e1\HIH-1\set_1';
       };
 s = spreadsheet2struct(inp,inp(1,:));
 
 % main options
-flags.load_data_mat = false;
+flags.load_data_mat = true;
 
 % loading options
-flags.sim.time_window = [0 100]; % [start end] percentage of time window to load
+flags.sim.time_window = [0 75]; % [start end] percentage of time window to load
 flags.sim.time_interval = 1; % interval for time indices to keep
 flags.sim.plot_window = [.5 .5];
 flags.sim.ghost_cells = 2;
@@ -19,12 +18,13 @@ flags.sim.ghost_cells = 2;
 % simulation flags
 flags.sim.test = false;
 flags.sim.plot_grids = false;
-flags.sim.vars = {'n', 'v_x', 'v_y', 'i_temp', 'e_temp','dt'};
-% flags.sim.vars = {'i_n', 'dn', 'i_v_x', 'e_v_x', 'i_temp', 'e_temp', 'E_x', 'dt'};
+% flags.sim.vars = {'n', 'v_x', 'v_y', 'i_temp', 'e_temp','dt'};
+flags.sim.vars = {'n','e_temp'};
 flags.sim.vlasov_analysis = false;
-flags.sim.cmpr_exp_sim = true;
+flags.sim.cmpr_exp_sim = false;
 flags.sim.iaw_analysis = false;
-flags.sim.ion_holes = false;
+flags.sim.ion_holes = true;
+flags.sim.charge_neutrality = false;
 flags.sim.hole_orientation = 0;
 
 flags.sim.figvis = 'on';
@@ -81,6 +81,7 @@ for i = 1:length(s)
         if flags.sim.cmpr_exp_sim, [out] = compareExpAndSimData(data,flags.sim); end
         if flags.sim.ion_holes, ionHolesAnalysis(data,flags.sim); end
         if flags.sim.iaw_analysis, iawAnalysis(data,flags.sim); end
+        if flags.sim.charge_neutrality, chargeNeutralityAnalysis(data,flags.sim); end
     end
     if is_exp_folder
         flags.exp.Te = [];

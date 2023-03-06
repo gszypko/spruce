@@ -277,8 +277,8 @@ t_plot = t(ind_t);
 vars{1} = {'n_exp','n_sim'};
 vars{2} = {'v_exp_x','v_sim_x'};
 row_str = {'n (10^8 cm^-^3)','v (cm/s)'};
-lgd_str = {'data','sim'};
-v_cut = [0.45 0.45 0.45 0.45];
+lgd_str = {'exp','sim'};
+v_cut = [0.4 0.42 0.45 0.45];
 
 num = 8;
 [fig,ax,an] = open_subplot(num);
