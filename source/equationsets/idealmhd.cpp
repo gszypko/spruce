@@ -86,7 +86,8 @@ std::vector<Grid> IdealMHD::computeTimeDerivativesDerived(const std::vector<Grid
                      + (grids[bi_y] + be_y)*m_pd.derivative1D(grids[v_z],1);
     
     // characteristic boundary evolution
-    double global_visc_coeff = m_global_viscosity*0.5*((d_x.square()+d_y.square())/grids[dt]).min(m_pd.m_xl_dt,m_pd.m_yl_dt,m_pd.m_xu_dt,m_pd.m_yu_dt);
+    Grid one = Grid::Ones(m_pd.m_xdim,m_pd.m_ydim);
+    double global_visc_coeff = m_global_viscosity*0.5*(one/(one/d_x.square()+one/d_y.square())/grids[dt]).min(m_pd.m_xl_dt,m_pd.m_yl_dt,m_pd.m_xu_dt,m_pd.m_yu_dt);
     std::vector<Grid> char_evolution = computeTimeDerivativesCharacteristicBoundary(grids,
                                                 m_pd.x_bound_1==PlasmaDomain::BoundaryCondition::OpenMoC,
                                                 m_pd.x_bound_2==PlasmaDomain::BoundaryCondition::OpenMoC,
@@ -293,8 +294,13 @@ void IdealMHD::recomputeDT(std::vector<Grid>& grids) const
     Grid diagonals = (m_pd.m_grids[PlasmaDomain::d_x].square() + m_pd.m_grids[PlasmaDomain::d_y].square()).sqrt();
     Grid vel_mag = (grids[v_x].square() + grids[v_y].square()).sqrt();
 
+    Grid vel_mag_x = (grids[v_x].square()).sqrt();
+    Grid vel_mag_y = (grids[v_y].square()).sqrt();
+
     // m_grids[dt] = diagonals/(c_s + v_alfven + v_fast + v_slow + vel_mag);
-    grids[dt] = diagonals/(vel_mag + c_s.max(v_alfven).max(v_fast).max(v_slow));
+    // grids[dt] = diagonals/(vel_mag + c_s.max(v_alfven).max(v_fast).max(v_slow));
+    grids[dt] = one/((vel_mag_x+ c_s.max(v_alfven).max(v_fast).max(v_slow))/m_pd.m_grids[PlasmaDomain::d_x]
+                    + (vel_mag_y+ c_s.max(v_alfven).max(v_fast).max(v_slow))/m_pd.m_grids[PlasmaDomain::d_y]);
 }
 
 // Returns time derivative from characteristic boundary cond for the quantities
