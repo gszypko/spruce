@@ -2,28 +2,32 @@
 clc, clearvars -except data, close all, f = filesep; setpath;
 
 inp = {'folder';
-    'C:\Users\grant\OneDrive\Research\mhd\data-expsims\an-mhd-02.08.23-gauss-e1\HIH-1\set_1';
+    'C:\Users\Grant\OneDrive\Research\mhd\data-sims\03.20.23\set_0';
+    'C:\Users\Grant\OneDrive\Research\mhd\data-sims\03.20.23\set_1';
+    'C:\Users\Grant\OneDrive\Research\mhd\data-sims\03.20.23\set_2';
+    'C:\Users\Grant\OneDrive\Research\mhd\data-sims\03.20.23\set_3';
       };
 s = spreadsheet2struct(inp,inp(1,:));
 
 % main options
-flags.load_data_mat = true;
+flags.load_data_mat = false;
 
 % loading options
-flags.sim.time_window = [0 75]; % [start end] percentage of time window to load
+flags.sim.time_window = [0 100]; % [start end] percentage of time window to load
 flags.sim.time_interval = 1; % interval for time indices to keep
-flags.sim.plot_window = [.5 .5];
+flags.sim.plot_window = [1 1];
 flags.sim.ghost_cells = 2;
 
 % simulation flags
+flags.sim.doGaussianFits2D = true;
 flags.sim.test = false;
 flags.sim.plot_grids = false;
-% flags.sim.vars = {'n', 'v_x', 'v_y', 'i_temp', 'e_temp','dt'};
-flags.sim.vars = {'n','e_temp'};
+flags.sim.vars = {'n', 'v_x', 'v_y', 'i_temp', 'e_temp','dt'};
+% flags.sim.vars = {'n','e_temp'};
 flags.sim.vlasov_analysis = false;
 flags.sim.cmpr_exp_sim = false;
-flags.sim.iaw_analysis = false;
-flags.sim.ion_holes = true;
+flags.sim.iaw_analysis = true;
+flags.sim.ion_holes = false;
 flags.sim.charge_neutrality = false;
 flags.sim.hole_orientation = 0;
 
@@ -75,6 +79,7 @@ for i = 1:length(s)
         end
         
         % run simulation options
+        if flags.sim.doGaussianFits2D, data = doGaussianFits2D(data,flags); end
         if flags.sim.test, simTest(data,flags.sim); end
         if flags.sim.plot_grids, plotGridEvol(data,flags.sim); end
         if flags.sim.vlasov_analysis, gaussianAnalysis(data,flags.sim); end

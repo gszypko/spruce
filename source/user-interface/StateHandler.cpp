@@ -238,10 +238,11 @@ Grid StateHandler::setup_density(const std::unique_ptr<Settings>& pms) const
     if (pms->getopt("n_iaw") == "true"){
         double iaw_amp = pms->getval("n_iaw_amp");
         double iaw_sig = pms->getval("n_iaw_sig");
+        double iaw_phase = pms->getval("n_iaw_phase")*PI/180;
         double k = 2*PI/iaw_sig;
         Grid x = getgrid("pos_x");
-        Grid n_iaw = iaw_amp*n*(k*x).sin();
-        n -= n_iaw;
+        Grid n_iaw = iaw_amp*n*(k*x-iaw_phase).sin();
+        n += n_iaw;
     }
     return n;
 }

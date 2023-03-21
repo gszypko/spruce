@@ -199,7 +199,7 @@ ydata = [s.A];
 
 num = 1;
 [fig,ax,an] = open_subplot(num,'Visible',flags.figvis);
-an.Position = [[0.065026362038664,0.944444444444444,0.929701230228474,0.047355555555555]];
+an.Position = [0.1595    0.9117    0.7230    0.0801];
 cax = get_axis(fig,ax{1});
 hold on
 l = get_line_specs(2);     
