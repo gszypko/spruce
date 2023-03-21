@@ -9,7 +9,7 @@ import os
 import sys
 
 BETA = 0.004
-B_0 = 20.0*30.0 #G
+B_0 = -125.0*30.0 #G
 PRESS_00 = BETA*B_0**2/(8.0*np.pi) #dyn cm^-2
 T_C = 1.0e6 #K
 G = 2.748e4 #cm s^-2

@@ -23,7 +23,7 @@ if len(sys.argv) != 3:
 out_directory = sys.argv[1]
 ACTIVE_REGION = sys.argv[2] == "T"
 # GAUSSIAN = sys.argv[3] == "T"
-GAUSSIAN = True
+GAUSSIAN = False
 
 if not os.path.exists(out_directory):
     os.makedirs(out_directory)
@@ -94,13 +94,25 @@ def compute_b(a, x_pos, z_pos):
     return result_x,result_z
 
 def compute_a0_from_boundary(x,z,num_bins=1000):
-    dt = 1.0/num_bins
-    t_vals = np.linspace(0.0,1.0,num_bins,endpoint=False) + 0.5*dt
-    result = 0.0
-    for t in t_vals:
-        xi = (1-t)/t
-        result += (a_boundary(xi)/((x-xi)**2 + z**2) + a_boundary(-xi)/((x+xi)**2 + z**2))*dt/t**2
-    result *= z/np.pi
+    if GAUSSIAN:
+        dt = 1.0/num_bins
+        t_vals = np.linspace(0.0,1.0,num_bins,endpoint=False) + 0.5*dt
+        result = 0.0
+        for t in t_vals:
+            xi = (1-t)/t
+            result += (a_boundary(xi)/((x-xi)**2 + z**2) + a_boundary(-xi)/((x+xi)**2 + z**2))*dt/t**2
+        result *= z/np.pi
+    else:
+        assert GAUSSIAN == False
+        b0 = 1.0
+        a0 = (2.0/3.0)*X_0*b0
+        result = a0/(4.0*np.pi*X_0**3) * ( \
+            z*(-3.0*x**2 + 3.0*X_0**2 + z**2)*np.log( ((x - X_0)**2 + z**2)/((x + X_0)**2 + z**2) ) \
+            + (2.0*x**3 - 6.0*x*X_0**2 - 6.0*x*z**2 + 4.0*X_0**3)*np.arctan((x - X_0)/(z)) \
+            + (-2.0*x**3 + 6.0*x*X_0**2 + 6.0*x*z**2 + 4.0*X_0**3)*np.arctan((x + X_0)/(z))
+            - 8.0*x*X_0*z
+        )
+
     return (z>0.0)*(result) + (z==0.0)*a_boundary(x)
 
 def press_profile_ch(a, a_ref, p_ch):
