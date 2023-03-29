@@ -114,9 +114,11 @@ void IdealMHD2E::catchNullFieldDirection(std::vector<Grid> &grids) const
 
 void IdealMHD2E::recomputeDT(std::vector<Grid>& grids) const
 {
+    //Sound speed
     Grid c_s = (m_pd.m_adiabatic_index*grids[press]/grids[rho]).sqrt();
     Grid c_s_sq = c_s.square();
 
+    //alfven modes
     Grid v_alfven = grids[b_mag]/(4.0*PI*grids[rho]).sqrt();
     Grid v_alfven_sq = v_alfven.square();
     Grid one = Grid::Ones(m_pd.m_xdim,m_pd.m_ydim);
@@ -127,9 +129,9 @@ void IdealMHD2E::recomputeDT(std::vector<Grid>& grids) const
     Grid v_slow = (0.5*(c_s_sq + v_alfven_sq)*(one - delta)).sqrt();
 
     //Bulk velocity transit time
-    Grid diagonals = (m_pd.m_grids[PlasmaDomain::d_x].square() + m_pd.m_grids[PlasmaDomain::d_y].square()).sqrt();
-    Grid vel_mag = (grids[v_x].square() + grids[v_y].square()).sqrt();
+    Grid v_x_mag = grids[v_x].abs() + c_s.max(v_alfven).max(v_fast).max(v_slow);
+    Grid v_y_mag = grids[v_y].abs() + c_s.max(v_alfven).max(v_fast).max(v_slow);
 
     // grids[dt] = diagonals/(c_s + v_alfven + v_fast + v_slow + vel_mag);
-    grids[dt] = diagonals/(vel_mag + c_s.max(v_alfven).max(v_fast).max(v_slow));
+    grids[dt] = 1./(v_x_mag/m_pd.m_grids[PlasmaDomain::d_x] + v_y_mag/m_pd.m_grids[PlasmaDomain::d_y]);
 }

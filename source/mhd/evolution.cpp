@@ -299,15 +299,15 @@ void PlasmaDomain::ucnpBoundaryExtrapolate(std::vector<Grid>& grids, Boundary bn
       default: assert(false);
     }
     for (int j : m_eqs->densities())
-      m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
+      grids[j](bnd_x,bnd_y) = grids[j](int_x,int_y);
     for (int j : m_eqs->thermal_energies())
-      m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
+      grids[j](bnd_x,bnd_y) = grids[j](int_x,int_y);
     for (int j : m_eqs->fields())
-      m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
+      grids[j](bnd_x,bnd_y) = grids[j](int_x,int_y);
     for (int species=0; species<m_eqs->num_species(); species++){
       std::vector<int> momenta = m_eqs->momenta()[species];
       for (int j : momenta)
-        m_eqs->grid(j)(bnd_x,bnd_y) = m_eqs->grid(j)(int_x,int_y);
+        grids[j](bnd_x,bnd_y) = grids[j](int_x,int_y);
     }
   }
   

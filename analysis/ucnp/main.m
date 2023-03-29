@@ -2,10 +2,10 @@
 clc, clearvars -except data, close all, f = filesep; setpath;
 
 inp = {'folder';
-    'C:\Users\Grant\OneDrive\Research\mhd\data-sims\03.20.23\set_0';
-    'C:\Users\Grant\OneDrive\Research\mhd\data-sims\03.20.23\set_1';
-    'C:\Users\Grant\OneDrive\Research\mhd\data-sims\03.20.23\set_2';
-    'C:\Users\Grant\OneDrive\Research\mhd\data-sims\03.20.23\set_3';
+    'C:\Users\grant\OneDrive\Research\mhd\projects\iaw-density-dist\Killian2012-Fig4a\set_0';
+    'C:\Users\grant\OneDrive\Research\mhd\projects\iaw-density-dist\Killian2012-Fig4b\set_0';
+    'C:\Users\grant\OneDrive\Research\mhd\projects\iaw-density-dist\Killian2012-Fig4c\set_0';
+    'C:\Users\grant\OneDrive\Research\mhd\projects\iaw-density-dist\Killian2012-Fig4d\set_0';
       };
 s = spreadsheet2struct(inp,inp(1,:));
 
@@ -21,10 +21,10 @@ flags.sim.ghost_cells = 2;
 % simulation flags
 flags.sim.doGaussianFits2D = true;
 flags.sim.test = false;
-flags.sim.plot_grids = false;
+flags.sim.plot_grids = true;
 flags.sim.vars = {'n', 'v_x', 'v_y', 'i_temp', 'e_temp','dt'};
 % flags.sim.vars = {'n','e_temp'};
-flags.sim.vlasov_analysis = false;
+flags.sim.vlasov_analysis = true;
 flags.sim.cmpr_exp_sim = false;
 flags.sim.iaw_analysis = true;
 flags.sim.ion_holes = false;

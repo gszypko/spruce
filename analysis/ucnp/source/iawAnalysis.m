@@ -22,7 +22,7 @@ for i = 1:length([s.t])
     x0(1) = max(ydata); lb(1) = 0; ub(1) = 2*x0(1);
     x0(2) = 0; lb(2) = min(xdata); ub(2) = max(xdata);
     dx = max(xdata) - min(xdata);
-    x0(3) = data.sig0; lb(3) = data.sig0/2; ub(3) = data.sig0*10;
+    x0(3) = data.sigx; lb(3) = data.sigx/2; ub(3) = data.sigx*10;
     if strcmp(data.settings.n_dist,'uniform')
         x0(3) = 1000; lb(3) = x0(3)/2; ub(3) = x0(3)*2;
     end
@@ -79,23 +79,39 @@ write_video(filepath,frames);
 G = @(x,amp,x0,sig) amp.*exp(-(x-x0).^2./(2*sig^2));
 for i = 1:length([s.t])
     % c = [A sig k phi]
+    L = data.settings.n_iaw_sig*s(i).time_fac;
+    k = 2*pi/L;
     xdata = s(i).x;
     ydata = s(i).dntild;
-    fun = @(c,d) -c(1).*G(d,1,0,s(i).sig).*cos(c(2).*d);
+    fun = @(c,d) G(d,1,0,c(3)).*(-c(1).*cos(c(2).*d)+c(4).*cos(2*c(2).*d));
     dy = max(ydata)-min(ydata);
     x0 = []; lb = []; ub = [];
     x0(1) = dy/2; lb(1) = -5*x0(1); ub(1) = 5*x0(1);
-    L = data.settings.n_iaw_sig*s(i).time_fac;
-    x0(2) = 2*pi/L; lb(2) = x0(2)/5; ub(2) = x0(2)*5;
+    x0(4) = dy/10; lb(4) = -x0(2); ub(4) = x0(2);
+    x0(3) = s(i).sig; lb(3) = x0(3).*.85; ub(3) = x0(3)*1.15;
+    x0(2) = k; lb(2) = x0(2).*0.75; ub(2) = x0(2)*1.25;
+%     x0(5) = pi; lb(5) = 0; ub(5) = 2*pi;
+%     x0(3) = k; lb(3) = x0(3)*.1; ub(3) = x0(3)*10;
 %     x0(3) = pi/2; lb(3) = 0; ub(3) = 2*pi;
-%     x0(3) = s(i).sig; lb(3) = x0(3)/2; ub(3) = x0(3)*2;
+%     x0(4) = s(i).sig; lb(4) = x0(4)/5; ub(4) = x0(4)*5;
     x = lsqcurvefit(fun,x0,xdata,ydata,lb,ub);
     s(i).dntild_fit = fun(x,xdata);
     s(i).dntild_guess = fun(x0,xdata);
     s(i).A = x(1);
-    s(i).k = x(2);
+    s(i).k = k;
     s(i).lam = 2*pi/s(i).k;
 %     s(i).sig = x(3);
+    
+%     ydata_fft = fft(ydata);
+%     xdata_fft = (0:length(ydata_fft)-1)*(2*pi/mean(diff(xdata)))/length(ydata_fft);
+%     plot(xdata_fft,real(ydata_fft).^2);
+%     hold on
+%     plot(xdata_fft,imag(ydata_fft).^2);
+%     hold off
+%     xlim([0,100])
+%     shg
+%     pause(0.1)
+
 end
 
 % Plot Density Perturbation
@@ -199,7 +215,7 @@ ydata = [s.A];
 
 num = 1;
 [fig,ax,an] = open_subplot(num,'Visible',flags.figvis);
-an.Position = [[0.065026362038664,0.944444444444444,0.929701230228474,0.047355555555555]];
+an.Position = [0.065026362038664,0.944444444444444,0.929701230228474,0.047355555555555];
 cax = get_axis(fig,ax{1});
 hold on
 l = get_line_specs(2);     
