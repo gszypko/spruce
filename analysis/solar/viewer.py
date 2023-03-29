@@ -17,7 +17,7 @@ fullnames = {
   'temp': "Temperature",
   'press': "Pressure",
   'rad': "Radiative Loss Rate",
-  'thermal_energy': "Energy Density",
+  'thermal_energy': "Thermal Energy Density",
   'be': "Background Magnetic Field",
   'bi': "Induced Magnetic Field",
   'bi_x': "X Induced Magnetic Field",
@@ -31,7 +31,7 @@ fullnames = {
   'dt': "CFL Timestep",
   'dt_thermal': "Thermal Conduction Timestep",
   'dt_rad': "Radiative Losses Timestep",
-  'n': "Number Density",
+  'n': "Density",
   'beta': "Plasma Beta",
   'div_be': "Background Field Divergence",
   'div_bi': "Induced Field Divergence",
@@ -89,6 +89,7 @@ parser.add_argument('-sn','--stream_number', help="override default number of so
 parser.add_argument('--density', metavar="vec_display_density", type=int, help="set the interval between displayed vectors", default=25)
 parser.add_argument('-t', '--time_label', help="inserts the time into the plot title" , action='store_true')
 parser.add_argument('-tr', '--time_label_rounded', help="when -t is specified, rounds the time to the nearest integer", action='store_true')
+parser.add_argument('-tz', '--time_label_zero', help="when -t is specified, uses the first frame as t=0", action='store_true')
 parser.add_argument('-d', '--dark_mode', help="renders using a black background and white text", action='store_true')
 parser.add_argument('-r', '--realtime', help="render in real time, instead of writing out to a video file", action='store_true')
 parser.add_argument('-sa', '--sandbox', help="plot according to the sandbox area in the script", action='store_true')
@@ -98,19 +99,28 @@ parser.add_argument('-nv', '--no_varname', help="omit variable name from title",
 parser.add_argument('-nu', '--no_units', help="omit units from title", action='store_true')
 parser.add_argument('-L','--low_colorbar', help="set the lower limit of the contour color bar", type=float)
 parser.add_argument('-H','--high_colorbar', help="set the upper limit of the contour color bar", type=float)
+parser.add_argument('-fsx','--fig_size_x', help="set the horizontal size of the image (inches)", type=float, default=6.4)
+parser.add_argument('-fsy','--fig_size_y', help="set the vertical size of the image (inches)", type=float, default=4.8)
 parser.add_argument('-cl','--colorbar_location',help="set location of colorbar relative to plot (left, right, bottom, or top)",type=str,default='right')
 parser.add_argument('-fs', '--font_size', help="set the font size", type=float, default=10)
+parser.add_argument('-dpi', '--dpi', help="set the dpi", type=float, default=-1.0)
 parser.add_argument('-g', '--ghost_zones', help="includes ghost zones in the contour plot", action='store_true')
 parser.add_argument('-nc', '--no_colorbar', help="omit colorbar for contour quantity", action='store_true')
 parser.add_argument('-nt','--no_ticks', help="omits labels along the x- and y-axes", action='store_true')
+parser.add_argument('-nty','--no_ticks_y', help="omits labels along the y-axis", action='store_true')
+parser.add_argument('-ntx','--no_ticks_x', help="omits labels along the x-axis", action='store_true')
 parser.add_argument('-i','--interactive',help="manually control the time stepping of the plot \
                     (with left and right arrow keys) and investigate contour values by mousing over",action='store_true')
 parser.add_argument('-E','--equal_aspect',help="enforce an equal aspect ratio on the plotted data",action='store_true')
+parser.add_argument('-tl', '--tick_list',help="provide comma-separated (no whitespace) list of tick values for colorbar", type=str, default="")
+parser.add_argument('-te', '--tick_e', help="use abbreviated e notation for colorbar", action="store_true")
 args = parser.parse_args()
 
 line_thickness = 1.0
 arrow_size = 1.0
 
+if args.dpi != -1.0:
+  matplotlib.rcParams.update({'figure.dpi': args.dpi})
 # matplotlib.rcParams.update({'figure.dpi': 300.0})
 # matplotlib.rcParams.update({'figure.autolayout': True})
 # matplotlib.rcParams.update({'font.family': 'Helvetica'})
@@ -462,7 +472,8 @@ if vec_mode == "stream":
 #   exit()
 # ###############################################
 
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(args.fig_size_x, args.fig_size_y)) #6.4, 4.8
+# fig, ax = plt.subplots()
 frame = 0
 
 
@@ -577,12 +588,47 @@ if args.equal_aspect:
   ax.set_aspect('equal')
 
 ax.set(xlim=(x_min,x_max), ylim=(y_min,y_max), title=output_var+", t="+str(t[frame]))
-if args.no_ticks:
-  ax.set(xticks=[],yticks=[])
+if args.no_ticks_x or args.no_ticks:
+  ax.xaxis.set_ticklabels([])
 else:
-  ax.set(xlabel="x (Mm)",ylabel="y (Mm)")
+  ax.set(xlabel="x (Mm)")
+if args.no_ticks_y or args.no_ticks:
+  ax.yaxis.set_ticklabels([])
+else:
+  ax.set(ylabel="y (Mm)")
 if not args.no_colorbar:
   var_colorbar = fig.colorbar(im,location=args.colorbar_location)
+  if args.tick_list != "":
+    tick_vals = [float(v) for v in args.tick_list.split(',')]
+    if args.tick_e:
+      var_colorbar.set_ticks(tick_vals,\
+        labels=[f'{v:.1e}'.replace("e-0","e-").replace("e+0","e") for v in tick_vals])
+    else:
+      var_colorbar.set_ticks(tick_vals)
+  # var_colorbar.set_ticks(var_colorbar.get_ticks(),\
+  #         labels=[f'{v:.0e}'.replace("e-0","e-").replace("e+0","e") for v in var_colorbar.get_ticks()])
+  # # We need to nomalize the tick locations so that they're in the range from 0-1...
+  # minor_tickvals = []
+  # major_tickvals = []
+  # floor_mag = math.floor(np.log10(min_v))
+  # ceil_mag = math.ceil(np.log10(max_v))
+  # for mag in range(floor_mag,ceil_mag+1):
+  #   for i in range(1,10):
+  #     val = i*pow(10.0,mag)
+  #     if val*1.01 >= min_v and val*0.99 <= max_v:
+  #       if i==1: major_tickvals.append(val)
+  #       else: minor_tickvals.append(val)
+  # # var_colorbar.set_ticks(np.array(major_tickvals), minor=False, \
+  # #       labels=[f'{v:.0e}'.replace("e-0","e-").replace("e+0","e") for v in major_tickvals])
+  # # var_colorbar.set_ticks(np.array(minor_tickvals), minor=True, \
+  # #       labels=[f'{v:.0e}'.replace("e-0","e-").replace("e+0","e") for v in minor_tickvals])
+  # if args.colorbar_location in ['left','right']:
+  #   var_colorbar.ax.yaxis.set_ticks(np.array(minor_tickvals), minor=True, \
+  #         labels=[f'{v:.0e}'.replace("e-0","e-").replace("e+0","e") for v in minor_tickvals])
+  # else:
+  #   var_colorbar.ax.xaxis.set_ticks(np.array(minor_tickvals), minor=True, \
+  #         labels=[f'{v:.0e}'.replace("e-0","e-").replace("e+0","e") for v in minor_tickvals])
+
 
 if vec_mode == "quiver":
   # pull out correctly spaced vectors
@@ -711,11 +757,21 @@ def updatefig(*args_arg):
       plot_title += fullunits.get(output_var,"")
     if args.time_label:
       if len(plot_title) != 0: plot_title += ", "
-      if args.time_label_rounded: plot_title += "t="+str(round(t[frame]))+" s"
-      else: plot_title += "t="+str(t[frame])+" s"
+      if args.time_label_rounded:
+        if args.time_label_zero:
+          plot_title += "t="+str(round(t[frame]-t[0]))+" s"
+        else:
+          plot_title += "t="+str(round(t[frame]))+" s"
+      else:
+        if args.time_label_zero:
+          plot_title += "t="+str(t[frame]-t[0])+" s"
+        else:
+          plot_title += "t="+str(t[frame])+" s"
     ax.set(title=plot_title)
-    if not args.no_ticks:
-      ax.set(xlabel="x (Mm)",ylabel="y (Mm)")
+    if not (args.no_ticks or args.no_ticks_x):
+      ax.set(xlabel="x (Mm)")
+    if not (args.no_ticks or args.no_ticks_y):
+      ax.set(ylabel="y (Mm)")
     if vec_var != "be" and vec_var != None:
       this_vec_x = vec_x[frame].copy()
       this_vec_y = vec_y[frame].copy()
@@ -745,7 +801,7 @@ def updatefig(*args_arg):
             color=(0.0,0.0,0.0),broken_streamlines=False,linewidth=line_thickness,arrowstyle='->',arrowsize=arrow_size,maxlength=10.0)
         if not args.streampoint_record:
           print("frame " + str(frame) + " plotted")
-    plt.tight_layout()
+    # plt.tight_layout()
     return im, ax
 
 # Argument: a LineCollection
@@ -806,12 +862,22 @@ def savestreampoints(event):
   global stream
   global args
   global startpointfile
+  global y_max,y_min
   segments = stream.lines.get_segments()
   lines = extract_separate_lines(segments)[0]
   print(f"Saving {len(lines)} lines to {startpointfile}...")
   with open(startpointfile, 'w') as f:
     for l in lines:
-      f.write(f"{l[-1][0]},{l[-1][1]}\n")
+      if l[-1][1] > l[0][1]:
+        if l[0][1] < y_min:
+          f.write(f"{l[0][0]},{max(l[1][1],y_min)}\n")
+        else:
+          f.write(f"{l[0][0]},{max(l[0][1],y_min)}\n")
+      else:
+        if l[-1][1] < y_min:
+          f.write(f"{l[-1][0]},{max(l[-1][1],y_min)}\n")
+        else:
+          f.write(f"{l[-1][0]},{max(l[-2][1],y_min)}\n")
 
 def advancetime(event):
   global frame
@@ -897,7 +963,7 @@ else:
 if args.realtime or args.streampoint_record or args.interactive:
   plt.show()
 else:
-  FFwriter = animation.FFMpegWriter(bitrate=2000)
+  FFwriter = animation.FFMpegWriter(bitrate=2000*2*4)
   filename_suffix = "_"+output_var
   if vec_var != None: filename_suffix = filename_suffix + "_" + vec_var
-  ani.save(args.filename.split('/')[-2]+filename_suffix+'.mp4', writer = FFwriter, dpi=100)
+  ani.save(args.filename.split('/')[-2]+filename_suffix+'.mp4', writer = FFwriter, dpi=100*2)
