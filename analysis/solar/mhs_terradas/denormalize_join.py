@@ -97,8 +97,10 @@ for this_var in vars:
         this_var[name] = -1.0*one
     for name in ["bi_z"]:
         this_var[name] = 0.01*one
-    this_var["bi_x"] = this_var["b0_x"] + BETA/2*this_var["b1_x"]
-    this_var["bi_y"] = this_var["b0_y"] + BETA/2*this_var["b1_y"]
+    this_var["bi_x"] = BETA/2*this_var["b1_x"]
+    this_var["bi_y"] = BETA/2*this_var["b1_y"]
+    this_var["be_x"] = this_var["b0_x"]
+    this_var["be_y"] = this_var["b0_y"]
     for name in ["press","b0_x","b0_y","b1_x","b1_y"]:
         this_var.pop(name)
     counter += 1
