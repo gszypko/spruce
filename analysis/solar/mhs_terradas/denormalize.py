@@ -74,8 +74,10 @@ for name in ["grav_y"]:
     vars[name] = -1.0*one
 for name in ["bi_z"]:
     vars[name] = 0.01*one
-vars["bi_x"] = vars["b0_x"] + BETA/2*vars["b1_x"]
-vars["bi_y"] = vars["b0_y"] + BETA/2*vars["b1_y"]
+vars["bi_x"] = BETA/2*vars["b1_x"]
+vars["bi_y"] = BETA/2*vars["b1_y"]
+vars["be_x"] = vars["b0_x"]
+vars["be_y"] = vars["b0_y"]
 for name in ["press","b0_x","b0_y","b1_x","b1_y"]:
     vars.pop(name)
 

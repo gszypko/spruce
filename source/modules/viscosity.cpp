@@ -113,7 +113,7 @@ void Viscosity::constructViscosityGrids(const std::vector<Grid>& grids)
 
         // determine viscosity strength factor
         if (m_visc_opt[i] == "local" || m_visc_opt[i] == "global") m_grids_strength[i] = Grid(m_pd.m_xdim,m_pd.m_ydim,m_strength[i]);
-        else if (m_visc_opt[i] == "boundary") m_grids_strength[i] = getBoundaryViscosity(m_strength[i],m_length[i]);
+        else if (m_visc_opt[i] == "boundary" || m_visc_opt[i] == "boundary_global") m_grids_strength[i] = getBoundaryViscosity(m_strength[i],m_length[i]);
         else assert("Viscosity option must be global, local, or boundary.");
 
         // determine timescale to base viscosity off of
@@ -127,7 +127,7 @@ void Viscosity::constructViscosityGrids(const std::vector<Grid>& grids)
         }
         double dt_min = dt.min(m_pd.m_xl_dt,m_pd.m_yl_dt,m_pd.m_xu_dt,m_pd.m_yu_dt);
         if (m_visc_opt[i] == "boundary" || m_visc_opt[i] == "local") m_grids_dt[i] = dt;
-        else if (m_visc_opt[i] == "global") m_grids_dt[i] = Grid(m_pd.m_xdim,m_pd.m_ydim,dt_min);
+        else if (m_visc_opt[i] == "global" || m_visc_opt[i] == "boundary_global") m_grids_dt[i] = Grid(m_pd.m_xdim,m_pd.m_ydim,dt_min);
         else assert("Viscosity option must be global, local, or boundary.");
 
         // compute viscosity coefficient and impose maximum
