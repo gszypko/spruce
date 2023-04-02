@@ -25,6 +25,7 @@ end
 num = length(varnames);
 [fig,ax,an] = open_subplot(num,'Visible',flags.figvis);
 an.Position = [0.1567    0.8909    0.7230    0.0801];
+fig.Position = [20.600000000000000,3.214000000000000e+02,1.342400000000000e+03,3.344000000000000e+02];
 
 frames = cell(1,length(data));
 for k = 1:length([data.grids.vars.time])
@@ -55,6 +56,7 @@ for k = 1:length([data.grids.vars.time])
             zdata = zdata(ind_y,ind_x);            
             
             imagesc(xdata,ydata,zdata)
+            
             colorbar
             cax.YDir = 'Normal';
             cax.PlotBoxAspectRatio = [1 1 1];
@@ -71,7 +73,7 @@ for k = 1:length([data.grids.vars.time])
     dlm = ' - ';
     str1 = ['Iter = ' num2str(k-1)];
     str2 = ['t = ' num2str(data.grids.vars(k).time*1e6,'%.3g') '\mus = ' num2str(data.grids.vars(k).time/data.tau,'%.3g') '\tau_e_x_p'];
-    an.String = [str2];
+    an.String = [str1 dlm str2];
     an.Position = [0.159500000000000,0.929069291338582,0.723000000000000,0.080100000000000];
 
     frames{k} = getframe(fig);

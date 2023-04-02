@@ -1,18 +1,23 @@
 %% User Controls
 flags.Te = 48;
 flags.sig_y = 0;
-flags.set = 0;
+flags.x_lim = 0.6;
+flags.x_bgd = 0.4;
+flags.set = 1;
 flags.Nx = 401;
 flags.Ny = 11;
 flags.t_max = 39.3e-6;
 flags.num_time_pts = 100;
 flags.config_path = 'C:\Users\grant\Documents\GitHub\mhd\ucnp.config';
 flags.settings_path = 'C:\Users\grant\Documents\GitHub\mhd\ucnp.settings';
-flags.n_iaw_sig = .2;
+flags.n_min = 1e-5;
 
 %% Set Up Directories and Other Program Options
+close all
 main_path = 'C:\Users\grant\OneDrive\Research\mhd\projects\iaw-density-dist';
 file_name = 'Killian 2012 - Fig 4d.csv';
+flags.iaw_amp = 0.05;
+flags.iaw_sig = 0.05;
 file_name_no_space = file_name(~isspace(file_name));
 folder_path = [main_path filesep extractBefore(file_name_no_space,'.csv')];
 mkdir(folder_path)
@@ -30,35 +35,58 @@ eq_set = config.eq_set;
 
 %% Load Data
 
+% read in raw data from file, convert units to cm and cm^-3, sort data, average data
+% with the same x position, and filter data with a savitzky-golay technique
+
 data = readcell([main_path filesep file_name]);
-x_pos = cell2mat(data(:,1))'./10; % converts mm to cm
-density = cell2mat(data(:,2))'.*1e15./1e6; % accounts for 10^15 units on plot axis, converts from m^-3 to cm^-3
+iaw.x_raw = cell2mat(data(:,1))'./10; % converts mm to cm
+iaw.n_raw = cell2mat(data(:,2))'.*1e15./1e6; % accounts for 10^15 units on plot axis, converts from m^-3 to cm^-3
 
-[x_pos,ind_x] = sort(x_pos);
-density = density(ind_x);
+[iaw.x,ind_x] = sort(iaw.x_raw);
+iaw.n = iaw.n_raw(ind_x);
 
-for i = 1:length(x_pos)-1
-    if x_pos(i) == x_pos(i+1)
-        density(i) = (density(i) + density(i+1))/2;
-        x_pos(i+1) = [];
-        density(i+1) = [];
+for i = 1:length(iaw.x)-1
+    if iaw.x(i) == iaw.x(i+1)
+        iaw.n(i) = (iaw.n(i) + iaw.n(i+1))/2;
+        iaw.x(i+1) = [];
+        iaw.n(i+1) = [];
     end
-    if i > length(x_pos)-2, break; end
+    if i > length(iaw.x)-2, break; end
 end
 
-density_filt = sgolayfilt(density,3,9);
+iaw.n_sg = sgolayfilt(iaw.n,3,9);
+iaw.x_ext = linspace(-flags.x_lim,flags.x_lim,flags.Nx);
 
 %% Fit Gaussian to Data
 
-[p,n_filt_fit,n_filt_guess] = fitGaussian1D(x_pos,density_filt);
+[p,iaw.n_sg_fit,iaw.n_sg_guess,~,~,fit_model] = fitSlopedGaussianWithIAW1D(iaw.x,iaw.n_sg,flags.iaw_amp,flags.iaw_sig);
 
 fig = figure;
-plot(x_pos,density_filt)
+plot(iaw.x,iaw.n_sg.*1e-8)
 hold on
-plot(x_pos,n_filt_guess)
-plot(x_pos,n_filt_fit)
-legend({'data','guess','fit'})
-close(fig)
+plot(iaw.x,iaw.n_sg_guess.*1e-8)
+plot(iaw.x_ext,fit_model(p,iaw.x_ext).*1e-8)
+plot(iaw.x,(iaw.n_sg-iaw.n_sg_fit).*1e-8)
+legend({'data','guess','fit','residual'})
+xlabel('x (cm)')
+ylabel('n (10^8 cm^-^3)')
+grid minor
+
+%% Extrapolate Density onto Extended Grid
+
+iaw.n_sg_ext = zeros(size(iaw.x_ext));
+for i = 1:length(iaw.x_ext)
+    if abs(iaw.x_ext(i)) < flags.x_bgd
+        iaw.n_sg_ext(i) = interp1(iaw.x,iaw.n_sg,iaw.x_ext(i));
+    else
+        iaw.n_sg_ext(i) = fit_model(p,iaw.x_ext(i));
+    end
+    if iaw.n_sg_ext(i) < flags.n_min*max(iaw.n_sg)
+        iaw.n_sg_ext(i) = flags.n_min*max(iaw.n_sg);
+    end
+end
+plot(iaw.x_ext,iaw.n_sg_ext.*1e-8)
+legend({'data','guess','fit','residual','extrapolated'})
 
 %% Handle Settings File
 % need to copy .settings path into set path, but first must determine the central value of n, Ti, and Te and the plasma size
@@ -74,11 +102,11 @@ end
 settings.Te = flags.Te;
 settings.sig_x = p(3);
 settings.sig_y = 1e10;
-settings.x_lim = max(x_pos);
+settings.x_lim = max(iaw.x_ext);
 settings.y_lim = 1;
 settings.Nx = flags.Nx;
 settings.Ny = flags.Ny;
-settings.n_min = min(density);
+settings.n_min = min(iaw.n_sg_ext);
 settings.n_iaw_sig = flags.n_iaw_sig;
 
 % write settings file
@@ -115,13 +143,13 @@ movefile(config_path,[extractBefore(config_path,'.txt') '.config']);
 
 %% Write State File
 
-[state.x,state.dx] = getNonUniformGrids(flags.Nx,max(abs(x_pos)),1,1);
+[state.x,state.dx] = getNonUniformGrids(flags.Nx,max(abs(iaw.x_ext)),1,1);
 [state.y,state.dy] = getNonUniformGrids(flags.Ny,1,1,1);
 [state.X,state.Y] = meshgrid(state.x,state.y);
 [state.dX,state.dY] = meshgrid(state.dx,state.dy);
 state.n = zeros(size(state.X));
 for i = 1:size(state.n,1)
-    state.n(i,:) = interp1(x_pos,density_filt,state.x,'makima');
+    state.n(i,:) = interp1(iaw.x_ext,iaw.n_sg_ext,state.x,'makima');
 end
 
 % vars that need to be generated
