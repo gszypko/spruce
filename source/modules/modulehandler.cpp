@@ -9,6 +9,7 @@
 #include "thermalconduction.hpp"
 #include "radiativelosses.hpp"
 #include "anomalousresistivity.hpp"
+#include "momentuminjection.hpp"
 #include "sgfilter.hpp"
 #include "coulomb_explosion.hpp"
 #include "eic_thermalization.hpp"
@@ -93,6 +94,7 @@ void ModuleHandler::instantiateModule(const std::string &module_name, std::ifstr
     else if(module_name == "artificial_viscosity") m_modules.push_back(std::unique_ptr<Module>(new Viscosity(m_pd)));
     else if(module_name == "global_temperature") m_modules.push_back(std::unique_ptr<Module>(new GlobalTemperature(m_pd)));
     else if(module_name == "anomalous_resistivity") m_modules.push_back(std::unique_ptr<Module>(new AnomalousResistivity(m_pd)));
+    else if(module_name == "momentum_injection") m_modules.push_back(std::unique_ptr<Module>(new MomentumInjection(m_pd)));
     else assert(false && "Module name was not recognized");
     m_modules.back()->configureModule(in_file);
 }

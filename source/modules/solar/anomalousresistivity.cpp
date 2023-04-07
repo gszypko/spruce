@@ -16,9 +16,9 @@ void AnomalousResistivity::setupModule(){
     assert(time_scale > 0.0 && "Anomalous Resistivity time_scale must be specified, and positive");
     anomalous_template = Grid::Ones(m_pd.m_xdim,m_pd.m_ydim);
     diffusivity = (m_pd.m_eqs->grid(IdealMHD::b_mag)
-                    /time_scale/(m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_eqs->grid(IdealMHD::bi_x)).square()
-                                + m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_eqs->grid(IdealMHD::bi_y)).square()
-                                + m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_z]+m_pd.m_eqs->grid(IdealMHD::bi_z)).square()).sqrt()
+                    /time_scale/((m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_x])+m_pd.laplacian(m_pd.m_eqs->grid(IdealMHD::bi_x))).square()
+                                + (m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_y])+m_pd.laplacian(m_pd.m_eqs->grid(IdealMHD::bi_y))).square()
+                                + (m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_z])+m_pd.laplacian(m_pd.m_eqs->grid(IdealMHD::bi_z))).square()).sqrt()
                                 ).min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
 }
 
@@ -35,9 +35,9 @@ void AnomalousResistivity::parseModuleConfigs(std::vector<std::string> lhs, std:
 void AnomalousResistivity::computeTimeDerivativesModule(const std::vector<Grid> &grids,std::vector<Grid> &grids_dt){
     computeTemplate();
     Grid coeff = m_pd.m_ghost_zone_mask*anomalous_template*diffusivity;
-    grids_dt[5] += coeff*m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_x]+grids[IdealMHD::bi_x]);
-    grids_dt[6] += coeff*m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_y]+grids[IdealMHD::bi_y]);
-    grids_dt[7] += coeff*m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_z]+grids[IdealMHD::bi_z]);
+    grids_dt[5] += coeff*(m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_x])+m_pd.laplacian(grids[IdealMHD::bi_x]));
+    grids_dt[6] += coeff*(m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_y])+m_pd.laplacian(grids[IdealMHD::bi_y]));
+    grids_dt[7] += coeff*(m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_z])+m_pd.laplacian(grids[IdealMHD::bi_z]));
 }
 
 void AnomalousResistivity::computeTemplate(){
