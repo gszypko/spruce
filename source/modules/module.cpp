@@ -18,7 +18,10 @@ void Module::configureModule(std::ifstream &in_file)
         std::getline(in_file, line);
         while(line[0] != '}'){
             clearWhitespace(line);
-            if(line.empty() || line[0] == '#') continue; //skip comment and empty lines
+            if(line.empty() || line[0] == '#'){ //skip comment and empty lines
+                std::getline(in_file, line);
+                continue; 
+            }
             std::istringstream ss_line(line);
             std::string lhs, rhs;
             std::getline(ss_line,lhs,'=');
