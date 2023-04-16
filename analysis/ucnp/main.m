@@ -3,11 +3,14 @@ clc, clearvars -except data, close all, f = filesep; setpath;
 
 inp = {'folder';
     'C:\Users\grant\OneDrive\Research\mhd\projects\iaw-density-dist\Killian2012-Fig4a\set_1';
+    'C:\Users\grant\OneDrive\Research\mhd\projects\iaw-density-dist\Killian2012-Fig4b\set_1';
+    'C:\Users\grant\OneDrive\Research\mhd\projects\iaw-density-dist\Killian2012-Fig4c\set_1';
+    'C:\Users\grant\OneDrive\Research\mhd\projects\iaw-density-dist\Killian2012-Fig4d\set_1';
       };
 s = spreadsheet2struct(inp,inp(1,:));
 
 % main options
-flags.load_data_mat = true;
+flags.load_mat_file = false;
 
 % loading options
 flags.sim.time_window = [0 100]; % [start end] percentage of time window to load
@@ -18,8 +21,8 @@ flags.sim.ghost_cells = 2;
 % simulation flags
 flags.sim.doGaussianFits2D = true;
 flags.sim.test = false;
-flags.sim.plot_grids = true;
-flags.sim.vars = {'n', 'v_x','i_temp'};
+flags.sim.plot_grids = false;
+flags.sim.vars = {'n', 'v_x', 'v_y','i_temp','e_temp','dt'};
 % flags.sim.vars = {'n','e_temp'};
 flags.sim.vlasov_analysis = false;
 flags.sim.cmpr_exp_sim = false;
@@ -68,7 +71,7 @@ for i = 1:length(s)
         % load simulation data
         files = dir(s(i).folder);
         data_mat_found = max(strcmp({files.name},'data.mat'));
-        if data_mat_found && flags.load_data_mat
+        if data_mat_found && flags.load_mat_file
             load([s(i).folder f 'data.mat'],'data');
         else
             data = loadData(s(i).folder,flags.sim);

@@ -1,12 +1,18 @@
+%% Clean Workspace
+clc, clear, setpath;
+
 %% User Controls
+flags.set = 1;
+flags.file_name = 'Killian 2012 - Fig 4d.csv';
+flags.iaw_amp = 0.1;
+flags.iaw_sig = 0.05;
+flags.t_max = 39.3e-6;
 flags.Te = 48;
 flags.sig_y = 0;
-flags.x_lim = 0.6;
-flags.x_bgd = 0.4;
-flags.set = 1;
+flags.x_lim = 1;
+flags.x_bgd = 0.44;
 flags.Nx = 401;
 flags.Ny = 11;
-flags.t_max = 39.3e-6;
 flags.num_time_pts = 100;
 flags.config_path = 'C:\Users\grant\Documents\GitHub\mhd\ucnp.config';
 flags.settings_path = 'C:\Users\grant\Documents\GitHub\mhd\ucnp.settings';
@@ -15,22 +21,18 @@ flags.n_min = 1e-5;
 %% Set Up Directories and Other Program Options
 close all
 main_path = 'C:\Users\grant\OneDrive\Research\mhd\projects\iaw-density-dist';
-file_name = 'Killian 2012 - Fig 4d.csv';
-flags.iaw_amp = 0.05;
-flags.iaw_sig = 0.05;
-file_name_no_space = file_name(~isspace(file_name));
+
+file_name_no_space = flags.file_name(~isspace(flags.file_name));
 folder_path = [main_path filesep extractBefore(file_name_no_space,'.csv')];
 mkdir(folder_path)
 set_path = [folder_path filesep 'set_' num2str(flags.set)]; % path to where simulation files will be saved
 mkdir(set_path);
 state_path = [set_path filesep 'init.txt']; % extension to be updated to .state later
 config_path = [set_path filesep 'ucnp.txt']; % extension to be updated to .config later
-settings_path = [set_path filesep 'plasma.txt']; % extension to be updated to .settings later
 git_path = 'C:\Users\grant\Documents\GitHub\mhd';
 
 % load config and settings files from MHD GitHub, as specified by the paths within 'flags'
 config = readConfigFile(flags.config_path);
-settings = readSettingsFile(flags.settings_path);
 eq_set = config.eq_set;
 
 %% Load Data
@@ -38,13 +40,17 @@ eq_set = config.eq_set;
 % read in raw data from file, convert units to cm and cm^-3, sort data, average data
 % with the same x position, and filter data with a savitzky-golay technique
 
-data = readcell([main_path filesep file_name]);
+% extract the raw position and density data
+data = readcell([main_path filesep flags.file_name]);
 iaw.x_raw = cell2mat(data(:,1))'./10; % converts mm to cm
 iaw.n_raw = cell2mat(data(:,2))'.*1e15./1e6; % accounts for 10^15 units on plot axis, converts from m^-3 to cm^-3
+iaw.x_ext = linspace(-flags.x_lim,flags.x_lim,flags.Nx);
 
+% sort the raw data
 [iaw.x,ind_x] = sort(iaw.x_raw);
 iaw.n = iaw.n_raw(ind_x);
 
+% make sure the position elements are unique
 for i = 1:length(iaw.x)-1
     if iaw.x(i) == iaw.x(i+1)
         iaw.n(i) = (iaw.n(i) + iaw.n(i+1))/2;
@@ -54,12 +60,12 @@ for i = 1:length(iaw.x)-1
     if i > length(iaw.x)-2, break; end
 end
 
+% apply an sg filter to the unique data points
 iaw.n_sg = sgolayfilt(iaw.n,3,9);
-iaw.x_ext = linspace(-flags.x_lim,flags.x_lim,flags.Nx);
 
 %% Fit Gaussian to Data
 
-[p,iaw.n_sg_fit,iaw.n_sg_guess,~,~,fit_model] = fitSlopedGaussianWithIAW1D(iaw.x,iaw.n_sg,flags.iaw_amp,flags.iaw_sig);
+[p,iaw.n_sg_fit,iaw.n_sg_guess,~,~,fit_model] = fitGaussianWithIAW1D(iaw.x,iaw.n_sg,flags.iaw_amp,flags.iaw_sig);
 
 fig = figure;
 plot(iaw.x,iaw.n_sg.*1e-8)
@@ -76,12 +82,15 @@ grid minor
 
 iaw.n_sg_ext = zeros(size(iaw.x_ext));
 for i = 1:length(iaw.x_ext)
-    if abs(iaw.x_ext(i)) < flags.x_bgd
+    exp_data_exists = abs(iaw.x_ext(i)) < flags.x_bgd;
+    if exp_data_exists
         iaw.n_sg_ext(i) = interp1(iaw.x,iaw.n_sg,iaw.x_ext(i));
     else
         iaw.n_sg_ext(i) = fit_model(p,iaw.x_ext(i));
     end
-    if iaw.n_sg_ext(i) < flags.n_min*max(iaw.n_sg)
+
+    density_below_minimum = iaw.n_sg_ext(i) < flags.n_min*max(iaw.n_sg);
+    if density_below_minimum
         iaw.n_sg_ext(i) = flags.n_min*max(iaw.n_sg);
     end
 end
@@ -92,30 +101,34 @@ legend({'data','guess','fit','residual','extrapolated'})
 % need to copy .settings path into set path, but first must determine the central value of n, Ti, and Te and the plasma size
 % on each axis
 
-% determine values to go into plasma.settings file
-settings.n = p(1);
+% read in plasma.settings file and overwrite with correct parameters
+settings = readSettingsFile(flags.settings_path);
+settings.n = p(1); % amplitude from Gaussian fit
 if strcmp(eq_set,'ideal_mhd') || strcmp(eq_set,'ideal_mhd_cons')
     settings.Ti = flags.Te;
 else
     settings.Ti = 1;
 end
 settings.Te = flags.Te;
-settings.sig_x = p(3);
-settings.sig_y = 1e10;
+settings.sig_x = p(3); % rms plasma size extracted from fit
+settings.sig_y = 1e10; % effectively infinite size along y axis
 settings.x_lim = max(iaw.x_ext);
 settings.y_lim = 1;
 settings.Nx = flags.Nx;
 settings.Ny = flags.Ny;
 settings.n_min = min(iaw.n_sg_ext);
-settings.n_iaw_sig = flags.n_iaw_sig;
+settings.n_iaw_sig = flags.iaw_sig;
 
-% write settings file
+% prepare settings data to be written
 settings_data = cell(1e2,1);
 fields = fieldnames(settings);
 for i = 1:length(fields)
     settings_data{i} = [fields{i} ' = cgs = ' num2str(settings.(fields{i}))];
 end
 settings_data(i+1:end) = []; % remove excess cells
+
+% write settings data to file
+settings_path = [set_path filesep 'plasma.txt']; 
 writecell(settings_data,settings_path,'QuoteStrings','none');
 movefile(settings_path,[extractBefore(settings_path,'.txt') '.settings']);
 

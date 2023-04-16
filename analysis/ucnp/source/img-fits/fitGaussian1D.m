@@ -1,4 +1,8 @@
 function [p,y_fit,y_guess,pci,pse,fit_model] = fitGaussian1D(x,y)
+% x (1xn double): independent data
+% y (1xn double): dependent data corresponding to x, same length as x
+
+% fits a 1D Gaussian with
 
 y_sg = sgolayfilt(y,3,9);
 amp = max(y_sg);
