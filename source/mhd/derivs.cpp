@@ -169,16 +169,20 @@ Grid PlasmaDomain::characteristicBartonDerivative1D(const Grid &quantity, const 
   // Fill in outer edge surface quantites (as direct upwind quantity)
   if(index == 0){
     if(positive_forward){
-      for(int j=yl; j<=yu; j++) surf_quantity(surf_quantity.rows()-1,j) = quantity(quantity.rows()-1,j);
+      for(int j=yl; j<=yu; j++) surf_quantity(surf_quantity.rows()-1,j) = quantity(quantity.rows()-1,j)
+                                                                        + (quantity(quantity.rows()-1,j) - surf_quantity(surf_quantity.rows()-2,j));
     } else{
-      for(int j=yl; j<=yu; j++) surf_quantity(0,j) = quantity(0,j);
+      for(int j=yl; j<=yu; j++) surf_quantity(0,j) = quantity(0,j)
+                                                      - (surf_quantity(1,j) - quantity(0,j));
     }
   }else {
     assert(index == 1);
     if(positive_forward){
-      for(int i=xl; i<=xu; i++) surf_quantity(i,surf_quantity.cols()-1) = quantity(i,quantity.cols()-1);
+      for(int i=xl; i<=xu; i++) surf_quantity(i,surf_quantity.cols()-1) = quantity(i,quantity.cols()-1)
+                                                                          + (quantity(i,quantity.cols()-1) - surf_quantity(i,surf_quantity.cols()-2));
     } else{
-      for(int i=xl; i<=xu; i++) surf_quantity(i,0) = quantity(i,0);
+      for(int i=xl; i<=xu; i++) surf_quantity(i,0) = quantity(i,0)
+                                                    - (surf_quantity(i,1) - quantity(i,0));
     }
   }
   int xdim = quantity.rows();

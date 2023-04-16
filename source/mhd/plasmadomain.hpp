@@ -68,6 +68,8 @@ private: //*********************************************************************
   friend class AmbientHeating;
   friend class LocalizedHeating;
   friend class FieldHeating;
+  friend class AnomalousResistivity;
+  friend class MomentumInjection;
   friend class RadiativeLosses;
   friend class ThermalConduction;
   friend class CoulombExplosion;

@@ -15,12 +15,15 @@ void AmbientHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vecto
         std::string this_rhs = rhs[i];
         if(this_lhs == "heating_rate") heating_rate = std::stod(this_rhs);
         else if(this_lhs == "rad_mirror_mode") rad_mirror_mode = (this_rhs == "true");
+        else if(this_lhs == "rad_mirror_factor") rad_mirror_factor = std::stod(this_rhs);
+        else if(this_lhs == "cutoff_temp") cutoff_temp = std::stod(this_rhs);
+        else if(this_lhs == "cutoff_ramp") cutoff_ramp = std::stod(this_rhs);
         else std::cerr << lhs[i] << " config not recognized.\n";
     }
 }
 
 void AmbientHeating::setupModule(){
-    if(rad_mirror_mode) heating = m_pd.m_ghost_zone_mask*radiativeLosses();
+    if(rad_mirror_mode) heating = m_pd.m_ghost_zone_mask*rad_mirror_factor*radiativeLosses();
     else heating = m_pd.m_ghost_zone_mask*heating_rate;
 }
 
@@ -35,8 +38,6 @@ std::string AmbientHeating::commandLineMessage() const
 }
 
 Grid AmbientHeating::radiativeLosses(){
-    double cutoff_temp = 3.0e4;
-    double cutoff_ramp = 1.0e3;
     Grid result = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     #pragma omp parallel for collapse(2)
     for (int i = m_pd.m_xl; i <= m_pd.m_xu; i++){
