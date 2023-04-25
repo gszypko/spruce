@@ -2,10 +2,6 @@
 clc, clearvars -except data, close all, f = filesep; setpath;
 
 inp = {'folder';
-    'C:\Users\grant\OneDrive\Research\mhd\projects\iaw-density-dist\Killian2012-Fig4a\set_1';
-    'C:\Users\grant\OneDrive\Research\mhd\projects\iaw-density-dist\Killian2012-Fig4b\set_1';
-    'C:\Users\grant\OneDrive\Research\mhd\projects\iaw-density-dist\Killian2012-Fig4c\set_1';
-    'C:\Users\grant\OneDrive\Research\mhd\projects\iaw-density-dist\Killian2012-Fig4d\set_1';
       };
 s = spreadsheet2struct(inp,inp(1,:));
 
@@ -19,18 +15,16 @@ flags.sim.plot_window = [1 1];
 flags.sim.ghost_cells = 2;
 
 % simulation flags
-flags.sim.doGaussianFits2D = true;
+flags.sim.plot_grids = true;
+flags.sim.vars = {};
+flags.sim.doGaussianFits2D = false;
 flags.sim.test = false;
-flags.sim.plot_grids = false;
-flags.sim.vars = {'n', 'v_x', 'v_y','i_temp','e_temp','dt'};
-% flags.sim.vars = {'n','e_temp'};
 flags.sim.vlasov_analysis = false;
 flags.sim.cmpr_exp_sim = false;
-flags.sim.iaw_analysis = true;
+flags.sim.iaw_analysis = false;
 flags.sim.ion_holes = false;
 flags.sim.charge_neutrality = false;
 flags.sim.hole_orientation = 0;
-
 flags.sim.figvis = 'on';
 
 % experimental flags
