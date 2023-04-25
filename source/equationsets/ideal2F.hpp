@@ -66,7 +66,7 @@ class Ideal2F: public EquationSet {
         // private functions
         std::vector<Grid> computeTimeDerivativesDerived(const std::vector<Grid> &grids) const override;
         void recomputeDT(std::vector<Grid>& grids) const override;
-        Grid ionTimescale() const;
+        Grid ionTimescale(const std::vector<Grid>& grids) const;
         void catchNullFieldDirection(std::vector<Grid> &grids) const;
         void recomputeEvolvedVarsFromStateVars(std::vector<Grid> &grids) const override;
         void recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) const override;

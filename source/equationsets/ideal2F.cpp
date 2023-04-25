@@ -166,39 +166,43 @@ void Ideal2F::catchNullFieldDirection(std::vector<Grid> &grids) const
 
 void Ideal2F::recomputeDT(std::vector<Grid>& grids) const
 {
-    // diagonal grid size
+    // references to grid size
     const Grid& dx = m_pd.m_grids[PlasmaDomain::d_x];
     const Grid& dy = m_pd.m_grids[PlasmaDomain::d_y];
-    Grid dr = (dx.square() + dy.square()).sqrt();
     // smallest wavenumber supported by grid structure
-    Grid lambda = dr*2;
-    Grid k = 2.*PI/lambda;
-    // determine largest fluid velocity
-    Grid v_mag_i = (grids[i_v_x].square() + grids[i_v_y].square()).sqrt();
-    Grid v_mag_e = (grids[e_v_x].square() + grids[e_v_y].square()).sqrt();
-    Grid v = v_mag_e.max(v_mag_i);
+    Grid lambda_x = dx*2;
+    Grid k_x = 2.*PI/lambda_x;
+    Grid lambda_y = dy*2;
+    Grid k_y = 2.*PI/lambda_y;
     // compute group velocity of Langmuir wave
     Grid v_th = (K_B*grids[e_temp]/M_ELECTRON).sqrt();
     Grid w_pe = (4*PI*grids[e_n]*E*E/M_ELECTRON).sqrt();
-    Grid w_th = (3*k.square()*v_th.square()).sqrt();
-    Grid w_L = (w_pe.square()+w_th.square()).sqrt();
-    Grid v_L = w_L/k;
+    Grid w_th_x = (3*k_x.square()*v_th.square()).sqrt();
+    Grid w_th_y = (3*k_y.square()*v_th.square()).sqrt();
+    Grid w_L_x = (w_pe.square()+w_th_x.square()).sqrt();
+    Grid w_L_y = (w_pe.square()+w_th_y.square()).sqrt();
+    Grid v_L_x = w_L_x/k_x;
+    Grid v_L_y = w_L_y/k_y;
+    // determine largest fluid velocity
+    Grid v_mag_x = grids[e_v_x].abs() + v_L_x;
+    Grid v_mag_y = grids[e_v_y].abs() + v_L_y;
     // get timesteps
-    Grid dt_v = dr/(v + v_L);
+    Grid dt_v = 1./(v_mag_x/dx + v_mag_y/dy);
     Grid dt_EM = dx*dy/(dx+dy)/C;
     grids[dt] = dt_v;
     if (!m_use_sub_cycling && !m_remove_curl_terms) grids[dt] = grids[dt].min(dt_EM);
     // record ion timescale
-    grids[dt_i] = ionTimescale();
+    grids[dt_i] = ionTimescale(grids);
 }
 
 // returns timescale of bulk flow and acoustic waves for ions
-Grid Ideal2F::ionTimescale() const
+Grid Ideal2F::ionTimescale(const std::vector<Grid>& grids) const
 {
-    Grid c_s = (m_pd.m_adiabatic_index*m_grids[i_press]/m_grids[i_rho]).sqrt();
-    Grid vel_mag = (m_grids[i_v_x].square() + m_grids[i_v_y].square()).sqrt();
-    Grid diagonals = (m_pd.m_grids[PlasmaDomain::d_x].square() + m_pd.m_grids[PlasmaDomain::d_y].square()).sqrt();
-    return diagonals/(vel_mag + c_s);
+    Grid c_s = (m_pd.m_adiabatic_index*grids[i_press]/grids[i_rho]).sqrt();
+    Grid v_x_mag = grids[i_v_x].abs() + c_s;
+    Grid v_y_mag = grids[i_v_y].abs() + c_s;
+    Grid dt_ion = 1./(v_x_mag/m_pd.m_grids[PlasmaDomain::d_x] + v_y_mag/m_pd.m_grids[PlasmaDomain::d_y]);
+    return dt_ion;
 }
 
 std::vector<Grid> Ideal2F::subcycleMaxwell(const std::vector<Grid>& grids, const std::vector<Grid>& dj_tot, double step) const
