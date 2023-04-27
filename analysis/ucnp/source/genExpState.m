@@ -23,14 +23,14 @@ end
 %% Filter Hot Pixels
 imgs(length([os.delays])).t = [];
 for i = 1:length([os.delays])
-    sg_kx = 9;
-    sg_ky = 9;
+    sg_kx = 11;
+    sg_ky = 11;
     n_filt = sgfilt2D(os(i).imgs.density,sg_kx,sg_ky,1,1);
 
     % replace hot pixels
     for j = 1:size(n_filt,1)
         for k = 1:size(n_filt,2)
-            if os(i).imgs.density(j,k) < 0 || os(i).imgs.density(j,k) > 2*n_filt(j,k) && ~isnan(n_filt(j,k))
+            if os(i).imgs.density(j,k) < 0 || os(i).imgs.density(j,k) > 2*n_filt(j,k) || isnan(n_filt(j,k))
                 os(i).imgs.density(j,k) = n_filt(j,k);
             end
         end
