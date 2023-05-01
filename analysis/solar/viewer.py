@@ -36,7 +36,12 @@ fullnames = {
   'div_be': "Background Field Divergence",
   'div_bi': "Induced Field Divergence",
   'b_mag': "Field Magnitude",
-  'field_heating': "Field-Based Heating Rate"
+  'field_heating': "Field-Based Heating Rate",
+  'roc': "Radius of Curvature",
+  'xia_heat': "Heating Heuristic from Xia et al. 2014",
+  'xia_comp': "Xia et al. 2014 Heating",
+  'current_density': "Current Density Magnitude",
+  'current_density_z': "Z Current Density"
 }
 fullunits = {
   'rho': r'g cm$^{-3}$',
@@ -58,11 +63,16 @@ fullunits = {
   'dt_thermal': r's',
   'dt_rad': r's',
   'n': r'cm$^{-3}$',
-  'beta': r'',
+  'beta': r'Log',
   'div_b': r'G cm$^{-1}$',
   'div_bi': r'G cm$^{-1}$',
   'b_mag': r'G',
-  'field_heating': r'erg cm$^{-3}$ s$^{-1}$'
+  'field_heating': r'erg cm$^{-3}$ s$^{-1}$',
+  'roc': r'Mm',
+  'xia_heat': r'erg cm^-3 s^-1',
+  'xia_comp': r'Fractional Excess wrt Rad. Loss',
+  'current_density': r'G s^-1',
+  'current_density_z': r'G s^-1'
 }
 for filter in aia.filter_names():
   fullnames[filter] = filter.split("A")[0] + " " + r'$\mathrm{\AA}$'
@@ -145,12 +155,20 @@ output_var = args.contourvar
 
 # Define any contour quantities that require multiple file values
 file_var_names = np.array([output_var])
-if output_var == "beta":
-  # file_var_names = np.array(["press","bi_x","bi_y","bi_z"])
-  file_var_names = np.array(["press","bi_x","bi_y"])
-if output_var == "b_mag":
-  # file_var_names = np.array(["bi_x","bi_y","bi_z"])
+if output_var in ["current_density","current_density_z"]:
+  file_var_names = np.array(["bi_x","bi_y","bi_z"])
+if output_var == "xia_comp":
+  file_var_names = np.array(["bi_x","bi_y","bi_z","n","rad"])
+if output_var == "xia_heat":
+  file_var_names = np.array(["bi_x","bi_y","bi_z","n"])
+if output_var == "roc":
   file_var_names = np.array(["bi_x","bi_y"])
+if output_var == "beta":
+  file_var_names = np.array(["press","bi_x","bi_y","bi_z"])
+  # file_var_names = np.array(["press","bi_x","bi_y"])
+if output_var == "b_mag":
+  file_var_names = np.array(["bi_x","bi_y","bi_z"])
+  # file_var_names = np.array(["bi_x","bi_y"])
 if output_var in ["div_b","div_bi"]:
   file_var_names = np.array(["bi_x","bi_y"])
 if args.sandbox:
@@ -511,14 +529,25 @@ if vec_var != None:
 
 # Set contour bar scaling (linear, log, etc)
 if args.diff_file is not None or output_var in ["beta","div_bi","div_be"]:
+  # im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+  #   interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-100, base=10))
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-    interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-100, base=10))
-elif output_var in ["rad","dt","dt_thermal","dt_rad","field_heating","b_mag"]: #variables that can go to zero
+    interpolation='nearest', norm=matplotlib.colors.CenteredNorm())
+  im.set_cmap('seismic')
+elif output_var in ["rad","dt","dt_thermal","dt_rad","field_heating","b_mag","xia_heat"]: #variables that can go to zero
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-8, base=10))
 elif aia.is_filter(output_var):
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-    interpolation='nearest')
+    interpolation='nearest', norm=matplotlib.colors.PowerNorm(gamma=0.2))
+elif output_var in ["xia_comp"]: # output_var in ["v_x","v_y","v_z","bi_x","bi_y"]: #variables with negative and positive values
+  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+    interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-1, base=10))
+  im.set_cmap('seismic')
+  im.set_clim(vmin=-max(abs(min_v),abs(max_v)),vmax=max(abs(min_v),abs(max_v)))
+elif output_var in ["current_density"]: # output_var in ["v_x","v_y","v_z","bi_x","bi_y"]: #variables with negative and positive values
+  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
+    interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-1, base=10))
 else: # output_var in ["v_x","v_y","v_z","bi_x","bi_y"]: #variables with negative and positive values
   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
     interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-2, base=10))
@@ -526,60 +555,10 @@ else: # output_var in ["v_x","v_y","v_z","bi_x","bi_y"]: #variables with negativ
 #   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
 #     interpolation='nearest', norm=matplotlib.colors.LogNorm())
 
-im.set_clim(vmin=min_v,vmax=max_v)
+if output_var not in ["xia_comp"]:
+  im.set_clim(vmin=min_v,vmax=max_v)
 
-# Construct custom colorbar
-# if args.diff_file is not None:
-#   colors = [(0.0,(0.1,0.1,1.0)),(0.5,(1.0,1.0,1.0)),(1.0,(1.0,0.1,0.1))]
-#   div_cmap = LinearSegmentedColormap.from_list('light_rwb',colors)
-#   im.set_cmap(div_cmap)
-if output_var == "beta" and args.diff_file is None:
-  logrange = np.log10(max_v) - np.log10(min_v)
-  one_pos = (np.log10(1.0) - np.log10(min_v))/logrange
-  small_range = min(abs(one_pos),abs(1.0-one_pos))
-  large_range = max(abs(one_pos),abs(1.0-one_pos))
-  if np.log10(max_v)*np.log10(min_v) < 0.0:
-    one_pos_color = (1.0,1.0,1.0)
-    zero_color = (0.0,0.1,0.4)
-    one_color = (0.4,0.1,0.0)
-    half_color_low = (0.0,0.2,0.9)
-    half_color_high = (0.9,0.2,0.0)
-    xp = [0.0,0.5*large_range]
-    if one_pos < 0.5:
-      if one_pos < 1.0/3.0:
-        s = one_pos
-        fp = [[1.0,half_color_low[0]],[1.0,half_color_low[1]],[1.0,half_color_low[2]]]
-        colors = [(0.0,[np.interp(s,xp,fp[0]),np.interp(s,xp,fp[1]),np.interp(s,xp,fp[2])]),\
-                  (one_pos,one_pos_color),(one_pos+0.5*large_range,half_color_high),(1.0,one_color)]
-      else:
-        s = one_pos-0.5*large_range
-        fp = [[half_color_low[0],zero_color[0]],[half_color_low[1],zero_color[1]],[half_color_low[2],zero_color[2]]]
-        colors = [(0.0,[np.interp(s,xp,fp[0]),np.interp(s,xp,fp[1]),np.interp(s,xp,fp[2])]),\
-                  (one_pos-0.5*large_range,half_color_low),(one_pos,one_pos_color),(one_pos+0.5*large_range,half_color_high),(1.0,one_color)]
-    if one_pos > 0.5:
-      if one_pos > 2.0/3.0:
-        s = 1.0-one_pos
-        fp = [[1.0,half_color_high[0]],[1.0,half_color_high[1]],[1.0,half_color_high[2]]]
-        colors = [(0.0,zero_color),(one_pos-0.5*large_range,half_color_low),(one_pos,one_pos_color),\
-                  (1.0,[np.interp(s,xp,fp[0]),np.interp(s,xp,fp[1]),np.interp(s,xp,fp[2])])]
-      else:
-        s = 1.0-one_pos-0.5*large_range
-        fp = [[half_color_high[0],one_color[0]],[half_color_high[1],one_color[1]],[half_color_high[2],one_color[2]]]
-        colors = [(0.0,zero_color),(one_pos-0.5*large_range,half_color_low),(one_pos,one_pos_color),(one_pos+0.5*large_range,half_color_high),\
-                  (1.0,[np.interp(s,xp,fp[0]),np.interp(s,xp,fp[1]),np.interp(s,xp,fp[2])])]
-    else:
-      colors = [(0.0,zero_color),(one_pos-0.5*small_range,half_color_low),(one_pos,one_pos_color),(one_pos+0.5*small_range,half_color_high),(1.0,one_color)]
-  elif np.log10(max_v) < 0.0:
-    middle = 0.5*one_pos
-    top_color = [np.interp(1.0,[middle,one_pos],[0.0,1.0]), np.interp(1.0,[middle,one_pos],[0.2,1.0]), np.interp(1.0,[middle,one_pos],[0.9,1.0])]
-    colors = [(0.0,(0.0,0.1,0.4)),(min(middle,1.0),(0.0,0.2,0.9)),(1.0,top_color)]
-  elif np.log10(max_v) > 0.0:
-    middle = 1.0 - 0.5*(1.0-one_pos)
-    bott_color = [np.interp(0.0,[one_pos,middle],[1.0,0.9]), np.interp(0.0,[one_pos,middle],[1.0,0.2]), np.interp(0.0,[one_pos,middle],[1.0,0.0])]
-    colors = [(0.0,bott_color),(max(middle,0.0),(0.9,0.2,0.0)),(1.0,(0.4,0.1,0.0))]
-  beta_cmap = LinearSegmentedColormap.from_list('beta_diverge',colors)
-  im.set_cmap(beta_cmap)
-elif aia.is_filter(output_var):
+if aia.is_filter(output_var):
   im.set_cmap(aia.colormap(output_var))
 
 im.set_data(x,y,np.transpose(var[frame]))
@@ -963,7 +942,7 @@ else:
 if args.realtime or args.streampoint_record or args.interactive:
   plt.show()
 else:
-  FFwriter = animation.FFMpegWriter(bitrate=2000*2*4)
+  FFwriter = animation.FFMpegWriter(bitrate=2000*2*4*10,fps=30)
   filename_suffix = "_"+output_var
   if vec_var != None: filename_suffix = filename_suffix + "_" + vec_var
   ani.save(args.filename.split('/')[-2]+filename_suffix+'.mp4', writer = FFwriter, dpi=100*2)
