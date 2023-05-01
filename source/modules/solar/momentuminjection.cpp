@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iostream>
 #include <cmath>
+
 MomentumInjection::MomentumInjection(PlasmaDomain &pd) : Module(pd) {
     assert(dynamic_cast<IdealMHD*>(m_pd.m_eqs.get()) && \
         "Module designed for IdealMHD EquationSet (ensure that equation_set is set before modules in the config)");
@@ -32,28 +33,36 @@ void MomentumInjection::parseModuleConfigs(std::vector<std::string> lhs, std::ve
 void MomentumInjection::setupModule(){
     assert(!(dir[0] == 0.0 && dir[1] == 0.0) && "Momentum Injection module must be given a nonzero acceleration direction");
     //normalize direction vector
+    // std::cout << dir[0] << ", " << dir[1] << std::endl;
     double mag = std::sqrt(dir[0]*dir[0] + dir[1]*dir[1]);
+    // std::cout << mag << std::endl;
     dir[0] = dir[0] / mag;
     dir[1] = dir[1] / mag;
+    // std::cout << dir[0] << ", " << dir[1] << std::endl;
     //compute acceleration template
     for(int i : {0,1}){
         double curr_max_accel = dir[i]*max_accel;
+        // std::cout << "curr_max_accel " << i << " " << curr_max_accel << std::endl;
         accel_template[i] = SolarUtils::GaussianGrid(m_pd.m_xdim,m_pd.m_ydim,-1.0e-2*curr_max_accel,
-                                                    curr_max_accel,stddev_x,stddev_y,center_x,center_y).max(0.0);
+                                                    curr_max_accel,stddev_x,stddev_y,center_x,center_y);
         if(m_pd.x_bound_1 == PlasmaDomain::BoundaryCondition::Periodic){
             Grid left_shifted = SolarUtils::GaussianGrid(m_pd.m_xdim,m_pd.m_ydim,-1.0e-2*curr_max_accel,
-                                                    curr_max_accel,stddev_x,stddev_y,center_x+(double)(m_pd.m_xdim),center_y).max(0.0);
+                                                    curr_max_accel,stddev_x,stddev_y,center_x+(double)(m_pd.m_xdim),center_y);
             Grid right_shifted = SolarUtils::GaussianGrid(m_pd.m_xdim,m_pd.m_ydim,-1.0e-2*curr_max_accel,
-                                                    curr_max_accel,stddev_x,stddev_y,center_x-(double)(m_pd.m_xdim),center_y).max(0.0);
-            accel_template[i] = accel_template[i].max(left_shifted).max(right_shifted);
+                                                    curr_max_accel,stddev_x,stddev_y,center_x-(double)(m_pd.m_xdim),center_y);
+            if(curr_max_accel > 0.0) accel_template[i] = accel_template[i].min(left_shifted).min(right_shifted);
+            else accel_template[i] = accel_template[i].min(left_shifted).min(right_shifted);
         }
         if(m_pd.y_bound_1 == PlasmaDomain::BoundaryCondition::Periodic){
             Grid down_shifted = SolarUtils::GaussianGrid(m_pd.m_xdim,m_pd.m_ydim,-1.0e-2*curr_max_accel,
-                                                    curr_max_accel,stddev_x,stddev_y,center_x,center_y+(double)(m_pd.m_ydim)).max(0.0);
+                                                    curr_max_accel,stddev_x,stddev_y,center_x,center_y+(double)(m_pd.m_ydim));
             Grid up_shifted = SolarUtils::GaussianGrid(m_pd.m_xdim,m_pd.m_ydim,-1.0e-2*curr_max_accel,
-                                                    curr_max_accel,stddev_x,stddev_y,center_x,center_y-(double)(m_pd.m_ydim)).max(0.0);
-            accel_template[i] = accel_template[i].max(down_shifted).max(up_shifted);
+                                                    curr_max_accel,stddev_x,stddev_y,center_x,center_y-(double)(m_pd.m_ydim));
+            if(curr_max_accel > 0.0) accel_template[i] = accel_template[i].min(down_shifted).min(up_shifted);
+            else accel_template[i] = accel_template[i].min(down_shifted).min(up_shifted);
         }
+        if(curr_max_accel > 0.0) accel_template[i] = accel_template[i].max(0.0);
+        else accel_template[i] = accel_template[i].min(0.0);
     }
 }
 
