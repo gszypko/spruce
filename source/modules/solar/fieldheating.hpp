@@ -16,10 +16,13 @@ class FieldHeating : public Module {
         void postIterateModule(double dt) override;
         std::string commandLineMessage() const override;
         void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) override;
+        void setupModule() override;
     private:
-        double rate;
+        // double rate;
+        double coeff = 0.0, current_pow = 0.0, b_pow = 0.0, n_pow = 0.0, roc_pow = 0.0;
+        // std::string mode;
         bool output_to_file;
-        bool current_mode; //when true, heating is calculated relative to current density J instead of magnetic pressure
+        // bool current_mode; //when true, heating is calculated relative to current density J instead of magnetic pressure
         Grid heating;
         void computeHeating();
 };

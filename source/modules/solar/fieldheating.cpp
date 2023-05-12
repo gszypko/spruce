@@ -4,6 +4,7 @@
 #include "idealmhd.hpp"
 #include "constants.hpp"
 #include <iostream>
+#include <cassert>
 
 FieldHeating::FieldHeating(PlasmaDomain &pd): Module(pd) {
     assert(dynamic_cast<IdealMHD*>(m_pd.m_eqs.get()) && \
@@ -15,17 +16,39 @@ void FieldHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vector<
     for(int i=0; i<lhs.size(); i++){
         std::string this_lhs = lhs[i];
         std::string this_rhs = rhs[i];
-        if(this_lhs == "rate") rate = std::stod(this_rhs);
-        else if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
-        else if(this_lhs == "current_mode") current_mode = (this_rhs == "true");
+        // if(this_lhs == "rate") rate = std::stod(this_rhs);
+        if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
+        // else if(this_lhs == "current_mode") current_mode = (this_rhs == "true");
+        // else if(this_lhs == "mode") mode = this_rhs;
+        else if(this_lhs == "coeff") coeff = std::stod(this_rhs);
+        else if(this_lhs == "current_pow") current_pow = std::stod(this_rhs);
+        else if(this_lhs == "b_pow") b_pow = std::stod(this_rhs);
+        else if(this_lhs == "n_pow") n_pow = std::stod(this_rhs);
+        else if(this_lhs == "roc_pow") roc_pow = std::stod(this_rhs);
         else std::cerr << this_lhs << " config not recognized.\n";
     }
 }
 
+void FieldHeating::setupModule(){
+    heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+}
+
 void FieldHeating::computeHeating(){
-    if(current_mode) heating = rate*C/(4.0*PI)*(m_pd.curl2D(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_eqs->grid(IdealMHD::bi_x),
-                                                            m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_eqs->grid(IdealMHD::bi_y))).abs();
-    else heating = rate*(m_pd.m_eqs->grid(IdealMHD::b_mag)).square()/(8.0*PI);
+    if(coeff == 0.0) heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    else {
+        heating = Grid(m_pd.m_xdim,m_pd.m_ydim,coeff);
+        if(current_pow != 0.0) heating *= (C/(4.0*PI)*(m_pd.curl2D(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_eqs->grid(IdealMHD::bi_x),
+                                                                m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_eqs->grid(IdealMHD::bi_y))).abs()).pow(current_pow);
+        if(b_pow != 0.0) heating *= (m_pd.m_eqs->grid(IdealMHD::b_mag)).pow(b_pow);
+        if(n_pow != 0.0) heating *= (m_pd.m_eqs->grid(IdealMHD::n)).pow(n_pow);
+        if(roc_pow != 0.0){
+            Grid &b_hat_x = m_pd.m_eqs->grid(IdealMHD::b_hat_x), &b_hat_y = m_pd.m_eqs->grid(IdealMHD::b_hat_y);
+            Grid curv_x = b_hat_x*m_pd.derivative1D(b_hat_x,0) + b_hat_y*m_pd.derivative1D(b_hat_x,1);
+            Grid curv_y = b_hat_x*m_pd.derivative1D(b_hat_y,0) + b_hat_y*m_pd.derivative1D(b_hat_y,1);
+            Grid roc = 1.0/((curv_x.square() + curv_y.square()).sqrt().max(1.0e-16));
+            heating /= (roc).pow(roc_pow);
+        }
+    }
 }
 
 void FieldHeating::postIterateModule(double dt){
@@ -36,7 +59,7 @@ void FieldHeating::postIterateModule(double dt){
 
 std::string FieldHeating::commandLineMessage() const
 {
-    return (current_mode ? "Field Heating On (Current Mode)" : "Field Heating On");
+    return (coeff == 0.0 ? "Field Heating Zero" : "Field Heating On");
 }
 
 void FieldHeating::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids)
