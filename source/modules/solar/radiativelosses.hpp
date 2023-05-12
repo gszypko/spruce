@@ -16,15 +16,18 @@ class RadiativeLosses : public Module {
         void preIterateModule(double dt) override;
         void iterateModule(double dt) override;
         std::string commandLineMessage() const override;
+        void setupModule() override;
         void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) override;
     private:
         double cutoff_ramp;
         double cutoff_temp;
         double epsilon;
         bool output_to_file;
-        Grid next_losses, avg_losses;
+        Grid avg_losses;
         int curr_num_subcycles;
-        void computeLosses();
+        std::string time_integrator;
+        Grid computeLosses(const Grid &temp, const Grid &n) const;
+        Grid computeLosses() const;
         int numberSubcycles(double dt);
 };
 

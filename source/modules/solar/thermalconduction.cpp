@@ -57,6 +57,7 @@ void ThermalConduction::iterateModule(double dt){
             half_step = thermal_energy + m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*thermalEnergyDerivative(temp,b_hat);
             half_step = half_step.max(m_pd.thermal_energy_min);
             half_step_temp = ((m_pd.m_adiabatic_index - 1.0)*half_step/(2*K_B*m_n)).max(m_pd.temp_min);
+            
             thermal_energy = thermal_energy + m_pd.m_ghost_zone_mask*(dt_subcycle)*thermalEnergyDerivative(half_step_temp,b_hat);
             thermal_energy = thermal_energy.max(m_pd.thermal_energy_min);
             temp = ((m_pd.m_adiabatic_index - 1.0)*thermal_energy/(2*K_B*m_n)).max(m_pd.temp_min);

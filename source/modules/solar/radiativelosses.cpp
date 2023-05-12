@@ -2,6 +2,7 @@
 #include "plasmadomain.hpp"
 #include "radiativelosses.hpp"
 #include "idealmhd.hpp"
+#include "constants.hpp"
 #include <cmath>
 #include <iostream>
 #include <memory>
@@ -21,37 +22,91 @@ void RadiativeLosses::parseModuleConfigs(std::vector<std::string> lhs, std::vect
         else if(this_lhs == "cutoff_temp") cutoff_temp = std::stod(this_rhs);
         else if(this_lhs == "epsilon") epsilon = std::stod(this_rhs);
         else if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
+        else if(this_lhs == "time_integrator") time_integrator = this_rhs;
         else std::cerr << this_lhs << " config not recognized.\n";
     }
 }
 
-void RadiativeLosses::preIterateModule(double dt){
-    next_losses = Grid(m_pd.m_xdim,m_pd.m_ydim,0.0);
+void RadiativeLosses::setupModule(){
+    if(time_integrator == "") time_integrator == "euler";
+    assert((time_integrator == "euler" || time_integrator == "rk2" || time_integrator == "rk4")
+            && "Invalid time integrator given for Thermal Conduction module");
     if(output_to_file) avg_losses = Grid(m_pd.m_xdim,m_pd.m_ydim,0.0);
+}
+
+void RadiativeLosses::preIterateModule(double dt){
     curr_num_subcycles = numberSubcycles(dt);
 }
 
 void RadiativeLosses::iterateModule(double dt){
-    for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
-        computeLosses();
-        if(output_to_file) avg_losses += next_losses/curr_num_subcycles;
-        m_pd.m_eqs->grid(IdealMHD::thermal_energy) = m_pd.m_eqs->grid(IdealMHD::thermal_energy) - m_pd.m_ghost_zone_mask*(dt/(double)curr_num_subcycles)*next_losses;
-        m_pd.m_eqs->propagateChanges();
+    Grid thermal_energy = m_pd.m_eqs->grid(IdealMHD::thermal_energy);
+    Grid temp = m_pd.m_eqs->grid(IdealMHD::temp);
+    Grid n = m_pd.m_eqs->grid(IdealMHD::n);
+    Grid old_thermal_energy;
+    if(output_to_file) old_thermal_energy = thermal_energy;
+    double dt_subcycle = (dt/(double)curr_num_subcycles);
+
+    if(time_integrator == "euler") for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
+        thermal_energy = thermal_energy - m_pd.m_ghost_zone_mask*dt_subcycle*computeLosses(temp,n);
+        thermal_energy = thermal_energy.max(m_pd.thermal_energy_min);
+        temp = ((m_pd.m_adiabatic_index - 1.0)*thermal_energy/(2*K_B*n)).max(m_pd.temp_min);
     }
+    else if(time_integrator == "rk2") {
+        Grid half_step, half_step_temp;
+        for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
+            half_step = thermal_energy + m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*computeLosses(temp,n);
+            half_step = half_step.max(m_pd.thermal_energy_min);
+            half_step_temp = ((m_pd.m_adiabatic_index - 1.0)*half_step/(2*K_B*n)).max(m_pd.temp_min);
+            
+            thermal_energy = thermal_energy + m_pd.m_ghost_zone_mask*(dt_subcycle)*computeLosses(half_step_temp,n);
+            thermal_energy = thermal_energy.max(m_pd.thermal_energy_min);
+            temp = ((m_pd.m_adiabatic_index - 1.0)*thermal_energy/(2*K_B*n)).max(m_pd.temp_min);
+        }
+    }
+    else if(time_integrator == "rk4") {
+        Grid intermediate, intermediate_temp, k1, k2, k3, k4;
+        for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
+            k1 = computeLosses(temp,n);
+
+            intermediate = (thermal_energy + m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*k1).max(m_pd.thermal_energy_min);
+            intermediate_temp = ((m_pd.m_adiabatic_index - 1.0)*intermediate/(2*K_B*n)).max(m_pd.temp_min);
+            k2 = computeLosses(intermediate_temp,n);
+
+            intermediate = (thermal_energy + m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*k2).max(m_pd.thermal_energy_min);
+            intermediate_temp = ((m_pd.m_adiabatic_index - 1.0)*intermediate/(2*K_B*n)).max(m_pd.temp_min);
+            k3 = computeLosses(intermediate_temp,n);
+
+            intermediate = (thermal_energy + m_pd.m_ghost_zone_mask*(dt_subcycle)*k3).max(m_pd.thermal_energy_min);
+            intermediate_temp = ((m_pd.m_adiabatic_index - 1.0)*intermediate/(2*K_B*n)).max(m_pd.temp_min);
+            k4 = computeLosses(intermediate_temp,n);
+
+            thermal_energy = thermal_energy + m_pd.m_ghost_zone_mask*(dt_subcycle)*(k1 + 2.0*k2 + 2.0*k3 + k4)/6.0;
+            thermal_energy = thermal_energy.max(m_pd.thermal_energy_min);
+            temp = ((m_pd.m_adiabatic_index - 1.0)*thermal_energy/(2*K_B*n)).max(m_pd.temp_min);
+        }
+    }
+
+
+    if(output_to_file) avg_losses = (thermal_energy - old_thermal_energy)/dt;
+    m_pd.m_eqs->grid(IdealMHD::thermal_energy) = thermal_energy;
+    m_pd.m_eqs->propagateChanges();
+}
+
+Grid RadiativeLosses::computeLosses() const {
+    return computeLosses(m_pd.m_eqs->grid(IdealMHD::temp), m_pd.m_eqs->grid(IdealMHD::n));
 }
 
 //Compute the volumetric rate of energy loss to radiation
 //using piecewise approximation for optically thin corona
 //Result is stored in next_losses and is positive, such that change in energy is -1*next_losses
-void RadiativeLosses::computeLosses(){
-    assert(next_losses.rows() == m_pd.m_xdim && next_losses.cols() == m_pd.m_ydim && "This function assumes that the next_losses Grid has already been allocated");
+Grid RadiativeLosses::computeLosses(const Grid &temp, const Grid &n) const {
+    Grid result = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     #pragma omp parallel for collapse(2)
     for (int i = m_pd.m_xl; i <= m_pd.m_xu; i++){
         for(int j = m_pd.m_yl; j <= m_pd.m_yu; j++){
-            if(m_pd.m_eqs->grid(IdealMHD::temp)(i,j) < cutoff_temp) next_losses(i,j) = 0.0;
+            if(temp(i,j) < cutoff_temp) result(i,j) = 0.0;
             else {
-                double logtemp = std::log10(m_pd.m_eqs->grid(IdealMHD::temp)(i,j));
-                double n = m_pd.m_eqs->grid(IdealMHD::rho)(i,j)/m_pd.m_ion_mass;
+                double logtemp = std::log10(temp(i,j));
                 double chi, alpha;
                 if(logtemp <= 4.97){
                     chi = 1.09e-31; //also adjust chi to ensure continuity
@@ -77,21 +132,22 @@ void RadiativeLosses::computeLosses(){
                     chi = 1.96e-27;
                     alpha = 0.5;
                 }
-                next_losses(i,j) = n*n*chi*std::pow(m_pd.m_eqs->grid(IdealMHD::temp)(i,j),alpha);
-                if(m_pd.m_eqs->grid(IdealMHD::temp)(i,j) < cutoff_temp + cutoff_ramp){
-                    double ramp = (m_pd.m_eqs->grid(IdealMHD::temp)(i,j) - cutoff_temp)/cutoff_ramp;
-                    next_losses(i,j) *= ramp;
+                result(i,j) = std::pow(n(i,j),2.0)*chi*std::pow(temp(i,j),alpha);
+                if(temp(i,j) < cutoff_temp + cutoff_ramp){
+                    double ramp = (temp(i,j) - cutoff_temp)/cutoff_ramp;
+                    result(i,j) *= ramp;
                 }
             }
         }
     }
+    return result;
 }
 
 //Computes number of subcycles necessary for the current iteration of the module
 int RadiativeLosses::numberSubcycles(double dt){
-    computeLosses();
-    if(next_losses.max() == 0.0) return 0;
-    double subcycle_dt = epsilon*(m_pd.m_eqs->grid(IdealMHD::thermal_energy)/next_losses).abs().min();
+    Grid losses = computeLosses();
+    if(losses.max() == 0.0) return 0;
+    double subcycle_dt = epsilon*(m_pd.m_eqs->grid(IdealMHD::thermal_energy)/losses).abs().min();
     return (int)(dt/subcycle_dt) + 1;
 }
 
