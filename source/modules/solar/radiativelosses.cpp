@@ -54,11 +54,11 @@ void RadiativeLosses::iterateModule(double dt){
     else if(time_integrator == "rk2") {
         Grid half_step, half_step_temp;
         for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
-            half_step = thermal_energy + m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*computeLosses(temp,n);
+            half_step = thermal_energy - m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*computeLosses(temp,n);
             half_step = half_step.max(m_pd.thermal_energy_min);
             half_step_temp = ((m_pd.m_adiabatic_index - 1.0)*half_step/(2*K_B*n)).max(m_pd.temp_min);
             
-            thermal_energy = thermal_energy + m_pd.m_ghost_zone_mask*(dt_subcycle)*computeLosses(half_step_temp,n);
+            thermal_energy = thermal_energy - m_pd.m_ghost_zone_mask*(dt_subcycle)*computeLosses(half_step_temp,n);
             thermal_energy = thermal_energy.max(m_pd.thermal_energy_min);
             temp = ((m_pd.m_adiabatic_index - 1.0)*thermal_energy/(2*K_B*n)).max(m_pd.temp_min);
         }
@@ -66,26 +66,25 @@ void RadiativeLosses::iterateModule(double dt){
     else if(time_integrator == "rk4") {
         Grid intermediate, intermediate_temp, k1, k2, k3, k4;
         for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
-            k1 = computeLosses(temp,n);
+            k1 = -computeLosses(temp,n);
 
             intermediate = (thermal_energy + m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*k1).max(m_pd.thermal_energy_min);
             intermediate_temp = ((m_pd.m_adiabatic_index - 1.0)*intermediate/(2*K_B*n)).max(m_pd.temp_min);
-            k2 = computeLosses(intermediate_temp,n);
+            k2 = -computeLosses(intermediate_temp,n);
 
             intermediate = (thermal_energy + m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*k2).max(m_pd.thermal_energy_min);
             intermediate_temp = ((m_pd.m_adiabatic_index - 1.0)*intermediate/(2*K_B*n)).max(m_pd.temp_min);
-            k3 = computeLosses(intermediate_temp,n);
+            k3 = -computeLosses(intermediate_temp,n);
 
             intermediate = (thermal_energy + m_pd.m_ghost_zone_mask*(dt_subcycle)*k3).max(m_pd.thermal_energy_min);
             intermediate_temp = ((m_pd.m_adiabatic_index - 1.0)*intermediate/(2*K_B*n)).max(m_pd.temp_min);
-            k4 = computeLosses(intermediate_temp,n);
+            k4 = -computeLosses(intermediate_temp,n);
 
             thermal_energy = thermal_energy + m_pd.m_ghost_zone_mask*(dt_subcycle)*(k1 + 2.0*k2 + 2.0*k3 + k4)/6.0;
             thermal_energy = thermal_energy.max(m_pd.thermal_energy_min);
             temp = ((m_pd.m_adiabatic_index - 1.0)*thermal_energy/(2*K_B*n)).max(m_pd.temp_min);
         }
     }
-
 
     if(output_to_file) avg_losses = (thermal_energy - old_thermal_energy)/dt;
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) = thermal_energy;
