@@ -16,10 +16,7 @@ void FieldHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vector<
     for(int i=0; i<lhs.size(); i++){
         std::string this_lhs = lhs[i];
         std::string this_rhs = rhs[i];
-        // if(this_lhs == "rate") rate = std::stod(this_rhs);
         if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
-        // else if(this_lhs == "current_mode") current_mode = (this_rhs == "true");
-        // else if(this_lhs == "mode") mode = this_rhs;
         else if(this_lhs == "coeff") coeff = std::stod(this_rhs);
         else if(this_lhs == "current_pow") current_pow = std::stod(this_rhs);
         else if(this_lhs == "b_pow") b_pow = std::stod(this_rhs);
@@ -51,11 +48,16 @@ void FieldHeating::computeHeating(){
     }
 }
 
-void FieldHeating::postIterateModule(double dt){
+void FieldHeating::preIterateModule(double dt){
     computeHeating();
+}
+
+void FieldHeating::iterateModule(double dt){
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) += m_pd.m_ghost_zone_mask*(dt*heating);
     m_pd.m_eqs->propagateChanges();
+    heating = m_pd.m_ghost_zone_mask*(dt*heating);
 }
+
 
 std::string FieldHeating::commandLineMessage() const
 {
