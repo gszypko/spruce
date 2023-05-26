@@ -26,6 +26,7 @@ class RadiativeLosses : public Module {
         Grid avg_losses;
         int curr_num_subcycles;
         std::string time_integrator;
+        bool inactive_mode = false; //when true, module will compute the change in thermal energy (allowing for output), but WON'T apply it to the simulation
         Grid computeLosses(const Grid &temp, const Grid &n) const;
         Grid computeLosses() const;
         int numberSubcycles(double dt);

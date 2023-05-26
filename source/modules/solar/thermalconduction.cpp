@@ -22,6 +22,7 @@ void ThermalConduction::parseModuleConfigs(std::vector<std::string> lhs, std::ve
         else if(this_lhs == "dt_subcycle_min")  dt_subcycle_min = std::stod(this_rhs);
         else if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
         else if(this_lhs == "time_integrator") time_integrator = this_rhs;
+        else if(this_lhs == "inactive_mode") inactive_mode = (this_rhs == "true");
         else std::cerr << this_lhs << " config not recognized for Thermal Conduction Module.\n";
     }
 }
@@ -86,6 +87,7 @@ void ThermalConduction::iterateModule(double dt){
         }
     }
     if(output_to_file) avg_change = (thermal_energy - old_thermal_energy)/dt;
+    if(inactive_mode) return;
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) = thermal_energy;
     m_pd.m_eqs->propagateChanges();
 }
@@ -218,5 +220,5 @@ void ThermalConduction::fileOutput(std::vector<std::string>& var_names, std::vec
 
 std::string ThermalConduction::commandLineMessage() const
 {
-    return "Thermal Subcycles: " + std::to_string(curr_num_subcycles);
+    return "Thermal Subcycles: " + std::to_string(curr_num_subcycles) + (inactive_mode ? " (Not Applied)" : "");
 }

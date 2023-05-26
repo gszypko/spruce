@@ -23,6 +23,7 @@ void RadiativeLosses::parseModuleConfigs(std::vector<std::string> lhs, std::vect
         else if(this_lhs == "epsilon") epsilon = std::stod(this_rhs);
         else if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
         else if(this_lhs == "time_integrator") time_integrator = this_rhs;
+        else if(this_lhs == "inactive_mode") inactive_mode = (this_rhs == "true");
         else std::cerr << this_lhs << " config not recognized.\n";
     }
 }
@@ -87,6 +88,7 @@ void RadiativeLosses::iterateModule(double dt){
     }
 
     if(output_to_file) avg_losses = (thermal_energy - old_thermal_energy)/dt;
+    if(inactive_mode) return;
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) = thermal_energy;
     m_pd.m_eqs->propagateChanges();
 }
@@ -153,7 +155,7 @@ int RadiativeLosses::numberSubcycles(double dt){
 
 std::string RadiativeLosses::commandLineMessage() const
 {
-    return "Radiative Subcycles: " + std::to_string(curr_num_subcycles);
+    return "Radiative Subcycles: " + std::to_string(curr_num_subcycles) + (inactive_mode ? " (Not Applied)" : "");
 }
 
 void RadiativeLosses::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids)
