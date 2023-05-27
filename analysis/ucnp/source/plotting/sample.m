@@ -1,4 +1,3 @@
-% opening a subplot
 num = 1;
 [fig,ax,an] = open_subplot(num);
 iter = 0;

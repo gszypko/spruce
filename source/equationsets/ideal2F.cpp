@@ -147,7 +147,9 @@ void Ideal2F::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) cons
     grids[divE] = m_pd.divergence2D({grids[E_x],grids[E_y]});
     grids[divB] = m_pd.divergence2D({grids[b_x],grids[b_y]});
     grids[curlE_z] = -(m_pd.derivative1D(grids[E_x],1) - m_pd.derivative1D(grids[E_y],0));
-    grids[E_1F_x] = (M_ELECTRON*m_pd.derivative1D(grids[i_press], 0) - m_pd.m_ion_mass*m_pd.derivative1D(grids[e_press], 0))/(M_ELECTRON+m_pd.m_ion_mass)/E/grids[i_n];
+    grids[i_dPdx] = m_pd.derivative1D(grids[i_press],0);
+    grids[e_dPdx] = m_pd.derivative1D(grids[e_press],0);
+    // grids[E_1F_x] = (M_ELECTRON*m_pd.derivative1D(grids[i_press], 0) - m_pd.m_ion_mass*m_pd.derivative1D(grids[e_press], 0))/(M_ELECTRON+m_pd.m_ion_mass)/E/grids[i_n];
     // grids[divEcond] = grids[divE] - 4.*PI*grids[rho_c];
 }
 

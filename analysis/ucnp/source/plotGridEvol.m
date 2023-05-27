@@ -2,13 +2,13 @@ function [] = plotGridEvol(data,flags)
 f = filesep;
 
 % get list of grid names from folder
-[grid_names,grid_str] = readGridNames(data.folder);
+[grid_names,grid_str] = readGridNames();
 
 % check that user specified the variables to be plotted
 if isfield(flags,'vars')
-    if isempty(flags.vars)
-        error('Variables must be specified.')
-    end
+    if isempty(flags.vars), error('Variables must be specified for plotting.'); end
+else
+    error('Variables must be specified for plotting.')
 end
 
 % determine the label string for each variable to be plotted
@@ -24,7 +24,7 @@ end
 % generate figure
 num = length(varnames);
 [fig,ax,an] = open_subplot(num,'Visible',flags.figvis);
-an.Position = [0.1567    0.8909    0.7230    0.0801];
+an.Position = [0.117748618784530,0.943062827225131,0.764751381215472,0.066106464113451];
 
 frames = cell(1,length(data));
 for k = 1:length([data.grids.vars.time])
@@ -36,7 +36,8 @@ for k = 1:length([data.grids.vars.time])
         for j = 1:size(ax,2)
             iter = iter + 1;
             if iter > num, break, end
-
+            
+            % interpolate data to uniform grid if base grid is non-uniform
             cax = get_axis(fig,ax{i,j});
             if data.grids.is_uniform
                 xdata = data.grids.x_vec;
@@ -48,12 +49,14 @@ for k = 1:length([data.grids.vars.time])
                 zdata = data.grids.uni_grid(data.grids.vars(k).(varnames{iter}));
             end
             
+            % trim the domain for plotting according to user input
             ind_x = abs(xdata) < flags.plot_window(1);
             ind_y = abs(ydata) < flags.plot_window(2);
             xdata = xdata(ind_x);
             ydata = ydata(ind_y);
             zdata = zdata(ind_y,ind_x);            
             
+            % do the plotting and update axis information
             imagesc(xdata,ydata,zdata)
             colorbar
             cax.YDir = 'Normal';
@@ -70,7 +73,7 @@ for k = 1:length([data.grids.vars.time])
 
     dlm = ' - ';
     str1 = ['Iter = ' num2str(k-1)];
-    str2 = ['t = ' num2str(data.grids.vars(k).time*1e6,'%.3g') '\mus = ' num2str(data.grids.vars(k).time/data.tau,'%.3g') '\tau_e_x_p'];
+    str2 = ['t = ' num2str(data.grids.vars(k).time*1e6,'%.3g') ' \mus = ' num2str(data.grids.vars(k).time/data.tau,'%.3g') '\tau_e_x_p'];
     an.String = [str2];
     an.Position = [0.159500000000000,0.929069291338582,0.723000000000000,0.080100000000000];
 

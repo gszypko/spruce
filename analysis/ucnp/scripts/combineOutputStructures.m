@@ -1,5 +1,5 @@
 % initialize script workspace
-clc, clearvars -except inp, close all, f = filesep; setpath;
+clc, clearvars -except inp, close all, setpath;
 % clear and open <inp> cell
 if ~exist('inp','var')
     %%
@@ -11,7 +11,7 @@ andir = 'an-mhd-09.26.22';
 os_combined = struct();
 for i = 1:length(inp)
     % load output structure for current data set
-    load([inp{i} f andir f 'os.mat']);
+    load([inp{i} filesep andir filesep 'os.mat']);
     % copy fields from loaded output structure into combined output structure
     fields = fieldnames(os);
     for j = 1:length(fields)

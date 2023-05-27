@@ -1,56 +1,48 @@
 function [] = ionHolesAnalysis(data,flags)
 %% Check for Required Grids
-required_grids = {'n','v_x','v_y','i_temp','e_temp'};
-vars = fieldnames(data.grids.vars);
+required_grids = {data.i.n,data.i.v_x,data.i.v_y,data.i.T,data.e.T};
+loaded_vars = fieldnames(data.grids.vars);
 for i = 1:length(required_grids)
-    if ~max(strcmp(vars,required_grids{i}))
+    if ~max(strcmp(loaded_vars,required_grids{i}))
         error(['Expected variable <' required_grids{i} '> is missing.'])
     end
 end
 
 %% Load Experimental Data - If Applicable
 % check if <os.mat> is within parent folder
-f = filesep;
-parent_folder = extractBefore(data.folder,[f 'set']);
-files = dir(parent_folder);
-file_ind = strcmp({files.name},'os.mat');
+parent_folder = extractBefore(data.folder,[filesep 'set']);
+parent_files = dir(parent_folder);
+file_ind = strcmp({parent_files.name},'os.mat');
 exp_file_found = max(file_ind);
 
 % if <os.mat> is found, load it and adjust delay times to include half of exposure time + convert to cgs units
 if exp_file_found
-    load([parent_folder f 'os.mat'],'os');
-    for i = 1:length(os)
+    load([parent_folder filesep 'os.mat'],'os');
+    for i = 1:length([os.delays])
         os(i).delays = (os(i).delays + os(i).tE/2)*1e-9;
     end
 end
-os = os([os.delays] < 22e-6);
+[~,ind] = unique([os.delays]);
+os = os(ind);
 
 % find indices of simulation time points that are closest to experimental time points
-% ind_t(i) holds the index of data.grids.vars corresponding to experimental time point os(i).delays
 closest_time_point = zeros(size(os)); 
 for i = 1:length([os.delays])
     [~,closest_time_point(i)] = min(abs(os(i).delays - data.grids.time));
 end
 
-% select which time points to plot
-t = [os.delays];
-t_plot = [os.delays];
-ind_t_plot = zeros(size(t_plot));
-for i = 1:length(t_plot)
-    [~,ind_t_plot(i)] = min(abs(t - t_plot(i)));
-end
-t_plot = t(ind_t_plot);
-
 %% Create Structure of Information
 
-% set aside relevant grid info for simulation
+% retrieve simulation grids within plotting window
 s = struct();
 s.folder = data.folder;
 s.sim_grids(length(data.grids.time)).t = [];
 for i = 1:length(data.grids.time)
+    % identify spatial indices within plotting window
     ind_x = data.grids.x_vec > -flags.plot_window(1) & data.grids.x_vec < flags.plot_window(1);
     ind_y = data.grids.y_vec > -flags.plot_window(2) & data.grids.y_vec < flags.plot_window(2);
-
+    
+    % record grids within plotting window
     s.sim_grids(i).t = data.grids.time(i);
     s.sim_grids(i).x = data.grids.x_vec(ind_x);
     s.sim_grids(i).y = data.grids.y_vec(ind_y);
@@ -67,31 +59,54 @@ if exp_file_found
     init_exp_n_sg = sgfilt2D(init_exp_n,7,7,1,1,true);
     max_exp_n_sg = max(init_exp_n_sg,[],'all');
     s.exp_grids(length(os)).t = [];
-    [~,~,vlasov_gam,vlasov_Ti,vlasov_Te,~,~] = kinetic_model([os.delays],data.sig0,data.Ti,data.Te,max_exp_n_sg,true);
-    for i = 1:length(os)
+    [~,~,vlasov_gam,vlasov_Ti,vlasov_Te,~,~] = kinetic_model(linspace(0,max([os.delays]),length(os)+1),data.sig0,data.Ti,data.Te,max_exp_n_sg,true);
+    
+    % create fictitious t=0 time point
+    % identify spatial indices within plotting window
+    ind_x = os(1).imgs.xRelInMM/10 > -flags.plot_window(1) & os(1).imgs.xRelInMM/10 < flags.plot_window(1);
+    ind_y = os(1).imgs.yRelInMM/10 > -flags.plot_window(2) & os(1).imgs.yRelInMM/10 < flags.plot_window(2);
+    s.exp_grids(1).t = 0;
+    s.exp_grids(1).x = os(1).imgs.xRelInMM(ind_x)./10;
+    s.exp_grids(1).y = os(1).imgs.yRelInMM(ind_y)./10;
+    s.exp_grids(1).n = os(1).imgs.density(ind_y,ind_x)*1e8;
+    ones_mat = ones(size(s.exp_grids(1).n));
+    s.exp_grids(1).Ti = vlasov_Ti(1).*ones_mat;
+    s.exp_grids(1).Te = vlasov_Te(1).*ones_mat;
+    s.exp_grids(1).v_x = vlasov_gam(1).*s.exp_grids(1).x.*ones_mat;
+    s.exp_grids(1).v_y = vlasov_gam(1).*s.exp_grids(1).y'.*ones_mat;
+    for i = 1:length([os.delays])
+        % identify spatial indices within plotting window
         ind_x = os(i).imgs.xRelInMM/10 > -flags.plot_window(1) & os(i).imgs.xRelInMM/10 < flags.plot_window(1);
         ind_y = os(i).imgs.yRelInMM/10 > -flags.plot_window(2) & os(i).imgs.yRelInMM/10 < flags.plot_window(2);
-
-        s.exp_grids(i).t = os(i).delays;
-        s.exp_grids(i).x = os(i).imgs.xRelInMM(ind_x)./10;
-        s.exp_grids(i).y = os(i).imgs.yRelInMM(ind_y)./10;
-        s.exp_grids(i).n = os(i).imgs.density(ind_y,ind_x)*1e8;
-        ones_mat = ones(size(s.exp_grids(i).n));
-        s.exp_grids(i).Ti = vlasov_Ti(i).*ones_mat;
-        s.exp_grids(i).Te = vlasov_Te(i).*ones_mat;
-        s.exp_grids(i).v_x = vlasov_gam(i).*s.exp_grids(i).x.*ones_mat;
-        s.exp_grids(i).v_y = vlasov_gam(i).*s.exp_grids(i).y'.*ones_mat;
+        
+        % record plasma measurements within plotting window
+        s.exp_grids(i+1).t = os(i).delays;
+        s.exp_grids(i+1).x = os(i).imgs.xRelInMM(ind_x)./10;
+        s.exp_grids(i+1).y = os(i).imgs.yRelInMM(ind_y)./10;
+        s.exp_grids(i+1).n = os(i).imgs.density(ind_y,ind_x)*1e8;
+        ones_mat = ones(size(s.exp_grids(i+1).n));
+        s.exp_grids(i+1).Ti = vlasov_Ti(i+1).*ones_mat;
+        s.exp_grids(i+1).Te = vlasov_Te(i+1).*ones_mat;
+        s.exp_grids(i+1).v_x = vlasov_gam(i+1).*s.exp_grids(i+1).x.*ones_mat;
+        s.exp_grids(i+1).v_y = vlasov_gam(i+1).*s.exp_grids(i+1).y'.*ones_mat;
     end
 end
 
 
 %% Determine Ion Hole Orientation
+
+% Fit Gaussian + perturbation to initial density grid. This will then be used to project the 2D
+% grids of information onto a rotated frame that aligns the x axis with the ion hole propagation
+% axis.
+
+% Identify initial time point and fit 2D model with perturbation to density distribution.
 [~,ind_t] = min(data.grids.time);
 x = data.grids.x_vec;
 y = data.grids.y_vec;
 n = data.grids.vars(ind_t).n;
 [gauss_fit,Rx,Ry] = extractHoleOrientation(x,y,n,flags.figvis,flags.hole_orientation,data.folder);
 
+% Record important information in data structure
 s.adiabatic_index_i = data.adiabatic_index_i;
 s.adiabatic_index_e = data.adiabatic_index_e;
 s.m_i = data.settings.m_i;
@@ -101,56 +116,59 @@ s.sig_x0 = gauss_fit.sigx_g;
 s.sig_y0 = gauss_fit.sigy_g;
 s.tau_hole = getTauExp(gauss_fit.sigx_g,data.Te+data.Ti);
 
-clearvars -except s Rx Ry gauss_fit exp_file_found t_plot closest_time_point ind_t_plot
-
 %% Project Data on Grid Aligned with Ion Hole Propagation Axis
 
 fields = fieldnames(s);
 grid_ind = endsWith(fields,'_grids');
 fields = fields(grid_ind);
+% for simulation and/or experimental grids
 for i = 1:length(fields)
     name = extractBefore(fields{i},'_grids');
-    name_full = [name '_rot'];
+    name_rot = [name '_rot'];
     name_1D = [name '_1D'];
     name_int = [name '_int'];
     s2 = s.(fields{i});
-
-    for j = 1:length(s2)
+    % for each time point
+    for j = 1:length([s2.t])
+        % original spatial grids
         x = s2(j).x;
         y = s2(j).y;
         [X,Y] = meshgrid(x,y);
-
-        s.(name_full)(j).t = s2(j).t;
-
+        
+        s.(name_rot)(j).t = s2(j).t;
+        
+        % rotated spatial grids so that x aligns with hole propagation axis
         x_rot = x - gauss_fit.x0;
         y_rot = y - gauss_fit.y0;
         [X_rot,Y_rot] = meshgrid(x_rot,y_rot);
-
-        s.(name_full)(j).x = x;
-        s.(name_full)(j).y = y;
-        s.(name_full)(j).n = interp2(X,Y,s2(j).n,Rx(X_rot,Y_rot,-gauss_fit.theta),Ry(X_rot,Y_rot,-gauss_fit.theta));
-        s.(name_full)(j).Ti = interp2(X,Y,s2(j).Ti,Rx(X_rot,Y_rot,-gauss_fit.theta),Ry(X_rot,Y_rot,-gauss_fit.theta));
-        s.(name_full)(j).Te = interp2(X,Y,s2(j).Te,Rx(X_rot,Y_rot,-gauss_fit.theta),Ry(X_rot,Y_rot,-gauss_fit.theta));
+        
+        % interpolate all grids onto rotated spatial grids
+        s.(name_rot)(j).x = x;
+        s.(name_rot)(j).y = y;
+        s.(name_rot)(j).n = interp2(X,Y,s2(j).n,Rx(X_rot,Y_rot,-gauss_fit.theta),Ry(X_rot,Y_rot,-gauss_fit.theta));
+        s.(name_rot)(j).Ti = interp2(X,Y,s2(j).Ti,Rx(X_rot,Y_rot,-gauss_fit.theta),Ry(X_rot,Y_rot,-gauss_fit.theta));
+        s.(name_rot)(j).Te = interp2(X,Y,s2(j).Te,Rx(X_rot,Y_rot,-gauss_fit.theta),Ry(X_rot,Y_rot,-gauss_fit.theta));
         v_x_rot = interp2(X,Y,s2(j).v_x,Rx(X_rot,Y_rot,-gauss_fit.theta),Ry(X_rot,Y_rot,-gauss_fit.theta));
         v_y_rot = interp2(X,Y,s2(j).v_y,Rx(X_rot,Y_rot,-gauss_fit.theta),Ry(X_rot,Y_rot,-gauss_fit.theta));
-        s.(name_full)(j).v = Rx(v_x_rot,v_y_rot,gauss_fit.theta);
-        s.(name_full)(j).pi = s.m_i.*s.(name_full)(j).n.*s.(name_full)(j).v;
+        s.(name_rot)(j).v = Rx(v_x_rot,v_y_rot,gauss_fit.theta);
+        s.(name_rot)(j).pi = s.m_i.*s.(name_rot)(j).n.*s.(name_rot)(j).v;
     end
-
+    
+    % for each time point average grids across rotated y axis to obtain 1D transects along hole 
+    % propagation axis
     s.(name_1D) = struct();
-    s.(name_1D)(length(s.(name_full))).t = [];
-    for k = 1:length(s.(name_full))
-        s.(name_1D)(k).t = s.(name_full)(k).t;
+    s.(name_1D)(length(s.(name_rot))).t = [];
+    for k = 1:length([s.(name_rot).t])
+        s.(name_1D)(k).t = s.(name_rot)(k).t;
         time_fac = sqrt(1+s.(name_1D)(k).t.^2/s.tau_hole^2);
-        ind_x = abs(s.(name_full)(k).x) < 3*s.sig_x0;
-        ind_y = abs(s.(name_full)(k).y) < gauss_fit.sigy_g*time_fac/2;
-        fields3 = fieldnames(s.(name_full));
-        s.(name_1D)(k).r = s.(name_full)(k).x(ind_x);
+        ind_x = abs(s.(name_rot)(k).x) < 3*s.sig_x0;
+        ind_y = abs(s.(name_rot)(k).y) < gauss_fit.sigy_g*time_fac/2;
+        fields3 = fieldnames(s.(name_rot));
+        s.(name_1D)(k).r = s.(name_rot)(k).x(ind_x);
         for l = 4:length(fields3)
-            s.(name_1D)(k).(fields3{l}) = mean(s.(name_full)(k).(fields3{l})(ind_y,ind_x),1,'omitnan'); 
+            s.(name_1D)(k).(fields3{l}) = mean(s.(name_rot)(k).(fields3{l})(ind_y,ind_x),1,'omitnan'); 
         end
     end
-    s.(name_1D)(1).t = 0;
 
     % create anonymous functions to interpolate 1D variables in time and space
     s.(name_int) = struct();
@@ -175,10 +193,10 @@ fields_1D = fields(ind_1D);
 fields_int = fields(ind_int);
 fields = extractBefore(fields_int,'_int');
 for i = 1:length(fields_1D)
-    name_full = [fields{i} '_hole'];
+    name_rot = [fields{i} '_hole'];
     for k = 1:length(s.(fields_1D{i}))
         disp(['Fitting for ion hole location: ' num2str(k) '/' num2str(length(s.(fields_1D{i})))])
-        s.(name_full)(k) = extractHoleLocation(s.(fields_1D{i})(k).t,s.(fields_1D{i})(k).r,s.(fields_1D{i})(k).n,s.(fields_1D{i})(k).v,s.sig_x0,s.tau_hole,s.(fields_int{i}).hole(s.(fields_1D{i})(k).t));
+        s.(name_rot)(k) = extractHoleLocation(s.(fields_1D{i})(k).t,s.(fields_1D{i})(k).r,s.(fields_1D{i})(k).n,s.(fields_1D{i})(k).v,s.sig_x0,s.tau_hole,s.(fields_int{i}).hole(s.(fields_1D{i})(k).t));
     end
 end
 
@@ -273,44 +291,44 @@ ylabel('Hole Pos. (cm)')
 saveas(fig,[s.folder filesep 'hole-prop.png'])
 close(fig)
 
-% save([s.folder filesep 'ion-hole-data.mat'],'s');
+save([s.folder filesep 'holes.mat'],'s');
 
 %%
 
-% opening a subplot
-num = length(t_plot);
-[fig,ax,an] = open_subplot(num);
-iter = 0;
-for i = 1:size(ax,1)
-    for j = 1:size(ax,2)
-        iter = iter + 1;
-        if iter > num, break, end
-        
-        cax = get_axis(fig,ax{i,j});
-
-        hold off
-        l = get_line_specs(length(fields_1D));
-        xdata = [s.(fields_1D{1})(closest_time_point(ind_t_plot(iter))).r];
-        ydata = [s.(fields_1D{1})(closest_time_point(ind_t_plot(iter))).n];
-        ydata = ydata./max(ydata);
-        plot(xdata,ydata,'LineWidth',2,'MarkerSize',4,'Color',l(1).col,'MarkerFaceColor',l(1).col,'MarkerEdgeColor',l(1).col)
-        hold on
-        xdata = [s.(fields_1D{2})(ind_t_plot(iter)).r];
-        ydata = [s.(fields_1D{2})(ind_t_plot(iter)).n];
-        ydata = ydata./max(ydata);
-        plot(xdata,ydata,'LineWidth',2,'MarkerSize',4,'Color',l(2).col,'MarkerFaceColor',l(2).col,'MarkerEdgeColor',l(2).col)
-        hold on
-
-        cax.FontSize = 11;
-        if i == size(ax,1), xlabel('r (cm)'), end
-        if j == 1, ylabel('n / n_0'), end
-        title(['t = ' num2str(s.sim_1D(closest_time_point(ind_t_plot(iter))).t*1e6,'%.2g') ' \mus'],'FontWeight','normal')
-        ylim([0 1.1].*max(ydata))
-    end
-end
-an.String = [];
-
-lgd = legend({'Sim','Exp'});
-lgd.Position = [0.793153505527392,0.380132906369903,0.108849558323886,0.067314489047856];
+% % opening a subplot
+% num = length(t_plot);
+% [fig,ax,an] = open_subplot(num);
+% iter = 0;
+% for i = 1:size(ax,1)
+%     for j = 1:size(ax,2)
+%         iter = iter + 1;
+%         if iter > num, break, end
+%         
+%         cax = get_axis(fig,ax{i,j});
+% 
+%         hold off
+%         l = get_line_specs(length(fields_1D));
+%         xdata = [s.(fields_1D{1})(closest_time_point(ind_t_plot(iter))).r];
+%         ydata = [s.(fields_1D{1})(closest_time_point(ind_t_plot(iter))).n];
+%         ydata = ydata./max(ydata);
+%         plot(xdata,ydata,'LineWidth',2,'MarkerSize',4,'Color',l(1).col,'MarkerFaceColor',l(1).col,'MarkerEdgeColor',l(1).col)
+%         hold on
+%         xdata = [s.(fields_1D{2})(ind_t_plot(iter)).r];
+%         ydata = [s.(fields_1D{2})(ind_t_plot(iter)).n];
+%         ydata = ydata./max(ydata);
+%         plot(xdata,ydata,'LineWidth',2,'MarkerSize',4,'Color',l(2).col,'MarkerFaceColor',l(2).col,'MarkerEdgeColor',l(2).col)
+%         hold on
+% 
+%         cax.FontSize = 11;
+%         if i == size(ax,1), xlabel('r (cm)'), end
+%         if j == 1, ylabel('n / n_0'), end
+%         title(['t = ' num2str(s.sim_1D(closest_time_point(ind_t_plot(iter))).t*1e6,'%.2g') ' \mus'],'FontWeight','normal')
+%         ylim([0 1.1].*max(ydata))
+%     end
+% end
+% an.String = [];
+% 
+% lgd = legend({'Sim','Exp'});
+% lgd.Position = [0.793153505527392,0.380132906369903,0.108849558323886,0.067314489047856];
 
 end

@@ -1,0 +1,102 @@
+function [s] = loadExpData(path,filename)
+%% Load Experimental Data
+load([path filesep filename],'os');
+[~,ind_t] = sort([os.delays]); 
+os = os(ind_t);
+for i = 1:length(os)
+    os(i).delays = os(i).delays + os(i).tE/2;
+end
+
+%% Process Experimental Data - Load Images from Integrated Spectra
+s = struct();
+s.Te0 = os(1).Te;
+s.img = struct();
+s.img(length(os)).t = [];
+for i = 1:length([os.delays])
+    s.img(i).t = os(i).delays*1e-9;
+    s.img(i).x = os(i).imgs.xRelInMM./10;
+    s.img(i).y = os(i).imgs.yRelInMM./10;
+    [s.img(i).X,s.img(i).Y] = meshgrid(s.img(i).x,s.img(i).y);
+    s.img(i).R = sqrt(s.img(i).X.^2+s.img(i).Y.^2);
+
+    s.img(i).n = os(i).imgs.density.*1e8;
+
+    [~,ind_y] = min(abs(s.img(i).y));
+    s.img(i).n_x = s.img(i).n(ind_y,:);
+    [~,ind_x] = min(abs(s.img(i).x));
+    s.img(i).n_y = s.img(i).n(:,ind_x)';
+    
+    s.img(i).n_sg = sgfilt2D(s.img(i).n,9,9,3,3,false);
+    s.img(i).n_x_sg = s.img(i).n_sg(ind_y,:);
+    s.img(i).n_y_sg = s.img(i).n_sg(:,ind_x)';
+end
+
+%% Process Experimental Data - Load LIF Transects
+
+local_exists = max(strcmp(fieldnames(os),'local'))==1;
+if local_exists
+    % for each time point, load the LIF transect data if LIF analysis is in transect mode
+    s.tr = struct();
+    s.tr(length(os)).t = [];
+    for i = 1:length([os.delays])
+        if ~isempty(os(i).local)
+            tr_num = unique([os(i).local.tr_num]);
+            transects_exist = max(tr_num == 0) ~= 1;
+            if transects_exist
+                s.tr(i).t = s.img(i).t;
+                s.tr(i).x = [os(i).local.x]./10;
+                s.tr(i).n = [os(i).local.nFit].*1e8;
+                s.tr(i).v = [os(i).local.vExp]*100;
+                s.tr(i).Ti = [os(i).local.Ti];
+            end
+        end
+    end
+
+    % if this process does not result in loading any transects, remove the 'tr' field from 's'
+    all_tr_empty = min(isempty([s.tr.t])) == 1;
+    if all_tr_empty
+        s = rmfield(s,'tr');
+    end
+end
+
+%% Process Experimental Data - Load LIF Maps
+names = fieldnames(os(i));
+map_field_exists = max(strcmp(names,'map')) == 1;
+if map_field_exists
+    s.map = struct();
+    s.map(length([os.delays])).t = [];
+    for i = 1:length([os.delays])
+        if ~isempty(os(i).map)
+            s.map(i).t = s.img(i).t;
+            s.map(i).x = os(i).map.x./10;
+            s.map(i).y = os(i).map.y./10;
+            [s.map(i).X,s.map(i).Y] = meshgrid(s.map(i).x,s.map(i).y);
+            s.map(i).R = sqrt(s.map(i).X.^2 + s.map(i).Y.^2);
+
+            s.map(i).n = os(i).map.nFit.*1e8;
+            s.map(i).v = os(i).map.vExp.*100;
+            s.map(i).Ti = os(i).map.Ti;
+
+            [s.map(i).n_hpr,ind_x_hpr,ind_y_hpr] = filterHotPixels(s.map(i).n,5,5,1,1,2);
+
+            [~,ind_y] = min(abs(s.map(i).y));
+            [~,ind_x] = min(abs(s.map(i).x));
+            s.map(i).n_x = s.map(i).n(ind_y,:);
+            s.map(i).n_x_hpr = s.map(i).n_hpr(ind_y,:);
+            s.map(i).n_y = s.map(i).n(:,ind_x)';
+            s.map(i).n_y_hpr = s.map(i).n_hpr(:,ind_x)';
+
+            s.map(i).x_hpr = s.map(i).x(ind_x_hpr);
+            s.map(i).y_hpr = s.map(i).y(ind_y_hpr);
+            [s.map(i).X_hpr,s.map(i).Y_hpr] = meshgrid(s.map(i).x_hpr,s.map(i).y_hpr);
+            s.map(i).R_hpr = sqrt(s.map(i).X_hpr.^2 + s.map(i).Y_hpr.^2);
+            s.map(i).n_hpr_trim = s.map(i).n_hpr(ind_y_hpr,ind_x_hpr);
+        end
+    end
+    all_map_empty = min(isempty([s.map.t])) == 1;
+    if all_map_empty
+        s = rmfield(s,'map');
+    end
+end  
+
+end

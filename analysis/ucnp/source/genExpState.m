@@ -1,145 +1,55 @@
 function [] = genExpState(path,flags)
 %% Set Up Directories and Other Program Options
-f = filesep;
-set_path = [path f 'set_' num2str(flags.set)]; % path to where simulation files will be saved
+set_path = [path filesep 'set_' num2str(flags.set)]; % path to where simulation files will be saved
 mkdir(set_path);
-state_path = [set_path f 'init.txt']; % extension to be updated to .state later
-config_path = [set_path f 'ucnp.txt']; % extension to be updated to .config later
-settings_path = [set_path f 'plasma.txt']; % extension to be updated to .settings later
+save([setpath filesep 'exp-flags.mat'],'flags','-mat');
+state_path = [set_path filesep 'init.txt']; % extension to be updated to .state later
+config_path = [set_path filesep 'ucnp.txt']; % extension to be updated to .config later
+settings_path = [set_path filesep 'plasma.txt']; % extension to be updated to .settings later
 
 %% Load Data
-% load config and settings files from MHD GitHub, as specified by the paths within 'flags'
 config = readConfigFile(flags.config_path);
 settings = readSettingsFile(flags.settings_path);
-eq_set = config.eq_set;
-% load the experimental data and identify the smallest time point, which is to be used as the initial time point
-load([path f 'os.mat'],'os');
-[~,ind_t] = sort([os.delays]); 
-os = os(ind_t);
-for i = 1:length(os)
-    os(i).delays = os(i).delays+os(i).tE/2;
+s = loadExpData(path,'os-init.mat');
+
+ind = s.map(1).R < .05;
+Ti_from_lif = mean(s.map(1).Ti(ind));
+
+%% Trim Plasma Images
+
+for i = 1:length([s.img.t])
+    indx = s.img(i).x < flags.trim_exp_domain(1) & s.img(i).x > -flags.trim_exp_domain(1);
+    indy = s.img(i).y < flags.trim_exp_domain(2) & s.img(i).y > -flags.trim_exp_domain(2);
+    s.img(i).x = s.img(i).x(indx);
+    s.img(i).y = s.img(i).y(indy);
+    s.img(i).n = s.img(i).n(indy,indx);
+    s.img(i).n_x = s.img(i).n_x(indx);
+    s.img(i).n_y = s.img(i).n_y(indy);
+    s.img(i).n_sg = s.img(i).n_sg(indy,indx);
+    s.img(i).n_x_sg = s.img(i).n_x_sg(indx);
+    s.img(i).n_y_sg = s.img(i).n_y_sg(indy);
 end
-
-%% Filter Hot Pixels
-imgs(length([os.delays])).t = [];
-for i = 1:length([os.delays])
-    sg_kx = 11;
-    sg_ky = 11;
-    n_filt = sgfilt2D(os(i).imgs.density,sg_kx,sg_ky,1,1);
-
-    % replace hot pixels
-    for j = 1:size(n_filt,1)
-        for k = 1:size(n_filt,2)
-            if os(i).imgs.density(j,k) < 0 || os(i).imgs.density(j,k) > 2*n_filt(j,k) || isnan(n_filt(j,k))
-                os(i).imgs.density(j,k) = n_filt(j,k);
-            end
-        end
-    end
-end
-
-%% Filter Plasma Images and Trim Domain
-% retrieve images and domain information, trim domain, and apply 
-imgs(length([os.delays])).t = [];
-for i = 1:length([os.delays])
-    % retrieve information from output structure
-    imgs(i).t = os(i).delays*1e-9;
-    imgs(i).x = os(i).imgs.xRelInMM./10;
-    imgs(i).y = os(i).imgs.yRelInMM./10;
-    imgs(i).n = os(i).imgs.density.*1e8;
-    
-    % determine number of kernels to be used with SG filter
-    sg_kx = 5;
-    sg_ky = 5;
-    sg_bx = floor(sg_kx/2);
-    sg_by = floor(sg_ky/2);
-
-    % use sg filter on density images
-    imgs(i).n_filt = sgfilt2D(imgs(i).n,sg_kx,sg_ky,3,3);
-    imgs(i).n_filt_res = imgs(i).n_filt - imgs(i).n;
-
-    % remove boundary cells of sg filter from os.imgs
-    imgs(i).x = imgs(i).x(1+sg_bx:end-sg_bx);
-    imgs(i).y = imgs(i).y(1+sg_by:end-sg_by);
-    imgs(i).n = imgs(i).n(1+sg_bx:end-sg_bx,1+sg_by:end-sg_by);
-    imgs(i).n_filt = imgs(i).n_filt(1+sg_bx:end-sg_bx,1+sg_by:end-sg_by);
-    imgs(i).n_filt_res = imgs(i).n_filt_res(1+sg_bx:end-sg_bx,1+sg_by:end-sg_by);
-
-    % trim domain
-    indx = imgs(i).x < flags.trim_exp_domain(1) & imgs(i).x > -flags.trim_exp_domain(1);
-    indy = imgs(i).y < flags.trim_exp_domain(2) & imgs(i).y > -flags.trim_exp_domain(2);
-    imgs(i).x = imgs(i).x(indx);
-    imgs(i).y = imgs(i).y(indy);
-    imgs(i).n = imgs(i).n(indy,indx);
-    imgs(i).n_filt = imgs(i).n_filt(indy,indx);
-    imgs(i).n_filt_res = imgs(i).n_filt_res(indy,indx);
-end
-
-%% Plot Plasma Images
-% open figure with the given panel number
-num = 3;
-[fig,ax,an] = open_subplot(num,'Visible',flags.figvis);
-an.Position = [0.1567    0.8909    0.7230    0.0801];
-fields = {'n','n_filt','n_filt_res'};
-fieldStr = {'Img','Img SG','Img Res.'};
-for k = 1:length([imgs.t])
-    disp(['Plotting: ' num2str(k) '/' num2str(length([imgs.t]))])
-    % update axis information
-    iter = 0;
-    ind = strcmp(fields,'n_filt');
-    clim = max(imgs(k).(fields{ind}),[],'all')*1.1/1e8;
-    for i = 1:size(ax,1)
-        for j = 1:size(ax,2)
-            iter = iter + 1;
-            if iter > num, break, end
-
-            cax = get_axis(fig,ax{i,j});
-            xdata = imgs(k).x;
-            ydata = imgs(k).y;
-            zdata = imgs(k).(fields{iter})./1e8;
-            imagesc(xdata,ydata,zdata)
-            colorbar
-            cax.YDir = 'Normal';
-            cax.PlotBoxAspectRatio = [1 1 1];
-            cax.FontSize = 10;
-            if i == size(ax,1), xlabel('x (cm)'), end
-            if j == 1, ylabel('y (cm)'), end
-            cax.CLim = [0 clim];
-            if strcmp(fields{iter},'n_filt_res')
-                cax.CLim = [-clim clim]./10;
-            end
-
-            title(fieldStr{iter},'FontWeight','normal')
-            str0 = 'SG Image Smoothing: ';
-            str1 = ['t = ' num2str(os(k).delays/1000,'%.2g') '\mus'];
-            an.String = [str0 str1];
-            an.Position = [0.196100917431193,0.872420262664165,0.589521675636846,0.116079737335835];
-        end
-    end
-    % save figure
-    saveas(fig,[path f 'imgs-' num2str(k) '.png']);
-end
-close(fig)
 
 %% Obtain State Background with Fit to Image
-density_min = max([os(1).local.nLIF2])*flags.n_min*1e8;
+% fit density distribution with analytic distribution
+density_min = max(s.map(1).n_hpr_trim,[],'all')*flags.n_min;
 if strcmp(flags.n_dist,'gauss')
-    [n_fit] = fitImgWithGaussian(imgs(1).x,imgs(1).y,imgs(1).n,density_min);
+    [n_fit] = fitImgWithGaussian(s.map(1).x_hpr,s.map(1).y_hpr,s.map(1).n_hpr_trim,density_min);
 elseif strcmp(flags.n_dist,'exp')
-    [n_fit] = fitImgWithExp(imgs(1).x,imgs(1).y,imgs(1).n,density_min);
+    [n_fit] = fitImgWithExp(s.map(1).x_hpr,s.map(1).y_hpr,s.map(1).n_hpr_trim,density_min);
 end
 
 % plot fit to density distribution
 fields = {'img','imgfit','imgres'};
 fields_text = {'Img','Fit','Res'};
+
 num = length(fields);
 [fig,ax,an] = open_subplot(num,'Visible',flags.figvis);
 an.Position = [0.1567    0.8909    0.7230    0.0801];
 
-% get axis limits
 ind = strcmp(fields,'imgfit');
 clim = max(n_fit.(fields{ind}),[],'all');
 
-% update axis information
 iter = 0;
 for i = 1:size(ax,1)
     for j = 1:size(ax,2)
@@ -165,22 +75,17 @@ for i = 1:size(ax,1)
     end
 end
 an.String = 'Fit to Initial Density Distribution';
-saveas(fig,[set_path f 'bgd-fit.png']);
+exportgraphics(fig,[set_path filesep 'bgd-fit.png'],'Resolution',300);
 close(fig)
 
 %% Extract Te From Size Evolution
 
-% get central ion temperature from LIF fits
-[~,ind_t] = min([os.delays]);
-ind_c = abs([os(ind_t).local.x]./10) < n_fit.sigx/5;
-Ti_from_lif = mean([os(ind_t).local(ind_c).Ti]);
-
 % extract sizes from fit
 fit = struct;
-fit(length([imgs.t])).sig_x = [];
-fit(length([imgs.t])).sig_y = [];
-for i = 1:length([imgs.t])
-    results = fitImgWithGaussian(imgs(i).x,imgs(i).y,imgs(i).n,0);
+fit(length([s.img.t])).sig_x = [];
+fit(length([s.img.t])).sig_y = [];
+for i = 1:length([s.img.t])
+    results = fitImgWithGaussian(s.img(i).x,s.img(i).y,s.img(i).n,0);
     fit(i).sig_x = results.sigx;
     fit(i).sig_y = results.sigy;
     fit(i).sig_2D = (fit(i).sig_x*fit(i).sig_y)^(1/2); % 1/3 because this is the experimental data
@@ -190,7 +95,7 @@ end
 tau_2D = @(T) getTauExp(fit(1).sig_2D,T);
 fitmodel = @(c,data) fit(1).sig_2D*sqrt(1+data.^2/tau_2D(c)^2);
 p0 = settings.Te;
-data = [imgs.t];
+data = [s.img.t];
 data = data';
 zdata = [fit.sig_2D]';
 T_fit = lsqcurvefit(fitmodel,p0,data,zdata,0,200);
@@ -208,7 +113,7 @@ ylabel('\sigma (cm)')
 an.String = ['T_e = ' num2str(T_fit) ' K'];
 grid on 
 grid minor
-saveas(fig,[path f 'sig2DvsTime.png']);
+exportgraphics(fig,[path filesep 'sig2DvsTime.png'],'Resolution',300);
 close(fig)
 
 % decide which electron temperature to use
@@ -241,21 +146,12 @@ end
 [state.dX,state.dY] = meshgrid(state.dx,state.dy);
 state.R = sqrt(state.X.^2+state.Y.^2);
 
-if flags.apply_sg_filt
-    n_for_interpolation = imgs(1).n_filt;
-else
-    n_for_interpolation = imgs(1).n;
-end
-
-state.n = interp2(imgs(1).x,imgs(1).y,n_for_interpolation,state.X,state.Y);
+state.n = interp2(s.map(1).x_hpr,s.map(1).y_hpr,s.map(1).n_hpr_trim,state.X,state.Y);
 
 n_bgd = n_fit.fit(state.X,state.Y);
-
-for i = 1:size(state.n,1)
-    for j = 1:size(state.n,2)
-        if state.R(i,j) > flags.bgd_radius || state.n(i,j) < density_min || isnan(state.n(i,j))
-            state.n(i,j) = n_bgd(i,j);
-        end
+for i = 1:numel(state.n)
+    if state.R(i) > flags.bgd_radius || state.n(i) < density_min || isnan(state.n(i))
+        state.n(i) = n_bgd(i);
     end
 end
 
@@ -265,7 +161,7 @@ end
 
 % determine values to go into plasma.settings file
 settings.n = n_fit.amp;
-if strcmp(eq_set,'ideal_mhd') || strcmp(eq_set,'ideal_mhd_cons')
+if strcmp(config.eq_set,'ideal_mhd') || strcmp(config.eq_set,'ideal_mhd_cons')
     settings.Ti = Te_for_files;
 else
     settings.Ti = Ti_from_lif;
@@ -335,7 +231,7 @@ colorbar
 xlabel('x (cm)')
 ylabel('y (cm)')
 title('Initial Density (10^8 cm^-^3)','FontWeight','normal')
-saveas(fig,[set_path f 'init-n.png']);
+exportgraphics(fig,[set_path filesep 'init-n.png'],'Resolution',300);
 close(fig)
 
 % vars that need to be generated
@@ -346,7 +242,7 @@ grids.pos_y = state.Y;
 grids.be_x = zeros(size(state.X));
 grids.be_y = zeros(size(state.X));
 grids.be_z = zeros(size(state.X));
-if strcmp(eq_set,'ideal_mhd')
+if strcmp(config.eq_set,'ideal_mhd')
     grids.rho = settings.m_i.*state.n;
     grids.temp = settings.Te*ones(size(state.X));
     grids.mom_x = zeros(size(state.X));
@@ -357,7 +253,7 @@ if strcmp(eq_set,'ideal_mhd')
     grids.bi_z = zeros(size(state.X));
     grids.grav_x = zeros(size(state.X));
     grids.grav_y = zeros(size(state.X));
-elseif strcmp(eq_set,'ideal_2F')
+elseif strcmp(config.eq_set,'ideal_2F')
     grids.i_rho = settings.m_i.*state.n;
     grids.e_rho = cts.cgs.mE.*state.n;
     grids.i_mom_x = zeros(size(state.X));
@@ -374,7 +270,7 @@ elseif strcmp(eq_set,'ideal_2F')
     grids.E_z = zeros(size(state.X));
     grids.grav_x = zeros(size(state.X));
     grids.grav_y = zeros(size(state.X));
-elseif strcmp(eq_set,'ideal_mhd_2E')
+elseif strcmp(config.eq_set,'ideal_mhd_2E')
     grids.rho = settings.m_i.*state.n;
     grids.i_temp = settings.Ti*ones(size(state.X));
     grids.e_temp = settings.Te*ones(size(state.X));

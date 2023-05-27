@@ -1,16 +1,14 @@
 function [s] = compareExpAndSimData(data,flags)
 %% load experimental data from <os.mat> file
-% load data
-f = filesep;
-base_folder = extractBefore(data.folder,[f 'set_']);
-load([base_folder f 'os.mat'],'os');
-os = os([os.delays]*1e-9 < max(data.grids.time));
 
-% find indices of simulation time points that are closest to experimental time points
-% ind_t(i) holds the index of data.grids.vars corresponding to experimental time point os(i).delays
+base_folder = extractBefore(data.folder,[filesep 'set_']);
+load([base_folder filesep 'os.mat'],'os');
+os = os([os.delays]*1e-9 < max(data.grids.time)*1.1);
+
 closest_time_point = zeros(size(os)); 
 for i = 1:length([os.delays])
-    [~,closest_time_point(i)] = min(abs(os(i).delays*1e-9 + os(i).tE/2*1e-9 - data.grids.time));
+    os(i).delays = os(i).delays*1e-9 + os(i).tE*1e-9;
+    [~,closest_time_point(i)] = min(abs(os(i).delays - data.grids.time));
 end
 
 %% create structure for 2D image info and fit with 2D Gaussian
@@ -37,11 +35,12 @@ for i = 1:length([os.delays])
     imgs(i).x = x(ind_x);
     imgs(i).y = y(ind_y);
     [imgs(i).X, imgs(i).Y] = meshgrid(imgs(i).x, imgs(i).y);
+
     imgs(i).n_exp = os(i).imgs.density(ind_y,ind_x)*1e8;
-    imgs(i).n_sim = interp2(data.grids.pos_x,data.grids.pos_y,data.grids.vars(closest_time_point(i)).n,imgs(i).X,imgs(i).Y,'linear',0);
+    imgs(i).n_sim = interp2(data.grids.pos_x,data.grids.pos_y,data.grids.vars(closest_time_point(i)).(data.i.n),imgs(i).X,imgs(i).Y,'linear',0);
     imgs(i).n_res = imgs(i).n_sim - imgs(i).n_exp;
-    imgs(i).v_sim_x = interp2(data.grids.pos_x,data.grids.pos_y,data.grids.vars(closest_time_point(i)).v_x,imgs(i).X,imgs(i).Y,'linear',0);
-    imgs(i).v_sim_y = interp2(data.grids.pos_x,data.grids.pos_y,data.grids.vars(closest_time_point(i)).v_y,imgs(i).X,imgs(i).Y,'linear',0);
+    imgs(i).v_sim_x = interp2(data.grids.pos_x,data.grids.pos_y,data.grids.vars(closest_time_point(i)).(data.i.v_x),imgs(i).X,imgs(i).Y,'linear',0);
+    imgs(i).v_sim_y = interp2(data.grids.pos_x,data.grids.pos_y,data.grids.vars(closest_time_point(i)).(data.i.v_y),imgs(i).X,imgs(i).Y,'linear',0);
     
     % get plasma sizes
     imgs(i).fit_exp = fitImgWithGaussian(imgs(i).x,imgs(i).y,imgs(i).n_exp,0);
@@ -71,28 +70,6 @@ for i = 1:length([os.delays])
     tr(i).v_sim_y = imgs(i).v_sim_y(:,ind_x)';
     tr(i).v_exp_x = 100.*interp1([os(i).local.x]./10,[os(i).local.vExp],tr(i).x,'linear',0);
 
-    % fit velocities for effective temperature
-    tau = @(sig,T) getTauExp(sig,T);
-    gamma = @(t,sig,T) t./tau(sig,T).^2./(1 + t.^2./tau(sig,T).^2);
-    v = @(r,t,sig,T) r.*gamma(t,sig,T);
-    
-
-    r_cut = 0.24;
-    ind_x = abs(tr(i).x) < r_cut;
-    ind_y = abs(tr(i).y) < r_cut;
-
-    fit_model = @(c,xdata) v(xdata,t(i),sig(1).sim_x,c);
-    tr(i).T_x = lsqcurvefit(fit_model,data.Te,tr(i).x(ind_x),tr(i).v_sim_x(ind_x),0,1e3);
-    tr(i).v_sim_x_fit = fit_model(tr(i).T_x,tr(i).x);
-
-    fit_model = @(c,xdata) v(xdata,t(i),sig(1).sim_y,c);
-    tr(i).T_y = lsqcurvefit(fit_model,data.Te,tr(i).y(ind_y),tr(i).v_sim_y(ind_y),0,1e3);
-    tr(i).v_sim_y_fit = fit_model(tr(i).T_y,tr(i).y);
-
-    fit_model = @(c,xdata) v(xdata,t(i),sig(1).exp_x,c);
-    tr(i).T_exp = lsqcurvefit(fit_model,data.Te,tr(i).x(ind_x),tr(i).v_exp_x(ind_x),0,1e3);
-    tr(i).v_exp_x_fit = fit_model(tr(i).T_exp,tr(i).x);
-
 end
 
 %% evaluate kinetic model
@@ -115,11 +92,7 @@ end
 for i = 1:length(data.grids.time)    
     x = data.grids.x_vec;
     y = data.grids.y_vec;
-    if strcmp(data.config.eq_set,'ideal_2F')
-        img = data.grids.vars(i).i_n;
-    else
-        img = data.grids.vars(i).n;
-    end
+    img = data.grids.vars(i).(data.i.n);
     [gauss_fit(i)] = fitImgWithGaussian(x,y,img,0);
     disp(['2D Gaussian Fits: ' num2str(i) '/' num2str(length(data.grids.time))])
 end
@@ -225,13 +198,13 @@ for k = 1:length(t)
     str1 = ['t = ' num2str(t(k)*1e6,'%.3g') '\mus = ' num2str(t(k)/data.tau,'%.3g') '\tau_e_x_p'];
     an.String = str1;
     an.Position = [0.159500000000000,0.929069291338582,0.723000000000000,0.080100000000000];
-    saveas(fig,[data.folder f 'imgs-' num2str(k) '.png']);
+    saveas(fig,[data.folder filesep 'imgs-' num2str(k) '.png']);
 end
 close(fig)
 
 %% plot transect data
 
-vars = {'v_sim_x','v_exp_x','v_sim_y','v_exp_x_fit'};
+vars = {'v_sim_x','v_exp_x'};
 num = length(tr);
 [fig,ax,an] = open_subplot(num,'Visible',flags.figvis);
 iter = 0;
@@ -260,7 +233,7 @@ for i = 1:size(ax,1)
 end
 lgd = legend(vars);
 lgd.Position = [0.899896476035170,0.198423988232002,0.080329755350856,0.236471041927977];
-saveas(fig,[data.folder f 'velocity-fits.png']);
+saveas(fig,[data.folder filesep 'velocity-fits.png']);
 close(fig)
 
 %% plot density and velocity transects together
@@ -315,7 +288,7 @@ end
 an.String = [];
 lgd = legend(lgd_str);
 lgd.Position = [0.825186396355424,0.127480879107887,0.075254105375184,0.091235634102218];
-saveas(fig,[data.folder f 'n-v-transects.png']);
+saveas(fig,[data.folder filesep 'n-v-transects.png']);
 close(fig)
 
 
@@ -394,7 +367,7 @@ plot(data.grids.time(ind_t)*1e6,[km(ind_t).Ti],'LineWidth',2,'MarkerSize',4,'Col
 xlabel('t (\mus)')
 ylabel('T_i (K)')
 
-saveas(fig,[data.folder f 'size-temp-evol.png']);
+saveas(fig,[data.folder filesep 'size-temp-evol.png']);
 close(fig)
 
 %% output results
@@ -403,4 +376,6 @@ s.tr = tr;
 s.sig = sig;
 s.sig_fit = sig_fit;
 s.t = t;
+s.km = km;
+save([data.folder filesep 'cmprExpAndSim.mat'],'s','-mat')
 end
