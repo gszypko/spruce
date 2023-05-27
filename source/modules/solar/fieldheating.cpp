@@ -16,15 +16,13 @@ void FieldHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vector<
     for(int i=0; i<lhs.size(); i++){
         std::string this_lhs = lhs[i];
         std::string this_rhs = rhs[i];
-        // if(this_lhs == "rate") rate = std::stod(this_rhs);
         if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
-        // else if(this_lhs == "current_mode") current_mode = (this_rhs == "true");
-        // else if(this_lhs == "mode") mode = this_rhs;
         else if(this_lhs == "coeff") coeff = std::stod(this_rhs);
         else if(this_lhs == "current_pow") current_pow = std::stod(this_rhs);
         else if(this_lhs == "b_pow") b_pow = std::stod(this_rhs);
         else if(this_lhs == "n_pow") n_pow = std::stod(this_rhs);
         else if(this_lhs == "roc_pow") roc_pow = std::stod(this_rhs);
+        else if(this_lhs == "inactive_mode") inactive_mode = (this_rhs == "true");
         else std::cerr << this_lhs << " config not recognized.\n";
     }
 }
@@ -51,15 +49,25 @@ void FieldHeating::computeHeating(){
     }
 }
 
-void FieldHeating::postIterateModule(double dt){
+void FieldHeating::preIterateModule(double dt){
     computeHeating();
-    m_pd.m_eqs->grid(IdealMHD::thermal_energy) += m_pd.m_ghost_zone_mask*(dt*heating);
+}
+
+void FieldHeating::iterateModule(double dt){
+    heating = m_pd.m_ghost_zone_mask*(dt*heating);
+    if(inactive_mode) return;
+    m_pd.m_eqs->grid(IdealMHD::thermal_energy) += heating;
     m_pd.m_eqs->propagateChanges();
 }
 
+
 std::string FieldHeating::commandLineMessage() const
 {
-    return (coeff == 0.0 ? "Field Heating Zero" : "Field Heating On");
+    std::string message = "Field Heating";
+    if(coeff == 0.0) message += " Zero";
+    else message += " On";
+    if(inactive_mode) message += " (Not Applied)";
+    return message;
 }
 
 void FieldHeating::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids)
