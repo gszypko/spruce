@@ -14,10 +14,16 @@ class AnomalousResistivity : public Module {
         void computeTimeDerivativesModule(const std::vector<Grid> &grids,std::vector<Grid> &grids_dt) override;
     private:
         double time_scale;
-        double diffusivity;
+        Grid diffusivity;
+        bool output_to_file = false;
         Grid anomalous_template;
-        void computeTemplate();
-        void computeDiffusion();
+        double metric_coeff; // = 1.0e49;
+        bool metric_smoothing; // = true;
+        double smoothing_sigma;
+        int kernel_radius;
+        Grid smoothing_kernel;
+        void computeDiffusion(const std::vector<Grid> &grids);
+        void computeTemplate(const std::vector<Grid> &grids);
 };
 
 #endif
