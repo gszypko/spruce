@@ -22,7 +22,7 @@ void AnomalousResistivity::setupModule(){
         assert(smoothing_sigma > 0.0 && "smoothing_sigma must be a positive number");
         kernel_radius = nearbyint(4.0*smoothing_sigma);
         int kernel_size = 2*kernel_radius + 1;
-        smoothing_kernel = SolarUtils::GaussianGrid(kernel_size,kernel_size,0.0,1.0/std::sqrt(2.0*PI*smoothing_sigma*smoothing_sigma),
+        smoothing_kernel = SolarUtils::GaussianGrid(kernel_size,kernel_size,0.0,1.0/(2.0*PI*smoothing_sigma*smoothing_sigma),
                                                     smoothing_sigma,smoothing_sigma,kernel_radius,kernel_radius);
     }
     else smoothing_kernel = Grid::Zero(1,1);
@@ -56,8 +56,8 @@ void AnomalousResistivity::computeDiffusion(const std::vector<Grid> &grids){
     Grid one = Grid::Ones(m_pd.m_xdim,m_pd.m_ydim);
     double rk_timestep = m_pd.epsilon*m_pd.m_eqs->getDT().min(m_pd.m_xl_dt,m_pd.m_yl_dt,m_pd.m_xu_dt,m_pd.m_yu_dt);
     if(rk_timestep > time_scale){
-        std::cout << "Fluid time step exceeded anomalous diffusion time scale; using 10x fluid time step as diffusion time scale\n";
-        diffusivity = one/(one/dx.square()+one/dy.square())/2./(10.0*rk_timestep);
+        std::cout << "Fluid time step exceeded anomalous diffusion time scale; using fluid time step as diffusion time scale\n";
+        diffusivity = one/(one/dx.square()+one/dy.square())/2./(rk_timestep);
     } else {
         diffusivity = one/(one/dx.square()+one/dy.square())/2./time_scale;
     }
@@ -72,7 +72,6 @@ void AnomalousResistivity::computeTemplate(const std::vector<Grid> &grids){
                         + (m_pd.derivative1D(m_pd.m_grids[PlasmaDomain::be_y] + grids[IdealMHD::bi_y],1)).square()).sqrt();
     anomalous_template = (m_pd.laplacian(grad_b_frob_norm/b_mag_2d)).square();
     anomalous_template = (metric_coeff*anomalous_template).min(1.0);
-    // anomalous_template /= anomalous_template.max(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu); //normalize s.t. current peak = 1
     if(metric_smoothing){
         Grid smoothed_template = Grid::Zero(anomalous_template.rows(),anomalous_template.cols());
         for(int i=0; i<anomalous_template.rows(); i++){
@@ -86,14 +85,14 @@ void AnomalousResistivity::computeTemplate(const std::vector<Grid> &grids){
             }
         }
         anomalous_template = smoothed_template;
+        anomalous_template = (10.0*anomalous_template).min(1.0);
+        anomalous_template = anomalous_template.pow(1.5);
     }
+
 }
 
 std::string AnomalousResistivity::commandLineMessage() const
 {
-    // std::ostringstream oss;
-    // oss.precision(4);
-    // oss << diffusivity;
     return "Anomalous Resistivity Active";
 }
 
