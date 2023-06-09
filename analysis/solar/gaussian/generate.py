@@ -26,12 +26,13 @@ GAMMA = 5.0/3.0
 ION_MASS = 1.6726e-24 #g
 
 MAX_TEMP = 1.0e6
+MIN_TEMP = 0.1e6
 MAX_RHO = 1.0e-14
-MIN_RHO = 1.0e-18
+MIN_RHO = 1.0e-14
 
 BE_X = 0.0#100.0/np.sqrt(2.0)
-BE_Y = 3.0#1.0/np.sqrt(2.0)#1.0#100.0/np.sqrt(2.0)
-BE_Z = 3.0#1.0/np.sqrt(2.0)#1.0
+BE_Y = 10.0#1.0/np.sqrt(2.0)#1.0#100.0/np.sqrt(2.0)
+BE_Z = 1.0#1.0/np.sqrt(2.0)#1.0
 BI_X = 0.0
 BI_Y = 0.0
 BI_Z = 0.0
@@ -49,6 +50,7 @@ z_2d = np.outer(np.ones_like(x),z)
 sigma = 0.1*DOMAIN_WIDTH
 gaussian_1d = np.exp(-(x**2)/(2.0*sigma**2))
 rho = (MAX_RHO-MIN_RHO)*np.outer(gaussian_1d,gaussian_1d) + MIN_RHO
+temp = (MAX_TEMP-MIN_TEMP)*np.outer(gaussian_1d,gaussian_1d) + MIN_TEMP
 
 zero = np.zeros_like(x_2d)
 one = np.ones_like(x_2d)
@@ -67,7 +69,7 @@ with open(out_directory+"/"+filename, 'w', newline='') as f:
     writer.writerow([str(GAMMA)])
     writer.writerow(["t=0"])
     names = ["d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","mom_z","be_x","be_y","be_z","bi_x","bi_y","bi_z","grav_x","grav_y"]
-    vars = [dx*one,dz*one,x_2d,z_2d,rho,MAX_TEMP*one,zero,zero,zero,BE_X*one,BE_Y*one,BE_Z*one,BI_X*one,BI_Y*one,BI_Z*one,zero,G*one]
+    vars = [dx*one,dz*one,x_2d,z_2d,rho,temp,zero,zero,zero,BE_X*one,BE_Y*one,BE_Z*one,BI_X*one,BI_Y*one,BI_Z*one,zero,G*one]
     for i in range(len(names)):
         writer.writerow([names[i]])
         writer.writerows(vars[i])
