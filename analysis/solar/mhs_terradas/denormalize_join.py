@@ -8,14 +8,21 @@ import numpy as np
 import os
 import sys
 
-BETA = 0.004
+TRIXI_MODE = True
+NOGRAV_MODE = True
+
+BETA = 0.004*1.0e-3
 b_0 = [-125.0*30.0,20.0*30.0] #G
 press_00 = [BETA*b_0[0]**2/(8.0*np.pi),BETA*b_0[1]**2/(8.0*np.pi)]
 T_C = 1.0e6 #K
-G = 2.748e4 #cm s^-2
 MU = 0.5*1.6726e-24 #g
 K_B = 1.3807e-16 #erg K^-1
-H = K_B*T_C/MU/G
+if NOGRAV_MODE:
+    G = 0.0
+    H = 6007869626.05265
+else:
+    G = 2.748e4 #cm s^-2
+    H = K_B*T_C/MU/G
 GAMMA = 5.0/3.0
 ION_MASS = 1.6726e-24 #g
 
@@ -109,18 +116,21 @@ assert xdim[0] == xdim[1] and ydim[0] == ydim[1]
 
 with open(out_path+"/"+out_filename, 'w', newline='') as f:
     writer = csv.writer(f)
-    for comment in comments: writer.writerows(comment)
-    writer.writerow(["#","JOINED INTO INTERCHANGE RECONNECTION REGION"])
-    writer.writerow(["#","DENORMALIZATION FACTORS:"])
-    writer.writerow(["#","BETA","B_0_AR","B_0_CH","T_C","G","MU","K_B","GAMMA","ION_MASS"])
-    writer.writerow(["#",str(BETA),str(b_0[0]),str(b_0[1]),str(T_C),str(G),str(MU),str(K_B),str(GAMMA),str(ION_MASS)])
+    if not TRIXI_MODE:
+        for comment in comments: writer.writerows(comment)
+        writer.writerow(["#","JOINED INTO INTERCHANGE RECONNECTION REGION"])
+        writer.writerow(["#","DENORMALIZATION FACTORS:"])
+        writer.writerow(["#","BETA","B_0_AR","B_0_CH","T_C","G","MU","K_B","GAMMA","ION_MASS"])
+        writer.writerow(["#",str(BETA),str(b_0[0]),str(b_0[1]),str(T_C),str(G),str(MU),str(K_B),str(GAMMA),str(ION_MASS)])
     writer.writerow(["xdim","ydim"])
     writer.writerow([str(xdim[0]),str(ydim[0])])
-    writer.writerow(["ion_mass"])
-    writer.writerow([str(ION_MASS)])
+    if not TRIXI_MODE:
+        writer.writerow(["ion_mass"])
+        writer.writerow([str(ION_MASS)])
     writer.writerow(["adiabatic_index"])
     writer.writerow([str(GAMMA)])
-    writer.writerow(["t=0"])
+    if not TRIXI_MODE:
+        writer.writerow(["t=0"])
     names = ["d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","mom_z","be_x","be_y","be_z","bi_x","bi_y","bi_z","grav_x","grav_y"]
     mults = [[H,H,H,H,press_00[0]*MU/K_B/T_C,T_C,zero,zero,zero,b_0[0],b_0[0],b_0[0],b_0[0],b_0[0],b_0[0],G,G],\
                 [H,H,H,H,press_00[1]*MU/K_B/T_C,T_C,zero,zero,zero,b_0[1],b_0[1],b_0[1],b_0[1],b_0[1],b_0[1],G,G]]
@@ -136,5 +146,28 @@ with open(out_path+"/"+out_filename, 'w', newline='') as f:
             combined_var = (ar_var*ar_rho + ch_var*ch_rho)/(ar_rho+ch_rho)
         else:
             combined_var =  ar_var + ch_var
-        writer.writerow([name])
-        writer.writerows(combined_var)
+        if TRIXI_MODE:            
+            # writer.writerow([name])
+            # writer.writerows(combined_var)
+            # grids[n] = (grids[rho]/m_pd.m_ion_mass).max(m_pd.density_min);
+            # grids[press] = 2*grids[n]*K_B*grids[temp].max(m_pd.temp_min);
+            # grids[thermal_energy] = grids[press]/(m_pd.m_adiabatic_index - 1.0);
+            if name in ["d_x","d_y","pos_x","pos_y","grav_x","grav_y","rho","mom_x","mom_y","mom_z"]:
+                writer.writerow([name])
+                writer.writerows(combined_var)
+            elif name in ["temp"]:
+                number_density = (mults[0][names.index("rho")]*(vars[0]["rho"]) + mults[1][names.index("rho")]*(vars[1]["rho"]))/ION_MASS
+                pressure = 2.0*number_density*K_B*combined_var
+                thermal_energy = pressure/(GAMMA - 1.0)
+                writer.writerow(["thermal_energy"])
+                writer.writerows(thermal_energy)
+            elif name in ["be_x","be_y","be_z"]:
+                external_name = name
+                internal_name = external_name.replace("e","i")
+                combined_var = combined_var + mults[0][names.index(internal_name)]*(vars[0][internal_name]) + mults[1][names.index(internal_name)]*(vars[1][internal_name])
+                writer.writerow([name.replace("e","")])
+                writer.writerows(combined_var/np.sqrt(4.0*np.pi))
+        else:
+            writer.writerow([name])
+            writer.writerows(combined_var)
+
