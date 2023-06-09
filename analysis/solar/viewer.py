@@ -41,7 +41,14 @@ fullnames = {
   'xia_heat': "Heating Heuristic from Xia et al. 2014",
   'xia_comp': "Xia et al. 2014 Heating",
   'current_density': "Current Density Magnitude",
-  'current_density_z': "Z Current Density"
+  'current_density_z': "Z Current Density",
+  'anomalous_factor': "Anomalous Resistivity Factor",
+  'thermal_conduction': "Thermal Conduction",
+  'heating': "Heating Required for Balance",
+  'field_heating_vs_heating': "Field Heating vs. Heating Required",
+  'anomalous_diffusivity': "Anomalous Magnetic Diffusivity",
+  'diffusivity': "Magnetic Diffusivity (Before Template)",
+  'anomalous_template': "Anomalous Diffusivity Template"
 }
 fullunits = {
   'rho': r'g cm$^{-3}$',
@@ -69,10 +76,16 @@ fullunits = {
   'b_mag': r'G',
   'field_heating': r'erg cm$^{-3}$ s$^{-1}$',
   'roc': r'Mm',
-  'xia_heat': r'erg cm^-3 s^-1',
+  'xia_heat': r'erg cm$^{-3}$ s$^{-1}$',
   'xia_comp': r'Fractional Excess wrt Rad. Loss',
-  'current_density': r'G s^-1',
-  'current_density_z': r'G s^-1'
+  'current_density': r'G s$^{-1}$',
+  'current_density_z': r'G s$^{-1}$',
+  'anomalous_factor': r'cm$^{-4}$',
+  'thermal_conduction': r'erg cm$^{-3}$ s$^{-1}$',
+  'heating': r'erg cm$^{-3}$ s$^{-1}$',
+  'field_heating_vs_heating': r'Fractional Excess wrt. Heating Required',
+  'anomalous_diffusivity': r'cm$^2$ s$^{-1}$',
+  'diffusivity': r'cm$^2$ s$^{-1}$'
 }
 for filter in aia.filter_names():
   fullnames[filter] = filter.split("A")[0] + " " + r'$\mathrm{\AA}$'
@@ -80,6 +93,15 @@ for filter in aia.filter_names():
 for key in fullunits.keys():
   if fullunits[key] != r'':
     fullunits[key] = " (" + fullunits[key] + ")"
+
+symlogthresholds = {
+  ("div_bi","div_be","diffusivity"): 1e-25,
+  ("dt","dt_thermal","dt_rad","b_mag","xia_heat"): 1e-8,
+  ("xia_comp","field_heating_vs_heating"): 1e-2,
+  ("current_density"): 1e-1,
+  ("thermal_conduction"): 1e-6,
+  ("rad"): 1e-1
+}
 
 parser = argparse.ArgumentParser(description='View the output from mhdtoy.')
 parser.add_argument('filename', help="the name of the file output from mhdtoy")
@@ -124,6 +146,7 @@ parser.add_argument('-i','--interactive',help="manually control the time steppin
 parser.add_argument('-E','--equal_aspect',help="enforce an equal aspect ratio on the plotted data",action='store_true')
 parser.add_argument('-tl', '--tick_list',help="provide comma-separated (no whitespace) list of tick values for colorbar", type=str, default="")
 parser.add_argument('-te', '--tick_e', help="use abbreviated e notation for colorbar", action="store_true")
+parser.add_argument('-slt', '--symlogthreshold', help="override default lower threshold for symlog colorbar scaling", type=float, default=-1.0)
 args = parser.parse_args()
 
 line_thickness = 1.0
@@ -131,9 +154,7 @@ arrow_size = 1.0
 
 if args.dpi != -1.0:
   matplotlib.rcParams.update({'figure.dpi': args.dpi})
-# matplotlib.rcParams.update({'figure.dpi': 300.0})
 # matplotlib.rcParams.update({'figure.autolayout': True})
-# matplotlib.rcParams.update({'font.family': 'Helvetica'})
 matplotlib.rcParams.update({'font.size': args.font_size})
 if args.dark_mode: plt.style.use('dark_background')
 if args.serif: matplotlib.rcParams.update({'font.family': 'serif'})
@@ -155,10 +176,18 @@ output_var = args.contourvar
 
 # Define any contour quantities that require multiple file values
 file_var_names = np.array([output_var])
-if output_var in ["current_density","current_density_z"]:
+if output_var in ["field_heating_vs_heating"]:
+  file_var_names = np.array(["rad","thermal_conduction","field_heating"])
+if output_var in ["heating"]:
+  file_var_names = np.array(["rad","thermal_conduction"])
+if output_var in ["anomalous_factor"]:
+  file_var_names = np.array(["bi_x","bi_y","n"])
+if output_var in ["current_density_z"]:
+  file_var_names = np.array(["bi_x","bi_y"])
+if output_var in ["current_density"]:
   file_var_names = np.array(["bi_x","bi_y","bi_z"])
 if output_var == "xia_comp":
-  file_var_names = np.array(["bi_x","bi_y","bi_z","n","rad"])
+  file_var_names = np.array(["bi_x","bi_y","bi_z","n","rad","thermal_conduction"])
 if output_var == "xia_heat":
   file_var_names = np.array(["bi_x","bi_y","bi_z","n"])
 if output_var == "roc":
@@ -199,7 +228,7 @@ if args.diff_file is not None:
   for i_base in range(len(t)):
     t_base = t[i_base]
     i_diff = np.searchsorted(t_diff,t_base)
-    i_diff_lower = min(len(t_diff)-1,max(0,i_diff))
+    i_diff_lower = min(len(t_diff)-1,max(0,i_diff-1))
     i_diff_upper = max(0,min(len(t_diff)-1,i_diff))
     for name_idx in range(len(file_var_names)):
       val_lower = file_vars_diff[name_idx][i_diff_lower]
@@ -490,11 +519,6 @@ if vec_mode == "stream":
 #   exit()
 # ###############################################
 
-fig, ax = plt.subplots(figsize=(args.fig_size_x, args.fig_size_y)) #6.4, 4.8
-# fig, ax = plt.subplots()
-frame = 0
-
-
 max_v = np.finfo(np.float_).min
 min_v = np.finfo(np.float_).max
 for i in range(len(var)):
@@ -527,40 +551,32 @@ if vec_var != None:
   if min_v_vec == np.finfo(np.float_).max:
     min_v_vec = 0.0
 
-# Set contour bar scaling (linear, log, etc)
-if args.diff_file is not None or output_var in ["beta","div_bi","div_be"]:
-  # im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-  #   interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-100, base=10))
-  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-    interpolation='nearest', norm=matplotlib.colors.CenteredNorm())
-  im.set_cmap('seismic')
-elif output_var in ["rad","dt","dt_thermal","dt_rad","field_heating","b_mag","xia_heat"]: #variables that can go to zero
-  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-    interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-8, base=10))
-elif aia.is_filter(output_var):
-  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-    interpolation='nearest', norm=matplotlib.colors.PowerNorm(gamma=0.2))
-elif output_var in ["xia_comp"]: # output_var in ["v_x","v_y","v_z","bi_x","bi_y"]: #variables with negative and positive values
-  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-    interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-1, base=10))
-  im.set_cmap('seismic')
-  im.set_clim(vmin=-max(abs(min_v),abs(max_v)),vmax=max(abs(min_v),abs(max_v)))
-elif output_var in ["current_density"]: # output_var in ["v_x","v_y","v_z","bi_x","bi_y"]: #variables with negative and positive values
-  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-    interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-1, base=10))
-else: # output_var in ["v_x","v_y","v_z","bi_x","bi_y"]: #variables with negative and positive values
-  im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-    interpolation='nearest', norm=matplotlib.colors.SymLogNorm(linthresh=1e-2, base=10))
-# else:
-#   im = NonUniformImage(ax, animated=True, origin='lower', extent=(x_min,x_max,y_min,y_max),\
-#     interpolation='nearest', norm=matplotlib.colors.LogNorm())
+fig, ax = plt.subplots(figsize=(args.fig_size_x, args.fig_size_y)) #6.4, 4.8
+im = NonUniformImage(ax, origin='lower')
+im.set(animated=True, extent=(x_min,x_max,y_min,y_max), interpolation='nearest')
+
+# Set colorbar scaling, with any other particular settings
+for k in symlogthresholds.keys():
+  if output_var in k:
+    thresh = (symlogthresholds[k] if args.symlogthreshold == -1.0 else args.symlogthreshold)
+    im.set(norm=matplotlib.colors.SymLogNorm(linthresh=thresh, base=10))
+    break
+else:
+  if args.diff_file is not None:
+    thresh = (1e-25 if args.symlogthreshold == -1.0 else args.symlogthreshold)
+    im.set(norm=matplotlib.colors.SymLogNorm(linthresh=thresh, base=10))
+  elif output_var in ["beta"]:
+    im.set(norm=matplotlib.colors.CenteredNorm(),cmap='seismic')
+  elif aia.is_filter(output_var):
+    im.set(norm=matplotlib.colors.PowerNorm(gamma=0.2),cmap=aia.colormap(output_var))
+  else:
+    thresh = (1e-2 if args.symlogthreshold == -1.0 else args.symlogthreshold)
+    im.set(norm=matplotlib.colors.SymLogNorm(linthresh=thresh, base=10))
 
 if output_var not in ["xia_comp"]:
   im.set_clim(vmin=min_v,vmax=max_v)
 
-if aia.is_filter(output_var):
-  im.set_cmap(aia.colormap(output_var))
-
+frame = 0
 im.set_data(x,y,np.transpose(var[frame]))
 ax.add_image(im)
 if args.equal_aspect:
@@ -584,29 +600,6 @@ if not args.no_colorbar:
         labels=[f'{v:.1e}'.replace("e-0","e-").replace("e+0","e") for v in tick_vals])
     else:
       var_colorbar.set_ticks(tick_vals)
-  # var_colorbar.set_ticks(var_colorbar.get_ticks(),\
-  #         labels=[f'{v:.0e}'.replace("e-0","e-").replace("e+0","e") for v in var_colorbar.get_ticks()])
-  # # We need to nomalize the tick locations so that they're in the range from 0-1...
-  # minor_tickvals = []
-  # major_tickvals = []
-  # floor_mag = math.floor(np.log10(min_v))
-  # ceil_mag = math.ceil(np.log10(max_v))
-  # for mag in range(floor_mag,ceil_mag+1):
-  #   for i in range(1,10):
-  #     val = i*pow(10.0,mag)
-  #     if val*1.01 >= min_v and val*0.99 <= max_v:
-  #       if i==1: major_tickvals.append(val)
-  #       else: minor_tickvals.append(val)
-  # # var_colorbar.set_ticks(np.array(major_tickvals), minor=False, \
-  # #       labels=[f'{v:.0e}'.replace("e-0","e-").replace("e+0","e") for v in major_tickvals])
-  # # var_colorbar.set_ticks(np.array(minor_tickvals), minor=True, \
-  # #       labels=[f'{v:.0e}'.replace("e-0","e-").replace("e+0","e") for v in minor_tickvals])
-  # if args.colorbar_location in ['left','right']:
-  #   var_colorbar.ax.yaxis.set_ticks(np.array(minor_tickvals), minor=True, \
-  #         labels=[f'{v:.0e}'.replace("e-0","e-").replace("e+0","e") for v in minor_tickvals])
-  # else:
-  #   var_colorbar.ax.xaxis.set_ticks(np.array(minor_tickvals), minor=True, \
-  #         labels=[f'{v:.0e}'.replace("e-0","e-").replace("e+0","e") for v in minor_tickvals])
 
 
 if vec_mode == "quiver":
@@ -777,7 +770,7 @@ def updatefig(*args_arg):
             continue
           art.remove()
         stream = ax.streamplot(x_eq,y_eq,this_vec_x,this_vec_y,start_points=start_pts,\
-            color=(0.0,0.0,0.0),broken_streamlines=False,linewidth=line_thickness,arrowstyle='->',arrowsize=arrow_size,maxlength=10.0)
+          color=(0.0,0.0,0.0),broken_streamlines=False,linewidth=line_thickness,arrowstyle='->',arrowsize=arrow_size,maxlength=10.0)
         if not args.streampoint_record:
           print("frame " + str(frame) + " plotted")
     # plt.tight_layout()
@@ -841,7 +834,7 @@ def savestreampoints(event):
   global stream
   global args
   global startpointfile
-  global y_max,y_min
+  y_min = Y[0][5]
   segments = stream.lines.get_segments()
   lines = extract_separate_lines(segments)[0]
   print(f"Saving {len(lines)} lines to {startpointfile}...")
@@ -849,14 +842,26 @@ def savestreampoints(event):
     for l in lines:
       if l[-1][1] > l[0][1]:
         if l[0][1] < y_min:
-          f.write(f"{l[0][0]},{max(l[1][1],y_min)}\n")
+          for i in range(1,len(l)):
+            if l[i][1] > y_min:
+              print(i)
+              f.write(f"{l[i][0]:.15e},{l[i][1]:.15e}\n")
+              break
+          else:
+            print("Streamline always below y_min. Omitting from file...")
         else:
-          f.write(f"{l[0][0]},{max(l[0][1],y_min)}\n")
+          f.write(f"{l[0][0]:.15e},{l[0][1]:.15e}\n")
       else:
         if l[-1][1] < y_min:
-          f.write(f"{l[-1][0]},{max(l[-1][1],y_min)}\n")
+          for i in range(2,len(l)):
+            if l[-i][1] > y_min:
+              print(i)
+              f.write(f"{l[-i][0]:.15e},{l[-i][1]:.15e}\n")
+              break
+          else:
+            print("Streamline always below y_min. Omitting from file...")
         else:
-          f.write(f"{l[-1][0]},{max(l[-2][1],y_min)}\n")
+          f.write(f"{l[-1][0]:.15e},{l[-1][1]:.15e}\n")
 
 def advancetime(event):
   global frame
