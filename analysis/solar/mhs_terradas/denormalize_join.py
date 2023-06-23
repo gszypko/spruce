@@ -8,11 +8,11 @@ import numpy as np
 import os
 import sys
 
-TRIXI_MODE = True
-NOGRAV_MODE = True
+TRIXI_MODE = False
+NOGRAV_MODE = False
 
-BETA = 0.004*1.0e-3
-b_0 = [-125.0*30.0,20.0*30.0] #G
+BETA = 0.004
+b_0 = [-125.0*30.0*0.1,20.0*30.0*0.1] #G
 press_00 = [BETA*b_0[0]**2/(8.0*np.pi),BETA*b_0[1]**2/(8.0*np.pi)]
 T_C = 1.0e6 #K
 MU = 0.5*1.6726e-24 #g
