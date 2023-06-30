@@ -21,7 +21,7 @@ class FieldHeating : public Module {
         void setupModule() override;
     private:
         double coeff = 0.0, current_pow = 0.0, b_pow = 0.0, n_pow = 0.0, roc_pow = 0.0;
-        bool output_to_file;
+        bool output_to_file = false;
         bool inactive_mode = false; //when true, module will compute the change in thermal energy (allowing for output), but WON'T apply it to the simulation
         Grid heating;
         void computeHeating();

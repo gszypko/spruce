@@ -191,8 +191,6 @@ Grid ThermalConduction::saturatedKappa() const {
 std::vector<Grid> ThermalConduction::saturationTerms() const {
     Grid con_flux_x(m_pd.m_xdim,m_pd.m_ydim,0.0);
     Grid con_flux_y(m_pd.m_xdim,m_pd.m_ydim,0.0);
-    Grid field_temp_gradient = m_pd.derivative1D(m_pd.m_eqs->grid(IdealMHD::temp),0)*m_pd.m_eqs->grid(IdealMHD::b_hat_x)
-                            + m_pd.derivative1D(m_pd.m_eqs->grid(IdealMHD::temp),1)*m_pd.m_eqs->grid(IdealMHD::b_hat_y);
     fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_pd.m_eqs->grid(IdealMHD::temp), m_pd.m_eqs->grid(IdealMHD::rho),
                                 m_pd.m_eqs->grid(IdealMHD::b_hat_x), m_pd.m_eqs->grid(IdealMHD::b_hat_y), KAPPA_0);
     Grid flux_mag = (con_flux_x.square() + con_flux_y.square()).sqrt();
