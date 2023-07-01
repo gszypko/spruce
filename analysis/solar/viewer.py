@@ -12,81 +12,6 @@ import aia_response as aia
 from viewer_lib import *
 import os
 
-fullnames = {
-  'rho': "Density",
-  'temp': "Temperature",
-  'press': "Pressure",
-  'rad': "Radiative Loss Rate",
-  'thermal_energy': "Thermal Energy Density",
-  'be': "Background Magnetic Field",
-  'bi': "Induced Magnetic Field",
-  'bi_x': "X Induced Magnetic Field",
-  'bi_y': "Y Induced Magnetic Field",
-  'bi_z': "Z Induced Magnetic Field",
-  'b': "Magnetic Field",
-  'v': "Velocity",
-  'v_x': "X Velocity",
-  'v_y': "Y Velocity",
-  'v_z': "Z Velocity",
-  'dt': "CFL Timestep",
-  'dt_thermal': "Thermal Conduction Timestep",
-  'dt_rad': "Radiative Losses Timestep",
-  'n': "Density",
-  'beta': "Plasma Beta",
-  'div_be': "Background Field Divergence",
-  'div_bi': "Induced Field Divergence",
-  'b_mag': "Field Magnitude",
-  'field_heating': "Field-Based Heating Rate",
-  'roc': "Radius of Curvature",
-  'xia_heat': "Heating Heuristic from Xia et al. 2014",
-  'xia_comp': "Xia et al. 2014 Heating",
-  'current_density': "Current Density Magnitude",
-  'current_density_z': "Z Current Density",
-  'anomalous_factor': "Anomalous Resistivity Factor",
-  'thermal_conduction': "Thermal Conduction",
-  'heating': "Heating Required for Balance",
-  'field_heating_vs_heating': "Field Heating vs. Heating Required",
-  'anomalous_diffusivity': "Anomalous Magnetic Diffusivity",
-  'diffusivity': "Magnetic Diffusivity (Before Template)",
-  'anomalous_template': "Anomalous Diffusivity Template"
-}
-fullunits = {
-  'rho': r'g cm$^{-3}$',
-  'temp': r'K',
-  'press': r'dyn cm$^{-2}$',
-  'rad': r'erg cm$^{-3}$ s$^{-1}$',
-  'thermal_energy': r'erg cm$^{-3}$',
-  'be': r'G',
-  'bi': r'G',
-  'bi_x': r'G',
-  'bi_y': r'G',
-  'bi_z': r'G',
-  'b': r'G',
-  'v': r'cm s$^{-1}$',
-  'v_x': r'cm s$^{-1}$',
-  'v_y': r'cm s$^{-1}$',
-  'v_z': r'cm s$^{-1}$',
-  'dt': r's',
-  'dt_thermal': r's',
-  'dt_rad': r's',
-  'n': r'cm$^{-3}$',
-  'beta': r'Log',
-  'div_b': r'G cm$^{-1}$',
-  'div_bi': r'G cm$^{-1}$',
-  'b_mag': r'G',
-  'field_heating': r'erg cm$^{-3}$ s$^{-1}$',
-  'roc': r'Mm',
-  'xia_heat': r'erg cm$^{-3}$ s$^{-1}$',
-  'xia_comp': r'Fractional Excess wrt Rad. Loss',
-  'current_density': r'G s$^{-1}$',
-  'current_density_z': r'G s$^{-1}$',
-  'anomalous_factor': r'cm$^{-4}$',
-  'thermal_conduction': r'erg cm$^{-3}$ s$^{-1}$',
-  'heating': r'erg cm$^{-3}$ s$^{-1}$',
-  'field_heating_vs_heating': r'Fractional Excess wrt. Heating Required',
-  'anomalous_diffusivity': r'cm$^2$ s$^{-1}$',
-  'diffusivity': r'cm$^2$ s$^{-1}$'
-}
 for filter in aia.filter_names():
   fullnames[filter] = filter.split("A")[0] + " " + r'$\mathrm{\AA}$'
   fullunits[filter] = r'Simulated AIA Image'
@@ -94,14 +19,6 @@ for key in fullunits.keys():
   if fullunits[key] != r'':
     fullunits[key] = " (" + fullunits[key] + ")"
 
-symlogthresholds = {
-  ("div_bi","div_be","diffusivity"): 1e-25,
-  ("dt","dt_thermal","dt_rad","b_mag","xia_heat"): 1e-8,
-  ("xia_comp","field_heating_vs_heating"): 1e-2,
-  ("current_density"): 1e-1,
-  ("thermal_conduction"): 1e-6,
-  ("rad"): 1e-1
-}
 
 parser = argparse.ArgumentParser(description='View the output from mhdtoy.')
 parser.add_argument('filename', help="the name of the file output from mhdtoy")
@@ -176,30 +93,11 @@ output_var = args.contourvar
 
 # Define any contour quantities that require multiple file values
 file_var_names = np.array([output_var])
-if output_var in ["field_heating_vs_heating"]:
-  file_var_names = np.array(["rad","thermal_conduction","field_heating"])
-if output_var in ["heating"]:
-  file_var_names = np.array(["rad","thermal_conduction"])
-if output_var in ["anomalous_factor"]:
-  file_var_names = np.array(["bi_x","bi_y","n"])
-if output_var in ["current_density_z"]:
-  file_var_names = np.array(["bi_x","bi_y"])
-if output_var in ["current_density"]:
-  file_var_names = np.array(["bi_x","bi_y","bi_z"])
-if output_var == "xia_comp":
-  file_var_names = np.array(["bi_x","bi_y","bi_z","n","rad","thermal_conduction"])
-if output_var == "xia_heat":
-  file_var_names = np.array(["bi_x","bi_y","bi_z","n"])
-if output_var == "roc":
-  file_var_names = np.array(["bi_x","bi_y"])
-if output_var == "beta":
-  file_var_names = np.array(["press","bi_x","bi_y","bi_z"])
-  # file_var_names = np.array(["press","bi_x","bi_y"])
-if output_var == "b_mag":
-  file_var_names = np.array(["bi_x","bi_y","bi_z"])
-  # file_var_names = np.array(["bi_x","bi_y"])
-if output_var in ["div_b","div_bi"]:
-  file_var_names = np.array(["bi_x","bi_y"])
+for k in file_vars_dict.keys():
+  if output_var in k:
+    file_var_names = np.array(file_vars_dict[k])
+    break
+
 if args.sandbox:
   file_var_names = np.array(["press","bi_x","bi_y","n"])
 if aia.is_filter(output_var):
@@ -947,7 +845,7 @@ else:
 if args.realtime or args.streampoint_record or args.interactive:
   plt.show()
 else:
-  FFwriter = animation.FFMpegWriter(bitrate=2000*2*4*10,fps=30)
+  FFwriter = animation.FFMpegWriter(bitrate=2000*2*4*10,fps=20)
   filename_suffix = "_"+output_var
   if vec_var != None: filename_suffix = filename_suffix + "_" + vec_var
   ani.save(args.filename.split('/')[-2]+filename_suffix+'.mp4', writer = FFwriter, dpi=100*2)
