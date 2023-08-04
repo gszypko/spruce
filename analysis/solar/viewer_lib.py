@@ -90,7 +90,7 @@ symlogthresholds = {
   ("xia_comp","field_heating_vs_heating"): 1e-2,
   ("current_density",): 1e-1,
   ("thermal_conduction",): 1e-6,
-  ("rad",): 1e-8,
+  ("rad","heating"): 1e-8,
   ("lambda",): 1e-1,
   ("rho",): 1e-15,
   ("losses_over_rad",): 1e0
@@ -293,6 +293,50 @@ def apply_contour_computation(output_var, file_vars, x, y, bx, by, bz):
   else:
     var = file_vars[0]
   return var
+
+def extract_tracer_particles_from_file(filename, display_interval, start_time, end_time):
+  input_file = open(filename)
+  particle_sets = []
+
+  time = -1.0
+  line = input_file.readline()
+  while True:
+    #read through to next time step (or file end)
+    while line and line[0:2] != "t=":
+      line = input_file.readline()
+    if not line:
+      break
+    time = float(line.split('=')[1])
+
+    while time < start_time:
+      line = input_file.readline()
+      while line and line[0:2] != "t=":
+        line = input_file.readline()
+      if not line:
+        break
+      time = float(line.split('=')[1])
+    if not line:
+      break
+
+    if end_time > 0.0 and time > end_time+1.0:
+      break
+
+    curr_set = ([],[])
+
+    line = input_file.readline()
+    while line and line[0:2] != "t=":
+      curr_x,curr_y = line.split(',')
+      curr_set[0].append(float(''.join(curr_x.split())))
+      curr_set[1].append(float(''.join(curr_y.split())))
+      line = input_file.readline()
+    
+    particle_sets.append(curr_set)
+
+    if not line:
+      break
+
+  input_file.close()
+  return particle_sets
 
 def extract_data_from_file(filename, file_var_names, display_interval, xl_ghost, xu_ghost, yl_ghost, yu_ghost, start_time, end_time, file_vec_name=None):
   input_file = open(filename)

@@ -30,6 +30,7 @@ parser.add_argument('-s', '--start', help="designates simulation time to begin p
 parser.add_argument('-e', '--end', help="designates simulation time to end plotting",type=float,default=-1.0)
 parser.add_argument('-V', '--vecmode', help="designates mode of display for the chosen vector quantity", choices=['quiver','stream'], default='quiver')
 parser.add_argument('-so','--streampoint_override', help="filename containing newline-separated x,y source points for streamline vector drawing", type=str)
+parser.add_argument('-tpsp','--tracer_particle_streampoint', help="use local tpout file for time-dependent streamline start points", action='store_true')
 parser.add_argument('-sr','--streampoint_record', help="mode for easily selecting streampoints; clicking on plot adds or deletes streamlines; \
                                                         press 0 to save the current set of streamlines for later use", action='store_true')
 parser.add_argument('-u','--uniform_stream', help="force uniform streamline spacing for vector field", action='store_true')
@@ -64,6 +65,7 @@ parser.add_argument('-E','--equal_aspect',help="enforce an equal aspect ratio on
 parser.add_argument('-tl', '--tick_list',help="provide comma-separated (no whitespace) list of tick values for colorbar", type=str, default="")
 parser.add_argument('-te', '--tick_e', help="use abbreviated e notation for colorbar", action="store_true")
 parser.add_argument('-slt', '--symlogthreshold', help="override default lower threshold for symlog colorbar scaling", type=float, default=-1.0)
+parser.add_argument('-tp', '--tracerparticles', help="path to particles.tpout file to display tracer particles", action='store_true')
 args = parser.parse_args()
 
 line_thickness = 1.0
@@ -87,6 +89,9 @@ outpath = args.filename.split("/")[:-1]
 startpointfile = ""
 for folder in outpath: startpointfile += folder + "/"
 startpointfile += f"startpoints_{args.vector}.txt"
+tracerparticlefile = ""
+for folder in outpath: tracerparticlefile += folder + "/"
+tracerparticlefile += "particles.tpout"
 
 display_interval = float(args.timestep)
 output_var = args.contourvar
@@ -117,6 +122,9 @@ yu_ghost = num_ghost
 
 xdim, ydim, X, Y, file_vars, vec_x, vec_y, bx, by, bz, t =\
   extract_data_from_file(args.filename, file_var_names, display_interval, xl_ghost, xu_ghost, yl_ghost, yu_ghost, start_time, end_time, file_vec_name)
+
+if args.tracerparticles:
+  tracer_particles = extract_tracer_particles_from_file(tracerparticlefile, display_interval, start_time, end_time)
 
 if args.diff_file is not None:
   xdim_diff, ydim_diff, foo, foo, file_vars_diff, foo, foo, foo, foo, foo, t_diff =\
@@ -499,6 +507,8 @@ if not args.no_colorbar:
     else:
       var_colorbar.set_ticks(tick_vals)
 
+if args.tracerparticles:
+  tp = ax.scatter(np.array(tracer_particles[frame][1])/1e8,np.array(tracer_particles[frame][0])/1e8,c='k',s=5)
 
 if vec_mode == "quiver":
   # pull out correctly spaced vectors
@@ -549,7 +559,10 @@ if vec_var != None:
     norm = np.sqrt(this_vec_x**2 + this_vec_y**2)
     np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
     np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
-    if os.path.exists(startpointfile) or args.streampoint_override is not None:
+    if args.tracer_particle_streampoint:
+      start_pts_series = extract_tracer_particles_from_file(tracerparticlefile, display_interval, start_time, end_time)
+      start_pts_series = [np.transpose(np.asarray(s)/1.0e8) for s in start_pts_series]
+    elif os.path.exists(startpointfile) or args.streampoint_override is not None:
       start_pts=[]
       input_filename = ""
       if args.streampoint_override is not None:
@@ -585,6 +598,13 @@ if vec_var != None:
       #   cdf = [np.trapz(norm_normalized[:(i+1)]) for i in range(len(norm_normalized))]
       #   stream_points = np.interp(np.linspace(0.05,0.95,num=num_points),cdf,x)
       # start_pts=np.column_stack((stream_points,y_eq[0]*np.ones_like(stream_points)))
+    if args.tracer_particle_streampoint:
+      start_pts = start_pts_series[frame]
+      cleaned = []
+      for s in start_pts:
+        if s[0] > x_min+1 and s[0] < x_max-1 and s[1] > y_min+1 and s[1] < y_max-1:
+          cleaned.append(s)
+      start_pts = cleaned
     start_pts = np.asarray(start_pts)
     print(start_pts)
     stream = ax.streamplot(x_eq,y_eq,this_vec_x,this_vec_y,start_points=start_pts,\
@@ -614,9 +634,13 @@ def updatefig(*args_arg):
     global quiv
     global stream
     global start_pts
+    global im
+    global tp
     if not (args.streampoint_record or args.interactive):
       frame = (frame + 1)%len(var)
     im.set_data(x,y,np.transpose(var[frame]))
+    if args.tracerparticles:
+      tp.set_offsets(np.transpose(np.array(tracer_particles[frame])/1e8))
     plot_title = ""
     if args.diff_file is not None:
       plot_title += "Difference in "
@@ -667,6 +691,13 @@ def updatefig(*args_arg):
           if not isinstance(art, matplotlib.patches.FancyArrowPatch):
             continue
           art.remove()
+        if args.tracer_particle_streampoint:
+          start_pts = start_pts_series[frame]
+          cleaned = []
+          for s in start_pts:
+            if s[0] > x_min+1 and s[0] < x_max-1 and s[1] > y_min+1 and s[1] < y_max-1:
+              cleaned.append(s)
+          start_pts = cleaned
         stream = ax.streamplot(x_eq,y_eq,this_vec_x,this_vec_y,start_points=start_pts,\
           color=(0.0,0.0,0.0),broken_streamlines=False,linewidth=line_thickness,arrowstyle='->',arrowsize=arrow_size,maxlength=10.0)
         if not args.streampoint_record:
@@ -732,7 +763,7 @@ def savestreampoints(event):
   global stream
   global args
   global startpointfile
-  y_min = Y[0][5]
+  y_min = Y[0][20]
   segments = stream.lines.get_segments()
   lines = extract_separate_lines(segments)[0]
   print(f"Saving {len(lines)} lines to {startpointfile}...")
@@ -743,23 +774,27 @@ def savestreampoints(event):
           for i in range(1,len(l)):
             if l[i][1] > y_min:
               print(i)
-              f.write(f"{l[i][0]:.15e},{l[i][1]:.15e}\n")
+              f.write(f"{l[i][0]*1.0e8:.15e},{l[i][1]*1.0e8:.15e}\n")
               break
           else:
-            print("Streamline always below y_min. Omitting from file...")
+            print("Streamline always below y_min. Using middle point...")
+            middle = int(round(0.5*len(l)))
+            f.write(f"{l[middle][0]*1.0e8:.15e},{l[middle][1]*1.0e8:.15e}\n")
         else:
-          f.write(f"{l[0][0]:.15e},{l[0][1]:.15e}\n")
+          f.write(f"{l[0][0]*1.0e8:.15e},{l[0][1]*1.0e8:.15e}\n")
       else:
         if l[-1][1] < y_min:
           for i in range(2,len(l)):
             if l[-i][1] > y_min:
               print(i)
-              f.write(f"{l[-i][0]:.15e},{l[-i][1]:.15e}\n")
+              f.write(f"{l[-i][0]*1.0e8:.15e},{l[-i][1]*1.0e8:.15e}\n")
               break
           else:
-            print("Streamline always below y_min. Omitting from file...")
+            print("Streamline always below y_min. Using middle point...")
+            middle = int(round(0.5*len(l)))
+            f.write(f"{l[middle][0]*1.0e8:.15e},{l[middle][1]*1.0e8:.15e}\n")
         else:
-          f.write(f"{l[-1][0]:.15e},{l[-1][1]:.15e}\n")
+          f.write(f"{l[-1][0]*1.0e8:.15e},{l[-1][1]*1.0e8:.15e}\n")
 
 def advancetime(event):
   global frame
