@@ -17,6 +17,7 @@ class AnomalousResistivity : public Module {
         Grid diffusivity;
         bool output_to_file = false;
         Grid anomalous_template;
+        Grid joule_heating;
         double metric_coeff; // = 1.0e49;
         bool metric_smoothing; // = true;
         double smoothing_sigma;

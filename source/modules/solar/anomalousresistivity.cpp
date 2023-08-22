@@ -17,6 +17,7 @@ AnomalousResistivity::AnomalousResistivity(PlasmaDomain &pd): Module(pd) {
 void AnomalousResistivity::setupModule(){
     assert(time_scale > 0.0 && "Anomalous Resistivity time_scale must be specified, and positive");
     diffusivity = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    joule_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     anomalous_template = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     if(metric_smoothing){
         assert(smoothing_sigma > 0.0 && "smoothing_sigma must be a positive number");
@@ -52,7 +53,8 @@ void AnomalousResistivity::computeTimeDerivativesModule(const std::vector<Grid> 
     Grid electrical_resistivity = 4.0*PI/C/C*coeff;
     Grid current_density = C/(4.0*PI)*(m_pd.curl2D(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_eqs->grid(IdealMHD::bi_x),
                                         m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_eqs->grid(IdealMHD::bi_y))).abs();
-    grids_dt[4] += electrical_resistivity*current_density*current_density;
+    joule_heating = electrical_resistivity*current_density*current_density;
+    grids_dt[4] += joule_heating;
 }
 
 void AnomalousResistivity::computeDiffusion(const std::vector<Grid> &grids){
@@ -106,5 +108,7 @@ void AnomalousResistivity::fileOutput(std::vector<std::string>& var_names, std::
         var_grids.push_back(anomalous_template*diffusivity);
         var_names.push_back("anomalous_template");
         var_grids.push_back(anomalous_template);
+        var_names.push_back("joule_heating");
+        var_grids.push_back(joule_heating);
     }
 }
