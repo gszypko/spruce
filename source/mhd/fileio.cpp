@@ -155,7 +155,7 @@ void PlasmaDomain::storeGrids()
       m_data_to_write[m_lines_recorded] = m_eqs->index2name(i) + '\n';
       m_lines_recorded++;
       assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
-      m_data_to_write[m_lines_recorded] = m_eqs->grid(i).format(',','\n');
+      m_data_to_write[m_lines_recorded] = m_eqs->grid(i).format(',','\n',m_write_precision);
       m_lines_recorded++;
     }
   }
@@ -169,7 +169,7 @@ void PlasmaDomain::storeGrids()
     m_data_to_write[m_lines_recorded] = module_varnames[i] + '\n';
     m_lines_recorded++;
     assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
-    m_data_to_write[m_lines_recorded] = module_data[i].format(',','\n');
+    m_data_to_write[m_lines_recorded] = module_data[i].format(',','\n',m_write_precision);
     m_lines_recorded++;
   }
   // increment store counter
@@ -295,6 +295,7 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
     case static_cast<int>(Config::time_integrator): m_time_integrator = stringToTimeIntegrator(rhs); break;
     case static_cast<int>(Config::duration): m_duration = std::stod(rhs); break;
     case static_cast<int>(Config::sg_opt): m_sg_opt = rhs; break;
+    case static_cast<int>(Config::write_precision): m_write_precision = std::stoi(rhs); break;
     default: break;
   }
 }
