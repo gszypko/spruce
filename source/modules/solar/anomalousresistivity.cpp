@@ -27,6 +27,9 @@ void AnomalousResistivity::setupModule(){
                                                     smoothing_sigma,smoothing_sigma,kernel_radius,kernel_radius);
     }
     else smoothing_kernel = Grid::Zero(1,1);
+    if(time_integrator == "") time_integrator == "euler";
+    assert((time_integrator == "euler" || time_integrator == "rk2" || time_integrator == "rk4")
+            && "Invalid time integrator given for Anomalous Resistivity module");
 }
 
 void AnomalousResistivity::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){
@@ -39,67 +42,86 @@ void AnomalousResistivity::parseModuleConfigs(std::vector<std::string> lhs, std:
         else if(this_lhs == "smoothing_sigma") smoothing_sigma = std::stod(this_rhs);
         else if(this_lhs == "safety_factor") safety_factor = std::stod(this_rhs);
         else if(this_lhs == "metric_smoothing") metric_smoothing = (this_rhs == "true");
+        else if(this_lhs == "time_integrator") time_integrator = this_rhs;
         else std::cerr << this_lhs << " config not recognized.\n";
     }
+}
+
+std::vector<Grid> AnomalousResistivity::computeTimeDerivatives(const Grid &bi_x, const Grid &bi_y, const Grid &bi_z, const Grid &be_x_lap, const Grid &be_y_lap, const Grid &be_z_lap){
+    Grid b_x = m_pd.m_grids[PlasmaDomain::be_x]+bi_x;
+    Grid b_y = m_pd.m_grids[PlasmaDomain::be_y]+bi_y;
+    computeTemplate(b_x,b_y);
+    Grid coeff = m_pd.m_ghost_zone_mask*anomalous_template*diffusivity;
+    Grid electrical_resistivity = 4.0*PI/C/C*coeff;
+    Grid current_density = C/(4.0*PI)*(m_pd.curl2D(b_x,b_y)).abs();
+    Grid joule_heating = electrical_resistivity*current_density*current_density;
+    return {coeff*(be_x_lap+m_pd.laplacian(bi_x)),
+            coeff*(be_y_lap+m_pd.laplacian(bi_y)),
+            coeff*(be_z_lap+m_pd.laplacian(bi_z)),
+            joule_heating};
 }
 
 void AnomalousResistivity::iterateModule(double dt){
     computeDiffusion();
     Grid bi_x = m_pd.m_eqs->grid(IdealMHD::bi_x), bi_y = m_pd.m_eqs->grid(IdealMHD::bi_y), bi_z = m_pd.m_eqs->grid(IdealMHD::bi_z);
     Grid thermal_energy = m_pd.m_eqs->grid(IdealMHD::thermal_energy);
-    // Grid thermal_energy_next;
     if(output_to_file) avg_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     double dt_subcycle = (dt/(double)curr_num_subcycles);
     Grid old_thermal_energy = thermal_energy;
-    // if(time_integrator == "euler") for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
-    for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
-        // thermal_energy = thermal_energy + m_pd.m_ghost_zone_mask*(dt_subcycle)*thermalEnergyDerivative(temp,b_hat);
-        // thermal_energy = thermal_energy.max(m_pd.thermal_energy_min);
-        // temp = ((m_pd.m_adiabatic_index - 1.0)*thermal_energy/(2.0*K_B*m_n)).max(m_pd.temp_min);
-        computeTemplate(m_pd.m_grids[PlasmaDomain::be_x]+bi_x,m_pd.m_grids[PlasmaDomain::be_y]+bi_y);
-        Grid coeff = m_pd.m_ghost_zone_mask*anomalous_template*diffusivity;
-        bi_x += dt_subcycle*coeff*(m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_x])+m_pd.laplacian(bi_x));
-        bi_y += dt_subcycle*coeff*(m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_y])+m_pd.laplacian(bi_y));
-        bi_z += dt_subcycle*coeff*(m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_z])+m_pd.laplacian(bi_z));
-        Grid electrical_resistivity = 4.0*PI/C/C*coeff;
-        Grid current_density = C/(4.0*PI)*(m_pd.curl2D(m_pd.m_grids[PlasmaDomain::be_x]+bi_x,m_pd.m_grids[PlasmaDomain::be_y]+bi_y)).abs();
-        joule_heating = electrical_resistivity*current_density*current_density;
-        thermal_energy += dt_subcycle*joule_heating;
+    Grid be_x_lap = m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_x]);
+    Grid be_y_lap = m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_y]);
+    Grid be_z_lap = m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_z]);
+    if(time_integrator == "euler") {
+        for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
+            std::vector<Grid> derivatives = computeTimeDerivatives(bi_x,bi_y,bi_z,be_x_lap,be_y_lap,be_z_lap);
+            bi_x += dt_subcycle*derivatives[0];
+            bi_y += dt_subcycle*derivatives[1];
+            bi_z += dt_subcycle*derivatives[2];
+            thermal_energy += dt_subcycle*derivatives[3];
+        }
     }
-    // else if(time_integrator == "rk2") {
-    //     Grid half_step, half_step_temp;
-    //     for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
-    //         half_step = thermal_energy + m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*thermalEnergyDerivative(temp,b_hat);
-    //         half_step = half_step.max(m_pd.thermal_energy_min);
-    //         half_step_temp = ((m_pd.m_adiabatic_index - 1.0)*half_step/(2*K_B*m_n)).max(m_pd.temp_min);
-            
-    //         thermal_energy = thermal_energy + m_pd.m_ghost_zone_mask*(dt_subcycle)*thermalEnergyDerivative(half_step_temp,b_hat);
-    //         thermal_energy = thermal_energy.max(m_pd.thermal_energy_min);
-    //         temp = ((m_pd.m_adiabatic_index - 1.0)*thermal_energy/(2*K_B*m_n)).max(m_pd.temp_min);
-    //     }
-    // }
-    // else if(time_integrator == "rk4") {
-    //     Grid intermediate, intermediate_temp, k1, k2, k3, k4;
-    //     for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
-    //         k1 = thermalEnergyDerivative(temp,b_hat);
+    else if(time_integrator == "rk2") {
+        std::vector<Grid> bi_half_step, derivatives;
+        for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
+            derivatives = computeTimeDerivatives(bi_x,bi_y,bi_z,be_x_lap,be_y_lap,be_z_lap);
+            bi_half_step = {bi_x,bi_y,bi_z};
+            bi_half_step[0] += (0.5*dt_subcycle)*derivatives[0];
+            bi_half_step[1] += (0.5*dt_subcycle)*derivatives[1];
+            bi_half_step[2] += (0.5*dt_subcycle)*derivatives[2];
 
-    //         intermediate = (thermal_energy + m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*k1).max(m_pd.thermal_energy_min);
-    //         intermediate_temp = ((m_pd.m_adiabatic_index - 1.0)*intermediate/(2*K_B*m_n)).max(m_pd.temp_min);
-    //         k2 = thermalEnergyDerivative(intermediate_temp,b_hat);
+            derivatives = computeTimeDerivatives(bi_half_step[0],bi_half_step[1],bi_half_step[2],be_x_lap,be_y_lap,be_z_lap);
+            bi_x += dt_subcycle*derivatives[0];
+            bi_y += dt_subcycle*derivatives[1];
+            bi_z += dt_subcycle*derivatives[2];
+            thermal_energy += dt_subcycle*derivatives[3];
+        }
+    }
+    else if(time_integrator == "rk4") {
+        std::vector<Grid> intermediate_bi, k1, k2, k3, k4;
+        for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
+            k1 = computeTimeDerivatives(bi_x,bi_y,bi_z,be_x_lap,be_y_lap,be_z_lap);
 
-    //         intermediate = (thermal_energy + m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*k2).max(m_pd.thermal_energy_min);
-    //         intermediate_temp = ((m_pd.m_adiabatic_index - 1.0)*intermediate/(2*K_B*m_n)).max(m_pd.temp_min);
-    //         k3 = thermalEnergyDerivative(intermediate_temp,b_hat);
+            intermediate_bi = {bi_x + 0.5*dt_subcycle*k1[0],
+                                bi_y + 0.5*dt_subcycle*k1[1],
+                                bi_z + 0.5*dt_subcycle*k1[2]};
+            k2 = computeTimeDerivatives(intermediate_bi[0],intermediate_bi[1],intermediate_bi[2],be_x_lap,be_y_lap,be_z_lap);
 
-    //         intermediate = (thermal_energy + m_pd.m_ghost_zone_mask*(dt_subcycle)*k3).max(m_pd.thermal_energy_min);
-    //         intermediate_temp = ((m_pd.m_adiabatic_index - 1.0)*intermediate/(2*K_B*m_n)).max(m_pd.temp_min);
-    //         k4 = thermalEnergyDerivative(intermediate_temp,b_hat);
+            intermediate_bi = {bi_x + 0.5*dt_subcycle*k2[0],
+                                bi_y + 0.5*dt_subcycle*k2[1],
+                                bi_z + 0.5*dt_subcycle*k2[2]};
+            k3 = computeTimeDerivatives(intermediate_bi[0],intermediate_bi[1],intermediate_bi[2],be_x_lap,be_y_lap,be_z_lap);
 
-    //         thermal_energy = thermal_energy + m_pd.m_ghost_zone_mask*(dt_subcycle)*(k1 + 2.0*k2 + 2.0*k3 + k4)/6.0;
-    //         thermal_energy = thermal_energy.max(m_pd.thermal_energy_min);
-    //         temp = ((m_pd.m_adiabatic_index - 1.0)*thermal_energy/(2*K_B*m_n)).max(m_pd.temp_min);
-    //     }
-    // }
+            intermediate_bi = {bi_x + dt_subcycle*k3[0],
+                                bi_y + dt_subcycle*k3[1],
+                                bi_z + dt_subcycle*k3[2]};
+            k4 = computeTimeDerivatives(intermediate_bi[0],intermediate_bi[1],intermediate_bi[2],be_x_lap,be_y_lap,be_z_lap);
+
+            bi_x += dt_subcycle*(k1[0] + 2.0*k2[0] + 2.0*k3[0] + k4[0])/6.0;
+            bi_y += dt_subcycle*(k1[1] + 2.0*k2[1] + 2.0*k3[1] + k4[1])/6.0;
+            bi_z += dt_subcycle*(k1[2] + 2.0*k2[2] + 2.0*k3[2] + k4[2])/6.0;
+            thermal_energy += dt_subcycle*(k1[3] + 2.0*k2[3] + 2.0*k3[3] + k4[3])/6.0;
+        }
+    }
     if(output_to_file) avg_heating = (thermal_energy - old_thermal_energy)/dt;
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) = thermal_energy;
     m_pd.m_eqs->grid(IdealMHD::bi_x) = bi_x;
@@ -109,20 +131,20 @@ void AnomalousResistivity::iterateModule(double dt){
 }
 
 
-//std::vector<Grid> grids_dt {d_rho_dt,d_mom_x_dt,d_mom_y_dt,d_mom_z_dt,d_thermal_energy_dt,d_bi_x_dt,d_bi_y_dt,d_bi_z_dt};
-void AnomalousResistivity::computeTimeDerivativesModule(const std::vector<Grid> &grids,std::vector<Grid> &grids_dt){
-    computeDiffusion();
-    computeTemplate(m_pd.m_grids[PlasmaDomain::be_x]+grids[IdealMHD::bi_x],m_pd.m_grids[PlasmaDomain::be_y]+grids[IdealMHD::bi_y]);
-    Grid coeff = m_pd.m_ghost_zone_mask*anomalous_template*diffusivity;
-    grids_dt[5] += coeff*(m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_x])+m_pd.laplacian(grids[IdealMHD::bi_x]));
-    grids_dt[6] += coeff*(m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_y])+m_pd.laplacian(grids[IdealMHD::bi_y]));
-    grids_dt[7] += coeff*(m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_z])+m_pd.laplacian(grids[IdealMHD::bi_z]));
-    Grid electrical_resistivity = 4.0*PI/C/C*coeff;
-    Grid current_density = C/(4.0*PI)*(m_pd.curl2D(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_eqs->grid(IdealMHD::bi_x),
-                                        m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_eqs->grid(IdealMHD::bi_y))).abs();
-    joule_heating = electrical_resistivity*current_density*current_density;
-    grids_dt[4] += joule_heating;
-}
+// //std::vector<Grid> grids_dt {d_rho_dt,d_mom_x_dt,d_mom_y_dt,d_mom_z_dt,d_thermal_energy_dt,d_bi_x_dt,d_bi_y_dt,d_bi_z_dt};
+// void AnomalousResistivity::computeTimeDerivativesModule(const std::vector<Grid> &grids,std::vector<Grid> &grids_dt){
+//     computeDiffusion();
+//     computeTemplate(m_pd.m_grids[PlasmaDomain::be_x]+grids[IdealMHD::bi_x],m_pd.m_grids[PlasmaDomain::be_y]+grids[IdealMHD::bi_y]);
+//     Grid coeff = m_pd.m_ghost_zone_mask*anomalous_template*diffusivity;
+//     grids_dt[5] += coeff*(m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_x])+m_pd.laplacian(grids[IdealMHD::bi_x]));
+//     grids_dt[6] += coeff*(m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_y])+m_pd.laplacian(grids[IdealMHD::bi_y]));
+//     grids_dt[7] += coeff*(m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_z])+m_pd.laplacian(grids[IdealMHD::bi_z]));
+//     Grid electrical_resistivity = 4.0*PI/C/C*coeff;
+//     Grid current_density = C/(4.0*PI)*(m_pd.curl2D(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_eqs->grid(IdealMHD::bi_x),
+//                                         m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_eqs->grid(IdealMHD::bi_y))).abs();
+//     joule_heating = electrical_resistivity*current_density*current_density;
+//     grids_dt[4] += joule_heating;
+// }
 
 void AnomalousResistivity::computeDiffusion(){
     const Grid &dx = m_pd.m_grids[PlasmaDomain::d_x], &dy = m_pd.m_grids[PlasmaDomain::d_y];
@@ -154,12 +176,11 @@ void AnomalousResistivity::computeTemplate(const Grid &b_x, const Grid &b_y){
         anomalous_template = (10.0*anomalous_template).min(1.0);
         anomalous_template = anomalous_template.pow(1.5);
     }
-
 }
 
 std::string AnomalousResistivity::commandLineMessage() const
 {
-    return "Anomalous Resistivity Active";
+    return "Anomalous Resistivity Subcycles: " + std::to_string(curr_num_subcycles);
 }
 
 void AnomalousResistivity::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids){
