@@ -80,6 +80,31 @@ double Grid::min(int il, int jl, int iu, int ju) const
   return curr_min;
 }
 
+//Finds the indices of the min within the rectangular range defined by the bounds (il,jl) and (iu,ju)
+//Note: if non minimum exists, will return the center cell of the grid
+std::vector<int> Grid::argmin(int il, int jl, int iu, int ju) const
+{
+  std::vector<int> curr_argmin = {(int)(0.5*m_rows),(int)(0.5*m_cols)};
+  double curr_min = (*this)(curr_argmin[0],curr_argmin[1]);
+  for(int i=il; i<=iu; i++){
+    for(int j=jl; j<=ju; j++){
+      if((*this)(i,j) < curr_min){
+        curr_min = (*this)(i,j);
+        curr_argmin = {i,j};
+      }
+    }
+  }
+  assert(curr_min < std::numeric_limits<double>::max() && "Something went wrong in the argmin calculation");
+  return curr_argmin;
+}
+
+//Finds the indices of the min within the rectangular range defined by the bounds (il,jl) and (iu,ju)
+//Note: if non minimum exists, will return the center cell of the grid
+std::vector<int> Grid::argmin() const
+{
+  return argmin(0,0,m_rows-1,m_cols-1);
+}
+
 // returns a grid containing the elementwise minimum with b
 Grid Grid::min(double b) const { return ScalarOperation( b, SCALAR_LAMBDA(std::min(this_comp,scalar)) ); }
 
@@ -109,6 +134,28 @@ double Grid::max(int il, int jl, int iu, int ju) const
   return curr_max;
 }
 
+//Finds the min within the rectangular range defined by the bounds (il,jl) and (iu,ju)
+std::vector<int> Grid::argmax(int il, int jl, int iu, int ju) const
+{
+  std::vector<int> curr_argmax = {(int)(0.5*m_rows),(int)(0.5*m_cols)};
+  double curr_max = (*this)(curr_argmax[0],curr_argmax[1]);
+  for(int i=il; i<=iu; i++){
+    for(int j=jl; j<=ju; j++){
+      if((*this)(i,j) > curr_max){
+        curr_max = (*this)(i,j);
+        curr_argmax = {i,j};
+      }
+      
+    }
+  }
+  assert(curr_max > -std::numeric_limits<double>::max() && "Something went wrong in the argmax calculation");
+  return curr_argmax;
+}
+
+std::vector<int> Grid::argmax() const
+{
+  return argmax(0,0,m_rows-1,m_cols-1);
+}
 
 Grid Grid::max(double b) const { return ScalarOperation( b, SCALAR_LAMBDA(std::max(this_comp,scalar)) ); }
 
