@@ -30,7 +30,7 @@ void RadiativeLosses::parseModuleConfigs(std::vector<std::string> lhs, std::vect
 }
 
 void RadiativeLosses::setupModule(){
-    if(time_integrator == "") time_integrator == "euler";
+    if(time_integrator == "") time_integrator = "euler";
     assert((time_integrator == "euler" || time_integrator == "rk2" || time_integrator == "rk4")
             && "Invalid time integrator given for Thermal Conduction module");
     if(output_to_file) avg_losses = Grid(m_pd.m_xdim,m_pd.m_ydim,0.0);

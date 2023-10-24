@@ -27,7 +27,7 @@ void AnomalousResistivity::setupModule(){
                                                     smoothing_sigma,smoothing_sigma,kernel_radius,kernel_radius);
     }
     else smoothing_kernel = Grid::Zero(1,1);
-    if(time_integrator == "") time_integrator == "euler";
+    if(time_integrator == "") time_integrator = "euler";
     assert((time_integrator == "euler" || time_integrator == "rk2" || time_integrator == "rk4")
             && "Invalid time integrator given for Anomalous Resistivity module");
 }

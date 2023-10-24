@@ -30,7 +30,7 @@ void ThermalConduction::parseModuleConfigs(std::vector<std::string> lhs, std::ve
 void ThermalConduction::setupModule(){
     if(output_to_file) avg_change = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     else avg_change = Grid::Zero(1,1);
-    if(time_integrator == "") time_integrator == "euler";
+    if(time_integrator == "") time_integrator = "euler";
     assert((time_integrator == "euler" || time_integrator == "rk2" || time_integrator == "rk4")
             && "Invalid time integrator given for Thermal Conduction module");
 }
