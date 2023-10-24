@@ -19,6 +19,7 @@ void AnomalousResistivity::setupModule(){
     diffusivity = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     joule_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     anomalous_template = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    avg_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     if(metric_smoothing){
         assert(smoothing_sigma > 0.0 && "smoothing_sigma must be a positive number");
         kernel_radius = nearbyint(4.0*smoothing_sigma);
