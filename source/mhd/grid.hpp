@@ -29,6 +29,7 @@ public:
   double operator()(size_t i, size_t j) const;
   double& operator()(size_t el);
   double operator()(size_t el) const;
+  bool isInside(size_t i, size_t j) const;
   // *** Basic Getters
   int rows() const;
   int cols() const;
@@ -70,6 +71,7 @@ public:
   static void MeshGrid(const Grid& a,const Grid& b,Grid& A,Grid& B);
   static Grid Gaussian2D(const Grid& x,const Grid& y,double amp,double min,double sig_x,double sig_y,double x_cen,double y_cen);
   static Grid Exp2D(const Grid& x,const Grid& y,double amp,double min,double sig_x,double sig_y,double x_cen,double y_cen);
+  Grid floodFill(std::vector<std::vector<int> > start_coords, double threshold, bool under_threshold = true) const;
   // *** Vector Products
   static Grid DotProduct2D(const std::vector<Grid>& a, const std::vector<Grid>& b);//Dot product of two 2D vectors
   static Grid CrossProduct2D(const std::vector<Grid>& a, const std::vector<Grid>& b);//Cross product of two vectors in xy-plane (result in z-direction)

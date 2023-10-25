@@ -5,6 +5,7 @@
 #include <limits>
 #include <cmath>
 #include <algorithm>
+#include <queue>
 
 #define SCALAR_LAMBDA(expr) [](double this_comp, double scalar){return expr;}
 #define COMPONENTWISE_LAMBDA(expr) [](double this_comp, double that_comp){return expr;}
@@ -477,6 +478,44 @@ std::vector<Grid> Grid::CrossProduct(const std::vector<Grid>& a, const std::vect
   result_y = a_z*b_x - a_x*b_z;
   result_z = a_x*b_y - a_y*b_x;
   return {result_x, result_y, result_z};
+}
+
+//Flood fill starting from start_coords (vector of index pairs), borders implicitly defined by
+//threshold. If under_threshold is true (default), fills so long as the value is below threshold.
+//Otherwise, fills so long as the value is above threshold.
+//Returns a grid that equals 1.0 where filled, 0.0 where not filled.
+Grid Grid::floodFill(std::vector<std::vector<int> > start_coords, double threshold, bool under_threshold) const{
+  double threshold_factor = under_threshold ? 1.0 : -1.0; //flips direction of comparison
+  std::queue<std::vector<int> > q;
+  Grid result = Grid::Zero(m_rows,m_cols);
+  // initialize at field magnitude minimum
+  int neighbor_dirs[][2] {{1,0},{-1,0},{0,1},{0,-1}};
+  for(std::vector<int> start : start_coords){
+    // q.push(b_mag.argmin(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu));
+    q.push(start);
+    while(!q.empty()){
+      std::vector<int> curr = q.front();
+      q.pop();
+      std::cout << "Considering " << curr[0] << "," << curr[1] << "..." << std::endl;
+      if(threshold_factor*(*this)(curr[0],curr[1]) < threshold_factor*threshold){
+        result(curr[0],curr[1]) = 1.0;
+        std::cout << "Filled." << std::endl;
+        for(int* neighbor_dir : neighbor_dirs){
+          std::vector<int> neighbor {curr[0]+neighbor_dir[0],curr[1]+neighbor_dir[1]};
+          if(isInside(neighbor[0],neighbor[1]) && result(neighbor[0],neighbor[1]) < 1.0) {
+            q.push(neighbor);
+            std::cout << "Queueing neighbor " << neighbor[0] << "," << neighbor[1] << "..." << std::endl;
+          }
+        }
+      }
+    }
+  }
+  return result;
+}
+
+bool Grid::isInside(size_t i, size_t j) const
+{
+  return (i >= 0 && i < m_rows && j >= 0 && j < m_cols);
 }
 
 double& Grid::operator()(size_t i, size_t j)
