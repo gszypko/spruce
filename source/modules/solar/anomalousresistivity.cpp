@@ -19,6 +19,7 @@ void AnomalousResistivity::setupModule(){
     diffusivity = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     joule_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     anomalous_template = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    computeTemplate(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_eqs->grid(IdealMHD::bi_x), m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_eqs->grid(IdealMHD::bi_y));
     avg_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     if(metric_smoothing){
         assert(smoothing_sigma > 0.0 && "smoothing_sigma must be a positive number");
@@ -31,6 +32,8 @@ void AnomalousResistivity::setupModule(){
     if(time_integrator == "") time_integrator = "euler";
     assert((time_integrator == "euler" || time_integrator == "rk2" || time_integrator == "rk4")
             && "Invalid time integrator given for Anomalous Resistivity module");
+    assert((template_mode == "frobenius" || template_mode == "flood_fill") 
+            && "Invalid template mode given for Anomalous Resistivity module");
 }
 
 void AnomalousResistivity::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){
@@ -44,6 +47,8 @@ void AnomalousResistivity::parseModuleConfigs(std::vector<std::string> lhs, std:
         else if(this_lhs == "safety_factor") safety_factor = std::stod(this_rhs);
         else if(this_lhs == "metric_smoothing") metric_smoothing = (this_rhs == "true");
         else if(this_lhs == "time_integrator") time_integrator = this_rhs;
+        else if(this_lhs == "template_mode") template_mode = this_rhs;
+        else if(this_lhs == "flood_fill_threshold") flood_fill_threshold = std::stod(this_rhs);
         else std::cerr << this_lhs << " config not recognized.\n";
     }
 }
@@ -157,10 +162,16 @@ void AnomalousResistivity::computeDiffusion(){
 
 void AnomalousResistivity::computeTemplate(const Grid &b_x, const Grid &b_y){
     Grid b_mag_2d = (b_x.square() + b_y.square()).sqrt();
-    Grid grad_b_frob_norm = ((m_pd.derivative1D(b_x,0)).square() + (m_pd.derivative1D(b_x,1)).square()
-                        + (m_pd.derivative1D(b_y,0)).square() + (m_pd.derivative1D(b_y,1)).square()).sqrt();
-    anomalous_template = (m_pd.laplacian(grad_b_frob_norm/b_mag_2d)).square();
-    anomalous_template = (metric_coeff*anomalous_template).min(1.0);
+    if(template_mode == "frobenius"){
+        Grid grad_b_frob_norm = ((m_pd.derivative1D(b_x,0)).square() + (m_pd.derivative1D(b_x,1)).square()
+                            + (m_pd.derivative1D(b_y,0)).square() + (m_pd.derivative1D(b_y,1)).square()).sqrt();
+        anomalous_template = (m_pd.laplacian(grad_b_frob_norm/b_mag_2d)).square();
+        anomalous_template = (metric_coeff*anomalous_template).min(1.0);
+    } else {
+        assert(template_mode == "flood_fill");
+        std::vector<int> null_location = b_mag_2d.argmin(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
+        anomalous_template = b_mag_2d.floodFill({null_location},flood_fill_threshold);
+    }
     if(metric_smoothing){
         Grid smoothed_template = Grid::Zero(anomalous_template.rows(),anomalous_template.cols());
         for(int i=0; i<anomalous_template.rows(); i++){
@@ -174,6 +185,8 @@ void AnomalousResistivity::computeTemplate(const Grid &b_x, const Grid &b_y){
             }
         }
         anomalous_template = smoothed_template;
+    }
+    if(template_mode == "frobenius"){
         anomalous_template = (10.0*anomalous_template).min(1.0);
         anomalous_template = anomalous_template.pow(1.5);
     }

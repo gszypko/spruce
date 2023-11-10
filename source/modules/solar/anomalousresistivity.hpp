@@ -13,17 +13,19 @@ class AnomalousResistivity : public Module {
         void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) override;
         void iterateModule(double dt) override;
     private:
-        double time_scale;
+        double time_scale{1.0};
         double safety_factor{1.0};
-        std::string time_integrator;
+        std::string time_integrator{"euler"};
+        std::string template_mode{"frobenius"};
+        double flood_fill_threshold{1.0};
         Grid diffusivity;
         bool output_to_file = false;
         Grid anomalous_template;
         Grid joule_heating;
         Grid avg_heating;
-        double metric_coeff; // = 1.0e49;
-        bool metric_smoothing; // = true;
-        double smoothing_sigma;
+        double metric_coeff{1.0e50}; // = 1.0e49;
+        bool metric_smoothing{true}; // = true;
+        double smoothing_sigma{3.0};
         int kernel_radius;  
         int curr_num_subcycles;
         Grid smoothing_kernel;
