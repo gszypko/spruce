@@ -14,6 +14,8 @@ class MomentumInjection : public Module {
         void setupModule() override;
         std::string commandLineMessage() const override;
     private:
+        bool oscillatory{false};
+        double oscillation_period;
         double start_time;
         double duration;
         double max_accel; //maximum acceleration to apply, reached at center of gaussian injection template
