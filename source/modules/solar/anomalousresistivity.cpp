@@ -19,7 +19,6 @@ void AnomalousResistivity::setupModule(){
     diffusivity = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     joule_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     anomalous_template = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    computeTemplate(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_eqs->grid(IdealMHD::bi_x), m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_eqs->grid(IdealMHD::bi_y));
     avg_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     if(metric_smoothing){
         assert(smoothing_sigma > 0.0 && "smoothing_sigma must be a positive number");
@@ -29,6 +28,7 @@ void AnomalousResistivity::setupModule(){
                                                     smoothing_sigma,smoothing_sigma,kernel_radius,kernel_radius);
     }
     else smoothing_kernel = Grid::Zero(1,1);
+    computeTemplate(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_eqs->grid(IdealMHD::bi_x), m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_eqs->grid(IdealMHD::bi_y));
     if(time_integrator == "") time_integrator = "euler";
     assert((time_integrator == "euler" || time_integrator == "rk2" || time_integrator == "rk4")
             && "Invalid time integrator given for Anomalous Resistivity module");
