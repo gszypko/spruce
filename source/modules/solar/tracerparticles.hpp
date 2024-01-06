@@ -25,6 +25,7 @@ class TracerParticles : public Module {
         fs::path m_end_filename{"end.tpstate"};
         std::vector<double> x_vec, y_vec;
         std::vector<std::vector<double>> m_particles;
+        std::vector<std::string> m_labels;
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
         void readTPStateFile(const fs::path &init_path);
         void writeTPStateFile(const fs::path &state_path);

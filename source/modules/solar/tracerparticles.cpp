@@ -26,6 +26,8 @@ void TracerParticles::setupModule(){
     fs::path new_init_path = m_pd.m_out_directory/"init.tpstate";
     fs::directory_entry new_init_dir(new_init_path);
     if(new_init_dir.exists()) fs::remove(new_init_path);
+    fs::directory_entry init_path_dir(m_init_filename);
+    assert(init_path_dir.exists() && init_path_dir.is_regular_file() && "Tracer particle initialization file was not found");
     fs::copy(m_init_filename, new_init_path, fs::copy_options::overwrite_existing);
     fs::path old_out_path = m_pd.m_out_directory/"particles.tpout";
     fs::directory_entry old_out_dir(old_out_path);
@@ -65,6 +67,7 @@ void TracerParticles::iterateModule(double dt){
         p[0] = std::fmod((p[0] - x_vec[0] + width),width) + x_vec[0];
       } else {
         m_particles.erase(m_particles.begin() + i);
+        m_labels.erase(m_labels.begin() + i);
       }
     }
     if(p[1] < y_vec[0] || p[1] > y_vec.back()){
@@ -73,6 +76,7 @@ void TracerParticles::iterateModule(double dt){
         p[1] = std::fmod((p[1] - y_vec[0] + height),height) + y_vec[0];
       } else {
         m_particles.erase(m_particles.begin() + i);
+        m_labels.erase(m_labels.begin() + i);
       }
     }
   }
@@ -103,8 +107,10 @@ void TracerParticles::readTPStateFile(const fs::path &init_path) {
     // obtain the lhs and rhs quantities for the current line
     clearWhitespace(line);
     if (line.empty() || line[0] == '#') continue; // skip comment and empty lines
-    std::cout << line << std::endl;
-    std::vector<std::string> components_str = splitString(splitString(line,'#')[0],',');
+    std::vector<std::string> components_and_label = splitString(line,'#');
+    if(components_and_label.size() == 1) m_labels.push_back("");
+    else m_labels.push_back(components_and_label[1]);
+    std::vector<std::string> components_str = splitString(components_and_label[0],',');
     m_particles.push_back({std::stod(components_str[0]),std::stod(components_str[1])});
   }
   init_file.close();
@@ -113,9 +119,12 @@ void TracerParticles::readTPStateFile(const fs::path &init_path) {
 void TracerParticles::writeTPStateFile(const fs::path &state_path) {
   std::ofstream state_file((m_pd.m_out_directory/m_end_filename).string());
   state_file.precision(std::numeric_limits<double>::digits10 + 1);
-  for(std::vector<double> p : m_particles){
-    state_file << p[0] << "," << p[1] << std::endl;
+  for(int i=0; i<m_particles.size(); i++){
+    state_file << m_particles[i][0] << "," << m_particles[i][1] << "#" << m_labels[i] <<  std::endl;
   }
+  // for(std::vector<double> p : m_particles){
+  //   state_file << p[0] << "," << p[1] << "#" <<  std::endl;
+  // }
   state_file.close();
 }
 
@@ -123,9 +132,12 @@ void TracerParticles::writeToTPOutFile(const fs::path &out_path, double dt) {
   std::ofstream out_file((m_pd.m_out_directory/m_out_filename).string(),std::ofstream::app);
   out_file.precision(std::numeric_limits<double>::digits10 + 1);
   out_file << "t=" << m_pd.m_time + dt << std::endl;
-  for(std::vector<double> p : m_particles){
-    out_file << p[0] << "," << p[1] << std::endl;
+  for(int i=0; i<m_particles.size(); i++){
+    out_file << m_particles[i][0] << "," << m_particles[i][1] << "#" << m_labels[i] <<  std::endl;
   }
+  // for(std::vector<double> p : m_particles){
+  //   out_file << p[0] << "," << p[1] << std::endl;
+  // }
   out_file.close();
 }
 
