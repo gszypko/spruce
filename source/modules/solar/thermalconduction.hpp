@@ -26,6 +26,7 @@ class ThermalConduction : public Module {
         double dt_subcycle_min;
         int curr_num_subcycles;
         bool output_to_file = false;
+        double weakening_factor{1.0};
         Grid avg_change;
         std::string time_integrator;
         bool inactive_mode = false; //when true, module will compute the change in thermal energy (allowing for output), but WON'T apply it to the simulation
