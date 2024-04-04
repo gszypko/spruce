@@ -15,6 +15,9 @@ fullnames = {
   'bi_x': "X Induced Magnetic Field",
   'bi_y': "Y Induced Magnetic Field",
   'bi_z': "Z Induced Magnetic Field",
+  'b_x': "X Magnetic Field",
+  'b_y': "Y Magnetic Field",
+  'b_z': "Z Magnetic Field",
   'b': "Magnetic Field",
   'v': "Velocity",
   'v_x': "X Velocity",
@@ -36,13 +39,16 @@ fullnames = {
   'current_density_z': "Z Current Density",
   'anomalous_factor': "Anomalous Resistivity Factor",
   'thermal_conduction': "Thermal Conduction",
+  'thermal_conduction_temp': "Thermal Conduction",
   'heating': "Heating Required for Balance",
   'field_heating_vs_heating': "Field Heating vs. Heating Required",
   'anomalous_diffusivity': "Anomalous Magnetic Diffusivity",
   'diffusivity': "Magnetic Diffusivity (Before Template)",
   'anomalous_template': "Anomalous Diffusivity Template",
   'lambda': "Lambda(T) Suppression Factor",
-  'losses_over_rad': "Radiative and Conductive Losses"
+  'losses_over_rad': "Radiative and Conductive Losses",
+  'joule_heating': "Joule Heating",
+  'joule_heating_temp': "Joule Heating"
 }
 fullunits = {
   'rho': r'g cm$^{-3}$',
@@ -55,6 +61,9 @@ fullunits = {
   'bi_x': r'G',
   'bi_y': r'G',
   'bi_z': r'G',
+  'b_x': r'G',
+  'b_y': r'G',
+  'b_z': r'G',
   'b': r'G',
   'v': r'cm s$^{-1}$',
   'v_x': r'cm s$^{-1}$',
@@ -76,12 +85,15 @@ fullunits = {
   'current_density_z': r'G s$^{-1}$',
   'anomalous_factor': r'cm$^{-4}$',
   'thermal_conduction': r'erg cm$^{-3}$ s$^{-1}$',
+  'thermal_conduction_temp': r'K s$^{-1}$',
   'heating': r'erg cm$^{-3}$ s$^{-1}$',
   'field_heating_vs_heating': r'Fractional Excess wrt. Heating Required',
   'anomalous_diffusivity': r'cm$^2$ s$^{-1}$',
   'diffusivity': r'cm$^2$ s$^{-1}$',
   'lambda': r'',
-  'losses_over_rad': r'Fraction of Rad. Loss'
+  'losses_over_rad': r'Fraction of Rad. Loss',
+  'joule_heating': r'erg cm$^{-3}$ s$^{-1}$',
+  'joule_heating_temp': r'K s$^{-1}$'
 }
 
 symlogthresholds = {
@@ -90,10 +102,12 @@ symlogthresholds = {
   ("xia_comp","field_heating_vs_heating"): 1e-2,
   ("current_density",): 1e-1,
   ("thermal_conduction",): 1e-6,
+  ("thermal_conduction_temp",): 1e0,
   ("rad","heating"): 1e-8,
   ("lambda",): 1e-1,
   ("rho",): 1e-15,
-  ("losses_over_rad",): 1e0
+  ("losses_over_rad",): 1e0,
+  ("joule_heating",): 1e-4
 }
 
 file_vars_dict = {
@@ -109,7 +123,12 @@ file_vars_dict = {
   ("b_mag",): ("bi_x","bi_y","bi_z"),
   ("div_b","div_bi"): ("bi_x","bi_y"),
   ("lambda",): ("rad","n","temp"),
-  ("losses_over_rad",): ("rad","thermal_conduction")
+  ("losses_over_rad",): ("rad","thermal_conduction"),
+  ("joule_heating_temp",): ("joule_heating","n"),
+  ("thermal_conduction_temp",): ("thermal_conduction","n"),
+  ("b_x",): ("bi_x",),
+  ("b_y",): ("bi_y",),
+  ("b_z",): ("bi_z",)
 }
 
 
@@ -186,6 +205,27 @@ def apply_contour_computation(output_var, file_vars, x, y, bx, by, bz):
         heating = - (file_vars[0][i] + file_vars[1][i])
         field_heating = file_vars[2][i]
         var.append((field_heating - heating)/heating)
+  elif output_var == "b_x":
+    for i in range(len(file_vars[0])):
+        var.append(file_vars[0][i]+bx)
+  elif output_var == "b_y":
+    for i in range(len(file_vars[0])):
+        var.append(file_vars[0][i]+by)
+  elif output_var == "b_z":
+    for i in range(len(file_vars[0])):
+        var.append(file_vars[0][i]+bz)
+  elif output_var == "joule_heating_temp":
+    for i in range(len(file_vars[0])):
+      result = file_vars[0][i]/(1.380649e-16*file_vars[1][i])
+      # result = np.ma.masked_where(file_vars[2][i]<3.1e4,result)
+      # result = np.divide(result,lambda_array(file_vars[2][i]),result,where=lambda_array(file_vars[2][i])>0.0)
+      var.append(result)
+  elif output_var == "thermal_conduction_temp":
+    for i in range(len(file_vars[0])):
+      result = file_vars[0][i]/(1.380649e-16*file_vars[1][i])
+      # result = np.ma.masked_where(file_vars[2][i]<3.1e4,result)
+      # result = np.divide(result,lambda_array(file_vars[2][i]),result,where=lambda_array(file_vars[2][i])>0.0)
+      var.append(result)
   elif output_var == "lambda":
     for i in range(len(file_vars[0])):
       result = -file_vars[0][i]/(file_vars[1][i]**2)
@@ -200,7 +240,7 @@ def apply_contour_computation(output_var, file_vars, x, y, bx, by, bz):
       factor = np.abs(laplacian(np.sqrt(grad_bx_mag**2 + grad_by_mag**2)/(mag_2d),x,y))
       factor = factor**2
       factor = np.clip(1.0e50*factor,0.0,1.0)
-      factor = scipy.ndimage.gaussian_filter(factor,sigma=3,mode='constant')
+      factor = scipy.ndimage.gaussian_filter(factor,sigma=3,mode='constant',radius=12)
       factor = np.clip(10.0*factor,0.0,1.0)
       factor = factor**1.5
       var.append(factor)
@@ -277,7 +317,10 @@ def apply_contour_computation(output_var, file_vars, x, y, bx, by, bz):
   elif output_var == "beta":
     for i in range(len(file_vars[0])):
       mag_press = ((bx+file_vars[1][i])**2 + (by+file_vars[2][i])**2)/(8.0*np.pi)
-      var.append(np.log10(file_vars[0][i]/mag_press))
+      if np.all(mag_press == 0.0):
+        var.append(np.ones_like(file_vars[0][i]))
+      else:
+        var.append(np.log10(file_vars[0][i]/np.ma.masked_where(mag_press == 0.0, mag_press)))
   elif output_var == "b_mag":
     for i in range(len(file_vars[0])):
       field_mag = np.sqrt((bx+file_vars[0][i])**2 + (by+file_vars[1][i])**2)
@@ -294,12 +337,15 @@ def apply_contour_computation(output_var, file_vars, x, y, bx, by, bz):
     var = file_vars[0]
   return var
 
-def extract_tracer_particles_from_file(filename, display_interval, start_time, end_time):
+def extract_tracer_particles_from_file(filename, display_interval, start_time, end_time, streamline_mode, label_list):
   input_file = open(filename)
   particle_sets = []
+  particle_labels = []
 
   time = -1.0
   line = input_file.readline()
+  output_number = 0
+  t = []
   while True:
     #read through to next time step (or file end)
     while line and line[0:2] != "t=":
@@ -308,7 +354,7 @@ def extract_tracer_particles_from_file(filename, display_interval, start_time, e
       break
     time = float(line.split('=')[1])
 
-    while time < start_time:
+    while time < start_time or not (output_number == 0 or display_interval == 0 or ((time - t[0])/display_interval >= output_number and not math.isinf(t[-1]))):
       line = input_file.readline()
       while line and line[0:2] != "t=":
         line = input_file.readline()
@@ -322,21 +368,46 @@ def extract_tracer_particles_from_file(filename, display_interval, start_time, e
       break
 
     curr_set = ([],[])
+    curr_labels = []
 
+    print(time)
     line = input_file.readline()
     while line and line[0:2] != "t=":
-      curr_x,curr_y = line.split(',')
-      curr_set[0].append(float(''.join(curr_x.split())))
-      curr_set[1].append(float(''.join(curr_y.split())))
+      comment_split = line.split('#')
+
+      if len(comment_split) > 1:
+        comment = comment_split[1].strip()
+      else:
+        comment = ""
+      
+      # print(comment)
+      use_line = True
+      if streamline_mode and not (comment == "" or comment[0] == 's'):
+        use_line = False
+      if len(label_list) != 0 and comment not in label_list:
+        use_line = False
+      # print(use_line)
+      if use_line:
+        # print("added")
+        curr_labels.append(comment)
+        curr_x,curr_y = comment_split[0].split(',')
+        curr_set[0].append(float(''.join(curr_x.split())))
+        curr_set[1].append(float(''.join(curr_y.split())))
+
       line = input_file.readline()
+    output_number += 1
+    t.append(time)
     
     particle_sets.append(curr_set)
+    particle_labels.append(curr_labels)
 
     if not line:
       break
 
+  print(particle_sets)
+  print(particle_labels)
   input_file.close()
-  return particle_sets
+  return particle_sets, particle_labels
 
 def extract_data_from_file(filename, file_var_names, display_interval, xl_ghost, xu_ghost, yl_ghost, yu_ghost, start_time, end_time, file_vec_name=None):
   input_file = open(filename)

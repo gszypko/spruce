@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
@@ -19,7 +19,6 @@ for key in fullunits.keys():
   if fullunits[key] != r'':
     fullunits[key] = " (" + fullunits[key] + ")"
 
-
 parser = argparse.ArgumentParser(description='View the output from mhdtoy.')
 parser.add_argument('filename', help="the name of the file output from mhdtoy")
 parser.add_argument('timestep', type=float, help="the interval (in simulation time units) between frames of output animation")
@@ -33,6 +32,8 @@ parser.add_argument('-so','--streampoint_override', help="filename containing ne
 parser.add_argument('-tpsp','--tracer_particle_streampoint', help="use local tpout file for time-dependent streamline start points", action='store_true')
 parser.add_argument('-sr','--streampoint_record', help="mode for easily selecting streampoints; clicking on plot adds or deletes streamlines; \
                                                         press 0 to save the current set of streamlines for later use", action='store_true')
+parser.add_argument('-tpr','--tracerparticle_record', help="mode for easily selecting tracer particles; clicking on plot adds or deletes streamlines; \
+                                                        press 0 to save the current set of particles to a tpstate file", action='store_true')
 parser.add_argument('-u','--uniform_stream', help="force uniform streamline spacing for vector field", action='store_true')
 parser.add_argument('-sp','--stream_power', help="override default power used to scale vector field in stream mode",type=float)
 parser.add_argument('-sn','--stream_number', help="override default number of source points for vector field in stream mode",type=int)
@@ -63,9 +64,11 @@ parser.add_argument('-i','--interactive',help="manually control the time steppin
                     (with left and right arrow keys) and investigate contour values by mousing over",action='store_true')
 parser.add_argument('-E','--equal_aspect',help="enforce an equal aspect ratio on the plotted data",action='store_true')
 parser.add_argument('-tl', '--tick_list',help="provide comma-separated (no whitespace) list of tick values for colorbar", type=str, default="")
+parser.add_argument('-C', '--contour_list',help="provide comma-separated (no whitespace) list of values to include as contour lines", type=str, default="")
 parser.add_argument('-te', '--tick_e', help="use abbreviated e notation for colorbar", action="store_true")
 parser.add_argument('-slt', '--symlogthreshold', help="override default lower threshold for symlog colorbar scaling", type=float, default=-1.0)
-parser.add_argument('-tp', '--tracerparticles', help="path to particles.tpout file to display tracer particles", action='store_true')
+parser.add_argument('-tp', '--tracerparticles', help="display labelled tracer particles", action='store_true')
+parser.add_argument('-tpl', '--tracerparticle_list',help="provide comma-separated (no whitespace) list of particle labels to include", type=str, default="")
 args = parser.parse_args()
 
 line_thickness = 1.0
@@ -77,6 +80,12 @@ if args.dpi != -1.0:
 matplotlib.rcParams.update({'font.size': args.font_size})
 if args.dark_mode: plt.style.use('dark_background')
 if args.serif: matplotlib.rcParams.update({'font.family': 'serif'})
+if args.contour_list != "":
+    contour_vals = [float(v) for v in args.contour_list.split(',')]
+if args.tracerparticle_list != "":
+    tracerparticle_labels = args.tracerparticle_list.split(',')
+else:
+    tracerparticle_labels = []
 
 vec_interval = args.density #number of vectors in each direction to display(?)
 vec_mode = args.vecmode
@@ -92,6 +101,9 @@ startpointfile += f"startpoints_{args.vector}.txt"
 tracerparticlefile = ""
 for folder in outpath: tracerparticlefile += folder + "/"
 tracerparticlefile += "particles.tpout"
+tracerrecordfile = ""
+for folder in outpath: tracerrecordfile += folder + "/"
+tracerrecordfile += "tracerpoints.tpstate"
 
 display_interval = float(args.timestep)
 output_var = args.contourvar
@@ -124,7 +136,19 @@ xdim, ydim, X, Y, file_vars, vec_x, vec_y, bx, by, bz, t =\
   extract_data_from_file(args.filename, file_var_names, display_interval, xl_ghost, xu_ghost, yl_ghost, yu_ghost, start_time, end_time, file_vec_name)
 
 if args.tracerparticles:
-  tracer_particles = extract_tracer_particles_from_file(tracerparticlefile, display_interval, start_time, end_time)
+  print(tracerparticle_labels)
+  tracer_particles, tracer_labels = extract_tracer_particles_from_file(tracerparticlefile, display_interval, start_time, end_time, False, tracerparticle_labels)
+  if args.tracerparticle_record:
+    print("tp and tpr options not designed to be used at once. Use tpr to create a tpstate file and tp to plot existing particles over time.")
+    exit()
+
+if args.tracerparticle_record:
+  tracer_particles = ([],[])
+  tracer_labels = []
+  click_count = 0
+  if args.tracerparticles:
+    print("tp and tpr options not designed to be used at once. Use tpr to create a tpstate file and tp to plot existing particles over time.")
+    exit()
 
 if args.diff_file is not None:
   xdim_diff, ydim_diff, foo, foo, file_vars_diff, foo, foo, foo, foo, foo, t_diff =\
@@ -168,7 +192,7 @@ var = apply_contour_computation(output_var, file_vars, x, y, bx, by, bz)
 if args.diff_file is not None:
   var_diff = apply_contour_computation(output_var, file_vars_diff, x, y, bx, by, bz)
   for i in range(len(var)):
-    var[i] = var[i] - var_diff[i]
+    var[i] = (var[i] - var_diff[i])/var[i]
 
 if vec_var == "b":
   for i in range(len(vec_x)):
@@ -485,6 +509,9 @@ if output_var not in ["xia_comp"]:
 frame = 0
 im.set_data(x,y,np.transpose(var[frame]))
 ax.add_image(im)
+if args.contour_list != "":
+  cs = ax.contour(x,y,np.transpose(var[frame]), colors='k',levels=contour_vals)
+  csl = ax.clabel(cs,inline=True)
 if args.equal_aspect:
   ax.set_aspect('equal')
 
@@ -508,7 +535,16 @@ if not args.no_colorbar:
       var_colorbar.set_ticks(tick_vals)
 
 if args.tracerparticles:
-  tp = ax.scatter(np.array(tracer_particles[frame][1])/1e8,np.array(tracer_particles[frame][0])/1e8,c='k',s=5)
+  tp = ax.scatter(np.array(tracer_particles[frame][0])/1e8,np.array(tracer_particles[frame][1])/1e8,c='k',s=5)
+  tp_labels = []
+  for i in range(len(tracer_labels[frame])):
+    tp_labels.append(ax.annotate(tracer_labels[frame][i],(tracer_particles[frame][0][i]/1e8,tracer_particles[frame][1][i]/1e8),ha='center',va='bottom'))
+
+if args.tracerparticle_record:
+  tp = ax.scatter([],[],c='k',s=5)
+  tp_labels = []
+  for i in range(len(tracer_labels)):
+    tp_labels.append(ax.annotate(tracer_labels[0][i],(tracer_particles[frame][0][i]/1e8,tracer_particles[frame][1][i]/1e8),ha='center',va='bottom'))
 
 if vec_mode == "quiver":
   # pull out correctly spaced vectors
@@ -560,8 +596,8 @@ if vec_var != None:
     np.divide(this_vec_x, norm, out=this_vec_x, where=norm > 0)
     np.divide(this_vec_y, norm, out=this_vec_y, where=norm > 0)
     if args.tracer_particle_streampoint:
-      start_pts_series = extract_tracer_particles_from_file(tracerparticlefile, display_interval, start_time, end_time)
-      start_pts_series = [np.transpose(np.asarray(s)/1.0e8) for s in start_pts_series]
+      start_pts_series = extract_tracer_particles_from_file(tracerparticlefile, display_interval, start_time, end_time, True, [])
+      start_pts_series = [np.transpose(np.asarray(s)/1.0e8) for s in start_pts_series[0]]
     elif os.path.exists(startpointfile) or args.streampoint_override is not None:
       start_pts=[]
       input_filename = ""
@@ -635,12 +671,34 @@ def updatefig(*args_arg):
     global stream
     global start_pts
     global im
-    global tp
-    if not (args.streampoint_record or args.interactive):
+    global tp, tp_labels
+    global tracer_particles, tracer_labels
+    global cs, csl
+    if not (args.streampoint_record or args.tracerparticle_record or args.interactive):
       frame = (frame + 1)%len(var)
     im.set_data(x,y,np.transpose(var[frame]))
+    if args.contour_list != "":
+      for c in cs.collections:
+        c.remove()
+      for c in csl:
+        c.remove()
+      cs = ax.contour(x,y,np.transpose(var[frame]), colors='k',levels=contour_vals)
+      csl = ax.clabel(cs,inline=True)
     if args.tracerparticles:
       tp.set_offsets(np.transpose(np.array(tracer_particles[frame])/1e8))
+      for i in range(len(tp_labels)):
+        tp_labels.pop().remove()
+      for i in range(len(tracer_labels[frame])):
+        tp_labels.append(ax.annotate(tracer_labels[frame][i],(tracer_particles[frame][0][i]/1e8,tracer_particles[frame][1][i]/1e8),ha='center',va='bottom'))
+      # for i in range(len(tracer_labels[frame])):
+      #   tp_labels[i].set(x=tracer_particles[frame][0][i]/1e8,y=tracer_particles[frame][1][i]/1e8 - 5.0)
+      #   #.append(ax.annotate(tracer_labels[frame][i],(tracer_particles[frame][1][i]/1e8,tracer_particles[frame][0][i]/1e8)))
+    if args.tracerparticle_record:
+      tp.set_offsets(np.transpose(np.array(tracer_particles)))
+      for i in range(len(tp_labels)):
+        tp_labels.pop().remove()
+      for i in range(len(tracer_labels)):
+        tp_labels.append(ax.annotate(tracer_labels[i],(tracer_particles[0][i],tracer_particles[1][i]),ha='center',va='bottom'))
     plot_title = ""
     if args.diff_file is not None:
       plot_title += "Difference in "
@@ -700,7 +758,7 @@ def updatefig(*args_arg):
           start_pts = cleaned
         stream = ax.streamplot(x_eq,y_eq,this_vec_x,this_vec_y,start_points=start_pts,\
           color=(0.0,0.0,0.0),broken_streamlines=False,linewidth=line_thickness,arrowstyle='->',arrowsize=arrow_size,maxlength=10.0)
-        if not args.streampoint_record:
+        if not (args.streampoint_record or args.tracerparticle_record):
           print("frame " + str(frame) + " plotted")
     # plt.tight_layout()
     return im, ax
@@ -724,6 +782,37 @@ def extract_separate_lines(segments):
     lines.append(np.asarray(this_line))
     line_segments.append(this_line_segments)
   return lines, line_segments
+
+def modifytracerpoints(event):
+  ix, iy = event.xdata, event.ydata
+  print(f"{ix},{iy} clicked")
+  if ix is not None and iy is not None and args.tracerparticle_record:
+    global tp, tp_labels
+    global fig
+    global ax
+    global tracer_particles, tracer_labels
+    global click_count
+    tracer_clicked = False
+    clicked_i = -1
+    for i in range(len(tracer_labels)):
+      if np.sqrt((tracer_particles[0][i] - ix)**2 + (tracer_particles[1][i] - iy)**2) < 3:
+        print(f"{tracer_particles[0][i]},{tracer_particles[1][i]} clicked (particle {i}, {tracer_labels[i]})")
+        tracer_clicked = True
+        clicked_i = i
+        break
+    if tracer_clicked:
+      print("Removing existing tracer...")
+      tracer_particles[0].pop(clicked_i)
+      tracer_particles[1].pop(clicked_i)
+      tracer_labels.pop(clicked_i)
+    else:
+      print("Adding new tracer...")
+      tracer_particles[0].append(ix)
+      tracer_particles[1].append(iy)
+      click_count += 1
+      tracer_labels.append("t"+str(click_count))
+  updatefig()
+  fig.canvas.draw_idle()
 
 def modifystreampoints(event):
   ix, iy = event.xdata, event.ydata
@@ -759,42 +848,56 @@ def modifystreampoints(event):
   updatefig()
   fig.canvas.draw_idle()
 
+def savetracerpoints(event):
+  global stream
+  global args
+  global tracerrecordfile
+  global tracer_particles, tracer_labels
+  print(f"Saving {len(tracer_labels)} tracer points to {tracerrecordfile}...")
+  scale_factor = 1.0e8
+  with open(tracerrecordfile, 'w') as f:
+    for i in range(len(tracer_labels)):
+      f.write(f"{tracer_particles[0][i]*scale_factor:.15e},{tracer_particles[1][i]*scale_factor:.15e}#{tracer_labels[i]}\n")
+
 def savestreampoints(event):
   global stream
   global args
   global startpointfile
-  y_min = Y[0][20]
+  y_min = Y[0][50]
   segments = stream.lines.get_segments()
   lines = extract_separate_lines(segments)[0]
   print(f"Saving {len(lines)} lines to {startpointfile}...")
+  scale_factor = 1.0e8
   with open(startpointfile, 'w') as f:
+    line_num = 1
     for l in lines:
       if l[-1][1] > l[0][1]:
         if l[0][1] < y_min:
           for i in range(1,len(l)):
             if l[i][1] > y_min:
               print(i)
-              f.write(f"{l[i][0]*1.0e8:.15e},{l[i][1]*1.0e8:.15e}\n")
+              f.write(f"{l[i][0]*scale_factor:.15e},{l[i][1]*scale_factor:.15e}#s{line_num}\n")
               break
           else:
             print("Streamline always below y_min. Using middle point...")
             middle = int(round(0.5*len(l)))
-            f.write(f"{l[middle][0]*1.0e8:.15e},{l[middle][1]*1.0e8:.15e}\n")
+            f.write(f"{l[middle][0]*scale_factor:.15e},{l[middle][1]*scale_factor:.15e}#s{line_num}\n")
         else:
-          f.write(f"{l[0][0]*1.0e8:.15e},{l[0][1]*1.0e8:.15e}\n")
+          f.write(f"{l[0][0]*scale_factor:.15e},{l[0][1]*scale_factor:.15e}#s{line_num}\n")
       else:
         if l[-1][1] < y_min:
           for i in range(2,len(l)):
             if l[-i][1] > y_min:
               print(i)
-              f.write(f"{l[-i][0]*1.0e8:.15e},{l[-i][1]*1.0e8:.15e}\n")
+              f.write(f"{l[-i][0]*scale_factor:.15e},{l[-i][1]*scale_factor:.15e}#s{line_num}\n")
               break
           else:
             print("Streamline always below y_min. Using middle point...")
             middle = int(round(0.5*len(l)))
-            f.write(f"{l[middle][0]*1.0e8:.15e},{l[middle][1]*1.0e8:.15e}\n")
+            f.write(f"{l[middle][0]*scale_factor:.15e},{l[middle][1]*scale_factor:.15e}#s{line_num}\n")
         else:
-          f.write(f"{l[-1][0]*1.0e8:.15e},{l[-1][1]*1.0e8:.15e}\n")
+          f.write(f"{l[-1][0]*scale_factor:.15e},{l[-1][1]*scale_factor:.15e}#s{line_num}\n")
+    line_num += 1
 
 def advancetime(event):
   global frame
@@ -815,6 +918,9 @@ def keypresshandler(event):
       savestreampoints(event)
     elif(event.key == "9"):
       drawautofieldlines()
+  if args.tracerparticle_record:
+    if(event.key == "0"):
+      savetracerpoints(event)
 
 def displayinfo(event):
   global fig
@@ -868,16 +974,18 @@ def drawautofieldlines():
     curr_y -= dy
   
 
-if args.interactive or args.streampoint_record:
+if args.interactive or args.streampoint_record or args.tracerparticle_record:
   cid = fig.canvas.mpl_connect('key_press_event', keypresshandler)
 if args.interactive:
   cid = fig.canvas.mpl_connect('motion_notify_event', displayinfo)
 if args.streampoint_record:
   cid = fig.canvas.mpl_connect('button_press_event', modifystreampoints)
+if args.tracerparticle_record:
+  cid = fig.canvas.mpl_connect('button_press_event', modifytracerpoints)
 else:
   ani = animation.FuncAnimation(fig, updatefig, frames=len(var), repeat=args.realtime, interval=100, blit=False)
 
-if args.realtime or args.streampoint_record or args.interactive:
+if args.realtime or args.streampoint_record or args.tracerparticle_record or args.interactive:
   plt.show()
 else:
   FFwriter = animation.FFMpegWriter(bitrate=2000*2*4*10,fps=20)
