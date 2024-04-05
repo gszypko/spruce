@@ -136,7 +136,7 @@ xdim, ydim, X, Y, file_vars, vec_x, vec_y, bx, by, bz, t =\
   extract_data_from_file(args.filename, file_var_names, display_interval, xl_ghost, xu_ghost, yl_ghost, yu_ghost, start_time, end_time, file_vec_name)
 
 if args.tracerparticles:
-  print(tracerparticle_labels)
+  # print(tracerparticle_labels)
   tracer_particles, tracer_labels = extract_tracer_particles_from_file(tracerparticlefile, display_interval, start_time, end_time, False, tracerparticle_labels)
   if args.tracerparticle_record:
     print("tp and tpr options not designed to be used at once. Use tpr to create a tpstate file and tp to plot existing particles over time.")
@@ -642,7 +642,7 @@ if vec_var != None:
           cleaned.append(s)
       start_pts = cleaned
     start_pts = np.asarray(start_pts)
-    print(start_pts)
+    # print(start_pts)
     stream = ax.streamplot(x_eq,y_eq,this_vec_x,this_vec_y,start_points=start_pts,\
         color=(0.0,0.0,0.0),broken_streamlines=False,linewidth=line_thickness,arrowstyle='->',arrowsize=arrow_size,maxlength=10.0)
     stream.lines.set(pickradius=2.0)
