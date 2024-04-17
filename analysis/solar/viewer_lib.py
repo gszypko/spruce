@@ -404,8 +404,8 @@ def extract_tracer_particles_from_file(filename, display_interval, start_time, e
     if not line:
       break
 
-  print(particle_sets)
-  print(particle_labels)
+  # print(particle_sets)
+  # print(particle_labels)
   input_file.close()
   return particle_sets, particle_labels
 
