@@ -48,7 +48,8 @@ fullnames = {
   'lambda': "Lambda(T) Suppression Factor",
   'losses_over_rad': "Radiative and Conductive Losses",
   'joule_heating': "Joule Heating",
-  'joule_heating_temp': "Joule Heating"
+  'joule_heating_temp': "Joule Heating",
+  'diff_time_scale': "Time Scale of Magnetic Diffusion"
 }
 fullunits = {
   'rho': r'g cm$^{-3}$',
@@ -81,8 +82,8 @@ fullunits = {
   'roc': r'Mm',
   'xia_heat': r'erg cm$^{-3}$ s$^{-1}$',
   'xia_comp': r'Fractional Excess wrt Rad. Loss',
-  'current_density': r'G s$^{-1}$',
-  'current_density_z': r'G s$^{-1}$',
+  'current_density': r'G cm$^{-1}$',
+  'current_density_z': r'G cm$^{-1}$',
   'anomalous_factor': r'cm$^{-4}$',
   'thermal_conduction': r'erg cm$^{-3}$ s$^{-1}$',
   'thermal_conduction_temp': r'K s$^{-1}$',
@@ -93,7 +94,8 @@ fullunits = {
   'lambda': r'',
   'losses_over_rad': r'Fraction of Rad. Loss',
   'joule_heating': r'erg cm$^{-3}$ s$^{-1}$',
-  'joule_heating_temp': r'K s$^{-1}$'
+  'joule_heating_temp': r'K s$^{-1}$',
+  'diff_time_scale': r's'
 }
 
 symlogthresholds = {
@@ -128,7 +130,8 @@ file_vars_dict = {
   ("thermal_conduction_temp",): ("thermal_conduction","n"),
   ("b_x",): ("bi_x",),
   ("b_y",): ("bi_y",),
-  ("b_z",): ("bi_z",)
+  ("b_z",): ("bi_z",),
+  ("diff_time_scale",): ("anomalous_diffusivity",)
 }
 
 
@@ -200,7 +203,13 @@ def lambda_array(t):
 
 def apply_contour_computation(output_var, file_vars, x, y, bx, by, bz):
   var = []
-  if output_var == "field_heating_vs_heating":
+  if output_var == "diff_time_scale":
+    for i in range(len(file_vars[0])):
+        diffusivity = file_vars[0][i]
+        dx = np.maximum(x - np.roll(x,1), np.roll(x,-1) - x)*1.0e8
+        dy = np.maximum(y - np.roll(y,1), np.roll(y,-1) - y)*1.0e8
+        var.append((np.ma.array(np.outer(dx,dy))/np.ma.masked_less_equal(diffusivity,0.0)))
+  elif output_var == "field_heating_vs_heating":
     for i in range(len(file_vars[0])):
         heating = - (file_vars[0][i] + file_vars[1][i])
         field_heating = file_vars[2][i]

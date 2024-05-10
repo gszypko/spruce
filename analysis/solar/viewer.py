@@ -69,6 +69,7 @@ parser.add_argument('-te', '--tick_e', help="use abbreviated e notation for colo
 parser.add_argument('-slt', '--symlogthreshold', help="override default lower threshold for symlog colorbar scaling", type=float, default=-1.0)
 parser.add_argument('-tp', '--tracerparticles', help="display labelled tracer particles", action='store_true')
 parser.add_argument('-tpl', '--tracerparticle_list',help="provide comma-separated (no whitespace) list of particle labels to include", type=str, default="")
+parser.add_argument('-o', '--out_filename',help="override default naming convention for video file output", type=str, default="")
 args = parser.parse_args()
 
 line_thickness = 1.0
@@ -493,7 +494,7 @@ for k in symlogthresholds.keys():
     break
 else:
   if args.diff_file is not None:
-    thresh = (1e-25 if args.symlogthreshold == -1.0 else args.symlogthreshold)
+    thresh = (1e-15 if args.symlogthreshold == -1.0 else args.symlogthreshold)
     im.set(norm=matplotlib.colors.SymLogNorm(linthresh=thresh, base=10))
   elif output_var in ["beta"]:
     im.set(norm=matplotlib.colors.CenteredNorm(),cmap='seismic')
@@ -706,7 +707,10 @@ def updatefig(*args_arg):
       if args.full_varname: plot_title += fullnames[output_var]
       else: plot_title += output_var
     if not args.no_units:
-      plot_title += fullunits.get(output_var,"")
+      if args.diff_file is not None:
+        plot_title += " (Percentage)"
+      else:
+        plot_title += fullunits.get(output_var,"")
     if args.time_label:
       if len(plot_title) != 0: plot_title += ", "
       if args.time_label_rounded:
@@ -899,6 +903,33 @@ def savestreampoints(event):
           f.write(f"{l[-1][0]*scale_factor:.15e},{l[-1][1]*scale_factor:.15e}#s{line_num}\n")
     line_num += 1
 
+def setmeasurepoint(event):
+  global measurepoint
+  global mp_scatter
+  global ax
+  global x,y
+  if event.xdata is None or event.ydata is None:
+    measurepoint = None
+  else:
+    xidx = min(np.searchsorted(x,event.xdata),xdim-1)
+    if xidx != 0:
+      xidx = xidx if (event.xdata-x[xidx-1])>(x[xidx]-event.xdata) else xidx-1
+    yidx = min(np.searchsorted(y,event.ydata),ydim-1)
+    if yidx != 0:
+      yidx = yidx if (event.ydata-y[yidx-1])>(y[yidx]-event.ydata) else yidx-1
+    measurepoint = (xidx,yidx)
+  try:
+    mp_scatter
+  except NameError:
+      real_coords = (x[measurepoint[0]],y[measurepoint[1]])
+      mp_scatter = ax.scatter((real_coords[0],),(real_coords[1],),c='r',s=10)
+  else:
+      if measurepoint is None:
+        mp_scatter.set_offsets(np.ma.masked_array([0, 0], mask=True))
+      else:
+        mp_scatter.set_offsets(((x[measurepoint[0]],y[measurepoint[1]]),))
+  # fig.canvas.draw_idle()
+
 def advancetime(event):
   global frame
   if event.key == "right":
@@ -927,8 +958,17 @@ def displayinfo(event):
   global x,y
   global var
   global frame
+  global measurepoint
+  global mp_plot
   if event.xdata is None or event.ydata is None:
     fig.suptitle("")
+    try:
+      mp_plot
+    except NameError:
+      pass
+    else:
+      if measurepoint is None:
+        mp_plot.set_data([[],[]])
   else:
     xidx = min(np.searchsorted(x,event.xdata),xdim-1)
     if xidx != 0:
@@ -936,7 +976,17 @@ def displayinfo(event):
     yidx = min(np.searchsorted(y,event.ydata),ydim-1)
     if yidx != 0:
       yidx = yidx if (event.ydata-y[yidx-1])>(y[yidx]-event.ydata) else yidx-1
-    fig.suptitle(f"{var[frame][xidx,yidx]:.3e} at ({xidx},{yidx})",x=0.1,ha='left')
+    suptext = f"{var[frame][xidx,yidx]:.3e} at ({xidx},{yidx})"
+    if measurepoint is not None:
+      measuredist = np.sqrt((measurepoint[0] - xidx)**2 + (measurepoint[1] - yidx)**2)
+      suptext += f"\n{measuredist:.2f} cells from ({measurepoint[0]},{measurepoint[1]})"
+      try:
+        mp_plot
+      except NameError:
+        mp_plot = ax.plot((x[measurepoint[0]],event.xdata),(y[measurepoint[1]],event.ydata),'r--')[0]
+      else:
+        mp_plot.set_data([[x[measurepoint[0]],event.xdata],[y[measurepoint[1]],event.ydata]])
+    fig.suptitle(suptext,x=0.99,y=0.99,ha='right',va='top',size='small')
   fig.canvas.draw_idle()
 
 def drawautofieldlines():
@@ -978,6 +1028,7 @@ if args.interactive or args.streampoint_record or args.tracerparticle_record:
   cid = fig.canvas.mpl_connect('key_press_event', keypresshandler)
 if args.interactive:
   cid = fig.canvas.mpl_connect('motion_notify_event', displayinfo)
+  cid2 = fig.canvas.mpl_connect('button_press_event', setmeasurepoint)
 if args.streampoint_record:
   cid = fig.canvas.mpl_connect('button_press_event', modifystreampoints)
 if args.tracerparticle_record:
@@ -986,9 +1037,14 @@ else:
   ani = animation.FuncAnimation(fig, updatefig, frames=len(var), repeat=args.realtime, interval=100, blit=False)
 
 if args.realtime or args.streampoint_record or args.tracerparticle_record or args.interactive:
+  measurepoint = None
   plt.show()
 else:
   FFwriter = animation.FFMpegWriter(bitrate=2000*2*4*10,fps=20)
-  filename_suffix = "_"+output_var
-  if vec_var != None: filename_suffix = filename_suffix + "_" + vec_var
-  ani.save(args.filename.split('/')[-2]+filename_suffix+'.mp4', writer = FFwriter, dpi=100*2)
+  if args.out_filename != "":
+    fname = args.out_filename + '.mp4'
+  else:
+    filename_suffix = "_"+output_var
+    if vec_var != None: filename_suffix = filename_suffix + "_" + vec_var
+    fname = args.filename.split('/')[-2]+filename_suffix+'.mp4'
+  ani.save(fname, writer = FFwriter, dpi=100*2)
