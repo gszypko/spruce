@@ -251,7 +251,7 @@ void IdealMHD::recomputeDerivedVarsFromEvolvedVars(std::vector<Grid> &grids) con
     grids[kinetic_energy] = 0.5*grids[rho]*(grids[v_x].square()+grids[v_y].square());
     grids[thermal_energy] = grids[thermal_energy].max(m_pd.thermal_energy_min);
     grids[press] = (m_pd.m_adiabatic_index - 1.0)*grids[thermal_energy];
-    grids[temp] = (grids[press]/(2*K_B*grids[n])).max(m_pd.temp_min);
+    grids[temp] = (grids[press]/(2*K_B*grids[n])).max(m_pd.temp_min); //note: factor of two to account for electrons as well as ions
     grids[b_x] = m_pd.m_grids[PlasmaDomain::be_x] + grids[bi_x];
     grids[b_y] = m_pd.m_grids[PlasmaDomain::be_y] + grids[bi_y];
     grids[b_z] = m_pd.m_grids[PlasmaDomain::be_z] + grids[bi_z];

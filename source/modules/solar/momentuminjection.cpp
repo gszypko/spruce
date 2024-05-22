@@ -36,16 +36,12 @@ void MomentumInjection::parseModuleConfigs(std::vector<std::string> lhs, std::ve
 void MomentumInjection::setupModule(){
     assert(!(dir[0] == 0.0 && dir[1] == 0.0) && "Momentum Injection module must be given a nonzero acceleration direction");
     //normalize direction vector
-    // std::cout << dir[0] << ", " << dir[1] << std::endl;
     double mag = std::sqrt(dir[0]*dir[0] + dir[1]*dir[1]);
-    // std::cout << mag << std::endl;
     dir[0] = dir[0] / mag;
     dir[1] = dir[1] / mag;
-    // std::cout << dir[0] << ", " << dir[1] << std::endl;
     //compute acceleration template
     for(int i : {0,1}){
         double curr_max_accel = dir[i];
-        // std::cout << "curr_max_accel " << i << " " << curr_max_accel << std::endl;
         accel_template[i] = SolarUtils::GaussianGrid(m_pd.m_xdim,m_pd.m_ydim,-1.0e-2*curr_max_accel,
                                                     curr_max_accel,stddev_x,stddev_y,center_x,center_y);
         if(m_pd.x_bound_1 == PlasmaDomain::BoundaryCondition::Periodic){

@@ -16,13 +16,12 @@ class AmbientHeating : public Module {
         void setupModule() override;
         void postIterateModule(double dt) override;
         std::string commandLineMessage() const override;
-        Grid radiativeLosses();
     private:
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
-        double heating_rate;
-        bool rad_mirror_mode = false; //when true, heating is taken as the radiative loss rate for the initial state, constant in time
-        double rad_mirror_factor; //coefficient to multiply radiative loss by, when applying as heating
-        double cutoff_ramp, cutoff_temp; //radiative losses cutoff for low temps; same as in radiativelosses.hpp
+        double heating_rate{0.0};
+        bool exp_mode{false};
+        double exp_base_heating_rate;
+        double exp_scale_height;
         Grid heating;     
 };
 
