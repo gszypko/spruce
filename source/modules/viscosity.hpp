@@ -24,9 +24,11 @@ class Viscosity : public Module {
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override; // handles configs during construction
         void setupModule(); // to be called in PlasmaDomain constructor - does initial setup of module following config parsing
         // *** Usage
-        void constructViscosityGrids(const std::vector<Grid>& grids);
+        Grid constructSingleViscosityGrid(const std::vector<Grid>& grids, int term_index);
+        std::vector<Grid> constructViscosityGrids(const std::vector<Grid>& grids);
         Grid getBoundaryViscosity(double strength,double length) const;
         void computeTimeDerivativesModule(const std::vector<Grid> &grids,std::vector<Grid> &grids_dt);
+        void iterateModule(double dt) override;
         std::vector<std::string> config_names() const override {return {"visc_output_to_file","visc_strength","visc_vars_diff","visc_vars_update"};};
         void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) override;
     private:
@@ -59,6 +61,9 @@ class Viscosity : public Module {
         bool m_output_lap;
         bool m_output_strength;
         bool m_output_timescale;
+
+        std::string m_hv_time_integrator; // time integrator used for hyperviscosity (strength > 1.0), one of {euler, rk2, rk4}
+        double m_hv_epsilon{1.0}; // epsilon used for subcycling in hyperviscous (strength > 1.0) evolution
 
         std::vector<std::string> m_momenta; // possible momentum density variables
         std::vector<std::string> m_velocities; // possible velocity variables

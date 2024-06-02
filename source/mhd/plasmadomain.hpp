@@ -41,13 +41,13 @@ public: //**********************************************************************
     x_bound_1, x_bound_2, y_bound_1, y_bound_2,
     epsilon, density_min, temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
     output_flags, xdim, ydim, open_boundary_strength, std_out_interval, write_interval,
-    open_boundary_decay_base, x_origin, y_origin, time_integrator, duration, sg_opt
+    open_boundary_decay_base, x_origin, y_origin, time_integrator, duration, sg_opt, write_precision
   };
   static inline std::vector<std::string> m_config_names = {
     "x_bound_1","x_bound_2","y_bound_1","y_bound_2",
     "epsilon","density_min","temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
     "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","write_interval",
-    "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "duration", "sg_opt"
+    "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "duration", "sg_opt", "write_precision"
   };
 
   // Public Member Functions
@@ -72,6 +72,7 @@ private: //*********************************************************************
   friend class MomentumInjection;
   friend class RadiativeLosses;
   friend class ThermalConduction;
+  friend class TracerParticles;
   friend class CoulombExplosion;
   friend class EICThermalization;
   friend class Viscosity;
@@ -102,6 +103,7 @@ private: //*********************************************************************
   int m_iter_output_interval{1};
   double m_time_output_interval{-1.0};
   int m_std_out_interval{1}; //number of iterations between printing an update to standard out
+  int m_write_precision{4}; // floating point precision for output to mhd.out
   int m_write_interval{1}; // how many times data is stored within m_data_to_write before transfering to mhd.out
   int m_store_counter{0}; // number of times data has been stored withn m_data_to_write since last call to writeToOutFile
   std::vector<std::string> m_data_to_write; // holds data to be written to mhd.out

@@ -15,6 +15,7 @@
 #include "eic_thermalization.hpp"
 #include "viscosity.hpp"
 #include "global_temperature.hpp"
+#include "tracerparticles.hpp"
 
 ModuleHandler::ModuleHandler(PlasmaDomain &pd): m_pd(pd) {}
 
@@ -95,6 +96,7 @@ void ModuleHandler::instantiateModule(const std::string &module_name, std::ifstr
     else if(module_name == "global_temperature") m_modules.push_back(std::unique_ptr<Module>(new GlobalTemperature(m_pd)));
     else if(module_name == "anomalous_resistivity") m_modules.push_back(std::unique_ptr<Module>(new AnomalousResistivity(m_pd)));
     else if(module_name == "momentum_injection") m_modules.push_back(std::unique_ptr<Module>(new MomentumInjection(m_pd)));
+    else if(module_name == "tracer_particles") m_modules.push_back(std::unique_ptr<Module>(new TracerParticles(m_pd)));
     else assert(false && "Module name was not recognized");
     m_modules.back()->configureModule(in_file);
 }

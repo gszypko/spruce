@@ -128,7 +128,7 @@ class EquationSet {
         void applyTimeDerivatives(std::vector<Grid>& grids, const std::vector<Grid>& grids_dt, double step) const;
         // Overload for applying time derivatives to m_grids
         void applyTimeDerivatives(const std::vector<Grid>& grids_dt,double step) { applyTimeDerivatives(m_grids,grids_dt,step); };
-        // Updated derived variables - to be called after time derivatives are applied to derived variables
+        // Updated derived variables - to be called after time derivatives are applied to evolved variables
         void propagateChanges(std::vector<Grid>& grids) const;
         // Overload for propagating changes to m_grids
         void propagateChanges() { propagateChanges(m_grids); };

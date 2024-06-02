@@ -5,6 +5,7 @@
 #include <limits>
 #include <cmath>
 #include <algorithm>
+#include <queue>
 
 #define SCALAR_LAMBDA(expr) [](double this_comp, double scalar){return expr;}
 #define COMPONENTWISE_LAMBDA(expr) [](double this_comp, double that_comp){return expr;}
@@ -80,6 +81,31 @@ double Grid::min(int il, int jl, int iu, int ju) const
   return curr_min;
 }
 
+//Finds the indices of the min within the rectangular range defined by the bounds (il,jl) and (iu,ju)
+//Note: if non minimum exists, will return the center cell of the grid
+std::vector<int> Grid::argmin(int il, int jl, int iu, int ju) const
+{
+  std::vector<int> curr_argmin = {(int)(0.5*m_rows),(int)(0.5*m_cols)};
+  double curr_min = (*this)(curr_argmin[0],curr_argmin[1]);
+  for(int i=il; i<=iu; i++){
+    for(int j=jl; j<=ju; j++){
+      if((*this)(i,j) < curr_min){
+        curr_min = (*this)(i,j);
+        curr_argmin = {i,j};
+      }
+    }
+  }
+  assert(curr_min < std::numeric_limits<double>::max() && "Something went wrong in the argmin calculation");
+  return curr_argmin;
+}
+
+//Finds the indices of the min within the rectangular range defined by the bounds (il,jl) and (iu,ju)
+//Note: if non minimum exists, will return the center cell of the grid
+std::vector<int> Grid::argmin() const
+{
+  return argmin(0,0,m_rows-1,m_cols-1);
+}
+
 // returns a grid containing the elementwise minimum with b
 Grid Grid::min(double b) const { return ScalarOperation( b, SCALAR_LAMBDA(std::min(this_comp,scalar)) ); }
 
@@ -109,6 +135,28 @@ double Grid::max(int il, int jl, int iu, int ju) const
   return curr_max;
 }
 
+//Finds the min within the rectangular range defined by the bounds (il,jl) and (iu,ju)
+std::vector<int> Grid::argmax(int il, int jl, int iu, int ju) const
+{
+  std::vector<int> curr_argmax = {(int)(0.5*m_rows),(int)(0.5*m_cols)};
+  double curr_max = (*this)(curr_argmax[0],curr_argmax[1]);
+  for(int i=il; i<=iu; i++){
+    for(int j=jl; j<=ju; j++){
+      if((*this)(i,j) > curr_max){
+        curr_max = (*this)(i,j);
+        curr_argmax = {i,j};
+      }
+      
+    }
+  }
+  assert(curr_max > -std::numeric_limits<double>::max() && "Something went wrong in the argmax calculation");
+  return curr_argmax;
+}
+
+std::vector<int> Grid::argmax() const
+{
+  return argmax(0,0,m_rows-1,m_cols-1);
+}
 
 Grid Grid::max(double b) const { return ScalarOperation( b, SCALAR_LAMBDA(std::max(this_comp,scalar)) ); }
 
@@ -430,6 +478,39 @@ std::vector<Grid> Grid::CrossProduct(const std::vector<Grid>& a, const std::vect
   result_y = a_z*b_x - a_x*b_z;
   result_z = a_x*b_y - a_y*b_x;
   return {result_x, result_y, result_z};
+}
+
+//Flood fill starting from start_coords (vector of index pairs), borders implicitly defined by
+//threshold. If under_threshold is true (default), fills so long as the value is below threshold.
+//Otherwise, fills so long as the value is above threshold.
+//Returns a grid that equals 1.0 where filled, 0.0 where not filled.
+Grid Grid::floodFill(std::vector<std::vector<int> > start_coords, double threshold, bool under_threshold) const{
+  double sign = under_threshold ? 1.0 : -1.0; //flips direction of comparison
+  std::queue<std::vector<int> > q;
+  Grid result = Grid::Zero(m_rows,m_cols);
+  int neighbor_dirs[][2] {{1,0},{-1,0},{0,1},{0,-1}};
+  for(std::vector<int> start : start_coords){
+    q.push(start);
+    while(!q.empty()){
+      std::vector<int> curr = q.front();
+      q.pop();
+      if(sign*(*this)(curr[0],curr[1]) < sign*threshold && result(curr[0],curr[1]) < 1.0){
+        result(curr[0],curr[1]) = 1.0;
+        for(int* neighbor_dir : neighbor_dirs){
+          std::vector<int> neighbor {curr[0]+neighbor_dir[0],curr[1]+neighbor_dir[1]};
+          if(isInside(neighbor[0],neighbor[1]) && result(neighbor[0],neighbor[1]) < 1.0) {
+            q.push(neighbor);
+          }
+        }
+      }
+    }
+  }
+  return result;
+}
+
+bool Grid::isInside(size_t i, size_t j) const
+{
+  return (i >= 0 && i < m_rows && j >= 0 && j < m_cols);
 }
 
 double& Grid::operator()(size_t i, size_t j)

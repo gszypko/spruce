@@ -2,6 +2,7 @@
 #include "plasmadomain.hpp"
 #include "solarutils.hpp"
 #include "idealmhd.hpp"
+#include "constants.hpp"
 #include <sstream>
 #include <iostream>
 #include <cmath>
@@ -26,6 +27,8 @@ void MomentumInjection::parseModuleConfigs(std::vector<std::string> lhs, std::ve
         else if(this_lhs == "center_y") center_y = std::stod(this_rhs);
         else if(this_lhs == "dir_x") dir[0] = std::stod(this_rhs);
         else if(this_lhs == "dir_y") dir[1] = std::stod(this_rhs);
+        else if(this_lhs == "oscillatory") oscillatory = (this_rhs == "true");
+        else if(this_lhs == "oscillation_period") oscillation_period = std::stod(this_rhs);
         else std::cerr << this_lhs << " config not recognized.\n";
     }
 }
@@ -33,16 +36,12 @@ void MomentumInjection::parseModuleConfigs(std::vector<std::string> lhs, std::ve
 void MomentumInjection::setupModule(){
     assert(!(dir[0] == 0.0 && dir[1] == 0.0) && "Momentum Injection module must be given a nonzero acceleration direction");
     //normalize direction vector
-    // std::cout << dir[0] << ", " << dir[1] << std::endl;
     double mag = std::sqrt(dir[0]*dir[0] + dir[1]*dir[1]);
-    // std::cout << mag << std::endl;
     dir[0] = dir[0] / mag;
     dir[1] = dir[1] / mag;
-    // std::cout << dir[0] << ", " << dir[1] << std::endl;
     //compute acceleration template
     for(int i : {0,1}){
-        double curr_max_accel = dir[i]*max_accel;
-        // std::cout << "curr_max_accel " << i << " " << curr_max_accel << std::endl;
+        double curr_max_accel = dir[i];
         accel_template[i] = SolarUtils::GaussianGrid(m_pd.m_xdim,m_pd.m_ydim,-1.0e-2*curr_max_accel,
                                                     curr_max_accel,stddev_x,stddev_y,center_x,center_y);
         if(m_pd.x_bound_1 == PlasmaDomain::BoundaryCondition::Periodic){
@@ -68,8 +67,9 @@ void MomentumInjection::setupModule(){
 
 void MomentumInjection::postIterateModule(double dt){
     if(m_pd.m_time < start_time || m_pd.m_time > start_time+duration) return;
-    m_pd.m_eqs->grid(IdealMHD::mom_x) += m_pd.m_ghost_zone_mask*(dt*accel_template[0]*m_pd.m_eqs->grid(IdealMHD::rho));
-    m_pd.m_eqs->grid(IdealMHD::mom_y) += m_pd.m_ghost_zone_mask*(dt*accel_template[1]*m_pd.m_eqs->grid(IdealMHD::rho));
+    double osc_factor = oscillatory ? std::sin(2.0*PI*(m_pd.m_time - start_time)/oscillation_period) : 1.0;
+    m_pd.m_eqs->grid(IdealMHD::mom_x) += m_pd.m_ghost_zone_mask*(dt*(osc_factor*max_accel)*accel_template[0]*m_pd.m_eqs->grid(IdealMHD::rho));
+    m_pd.m_eqs->grid(IdealMHD::mom_y) += m_pd.m_ghost_zone_mask*(dt*(osc_factor*max_accel)*accel_template[1]*m_pd.m_eqs->grid(IdealMHD::rho));
     m_pd.m_eqs->propagateChanges();
 }
 

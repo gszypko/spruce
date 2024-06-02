@@ -14,16 +14,15 @@ void AmbientHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vecto
         std::string this_lhs = lhs[i];
         std::string this_rhs = rhs[i];
         if(this_lhs == "heating_rate") heating_rate = std::stod(this_rhs);
-        else if(this_lhs == "rad_mirror_mode") rad_mirror_mode = (this_rhs == "true");
-        else if(this_lhs == "rad_mirror_factor") rad_mirror_factor = std::stod(this_rhs);
-        else if(this_lhs == "cutoff_temp") cutoff_temp = std::stod(this_rhs);
-        else if(this_lhs == "cutoff_ramp") cutoff_ramp = std::stod(this_rhs);
+        if(this_lhs == "exp_mode") exp_mode = (this_rhs == "true");
+        else if(this_lhs == "exp_base_heating_rate") exp_base_heating_rate = std::stod(this_rhs);
+        else if(this_lhs == "exp_scale_height") exp_scale_height = std::stod(this_rhs);
         else std::cerr << lhs[i] << " config not recognized.\n";
     }
 }
 
 void AmbientHeating::setupModule(){
-    if(rad_mirror_mode) heating = m_pd.m_ghost_zone_mask*rad_mirror_factor*radiativeLosses();
+    if(exp_mode) heating = m_pd.m_ghost_zone_mask*exp_base_heating_rate*(-1.0*m_pd.m_grids[PlasmaDomain::pos_y]/exp_scale_height).exp();
     else heating = m_pd.m_ghost_zone_mask*heating_rate;
 }
 
@@ -34,48 +33,5 @@ void AmbientHeating::postIterateModule(double dt){
 
 std::string AmbientHeating::commandLineMessage() const
 {
-    return rad_mirror_mode ? "Ambient Heating On (Matching Initial Rad. Loss)" : "Ambient Heating On";
-}
-
-Grid AmbientHeating::radiativeLosses(){
-    Grid result = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
-    #pragma omp parallel for collapse(2)
-    for (int i = m_pd.m_xl; i <= m_pd.m_xu; i++){
-        for(int j = m_pd.m_yl; j <= m_pd.m_yu; j++){
-            if(m_pd.m_eqs->grid(IdealMHD::temp)(i,j) < cutoff_temp) result(i,j) = 0.0;
-            else {
-                double logtemp = std::log10(m_pd.m_eqs->grid(IdealMHD::temp)(i,j));
-                double n = m_pd.m_eqs->grid(IdealMHD::rho)(i,j)/m_pd.m_ion_mass;
-                double chi, alpha;
-                if(logtemp <= 4.97){
-                    chi = 1.09e-31;
-                    alpha = 2.0;
-                } else if(logtemp <= 5.67){
-                    chi = 8.87e-17;
-                    alpha = -1.0;
-                } else if(logtemp <= 6.18){
-                    chi = 1.90e-22;
-                    alpha = 0.0;
-                } else if(logtemp <= 6.55){
-                    chi = 3.53e-13;
-                    alpha = -1.5;
-                } else if(logtemp <= 6.90){
-                    chi = 3.46e-25;
-                    alpha = 1.0/3.0;
-                } else if(logtemp <= 7.63){
-                    chi = 5.49e-16;
-                    alpha = -1.0;
-                } else{
-                    chi = 1.96e-27;
-                    alpha = 0.5;
-                }
-                result(i,j) = n*n*chi*std::pow(m_pd.m_eqs->grid(IdealMHD::temp)(i,j),alpha);
-                if(m_pd.m_eqs->grid(IdealMHD::temp)(i,j) < cutoff_temp + cutoff_ramp){
-                    double ramp = (m_pd.m_eqs->grid(IdealMHD::temp)(i,j) - cutoff_temp)/cutoff_ramp;
-                    result(i,j) *= ramp;
-                }
-            }
-        }
-    }
-    return result;
+    return exp_mode ? "Ambient Heating On (Exp. Mode)" : "Ambient Heating On";
 }

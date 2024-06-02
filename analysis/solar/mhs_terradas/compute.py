@@ -25,24 +25,27 @@ ACTIVE_REGION = sys.argv[2] == "T"
 # GAUSSIAN = sys.argv[3] == "T"
 GAUSSIAN = False
 
+NOGRAV_MODE = False
+
 if not os.path.exists(out_directory):
     os.makedirs(out_directory)
 
 DOMAIN_WIDTH = 8.0
-DOMAIN_HEIGHT = 8.0
+DOMAIN_HEIGHT = 12.0
 X_DIM = 202
-Z_DIM = 202
+Z_DIM = 302
 # N_GHOST = 1
 
-# Z_NONUNIFORM_START = 101
-# Z_NONUNIFORM_FACTOR = 1.005
-# Z_NONUNIFORM_FACTOR_FACTOR = 1.001
 Z_NONUNIFORM_START = 302
 Z_NONUNIFORM_FACTOR = 1.0
 Z_NONUNIFORM_FACTOR_FACTOR = 1.0
 
-X_1 = -2.0 #location of center for CH; location of one magnetic pole for AR
-X_2 = 1.75 #location of other magnetic pole for AR; not used for CH
+if ACTIVE_REGION:
+    X_1 = 2.25 #location of center for CH; location of one magnetic pole for AR
+    X_2 = 1.75 #location of other magnetic pole for AR; not used for CH
+else: #CORONAL_HOLE
+    X_1 = -2.0 #location of center for CH; location of one magnetic pole for AR
+    X_2 = 0.0 #location of other magnetic pole for AR; not used for CH
 B_1_MULT = -1.0
 B_2_MULT = 1.0
 
@@ -52,7 +55,7 @@ TEMP_AR = 4.0
 PRESS_CH = 0.25
 TEMP_CH = 0.8
 
-CHI = 0.0 # pressure scale height (along field lines)
+CHI = 20.0 # pressure scale height (along field lines)
 # BETA = 0.004
 
 W_0 = 0.2 # for gaussian profile
@@ -127,16 +130,20 @@ def compute_a0_from_boundary(x,z,num_bins=1000):
     return (z>0.0)*(result) + (z==0.0)*a_boundary(x)
 
 def press_profile_ch(a, a_ref, p_ch):
-    return (1.0/p_ch - 1.0)*(a/a_ref)**2 + 1.0
+    if NOGRAV_MODE: return (1.0/p_ch - 1.0)*(a_ref/a_ref)**2 + 1.0
+    else: return (1.0/p_ch - 1.0)*(a/a_ref)**2 + 1.0
 
 def temp_profile_ch(a, a_ref, t_ch):
     return (1.0 - t_ch)*(a/a_ref)**2 + t_ch
+    # return (1.0 - t_ch)*(a_ref/a_ref)**2 + t_ch
 
 def press_profile_ar(a, a_ref, p_ar):
-    return (1.0 - 1.0/p_ar)*(a/a_ref)**2 + (1.0/p_ar)
+    if NOGRAV_MODE: return (1.0 - 1.0/p_ar)*(a_ref/a_ref)**2 + (1.0/p_ar)
+    else: return (1.0 - 1.0/p_ar)*(a/a_ref)**2 + (1.0/p_ar)
 
 def temp_profile_ar(a, a_ref, t_ar):
     return (t_ar - 1.0)*(a/a_ref)**2 + 1.0
+    # return (t_ar - 1.0)*(a_ref/a_ref)**2 + 1.0
 
 def press_profile(a,a_ref):
     if ACTIVE_REGION: return press_profile_ar(a,a_ref,PRESS_AR)
@@ -152,23 +159,30 @@ def temperature(a, z, a_ref):
     else: return result*np.exp(z/CHI)
 
 def pressure(a, z, a_ref):
-    result = press_profile(a,a_ref)
-    if CHI == 0.0: exponent = -z/temp_profile(a,a_ref)
-    else: exponent = CHI/temp_profile(a,a_ref)*(np.exp(-z/CHI)-1.0) 
-    return result*np.exp(exponent)
-
+    if NOGRAV_MODE:
+        result = press_profile(a,a_ref)
+        return result*np.exp(0.0*z)
+    else:
+        result = press_profile(a,a_ref)
+        if CHI == 0.0: exponent = -z/temp_profile(a,a_ref)
+        else: exponent = CHI/temp_profile(a,a_ref)*(np.exp(-z/CHI)-1.0) 
+        return result*np.exp(exponent)
 
 def press_profile_ch_deriv(a, a_ref, p_ch):
-    return 2.0*(1.0/p_ch - 1.0)*(a/a_ref)
+    if NOGRAV_MODE: return 0.0*a
+    else: return 2.0*(1.0/p_ch - 1.0)*(a/a_ref)
 
 def temp_profile_ch_deriv(a, a_ref, t_ch):
     return 2.0*(1.0 - t_ch)*(a/a_ref)
+    # return 0.0*a
 
 def press_profile_ar_deriv(a, a_ref, p_ar):
-    return 2.0*(1.0 - 1.0/p_ar)*(a/a_ref)
+    if NOGRAV_MODE: return 0.0*a
+    else: return 2.0*(1.0 - 1.0/p_ar)*(a/a_ref)
 
 def temp_profile_ar_deriv(a, a_ref, t_ar):
     return 2.0*(t_ar - 1.0)*(a/a_ref)
+    # return 0.0*a
 
 def press_profile_deriv(a,a_ref):
     if ACTIVE_REGION: return press_profile_ar_deriv(a,a_ref,PRESS_AR)
@@ -181,7 +195,8 @@ def temp_profile_deriv(a,a_ref):
 def f(a,a_ref,z_var):
     if CHI == 0.0: z = z_var
     else: z = -CHI*(np.exp(-z_var/CHI) - 1.0)
-    return np.exp(-z/temp_profile(a,a_ref))*(press_profile_deriv(a,a_ref) + z*temp_profile_deriv(a,a_ref)*press_profile(a,a_ref)/(temp_profile(a,a_ref)**2))
+    if NOGRAV_MODE: return 0.0*np.exp(-z/temp_profile(a,a_ref))*(press_profile_deriv(a,a_ref) + z*temp_profile_deriv(a,a_ref)*press_profile(a,a_ref)/(temp_profile(a,a_ref)**2))
+    else: return np.exp(-z/temp_profile(a,a_ref))*(press_profile_deriv(a,a_ref) + z*temp_profile_deriv(a,a_ref)*press_profile(a,a_ref)/(temp_profile(a,a_ref)**2))
 
 def compute_a1(f1,f2,t_bins,s_bins,x,z):
     dt = 1.0/t_bins
@@ -235,7 +250,6 @@ def mp_compute_a1(x,z,t_bins=200,s_bins=200):
     return result
 
 if __name__ == '__main__':
-
 
     # x = np.linspace(-DOMAIN_WIDTH*(1.0/2.0 + N_GHOST/X_DIM),DOMAIN_WIDTH*(1.0/2.0 + N_GHOST/X_DIM),X_DIM + 2*N_GHOST)
     # z = np.linspace(-N_GHOST*DOMAIN_HEIGHT/Z_DIM,DOMAIN_HEIGHT*(1.0 + N_GHOST/Z_DIM),Z_DIM + 2*N_GHOST)
@@ -315,18 +329,6 @@ if __name__ == '__main__':
     full_a1 = np.zeros_like(full_a0)
     t_bins = 200
     s_bins = 200
-    # ##BENCHMARK
-    # f_1000 = precompute_f(t_bins,s_bins,a_ref,1000)
-    # f_50 = precompute_f(t_bins,s_bins,a_ref,50)
-    # print(f"f1 50: {np.nanmax(np.abs((f_50[0]-f_1000[0])/f_1000[0]))},{np.nanmin(np.abs((f_50[0]-f_1000[0])/f_1000[0]))}")
-    # print(f"f2 50: {np.nanmax(np.abs((f_50[1]-f_1000[1])/f_1000[1]))},{np.nanmin(np.abs((f_50[1]-f_1000[1])/f_1000[1]))}")
-    # f_100 = precompute_f(t_bins,s_bins,a_ref,100)
-    # print(f"f1 100: {np.nanmax(np.abs((f_100[0]-f_1000[0])/f_1000[0]))},{np.nanmin(np.abs((f_100[0]-f_1000[0])/f_1000[0]))}")
-    # print(f"f2 100: {np.nanmax(np.abs((f_100[1]-f_1000[1])/f_1000[1]))},{np.nanmin(np.abs((f_100[1]-f_1000[1])/f_1000[1]))}")
-    # f_500 = precompute_f(t_bins,s_bins,a_ref,500)
-    # print(f"f1 500: {np.nanmax(np.abs((f_500[0]-f_1000[0])/f_1000[0]))},{np.nanmin(np.abs((f_500[0]-f_1000[0])/f_1000[0]))}")
-    # print(f"f2 500: {np.nanmax(np.abs((f_500[1]-f_1000[1])/f_1000[1]))},{np.nanmin(np.abs((f_500[1]-f_1000[1])/f_1000[1]))}")
-    # exit()
     print("Precomputing pressure gradients...")
     precomps = precompute_f(t_bins,s_bins,a_ref)
     num_el = precomps[0].shape[0] * precomps[0].shape[1]

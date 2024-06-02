@@ -24,12 +24,13 @@ void RadiativeLosses::parseModuleConfigs(std::vector<std::string> lhs, std::vect
         else if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
         else if(this_lhs == "time_integrator") time_integrator = this_rhs;
         else if(this_lhs == "inactive_mode") inactive_mode = (this_rhs == "true");
+        else if(this_lhs == "prevent_subcycling") prevent_subcycling = (this_rhs == "true");
         else std::cerr << this_lhs << " config not recognized.\n";
     }
 }
 
 void RadiativeLosses::setupModule(){
-    if(time_integrator == "") time_integrator == "euler";
+    if(time_integrator == "") time_integrator = "euler";
     assert((time_integrator == "euler" || time_integrator == "rk2" || time_integrator == "rk4")
             && "Invalid time integrator given for Thermal Conduction module");
     if(output_to_file) avg_losses = Grid(m_pd.m_xdim,m_pd.m_ydim,0.0);
@@ -137,6 +138,12 @@ Grid RadiativeLosses::computeLosses(const Grid &temp, const Grid &n) const {
                 if(temp(i,j) < cutoff_temp + cutoff_ramp){
                     double ramp = (temp(i,j) - cutoff_temp)/cutoff_ramp;
                     result(i,j) *= ramp;
+                }
+                if(prevent_subcycling){ //reduce loss rate if it would dominate the fluid evolution
+                    if(0.1*epsilon*(m_pd.m_eqs->grid(IdealMHD::thermal_energy)(i,j)/result(i,j))
+                        < m_pd.epsilon*(m_pd.m_eqs->grid(IdealMHD::dt)(i,j))){
+                        result(i,j) = 0.1*epsilon*(m_pd.m_eqs->grid(IdealMHD::thermal_energy)(i,j))/(m_pd.epsilon*(m_pd.m_eqs->grid(IdealMHD::dt)(i,j)));
+                    }
                 }
             }
         }
