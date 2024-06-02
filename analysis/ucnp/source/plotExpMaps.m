@@ -20,9 +20,9 @@ for k = 1:length([s.map.t])
                 
                 cax = get_axis(fig,ax{i,j});
         
-                xdata = [s.map(i).x];
-                ydata = [s.map(i).y];
-                zdata = [s.map(i).(q{j})];
+                xdata = [s.map(k).x];
+                ydata = [s.map(k).y];
+                zdata = [s.map(k).(q{j})];
                 imagesc(xdata,ydata,zdata)
                 colorbar;
                 cax.YDir = 'Normal';
@@ -59,9 +59,9 @@ for k = 1:length([s.map.t])
                 
                 cax = get_axis(fig,ax{i,j});
         
-                xdata = [s.map(i).x];
-                ydata = [s.map(i).y];
-                zdata = [s.map(i).(q{j})];
+                xdata = [s.map(k).x];
+                ydata = [s.map(k).y];
+                zdata = [s.map(k).(q{j})];
                 imagesc(xdata,ydata,zdata)
                 colorbar;
                 cax.YDir = 'Normal';
@@ -97,11 +97,12 @@ for k = 1:length([s.map.t])
         
                 hold off
                 q = {'img','img','map','map'};
+                q1 = {'x','x','x','x_hpr'};
                 q2 = {'n_x','n_x_sg','n_x','n_x_hpr'};
                 q3 = {'n_i_n_t','n_i_n_t_,_s_g','n_l_i_f','n_l_i_f_,_h_p_r'};
                 l = get_line_specs(length(q));
                 for m = 1:length(q)
-                    xdata = [s.(q{m})(k).x];
+                    xdata = [s.(q{m})(k).(q1{m})];
                     ydata = [s.(q{m})(k).(q2{m})];
                     plot(xdata,ydata,'LineWidth',2,'MarkerSize',4,'Color',l(m).col,'MarkerFaceColor',l(m).col,'MarkerEdgeColor',l(m).col)
                     hold on

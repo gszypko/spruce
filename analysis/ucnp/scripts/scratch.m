@@ -1,20 +1,24 @@
-clc, clearvars, f = filesep;
-maindir = 'C:\Users\Grant\OneDrive\Research\mhd\data-expsims\an-mhd-09.26.22';
-s = dir(maindir);
-s(1:2) = [];
-for i = 1:length(s)
-    s(i).s = dir([s(i).folder f s(i).name]);
-    s(i).s(1:2) = [];
-    for j = 1:length(s(i).s)
-        name_to_delete = [s(i).s(j).folder f s(i).s(j).name];
-        isdir = s(i).s(j).isdir;
-        if ~endsWith(name_to_delete,'os.mat')
-            disp(name_to_delete);
-            if ~isdir
-                delete(name_to_delete);
-            else
-                rmdir(name_to_delete,'s');
-            end
-        end
-    end
+% transect for plot
+x = linspace(-.5,.5,301);
+y = 0;
+
+% grid data
+X = data.grids.pos_x;
+Y = data.grids.pos_y;
+n = data.grids.vars(10).n;
+n = sgolayfilt(n,3,25);
+
+% interpolation
+n_int = interp2(X,Y,n,x,y);
+n_grad = diff(n_int);
+% n_grad = sgolayfilt(n_grad,3,25);
+n_int_less = zeros(1,length(n_grad));
+for i = 1:length(n_int_less)
+    n_int_less(i) = mean(n_int(i:i+1));
+    x_less(i) = mean(x(i:i+1));
 end
+
+gradnOn = n_grad./n_int_less;
+
+figure
+plot(x_less(25:end-25),gradnOn(25:end-25))

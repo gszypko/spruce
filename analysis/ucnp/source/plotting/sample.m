@@ -24,6 +24,7 @@ for i = 1:size(ax,1)
             plot(xdata,ydata,'LineWidth',2,'MarkerSize',4,'Color',l(k).col,'MarkerFaceColor',l(k).col,'MarkerEdgeColor',l(k).col)
             hold on
         end
+        grid minor
 
         cax.FontSize = 11;
         if i == size(ax,1), xlabel('label'), end

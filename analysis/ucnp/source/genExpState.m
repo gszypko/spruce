@@ -10,10 +10,11 @@ settings_path = [set_path filesep 'plasma.txt']; % extension to be updated to .s
 %% Load Data
 config = readConfigFile(flags.config_path);
 settings = readSettingsFile(flags.settings_path);
-s = loadExpData(path,'os-init.mat');
+s = loadExpData(path,'os.mat');
 
-ind = s.map(1).R < .05;
+ind = s.map(1).R < .01;
 Ti_from_lif = mean(s.map(1).Ti(ind));
+if ~isempty(flags.Ti), Ti_from_lif = flags.Ti; end
 
 %% Trim Plasma Images
 
@@ -32,11 +33,11 @@ end
 
 %% Obtain State Background with Fit to Image
 % fit density distribution with analytic distribution
-density_min = max(s.map(1).n_hpr_trim,[],'all')*flags.n_min;
+density_min = max(s.map(1).n_hpr,[],'all')*flags.n_min;
 if strcmp(flags.n_dist,'gauss')
-    [n_fit] = fitImgWithGaussian(s.map(1).x_hpr,s.map(1).y_hpr,s.map(1).n_hpr_trim,density_min);
+    [n_fit] = fitImgWithGaussian(s.map(1).x_hpr,s.map(1).y_hpr,s.map(1).n_hpr,density_min);
 elseif strcmp(flags.n_dist,'exp')
-    [n_fit] = fitImgWithExp(s.map(1).x_hpr,s.map(1).y_hpr,s.map(1).n_hpr_trim,density_min);
+    [n_fit] = fitImgWithExp(s.map(1).x_hpr,s.map(1).y_hpr,s.map(1).n_hpr,density_min);
 end
 
 % plot fit to density distribution
@@ -85,7 +86,11 @@ fit = struct;
 fit(length([s.img.t])).sig_x = [];
 fit(length([s.img.t])).sig_y = [];
 for i = 1:length([s.img.t])
-    results = fitImgWithGaussian(s.img(i).x,s.img(i).y,s.img(i).n,0);
+    if strcmp(flags.n_dist,'gauss')
+    [results] = fitImgWithGaussian(s.map(i).x_hpr,s.map(i).y_hpr,s.map(i).n_hpr,density_min);
+elseif strcmp(flags.n_dist,'exp')
+    [results] = fitImgWithExp(s.map(i).x_hpr,s.map(i).y_hpr,s.map(i).n_hpr,density_min);
+end
     fit(i).sig_x = results.sigx;
     fit(i).sig_y = results.sigy;
     fit(i).sig_2D = (fit(i).sig_x*fit(i).sig_y)^(1/2); % 1/3 because this is the experimental data
@@ -121,7 +126,7 @@ if isempty(flags.Te)
     if strcmp(flags.n_dist,'gauss')
         Te_for_files = Te_fit;
     elseif strcmp(flags.n_dist,'exp')
-        Te_for_files = os(1).Te;
+        Te_for_files = s.Te0;
     else
         error('<n_dist> must be either <gauss> or <exp>.')
     end
@@ -140,13 +145,13 @@ else
     grid_growth = flags.grid_growth;
     grid_spread = flags.grid_spread;
 end
-[state.x,state.dx] = getNonUniformGrids(flags.num_grids,flags.sim_domain(1),grid_growth,grid_spread);
-[state.y,state.dy] = getNonUniformGrids(flags.num_grids,flags.sim_domain(2),grid_growth,grid_spread);
+[state.x,state.dx] = getNonUniformGrids(flags.Nx,flags.sim_domain(1),grid_growth,grid_spread);
+[state.y,state.dy] = getNonUniformGrids(flags.Ny,flags.sim_domain(2),grid_growth,grid_spread);
 [state.X,state.Y] = meshgrid(state.x,state.y);
 [state.dX,state.dY] = meshgrid(state.dx,state.dy);
 state.R = sqrt(state.X.^2+state.Y.^2);
 
-state.n = interp2(s.map(1).x_hpr,s.map(1).y_hpr,s.map(1).n_hpr_trim,state.X,state.Y);
+state.n = interp2(s.map(1).x_hpr,s.map(1).y_hpr,s.map(1).n_hpr,state.X,state.Y);
 
 n_bgd = n_fit.fit(state.X,state.Y);
 for i = 1:numel(state.n)
@@ -154,6 +159,22 @@ for i = 1:numel(state.n)
         state.n(i) = n_bgd(i);
     end
 end
+
+if flags.use_init_velocity
+    state.mom_x = cts.cgs.mI*state.n*interp2(s.map(1).x_hpr,s.map(1).y_hpr,s.map(1).v_hpr,state.X,state.Y,'linear',0);
+else
+    state.mom_x = zeros(size(state.X));
+end
+for i = 1:numel(state.n)
+    if state.R(i) > .35
+        state.mom_x(i) = 0;
+    end
+end
+
+%% Temperature Distribution
+
+T_dist = state.n.^(1/1.5);
+T_dist = T_dist./max(T_dist,[],'all');
 
 %% Handle Settings File
 % need to copy .settings path into set path, but first must determine the central value of n, Ti, and Te and the plasma size
@@ -171,8 +192,8 @@ settings.sig_x = n_fit.sigx;
 settings.sig_y = n_fit.sigy;
 settings.x_lim = flags.sim_domain(1);
 settings.y_lim = flags.sim_domain(2);
-settings.Nx = flags.num_grids;
-settings.Ny = flags.num_grids;
+settings.Nx = flags.Nx;
+settings.Ny = flags.Ny;
 settings.n_min = density_min;
 
 % write settings file
@@ -192,7 +213,7 @@ movefile(settings_path,[extractBefore(settings_path,'.txt') '.settings']);
 % the end time for the simulation is taken to be equal to the last experimental time point by default
 total_temp = settings.Te + settings.Ti;
 if isempty(flags.t_max)
-    t_max = max([imgs.t])*sqrt(os(1).Te/total_temp); % time in cgs
+    t_max = max(s.t)*sqrt(s.Te0/total_temp); % time in cgs
 else
     t_max = flags.t_max*tau_2D(total_temp);
 end
@@ -245,7 +266,7 @@ grids.be_z = zeros(size(state.X));
 if strcmp(config.eq_set,'ideal_mhd')
     grids.rho = settings.m_i.*state.n;
     grids.temp = settings.Te*ones(size(state.X));
-    grids.mom_x = zeros(size(state.X));
+    grids.mom_x = state.mom_x;
     grids.mom_y = zeros(size(state.X));
     grids.mom_z = zeros(size(state.X));
     grids.bi_x = zeros(size(state.X));
@@ -256,11 +277,11 @@ if strcmp(config.eq_set,'ideal_mhd')
 elseif strcmp(config.eq_set,'ideal_2F')
     grids.i_rho = settings.m_i.*state.n;
     grids.e_rho = cts.cgs.mE.*state.n;
-    grids.i_mom_x = zeros(size(state.X));
+    grids.i_mom_x = state.mom_x;
     grids.i_mom_y = zeros(size(state.X));
-    grids.e_mom_x = zeros(size(state.X));
+    grids.e_mom_x = state.mom_x;
     grids.e_mom_y = zeros(size(state.X));
-    grids.i_temp = settings.Ti*ones(size(state.X));
+    grids.i_temp = settings.Ti*T_dist;
     grids.e_temp = settings.Te*ones(size(state.X));
     grids.bi_x = zeros(size(state.X));
     grids.bi_y = zeros(size(state.X));
@@ -272,9 +293,9 @@ elseif strcmp(config.eq_set,'ideal_2F')
     grids.grav_y = zeros(size(state.X));
 elseif strcmp(config.eq_set,'ideal_mhd_2E')
     grids.rho = settings.m_i.*state.n;
-    grids.i_temp = settings.Ti*ones(size(state.X));
+    grids.i_temp = settings.Ti*T_dist;
     grids.e_temp = settings.Te*ones(size(state.X));
-    grids.mom_x = zeros(size(state.X));
+    grids.mom_x = state.mom_x;
     grids.mom_y = zeros(size(state.X));
     grids.bi_x = zeros(size(state.X));
     grids.bi_y = zeros(size(state.X));
