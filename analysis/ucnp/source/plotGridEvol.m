@@ -75,7 +75,7 @@ for k = 1:length([data.grids.vars.time])
     str1 = ['Iter = ' num2str(k-1)];
     str2 = ['t = ' num2str(data.grids.vars(k).time*1e6,'%.3g') ' \mus = ' num2str(data.grids.vars(k).time/data.tau,'%.3g') '\tau_e_x_p'];
     an.String = [str2];
-    an.Position = [0.159500000000000,0.929069291338582,0.723000000000000,0.080100000000000];
+    an.Position = [0.159500000000000,0.887715907879935,0.723000000000000,0.080100000000000];
 
     frames{k} = getframe(fig);
 end

@@ -293,42 +293,4 @@ close(fig)
 
 save([s.folder filesep 'holes.mat'],'s');
 
-%%
-
-% % opening a subplot
-% num = length(t_plot);
-% [fig,ax,an] = open_subplot(num);
-% iter = 0;
-% for i = 1:size(ax,1)
-%     for j = 1:size(ax,2)
-%         iter = iter + 1;
-%         if iter > num, break, end
-%         
-%         cax = get_axis(fig,ax{i,j});
-% 
-%         hold off
-%         l = get_line_specs(length(fields_1D));
-%         xdata = [s.(fields_1D{1})(closest_time_point(ind_t_plot(iter))).r];
-%         ydata = [s.(fields_1D{1})(closest_time_point(ind_t_plot(iter))).n];
-%         ydata = ydata./max(ydata);
-%         plot(xdata,ydata,'LineWidth',2,'MarkerSize',4,'Color',l(1).col,'MarkerFaceColor',l(1).col,'MarkerEdgeColor',l(1).col)
-%         hold on
-%         xdata = [s.(fields_1D{2})(ind_t_plot(iter)).r];
-%         ydata = [s.(fields_1D{2})(ind_t_plot(iter)).n];
-%         ydata = ydata./max(ydata);
-%         plot(xdata,ydata,'LineWidth',2,'MarkerSize',4,'Color',l(2).col,'MarkerFaceColor',l(2).col,'MarkerEdgeColor',l(2).col)
-%         hold on
-% 
-%         cax.FontSize = 11;
-%         if i == size(ax,1), xlabel('r (cm)'), end
-%         if j == 1, ylabel('n / n_0'), end
-%         title(['t = ' num2str(s.sim_1D(closest_time_point(ind_t_plot(iter))).t*1e6,'%.2g') ' \mus'],'FontWeight','normal')
-%         ylim([0 1.1].*max(ydata))
-%     end
-% end
-% an.String = [];
-% 
-% lgd = legend({'Sim','Exp'});
-% lgd.Position = [0.793153505527392,0.380132906369903,0.108849558323886,0.067314489047856];
-
 end

@@ -9,8 +9,10 @@ for i = 1:length(iaw)
 end
 
 %% Extract 1D Density Transects from 2D Grids
+load([data.folder filesep 'gauss-fits.mat'])
+
 for i = 1:length(iaw)
-    y_cut_off_distance = data.grids.gauss_fits(i).sigy/2;
+    y_cut_off_distance = gauss_fits(i).sigy/2;
     y_points_to_average = abs(data.grids.y_vec) < y_cut_off_distance;
 
     iaw(i).x = data.grids.x_vec;

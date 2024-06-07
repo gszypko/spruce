@@ -1,4 +1,12 @@
 function [data] = loadData(folder,flags)
+
+% default arguments
+    arguments 
+        folder (1,:) char
+        flags struct = struct('time_window',[0 100],'time_interval',1,...
+        'plot_window',[inf inf],'ghost_cells',2,'plot_grids',false,'vars',[])
+    end
+
 % load settings, config, and state files
 data.folder = folder;
 data.settings = readSettingsFile([folder filesep 'plasma.settings']);
