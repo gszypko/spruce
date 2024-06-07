@@ -33,7 +33,8 @@ class ModuleHandler {
         std::vector<std::unique_ptr<Module>> m_modules;
         static inline std::vector<std::string> m_module_names = {
             "radiative_losses", "thermal_conduction", "ambient_heating", "anomalous_resistivity", "momentum_injection", "localized_heating",
-            "field_heating", "tracer_particles", "sg_filtering", "coulomb_explosion","eic_thermalization", "artificial_viscosity", "global_temperature"
+            "field_heating", "tracer_particles", "sg_filtering", "coulomb_explosion","eic_thermalization", "artificial_viscosity", "global_temperature",
+            "mass_injection"
         };
 };
 

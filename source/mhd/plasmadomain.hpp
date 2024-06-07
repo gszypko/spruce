@@ -73,6 +73,7 @@ private: //*********************************************************************
   friend class RadiativeLosses;
   friend class ThermalConduction;
   friend class TracerParticles;
+  friend class MassInjection;
   friend class CoulombExplosion;
   friend class EICThermalization;
   friend class Viscosity;
