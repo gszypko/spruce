@@ -17,6 +17,7 @@
 #include "global_temperature.hpp"
 #include "tracerparticles.hpp"
 #include "massinjection.hpp"
+#include "ambientheatingsink.hpp"
 
 ModuleHandler::ModuleHandler(PlasmaDomain &pd): m_pd(pd) {}
 
@@ -99,6 +100,7 @@ void ModuleHandler::instantiateModule(const std::string &module_name, std::ifstr
     else if(module_name == "momentum_injection") m_modules.push_back(std::unique_ptr<Module>(new MomentumInjection(m_pd)));
     else if(module_name == "tracer_particles") m_modules.push_back(std::unique_ptr<Module>(new TracerParticles(m_pd)));
     else if(module_name == "mass_injection") m_modules.push_back(std::unique_ptr<Module>(new MassInjection(m_pd)));
+    else if(module_name == "ambient_heating_sink") m_modules.push_back(std::unique_ptr<Module>(new AmbientHeatingSink(m_pd)));
     else assert(false && "Module name was not recognized");
     m_modules.back()->configureModule(in_file);
 }
