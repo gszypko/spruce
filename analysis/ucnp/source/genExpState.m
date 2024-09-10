@@ -151,7 +151,7 @@ end
 [state.dX,state.dY] = meshgrid(state.dx,state.dy);
 state.R = sqrt(state.X.^2+state.Y.^2);
 
-state.n = interp2(s.map(1).x_hpr,s.map(1).y_hpr,s.map(1).n_hpr,state.X,state.Y);
+state.n = interp2(s.map(1).x_hpr,s.map(1).y_hpr,s.map(1).n_hpr,state.X,state.Y) - 2.5e7;
 
 n_bgd = n_fit.fit(state.X,state.Y);
 for i = 1:numel(state.n)

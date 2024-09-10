@@ -222,7 +222,7 @@ for k = 1:length(vlasov.time)
             cax.FontSize = 10;
             grid on
             grid minor
-            xlim([-.4 .4])
+            xlim([-.75 .75])
             xlabel(row_str{i})
             ylabel(col_str{j})
 
