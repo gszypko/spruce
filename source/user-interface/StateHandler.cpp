@@ -234,7 +234,22 @@ Grid StateHandler::setup_density(const std::unique_ptr<Settings>& pms) const
         n -= n_hole;
     }
     
-    // ION ACOUSTIC WAVES
+    // ION ACOUSTIC WAVES test
+    if (pms->getopt("n_shock") == "true"){
+        double shock_amp = pms->getval("n_shock_amp");
+        double shock_lam = pms->getval("n_shock_lam");
+        double shock_sig = pms->getval("n_shock_sig");
+        Grid x = getgrid("pos_x");
+        Grid y = getgrid("pos_y");
+        double sig_x = pms->getval("sig_x");
+        double sig_y = pms->getval("sig_y");
+        Grid r = (x.square()+sig_y/sig_x*y.square()).sqrt();
+        Grid n_shock = shock_amp*(2*PI/shock_lam*x).cos()*Grid::Gaussian2D(getgrid("pos_x"),getgrid("pos_y"),1,0,shock_sig,sig_y/sig_x*shock_sig,0,0);
+        n += n_shock;
+        std::cout << n.max() << std::endl;
+    }
+
+    // SHOCK WAVE
     if (pms->getopt("n_iaw") == "true"){
         double iaw_amp = pms->getval("n_iaw_amp");
         double iaw_sig = pms->getval("n_iaw_sig");
