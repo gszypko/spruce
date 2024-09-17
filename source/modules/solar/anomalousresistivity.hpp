@@ -11,6 +11,7 @@ class AnomalousResistivity : public Module {
         void setupModule() override;
         std::string commandLineMessage() const override;
         void fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids) override;
+        void preIterateModule(double dt) override;
         void iterateModule(double dt) override;
     private:
         std::string time_integrator{"euler"};
@@ -29,9 +30,11 @@ class AnomalousResistivity : public Module {
 
         Grid diffusivity;
         bool output_to_file = false;
+        bool multispecies_output_mode = false; //when true, only output the cumulative direct heating since the previous output, overrides output_to_file
         Grid anomalous_template;
         Grid joule_heating;
         Grid avg_heating;
+        Grid cumulative_heating;
         int kernel_radius;  
         int curr_num_subcycles;
         Grid smoothing_kernel;

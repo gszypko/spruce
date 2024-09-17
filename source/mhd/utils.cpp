@@ -61,10 +61,10 @@ double bilinearInterpolate(const std::vector<double> &point, const Grid &quantit
   if(it_x == x.cend() || it_y == y.cend()) return 0.0;
 
   int i_1 = std::distance(x.cbegin(), it_x);
-  int i_0 = i_1 - 1;
+  int i_0 = std::max(i_1 - 1,0);
   int j_1 = std::distance(y.cbegin(),it_y);
-  int j_0 = j_1 - 1;
-
+  int j_0 = std::max(j_1 - 1,0);
+  
   double dx0,dx1,dy0,dy1;
   dx0 = point[0] - x[i_0]; dx1 = x[i_1] - point[0];
   dy0 = point[1] - y[j_0]; dy1 = y[j_1] - point[1];

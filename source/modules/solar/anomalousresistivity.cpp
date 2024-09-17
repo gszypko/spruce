@@ -21,6 +21,7 @@ void AnomalousResistivity::setupModule(){
     joule_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     anomalous_template = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     avg_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    cumulative_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     if(metric_smoothing){
         assert(smoothing_sigma > 0.0 && "smoothing_sigma must be a positive number");
         kernel_radius = nearbyint(4.0*smoothing_sigma);
@@ -46,6 +47,7 @@ void AnomalousResistivity::parseModuleConfigs(std::vector<std::string> lhs, std:
         std::string this_rhs = rhs[i];
         if(this_lhs == "time_scale") time_scale = std::stod(rhs[i]);
         else if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
+        else if(this_lhs == "multispecies_output_mode") multispecies_output_mode = (this_rhs == "true");
         else if(this_lhs == "frobenius_metric_coeff") frobenius_metric_coeff = std::stod(this_rhs);
         else if(this_lhs == "smoothing_sigma") smoothing_sigma = std::stod(this_rhs);
         else if(this_lhs == "safety_factor") safety_factor = std::stod(this_rhs);
@@ -79,13 +81,25 @@ std::vector<Grid> AnomalousResistivity::computeTimeDerivatives(const Grid &bi_x,
             joule_heating};
 }
 
+void AnomalousResistivity::preIterateModule(double dt){
+    //Here, reproducing the check made in evolution.cpp to determine if a file output has just occured
+    int old_time_iter = (int)((m_pd.m_time - dt)/m_pd.m_time_output_interval);
+    int new_time_iter = (int)(m_pd.m_time/m_pd.m_time_output_interval);
+    bool store_cond_1 = m_pd.m_iter_output_interval > 0 && m_pd.m_iter%m_pd.m_iter_output_interval == 0;
+    bool store_cond_2 = m_pd.m_time_output_interval > 0.0 && new_time_iter > old_time_iter;
+    if (store_cond_1 || store_cond_2) cumulative_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim); //If so, since the cumulative joule heating has been output, we reset the count to zero
+}
+
 void AnomalousResistivity::iterateModule(double dt){
     Grid bi_x = m_pd.m_eqs->grid(IdealMHD::bi_x), bi_y = m_pd.m_eqs->grid(IdealMHD::bi_y), bi_z = m_pd.m_eqs->grid(IdealMHD::bi_z);
     computeTemplate(m_pd.m_grids[PlasmaDomain::be_x]+bi_x,m_pd.m_grids[PlasmaDomain::be_y]+bi_y);
     computeDiffusion(bi_x,bi_x);
     computeNumSubcycles();
     Grid thermal_energy = m_pd.m_eqs->grid(IdealMHD::thermal_energy);
-    if(output_to_file) avg_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    if(output_to_file) {
+        avg_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+        cumulative_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    }
     double dt_subcycle = (dt/(double)curr_num_subcycles);
     Grid old_thermal_energy = thermal_energy;
     Grid be_x_lap = m_pd.laplacian(m_pd.m_grids[PlasmaDomain::be_x]);
@@ -142,7 +156,10 @@ void AnomalousResistivity::iterateModule(double dt){
             thermal_energy += dt_subcycle*(k1[3] + 2.0*k2[3] + 2.0*k3[3] + k4[3])/6.0;
         }
     }
-    if(output_to_file) avg_heating = (thermal_energy - old_thermal_energy)/dt;
+    if(output_to_file){
+        cumulative_heating += (thermal_energy - old_thermal_energy);
+        avg_heating = (thermal_energy - old_thermal_energy)/dt;
+    }
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) = thermal_energy;
     m_pd.m_eqs->grid(IdealMHD::bi_x) = bi_x;
     m_pd.m_eqs->grid(IdealMHD::bi_y) = bi_y;
@@ -232,7 +249,10 @@ std::string AnomalousResistivity::commandLineMessage() const
 }
 
 void AnomalousResistivity::fileOutput(std::vector<std::string>& var_names, std::vector<Grid>& var_grids){
-    if (output_to_file) {
+    if (multispecies_output_mode) {
+        var_names.push_back("total_direct_heating");
+        var_grids.push_back(cumulative_heating);
+    } else if (output_to_file) {
         var_names.push_back("anomalous_diffusivity");
         var_grids.push_back(anomalous_template*diffusivity);
         var_names.push_back("anomalous_template");
