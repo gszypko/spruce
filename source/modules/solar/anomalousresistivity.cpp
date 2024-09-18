@@ -252,7 +252,8 @@ void AnomalousResistivity::fileOutput(std::vector<std::string>& var_names, std::
     if (multispecies_output_mode) {
         var_names.push_back("total_direct_heating");
         var_grids.push_back(cumulative_heating);
-    } else if (output_to_file) {
+    }
+    if (output_to_file) {
         var_names.push_back("anomalous_diffusivity");
         var_grids.push_back(anomalous_template*diffusivity);
         var_names.push_back("anomalous_template");

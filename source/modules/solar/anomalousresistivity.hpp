@@ -30,7 +30,7 @@ class AnomalousResistivity : public Module {
 
         Grid diffusivity;
         bool output_to_file = false;
-        bool multispecies_output_mode = false; //when true, only output the cumulative direct heating since the previous output, overrides output_to_file
+        bool multispecies_output_mode = false; //When true, output the cumulative direct heating since the previous output. Can be combined with output_to_file.
         Grid anomalous_template;
         Grid joule_heating;
         Grid avg_heating;
