@@ -156,10 +156,9 @@ void AnomalousResistivity::iterateModule(double dt){
             thermal_energy += dt_subcycle*(k1[3] + 2.0*k2[3] + 2.0*k3[3] + k4[3])/6.0;
         }
     }
-    if(output_to_file){
-        cumulative_heating += (thermal_energy - old_thermal_energy);
-        avg_heating = (thermal_energy - old_thermal_energy)/dt;
-    }
+    if(output_to_file) avg_heating = (thermal_energy - old_thermal_energy)/dt;
+    if(multispecies_output_mode) cumulative_heating += (thermal_energy - old_thermal_energy);
+    
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) = thermal_energy;
     m_pd.m_eqs->grid(IdealMHD::bi_x) = bi_x;
     m_pd.m_eqs->grid(IdealMHD::bi_y) = bi_y;
