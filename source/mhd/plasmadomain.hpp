@@ -41,13 +41,13 @@ public: //**********************************************************************
     x_bound_1, x_bound_2, y_bound_1, y_bound_2,
     epsilon, density_min, temp_min, thermal_energy_min, max_iterations, iter_output_interval, time_output_interval,
     output_flags, xdim, ydim, open_boundary_strength, std_out_interval, write_interval,
-    open_boundary_decay_base, x_origin, y_origin, time_integrator, duration, sg_opt, write_precision
+    open_boundary_decay_base, x_origin, y_origin, time_integrator, duration, sg_opt, write_precision, multispecies_mode
   };
   static inline std::vector<std::string> m_config_names = {
     "x_bound_1","x_bound_2","y_bound_1","y_bound_2",
     "epsilon","density_min","temp_min","thermal_energy_min","max_iterations","iter_output_interval","time_output_interval",
     "output_flags","xdim","ydim","open_boundary_strength","std_out_interval","write_interval",
-    "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "duration", "sg_opt", "write_precision"
+    "open_boundary_decay_base", "x_origin", "y_origin", "time_integrator", "duration", "sg_opt", "write_precision", "multispecies_mode"
   };
 
   // Public Member Functions
@@ -127,6 +127,10 @@ private: //*********************************************************************
   int gridname2index(const std::string& name) const;
   bool is_grid(const std::string& name) const;
   
+  // Grids for multispecies post-processing
+  bool m_multispecies_mode = false;
+  Grid m_cumulative_electron_heating, m_cumulative_ion_heating;
+
   // ion properties
   double m_ion_mass; //in g
   double m_adiabatic_index; //aka gamma, unitless

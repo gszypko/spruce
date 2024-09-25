@@ -160,6 +160,22 @@ void PlasmaDomain::storeGrids()
     }
   }
 
+  // write grids for multispecies analysis
+  if(m_multispecies_mode) {
+      assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
+      m_data_to_write[m_lines_recorded] = "cumulative_electron_heating\n";
+      m_lines_recorded++;
+      assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
+      m_data_to_write[m_lines_recorded] = m_cumulative_electron_heating.format(',','\n',m_write_precision);
+      m_lines_recorded++;
+      assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
+      m_data_to_write[m_lines_recorded] = "cumulative_ion_heating\n";
+      m_lines_recorded++;
+      assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
+      m_data_to_write[m_lines_recorded] = m_cumulative_ion_heating.format(',','\n',m_write_precision);
+      m_lines_recorded++;
+  }
+
   // write grids from modules
   std::vector<std::string> module_varnames;
   std::vector<Grid> module_data;
@@ -172,6 +188,8 @@ void PlasmaDomain::storeGrids()
     m_data_to_write[m_lines_recorded] = module_data[i].format(',','\n',m_write_precision);
     m_lines_recorded++;
   }
+
+  std::cout << m_lines_recorded << std::endl << m_data_to_write.size() << std::endl << std::endl;
   // increment store counter
   m_store_counter++;
 }
@@ -296,6 +314,7 @@ void PlasmaDomain::handleSingleConfig(int setting_index, std::string rhs)
     case static_cast<int>(Config::duration): m_duration = std::stod(rhs); break;
     case static_cast<int>(Config::sg_opt): m_sg_opt = rhs; break;
     case static_cast<int>(Config::write_precision): m_write_precision = std::stoi(rhs); break;
+    case static_cast<int>(Config::multispecies_mode): m_multispecies_mode = (rhs == "true"); break;
     default: break;
   }
 }

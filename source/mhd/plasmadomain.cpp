@@ -51,6 +51,11 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   m_sg = SavitzkyGolay(m_sg_opt,Grid::Zero(m_xdim,m_ydim));
   m_eqs->setupEquationSet();
   m_module_handler.setupModules();
+
+  if(m_multispecies_mode) {
+    m_cumulative_electron_heating = Grid::Zero(m_xdim,m_ydim);
+    m_cumulative_ion_heating = m_cumulative_electron_heating;
+  }
   
   // overwrite the init.state file if new simulation with overwrite flag
   if(!continue_mode && m_overwrite_init){
@@ -72,7 +77,7 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
 void PlasmaDomain::initOutputContainer()
 {
   // initialize grid with copies of pi, to simulate largest precision necessary for allocating space
-  Grid pi_grid(1,m_ydim,PI*1e100); // this represents the largest number we expect to write to mhd.out
+  Grid pi_grid(m_xdim,m_ydim,PI*1e100); // this represents the largest number we expect to write to mhd.out
   std::string row = pi_grid.format(',','\n');
   // count number of lines to record per iteration
     // one line for time
@@ -88,7 +93,8 @@ void PlasmaDomain::initOutputContainer()
   for(int i=0; i<module_varnames.size(); i++){
     num_grids_to_record++;
   }
-  int num_lines_per_iter = 1+num_grids_to_record+num_grids_to_record*m_xdim;
+  int num_lines_per_iter = 1+2*num_grids_to_record;
+  if(m_multispecies_mode) num_lines_per_iter += 2;
   // initialize size of m_data_to_write and the capacity of each element
   if (m_write_interval > 0){
     m_data_to_write.resize(m_write_interval*num_lines_per_iter);
