@@ -89,6 +89,7 @@ void RadiativeLosses::iterateModule(double dt){
     }
 
     if(output_to_file) avg_losses = (thermal_energy - old_thermal_energy)/dt;
+    if(m_pd.m_multispecies_mode) m_pd.m_cumulative_ion_heating += (thermal_energy - old_thermal_energy);
     if(inactive_mode) return;
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) = thermal_energy;
     m_pd.m_eqs->propagateChanges();
