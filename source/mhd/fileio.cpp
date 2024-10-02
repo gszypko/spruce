@@ -189,7 +189,6 @@ void PlasmaDomain::storeGrids()
     m_lines_recorded++;
   }
 
-  std::cout << m_lines_recorded << std::endl << m_data_to_write.size() << std::endl << std::endl;
   // increment store counter
   m_store_counter++;
 }
