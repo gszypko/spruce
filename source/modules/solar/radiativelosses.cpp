@@ -45,7 +45,7 @@ void RadiativeLosses::iterateModule(double dt){
     Grid temp = m_pd.m_eqs->grid(IdealMHD::temp);
     Grid n = m_pd.m_eqs->grid(IdealMHD::n);
     Grid old_thermal_energy;
-    if(output_to_file) old_thermal_energy = thermal_energy;
+    if(output_to_file || m_pd.m_multispecies_mode) old_thermal_energy = thermal_energy;
     double dt_subcycle = (dt/(double)curr_num_subcycles);
 
     if(time_integrator == "euler") for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
