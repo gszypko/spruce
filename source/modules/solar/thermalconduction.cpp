@@ -88,7 +88,10 @@ void ThermalConduction::iterateModule(double dt){
         }
     }
     if(output_to_file) avg_change = (thermal_energy - old_thermal_energy)/dt;
-    if(m_pd.m_multispecies_mode) m_pd.m_cumulative_electron_heating += (thermal_energy - old_thermal_energy);
+    if(m_pd.m_multispecies_mode) {
+        m_pd.m_cumulative_electron_heating += 0.5*(thermal_energy - old_thermal_energy);
+        m_pd.m_cumulative_ion_heating += 0.5*(thermal_energy - old_thermal_energy);
+    }
     if(inactive_mode) return;
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) = thermal_energy;
     m_pd.m_eqs->propagateChanges();

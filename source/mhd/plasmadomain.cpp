@@ -94,7 +94,7 @@ void PlasmaDomain::initOutputContainer()
     num_grids_to_record++;
   }
   int num_lines_per_iter = 1+2*num_grids_to_record;
-  if(m_multispecies_mode) num_lines_per_iter += 2;
+  if(m_multispecies_mode) num_lines_per_iter += 4; //two each for cumulative_electron_heating and cumulative_ion_heating
   // initialize size of m_data_to_write and the capacity of each element
   if (m_write_interval > 0){
     m_data_to_write.resize(m_write_interval*num_lines_per_iter);
