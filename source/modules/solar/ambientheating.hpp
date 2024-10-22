@@ -22,6 +22,9 @@ class AmbientHeating : public Module {
         bool exp_mode{false};
         double exp_base_heating_rate;
         double exp_scale_height;
+        bool split_exp_mode{false};
+        double split_exp_scale_height;
+        double split_exp_start_height;
         Grid heating;     
 };
 
