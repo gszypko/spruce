@@ -32,7 +32,7 @@ public: //**********************************************************************
   };
 
   // Internal Grids
-  enum Grids {d_x,d_y,pos_x,pos_y,be_x,be_y,be_z};
+  enum Grids {d_x,d_y,pos_x,pos_y,be_x,be_y,be_z}; // NOTE: be_x,y,z is assumed to be curl-free, i.e. curl(be_x,y,z) = 0
   static const inline std::vector<std::string> m_gridnames = {"d_x","d_y","pos_x","pos_y","be_x","be_y","be_z"};
   std::vector<Grid> m_grids{m_gridnames.size()};
 
