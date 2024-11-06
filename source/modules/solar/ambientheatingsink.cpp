@@ -33,6 +33,10 @@ void AmbientHeatingSink::setupModule(){
 void AmbientHeatingSink::postIterateModule(double dt){
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) -= dt*reduction;
     m_pd.m_eqs->propagateChanges();
+    if(m_pd.m_multispecies_mode) {
+        m_pd.m_cumulative_electron_heating -= 0.5*m_pd.m_ghost_zone_mask*reduction*dt;
+        m_pd.m_cumulative_ion_heating -= 0.5*m_pd.m_ghost_zone_mask*reduction*dt;
+    }
 }
 
 std::string AmbientHeatingSink::commandLineMessage() const

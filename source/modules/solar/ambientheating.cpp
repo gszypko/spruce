@@ -40,6 +40,10 @@ void AmbientHeating::setupModule(){
 void AmbientHeating::postIterateModule(double dt){
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) += dt*heating;
     m_pd.m_eqs->propagateChanges();
+    if(m_pd.m_multispecies_mode) {
+        m_pd.m_cumulative_electron_heating += 0.5*m_pd.m_ghost_zone_mask*heating*dt;
+        m_pd.m_cumulative_ion_heating += 0.5*m_pd.m_ghost_zone_mask*heating*dt;
+    }
 }
 
 std::string AmbientHeating::commandLineMessage() const
