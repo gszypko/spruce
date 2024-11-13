@@ -149,33 +149,20 @@ void Viscosity::iterateModule(double dt)
             for(int subcycle = 0; subcycle < num_subcycles; subcycle++){
                 init_grid_to_evol = grid_to_evol; //store initial state of evolved variable
 
-                // k1 = thermalEnergyDerivative(temp,b_hat);
                 dqdt1 = constructSingleViscosityGrid(m_pd.m_eqs->allGrids(), i);
 
-                // intermediate = (thermal_energy + m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*k1).max(m_pd.thermal_energy_min);
-                // intermediate_temp = ((m_pd.m_adiabatic_index - 1.0)*intermediate/(2*K_B*m_n)).max(m_pd.temp_min);
-                // k2 = thermalEnergyDerivative(intermediate_temp,b_hat);
                 grid_to_evol = init_grid_to_evol + m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*dqdt1;
                 m_pd.m_eqs->propagateChanges(); //apply and propagate half-step from evolved variable to diff'ed variable
                 dqdt2 = constructSingleViscosityGrid(m_pd.m_eqs->allGrids(), i);
 
-                // intermediate = (thermal_energy + m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*k2).max(m_pd.thermal_energy_min);
-                // intermediate_temp = ((m_pd.m_adiabatic_index - 1.0)*intermediate/(2*K_B*m_n)).max(m_pd.temp_min);
-                // k3 = thermalEnergyDerivative(intermediate_temp,b_hat);
                 grid_to_evol = init_grid_to_evol + m_pd.m_ghost_zone_mask*(0.5*dt_subcycle)*dqdt2;
                 m_pd.m_eqs->propagateChanges(); //apply and propagate half-step from evolved variable to diff'ed variable
                 dqdt3 = constructSingleViscosityGrid(m_pd.m_eqs->allGrids(), i);
 
-                // intermediate = (thermal_energy + m_pd.m_ghost_zone_mask*(dt_subcycle)*k3).max(m_pd.thermal_energy_min);
-                // intermediate_temp = ((m_pd.m_adiabatic_index - 1.0)*intermediate/(2*K_B*m_n)).max(m_pd.temp_min);
-                // k4 = thermalEnergyDerivative(intermediate_temp,b_hat);
                 grid_to_evol = init_grid_to_evol + m_pd.m_ghost_zone_mask*(dt_subcycle)*dqdt3;
                 m_pd.m_eqs->propagateChanges(); //apply and propagate half-step from evolved variable to diff'ed variable
                 dqdt4 = constructSingleViscosityGrid(m_pd.m_eqs->allGrids(), i);
 
-                // thermal_energy = thermal_energy + m_pd.m_ghost_zone_mask*(dt_subcycle)*(k1 + 2.0*k2 + 2.0*k3 + k4)/6.0;
-                // thermal_energy = thermal_energy.max(m_pd.thermal_energy_min);
-                // temp = ((m_pd.m_adiabatic_index - 1.0)*thermal_energy/(2*K_B*m_n)).max(m_pd.temp_min);
                 m_grids_dqdt[i] = (dqdt1 + 2.0*dqdt2 + 2.0*dqdt3 + dqdt4)/6.0;
                 grid_to_evol = init_grid_to_evol + m_pd.m_ghost_zone_mask*(dt_subcycle)*m_grids_dqdt[i];
                 m_pd.m_eqs->propagateChanges(); //apply and propagate half-step from evolved variable to diff'ed variable
