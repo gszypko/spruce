@@ -61,10 +61,16 @@ int PhysicalViscosity::computeViscousSubcycles(double dt){
     Grid directional_factor = 3.0*(m_pd.m_eqs->grid(IdealMHD::b_hat_x)*m_pd.m_eqs->grid(IdealMHD::v_x)/v_mag
                                     + m_pd.m_eqs->grid(IdealMHD::b_hat_y)*m_pd.m_eqs->grid(IdealMHD::v_y)/v_mag).square()
                                 + 1.0; //3cos^2(theta) + 1
+    Grid timescale = (m_pd.m_grids[PlasmaDomain::d_x]*m_pd.m_grids[PlasmaDomain::d_y])*m_pd.m_eqs->grid(IdealMHD::rho)/(directional_factor*3.0*coeff*m_pd.m_eqs->grid(IdealMHD::temp).pow(2.5));
+    for(int i=0; i<m_pd.m_xdim; i++){
+        for(int j=0; j<m_pd.m_ydim; j++){
+            if(v_mag(i,j) == 0.0) timescale(i,j) = 2.0*dt/epsilon; //set zero-velocity timescale such that it doesn't lead to any subcycling
+        }
+    }
     // Grid directional_factor = (3.0*(( m_pd.m_eqs->grid(IdealMHD::b_hat_x)*m_pd.m_eqs->grid(IdealMHD::v_x)/v_mag
     //                                 + m_pd.m_eqs->grid(IdealMHD::b_hat_y)*m_pd.m_eqs->grid(IdealMHD::v_y)/v_mag
     //                             ).square()) - 1.0).square(); //(3cos(theta)^2 - 1)^2 ASSUMING THAT v and wavevector k are parallel
-    Grid timescale = (m_pd.m_grids[PlasmaDomain::d_x]*m_pd.m_grids[PlasmaDomain::d_y])*m_pd.m_eqs->grid(IdealMHD::rho)/(directional_factor*3.0*coeff*m_pd.m_eqs->grid(IdealMHD::temp).pow(2.5));
+    // std::cout << timescale << std::endl;
     double min_dt_subcycle = epsilon*timescale.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
     return (int)(dt/min_dt_subcycle) + 1;
 }
