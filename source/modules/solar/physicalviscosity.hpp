@@ -20,6 +20,9 @@ class PhysicalViscosity : public Module {
         void setupModule() override;
     private:
         double coeff = 0.0;
+        Grid coeff_grid;
+        double ramp_length = 0.0; //physical length of ramp-down from max coefficient to zero, from interior toward boundary
+        double buffer_length = 0.0; //physical thickness of exterior border that's set at zero coefficient
         double epsilon = 1.0;
         bool heating_on = true;
         bool force_on = true;
@@ -33,6 +36,7 @@ class PhysicalViscosity : public Module {
         Grid computeHeating(const std::vector<Grid>& v, const std::vector<Grid>& b_hat, const Grid& temperature);
         int computeViscousSubcycles(double dt);
         std::vector<Grid> computeViscousForce(const std::vector<Grid>& v, const std::vector<Grid>& b_hat, const Grid& temperature);
+        Grid constructCoefficientGrid(double strength,double ramp_length,double buffer_length) const;
 };
 
 #endif

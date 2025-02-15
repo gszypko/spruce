@@ -10,6 +10,7 @@ PhysicalViscosity::PhysicalViscosity(PlasmaDomain &pd): Module(pd) {
     assert(dynamic_cast<IdealMHD*>(m_pd.m_eqs.get()) && \
         "Module designed for IdealMHD EquationSet (ensure that equation_set is set before modules in the config)");
     avg_heating = Grid::Zero(1,1);
+    coeff_grid = Grid::Zero(1,1);
 }
 
 void PhysicalViscosity::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){
@@ -18,6 +19,8 @@ void PhysicalViscosity::parseModuleConfigs(std::vector<std::string> lhs, std::ve
         std::string this_rhs = rhs[i];
         if(this_lhs == "output_to_file") output_to_file = (this_rhs == "true");
         else if(this_lhs == "coeff") coeff = std::stod(this_rhs);
+        else if(this_lhs == "ramp_length") ramp_length = std::stod(this_rhs);
+        else if(this_lhs == "buffer_length") buffer_length = std::stod(this_rhs);
         else if(this_lhs == "epsilon") epsilon = std::stod(this_rhs);
         else if(this_lhs == "heating_on") heating_on = (this_rhs == "true");
         else if(this_lhs == "force_on") force_on = (this_rhs == "true");
@@ -28,6 +31,7 @@ void PhysicalViscosity::parseModuleConfigs(std::vector<std::string> lhs, std::ve
 }
 
 void PhysicalViscosity::setupModule(){
+    coeff_grid = constructCoefficientGrid(coeff,ramp_length,buffer_length);
     avg_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     avg_force = std::vector<Grid>(3,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
     num_subcycles = 1;
@@ -43,7 +47,7 @@ Grid PhysicalViscosity::computeHeating(const std::vector<Grid>& v, const std::ve
         const Grid &v_x = v[0], &v_y = v[1], &v_z = v[2];
         Grid del_x_v_x = m_pd.derivative1D(v_x,0), del_x_v_y = m_pd.derivative1D(v_y,0), del_x_v_z = m_pd.derivative1D(v_z,0),
              del_y_v_x = m_pd.derivative1D(v_x,1), del_y_v_y = m_pd.derivative1D(v_y,1), del_y_v_z = m_pd.derivative1D(v_z,1);
-        Grid heating = 3.0*coeff*temperature.pow(2.5)*((
+        Grid heating = 3.0*coeff_grid*temperature.pow(2.5)*((
             b_hat_x*(b_hat_x*del_x_v_x + b_hat_y*del_y_v_x)
             + b_hat_y*(b_hat_x*del_x_v_y + b_hat_y*del_y_v_y)
             + b_hat_z*(b_hat_x*del_x_v_z + b_hat_y*del_y_v_z)
@@ -66,7 +70,7 @@ int PhysicalViscosity::computeViscousSubcycles(double dt){
             if(v_mag(i,j) == 0.0) directional_factor(i,j) = 4.0; //set to maximum to be safe, in the ambiguous local v=0 case
         }
     }
-    Grid timescale = (m_pd.m_grids[PlasmaDomain::d_x]*m_pd.m_grids[PlasmaDomain::d_y])*m_pd.m_eqs->grid(IdealMHD::rho)/(directional_factor*3.0*coeff*m_pd.m_eqs->grid(IdealMHD::temp).pow(2.5));
+    Grid timescale = (m_pd.m_grids[PlasmaDomain::d_x]*m_pd.m_grids[PlasmaDomain::d_y])*m_pd.m_eqs->grid(IdealMHD::rho)/(directional_factor*3.0*coeff_grid.max(0.001*coeff)*(m_pd.m_eqs->grid(IdealMHD::temp).pow(2.5)));
     double min_dt_subcycle = epsilon*timescale.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
     return (int)(dt/min_dt_subcycle) + 1;
 }
@@ -109,7 +113,7 @@ std::vector<Grid> PhysicalViscosity::computeViscousForce(const std::vector<Grid>
                             temperature.pow(2.5)
                             *(delta - b_hat[i]*b_hat[j]), i);
         }
-        result[j] *= -3.0*coeff*m_pd.m_ghost_zone_mask;
+        result[j] *= -3.0*coeff_grid*m_pd.m_ghost_zone_mask;
     }
     return result;
 }
@@ -216,6 +220,26 @@ void PhysicalViscosity::iterateModule(double dt){
     m_pd.m_eqs->grid(IdealMHD::mom_y) = mom_y;
     m_pd.m_eqs->grid(IdealMHD::mom_z) = mom_z;
     m_pd.m_eqs->propagateChanges();    
+}
+
+Grid PhysicalViscosity::constructCoefficientGrid(double strength,double ramp_length,double buffer_length) const
+{
+    if(ramp_length == 0.0) return strength*Grid::Ones(m_pd.m_xdim,m_pd.m_ydim);
+    // initialize grids and references to PlasmaDomain grids
+    const Grid& x = m_pd.grid("pos_x");
+    const Grid& y = m_pd.grid("pos_y");
+    // note: the choice of the 2.3 coefficient ensures that the exponential reaches about 1% after 1 full length
+    // left boundary
+    Grid result = 1.01*(-2.3*((-x + (x.min()+ramp_length+buffer_length)).max(0.0)/ramp_length).square()).exp() - 0.01;
+    // right boundary
+    result = result.min(1.01*(-2.3*((x - (x.max()-ramp_length-buffer_length)).max(0.0)/ramp_length).square()).exp() - 0.01);
+    // top boundary
+    result = result.min(1.01*(-2.3*((y - (y.max()-ramp_length-buffer_length)).max(0.0)/ramp_length).square()).exp() - 0.01);
+    // bottom boundary
+    result = result.min(1.01*(-2.3*((-y + (y.min()+ramp_length+buffer_length)).max(0.0)/ramp_length).square()).exp() - 0.01);
+    // piecewise minimum calls ensure that the corners a constructed correctly
+    result = result.max(0.0);
+    return strength*result;
 }
 
 
