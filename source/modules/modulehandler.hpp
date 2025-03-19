@@ -34,7 +34,7 @@ class ModuleHandler {
         static inline std::vector<std::string> m_module_names = {
             "radiative_losses", "thermal_conduction", "ambient_heating", "anomalous_resistivity", "momentum_injection", "localized_heating",
             "field_heating", "tracer_particles", "sg_filtering", "coulomb_explosion","eic_thermalization", "artificial_viscosity", "global_temperature",
-            "mass_injection", "ambient_heating_sink", "physical_viscosity"
+            "mass_injection", "ambient_heating_sink", "physical_viscosity", "div_cleaning"
         };
 };
 

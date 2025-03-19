@@ -70,6 +70,7 @@ private: //*********************************************************************
   friend class LocalizedHeating;
   friend class FieldHeating;
   friend class PhysicalViscosity;
+  friend class DivCleaning;
   friend class AnomalousResistivity;
   friend class MomentumInjection;
   friend class RadiativeLosses;
