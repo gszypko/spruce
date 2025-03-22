@@ -11,6 +11,7 @@ void Viscosity::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std
         else if(lhs[i] == "visc_output_strength") m_output_strength = (rhs[i] == "true");
         else if(lhs[i] == "visc_output_timescale") m_output_timescale = (rhs[i] == "true");
         else if(lhs[i] == "hv_time_integrator") m_hv_time_integrator = rhs[i];
+        else if(lhs[i] == "gradient_correction") m_gradient_correction = (rhs[i] == "true");
         else if(lhs[i] == "hv_epsilon") m_hv_epsilon = std::stod(rhs[i]);
         else if(lhs[i] == "visc_opt") m_inp_visc_opt = rhs[i];
         else if(lhs[i] == "visc_strength") m_inp_strength = rhs[i];
@@ -251,6 +252,11 @@ Grid Viscosity::constructSingleViscosityGrid(const std::vector<Grid>& grids, int
     }
 
     // compute final viscosity term
+    if(m_gradient_correction){
+        return visc_coeff*m_grids_lap[i]*scale_fac
+            + m_pd.derivative1D(visc_coeff*scale_fac,0)*m_pd.derivative1D(grid_to_diff,0)
+            + m_pd.derivative1D(visc_coeff*scale_fac,1)*m_pd.derivative1D(grid_to_diff,1);
+    }
     return visc_coeff*m_grids_lap[i]*scale_fac;
 }
 
