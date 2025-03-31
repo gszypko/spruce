@@ -25,6 +25,7 @@ void PhysicalViscosity::parseModuleConfigs(std::vector<std::string> lhs, std::ve
         else if(this_lhs == "heating_on") heating_on = (this_rhs == "true");
         else if(this_lhs == "force_on") force_on = (this_rhs == "true");
         else if(this_lhs == "inactive_mode") inactive_mode = (this_rhs == "true");
+        else if(lhs[i] == "gradient_correction") gradient_correction = (rhs[i] == "true");
         else if(this_lhs == "time_integrator") time_integrator = this_rhs;
         else std::cerr << this_lhs << " config not recognized.\n";
     }
@@ -102,20 +103,35 @@ std::vector<Grid> PhysicalViscosity::computeViscousForce(const std::vector<Grid>
             if(i == j) delta = 1.0/3.0;
             else delta = 0.0;
             //NOTE: Calculation is split up into three terms to expose the direct second-order velocity gradients (in grad_b_terms_diag)
-            result[j] += m_pd.derivative1D(
-                            temperature.pow(2.5)*coeff_grid
-                            *(delta - b_hat[i]*b_hat[j])
-                            *same_factor_off_diag, i);
             // result[j] += grad(b terms) dot (tensor)
             // result[j] += (b terms) div (tensor)
-            result[j] += grad_b_terms_diag[i]*temperature.pow(2.5)*coeff_grid
-                            *(delta - b_hat[i]*b_hat[j]);
-            result[j] += same_factor_diag * m_pd.derivative1D(
-                            temperature.pow(2.5)*coeff_grid
-                            *(delta - b_hat[i]*b_hat[j]), i);
+            if(gradient_correction){
+                result[j] += m_pd.derivative1D(
+                    temperature.pow(2.5)*coeff_grid
+                    *(delta - b_hat[i]*b_hat[j])
+                    *same_factor_off_diag, i);
+                result[j] += grad_b_terms_diag[i]*temperature.pow(2.5)*coeff_grid
+                    *(delta - b_hat[i]*b_hat[j]);
+                result[j] += same_factor_diag * m_pd.derivative1D(
+                    temperature.pow(2.5)*coeff_grid
+                    *(delta - b_hat[i]*b_hat[j]), i);
+            } else {
+                result[j] += m_pd.derivative1D(
+                    temperature.pow(2.5)
+                    *(delta - b_hat[i]*b_hat[j])
+                    *same_factor_off_diag, i);
+                result[j] += grad_b_terms_diag[i]*temperature.pow(2.5)
+                    *(delta - b_hat[i]*b_hat[j]);
+                result[j] += same_factor_diag * m_pd.derivative1D(
+                    temperature.pow(2.5)
+                    *(delta - b_hat[i]*b_hat[j]), i);
+            }
         }
-        // result[j] *= -3.0*coeff_grid*m_pd.m_ghost_zone_mask;
-        result[j] *= -3.0*m_pd.m_ghost_zone_mask;
+        if(gradient_correction){
+            result[j] *= -3.0*m_pd.m_ghost_zone_mask;
+        } else{
+            result[j] *= -3.0*coeff_grid*m_pd.m_ghost_zone_mask;
+        }
     }
     return result;
 }
