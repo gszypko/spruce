@@ -97,7 +97,7 @@ std::vector<Grid> PhysicalViscosity::computeViscousForce(const std::vector<Grid>
         + 2.0*b_hat_y*del_x_b_hat_y*del_y_v_y + b_hat_y*b_hat_y*m_pd.derivative1D(del_y_v_y,0),
         2.0*b_hat_x*del_y_b_hat_x*del_x_v_x + b_hat_x*b_hat_x*m_pd.derivative1D(del_x_v_x,1)
         + 2.0*b_hat_y*del_y_b_hat_y*del_y_v_y + b_hat_y*b_hat_y*m_pd.secondDerivative1D(v_y,1)
-    };
+    }; // = divergence of same_factor_diag
     for(int j=0; j<3; j++){
         for(int i=0; i<2; i++){
             if(i == j) delta = 1.0/3.0;

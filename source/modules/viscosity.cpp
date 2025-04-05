@@ -13,7 +13,8 @@ void Viscosity::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std
         else if(lhs[i] == "hv_time_integrator") m_hv_time_integrator = rhs[i];
         else if(lhs[i] == "gradient_correction") m_gradient_correction = (rhs[i] == "true");
         else if(lhs[i] == "hv_epsilon") m_hv_epsilon = std::stod(rhs[i]);
-        else if(lhs[i] == "visc_opt") m_inp_visc_opt = rhs[i];
+        else if(lhs[i] == "hv_epsilon") m_hv_epsilon = std::stod(rhs[i]);
+        else if(lhs[i] == "boundary_falloff_shape") m_boundary_falloff_shape = rhs[i];
         else if(lhs[i] == "visc_strength") m_inp_strength = rhs[i];
         else if(lhs[i] == "visc_vars_to_diff") m_inp_vars_to_diff = rhs[i];
         else if(lhs[i] == "visc_vars_to_evol") m_inp_vars_to_evol = rhs[i];
@@ -85,6 +86,10 @@ void Viscosity::setupModule()
     if(m_hv_time_integrator == "") m_hv_time_integrator = "euler";
     assert((m_hv_time_integrator == "euler" || m_hv_time_integrator == "rk2" || m_hv_time_integrator == "rk4")
             && "Invalid hyperviscous time integrator given for Viscosity module");
+
+    if(m_boundary_falloff_shape == "") m_boundary_falloff_shape = "gaussian";
+    assert((m_boundary_falloff_shape == "gaussian" || m_boundary_falloff_shape == "exp")
+            && "Invalid boundary falloff shape given for Viscosity module");
 
     // initialize viscosity grids
     m_grids_dt = std::vector<Grid>(m_num_terms,Grid::Zero(m_pd.m_xdim,m_pd.m_ydim));
@@ -257,7 +262,7 @@ Grid Viscosity::constructSingleViscosityGrid(const std::vector<Grid>& grids, int
             + m_pd.derivative1D(visc_coeff*scale_fac,0)*m_pd.derivative1D(grid_to_diff,0)
             + m_pd.derivative1D(visc_coeff*scale_fac,1)*m_pd.derivative1D(grid_to_diff,1);
     }
-    return visc_coeff*m_grids_lap[i]*scale_fac;
+    else return visc_coeff*m_grids_lap[i]*scale_fac;
 }
 
 std::vector<Grid> Viscosity::constructViscosityGrids(const std::vector<Grid>& grids)
@@ -275,14 +280,28 @@ Grid Viscosity::getBoundaryViscosity(double strength,double length) const
     Grid result = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     const Grid& x = m_pd.grid("pos_x");
     const Grid& y = m_pd.grid("pos_y");
-    // left boundary
-    result += (-2.3*((x - x.min())/length).square()).exp()*strength;
-    // right boundary
-    result += (-2.3*((x - x.max())/length).square()).exp()*strength;
-    // top boundary
-    result += (-2.3*((y - y.max())/length).square()).exp()*strength;
-    // bottom boundary
-    result += (-2.3*((y - y.min())/length).square()).exp()*strength;
+    if(m_boundary_falloff_shape == "gaussian"){
+        // left boundary
+        result += (-2.3*((x - x.min())/length).square()).exp()*strength;
+        // right boundary
+        result += (-2.3*((x - x.max())/length).square()).exp()*strength;
+        // top boundary
+        result += (-2.3*((y - y.max())/length).square()).exp()*strength;
+        // bottom boundary
+        result += (-2.3*((y - y.min())/length).square()).exp()*strength;
+    }
+    else{
+        assert(m_boundary_falloff_shape == "exp" && "boundary_falloff_shape in Viscosity module must be either gaussian or exp");
+        // left boundary
+        result += (-2.3*(x - x.min())/length).exp()*strength;
+        // right boundary
+        result += (-2.3*(x - x.max())/length).exp()*strength;
+        // top boundary
+        result += (-2.3*(y - y.max())/length).exp()*strength;
+        // bottom boundary
+        result += (-2.3*(y - y.min())/length).exp()*strength;
+    }
+
     // call to function min ensures that viscosity value cannot exceed strength
     // - this call is necessary because the boundary viscosity term is formed via superposition of many terms
     return result.min(strength);

@@ -64,6 +64,7 @@ class Viscosity : public Module {
         bool m_gradient_correction{false};
 
         std::string m_hv_time_integrator; // time integrator used for hyperviscosity (strength > 1.0), one of {euler, rk2, rk4}
+        std::string m_boundary_falloff_shape; // functional form of spatial falloff for boundary viscosity, one of {gaussian, exp}
         double m_hv_epsilon{1.0}; // epsilon used for subcycling in hyperviscous (strength > 1.0) evolution
 
         std::vector<std::string> m_momenta; // possible momentum density variables
