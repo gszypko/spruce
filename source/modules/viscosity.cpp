@@ -13,7 +13,7 @@ void Viscosity::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std
         else if(lhs[i] == "hv_time_integrator") m_hv_time_integrator = rhs[i];
         else if(lhs[i] == "gradient_correction") m_gradient_correction = (rhs[i] == "true");
         else if(lhs[i] == "hv_epsilon") m_hv_epsilon = std::stod(rhs[i]);
-        else if(lhs[i] == "hv_epsilon") m_hv_epsilon = std::stod(rhs[i]);
+        else if(lhs[i] == "visc_opt") m_inp_visc_opt = rhs[i];
         else if(lhs[i] == "boundary_falloff_shape") m_boundary_falloff_shape = rhs[i];
         else if(lhs[i] == "visc_strength") m_inp_strength = rhs[i];
         else if(lhs[i] == "visc_vars_to_diff") m_inp_vars_to_diff = rhs[i];
