@@ -27,6 +27,8 @@ class AnomalousResistivity : public Module {
         double time_scale{1.0};
         std::vector<double> resistivity_model_params;
 
+        bool gradient_correction{false};
+
         Grid diffusivity;
         bool output_to_file = false;
         // bool multispecies_output_mode = false; //When true, output the cumulative direct heating since the previous output. Can be combined with output_to_file.

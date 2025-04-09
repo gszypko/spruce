@@ -53,6 +53,7 @@ void AnomalousResistivity::parseModuleConfigs(std::vector<std::string> lhs, std:
         else if(this_lhs == "time_integrator") time_integrator = this_rhs;
         else if(this_lhs == "template_mode") template_mode = this_rhs;
         else if(this_lhs == "resistivity_model") resistivity_model = this_rhs;
+        else if(this_lhs == "gradient_correction") gradient_correction = (this_rhs == "true");
         else if(this_lhs == "resistivity_model_params"){
             std::vector<std::string> params_str = splitString(this_rhs,',');
             std::vector<double> b;
@@ -73,10 +74,23 @@ std::vector<Grid> AnomalousResistivity::computeTimeDerivatives(const Grid &bi_x,
     Grid electrical_resistivity = 4.0*PI/C/C*coeff;
     Grid current_density = C/(4.0*PI)*(m_pd.curl2D(bi_x,bi_y)).abs();
     Grid joule_heating = electrical_resistivity*current_density*current_density;
-    return {coeff*(be_x_lap+m_pd.laplacian(bi_x)),
+    if(gradient_correction){
+        //grad(eta) cross curl(B)
+        std::vector<Grid> grad_eta = {m_pd.derivative1D(coeff,0),m_pd.derivative1D(coeff,1)};
+        std::vector<Grid> grad_eta_cross_curl_b_z = Grid::CrossProduct2DZ(grad_eta,m_pd.curl2D(bi_x,bi_x));
+        std::vector<Grid> grad_eta_cross_curl_b = {grad_eta_cross_curl_b_z[0],
+                                                    grad_eta_cross_curl_b_z[1],
+                                                    Grid::CrossProduct2D(grad_eta,m_pd.curlZ(bi_z))};
+        return {grad_eta_cross_curl_b[0] + coeff*(be_x_lap+m_pd.laplacian(bi_x)),
+            grad_eta_cross_curl_b[1] + coeff*(be_y_lap+m_pd.laplacian(bi_y)),
+            grad_eta_cross_curl_b[2] + coeff*(be_z_lap+m_pd.laplacian(bi_z)),
+            joule_heating};
+    } else {
+        return {coeff*(be_x_lap+m_pd.laplacian(bi_x)),
             coeff*(be_y_lap+m_pd.laplacian(bi_y)),
             coeff*(be_z_lap+m_pd.laplacian(bi_z)),
             joule_heating};
+    }
 }
 
 void AnomalousResistivity::iterateModule(double dt){
