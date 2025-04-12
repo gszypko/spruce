@@ -33,6 +33,8 @@ class AnomalousResistivity : public Module {
         bool output_to_file = false;
         // bool multispecies_output_mode = false; //When true, output the cumulative direct heating since the previous output. Can be combined with output_to_file.
         Grid anomalous_template;
+        double flood_fill_max_radius{-1.0};
+        double flood_fill_min_current{-1.0};
         Grid joule_heating;
         Grid avg_heating;
         // Grid cumulative_heating;
@@ -40,10 +42,14 @@ class AnomalousResistivity : public Module {
         int curr_num_subcycles;
         Grid smoothing_kernel;
         
-        void computeDiffusion(const Grid &bi_x, const Grid &bi_y);
+        Grid circularMask(double radius, int i_center, int j_center);
+        Grid currentThresholdMask(double threshold, const Grid &curr_density);
+        void computeDiffusion(const Grid &bi_x, const Grid &bi_y, const Grid &bi_z);
         void computeNumSubcycles();
-        void computeTemplate(const Grid &b_x, const Grid &b_y);
+        void computeTemplate(const Grid &b_x, const Grid &b_y, const Grid &curr_density);
         std::vector<Grid> computeTimeDerivatives(const Grid &bi_x, const Grid &bi_y, const Grid &bi_z, const Grid &be_x_lap, const Grid &be_y_lap, const Grid &be_z_lap);
+        Grid computeCurrentDensity(const Grid &bi_x, const Grid &bi_y, const Grid &bi_z);
+        Grid computeCurrentDensity();
 };
 
 #endif

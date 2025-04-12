@@ -29,7 +29,7 @@ void AnomalousResistivity::setupModule(){
                                                     smoothing_sigma,smoothing_sigma,kernel_radius,kernel_radius);
     }
     else smoothing_kernel = Grid::Zero(1,1);
-    computeTemplate(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_eqs->grid(IdealMHD::bi_x), m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_eqs->grid(IdealMHD::bi_y));
+    computeTemplate(m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_eqs->grid(IdealMHD::bi_x), m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_eqs->grid(IdealMHD::bi_y),computeCurrentDensity());
     if(time_integrator == "") time_integrator = "euler";
     assert((time_integrator == "euler" || time_integrator == "rk2" || time_integrator == "rk4")
             && "Invalid time integrator given for Anomalous Resistivity module");
@@ -52,6 +52,8 @@ void AnomalousResistivity::parseModuleConfigs(std::vector<std::string> lhs, std:
         else if(this_lhs == "metric_smoothing") metric_smoothing = (this_rhs == "true");
         else if(this_lhs == "time_integrator") time_integrator = this_rhs;
         else if(this_lhs == "template_mode") template_mode = this_rhs;
+        else if(this_lhs == "flood_fill_max_radius") flood_fill_max_radius = std::stod(this_rhs);
+        else if(this_lhs == "flood_fill_min_current") flood_fill_min_current = std::stod(this_rhs);
         else if(this_lhs == "resistivity_model") resistivity_model = this_rhs;
         else if(this_lhs == "gradient_correction") gradient_correction = (this_rhs == "true");
         else if(this_lhs == "resistivity_model_params"){
@@ -68,11 +70,11 @@ void AnomalousResistivity::parseModuleConfigs(std::vector<std::string> lhs, std:
 std::vector<Grid> AnomalousResistivity::computeTimeDerivatives(const Grid &bi_x, const Grid &bi_y, const Grid &bi_z, const Grid &be_x_lap, const Grid &be_y_lap, const Grid &be_z_lap){
     Grid b_x = m_pd.m_grids[PlasmaDomain::be_x]+bi_x;
     Grid b_y = m_pd.m_grids[PlasmaDomain::be_y]+bi_y;
-    computeTemplate(b_x,b_y);
-    computeDiffusion(bi_x,bi_x);
+    Grid current_density = computeCurrentDensity(bi_x,bi_y,bi_z);
+    computeTemplate(b_x,b_y,current_density);
+    computeDiffusion(bi_x,bi_y,bi_z);
     Grid coeff = m_pd.m_ghost_zone_mask*anomalous_template*diffusivity;
     Grid electrical_resistivity = 4.0*PI/C/C*coeff;
-    Grid current_density = C/(4.0*PI)*(m_pd.curl2D(bi_x,bi_y)).abs();
     Grid joule_heating = electrical_resistivity*current_density*current_density;
     if(gradient_correction){
         //grad(eta) cross curl(B)
@@ -95,8 +97,8 @@ std::vector<Grid> AnomalousResistivity::computeTimeDerivatives(const Grid &bi_x,
 
 void AnomalousResistivity::iterateModule(double dt){
     Grid bi_x = m_pd.m_eqs->grid(IdealMHD::bi_x), bi_y = m_pd.m_eqs->grid(IdealMHD::bi_y), bi_z = m_pd.m_eqs->grid(IdealMHD::bi_z);
-    computeTemplate(m_pd.m_grids[PlasmaDomain::be_x]+bi_x,m_pd.m_grids[PlasmaDomain::be_y]+bi_y);
-    computeDiffusion(bi_x,bi_x);
+    computeTemplate(m_pd.m_grids[PlasmaDomain::be_x]+bi_x,m_pd.m_grids[PlasmaDomain::be_y]+bi_y,computeCurrentDensity(bi_x,bi_y,bi_z));
+    computeDiffusion(bi_x,bi_x,bi_z);
     computeNumSubcycles();
     Grid thermal_energy = m_pd.m_eqs->grid(IdealMHD::thermal_energy);
     if(output_to_file) {
@@ -186,7 +188,7 @@ void AnomalousResistivity::computeNumSubcycles(){
     curr_num_subcycles = (int)(1.0 + rk_timestep/(safety_factor*time_scale));
 }
 
-void AnomalousResistivity::computeDiffusion(const Grid &bi_x, const Grid &bi_y){
+void AnomalousResistivity::computeDiffusion(const Grid &bi_x, const Grid &bi_y, const Grid &bi_z){
     const Grid &dx = m_pd.m_grids[PlasmaDomain::d_x], &dy = m_pd.m_grids[PlasmaDomain::d_y];
     Grid one = Grid::Ones(m_pd.m_xdim,m_pd.m_ydim);
 
@@ -196,7 +198,7 @@ void AnomalousResistivity::computeDiffusion(const Grid &bi_x, const Grid &bi_y){
     else if(resistivity_model == "syntelis_19"){
         assert(resistivity_model_params.size() == 3 && "Syntelis-19 resistivity model requires three parameters: eta_0, eta_1, and J_crit");
         double eta_0 = resistivity_model_params[0], eta_1 = resistivity_model_params[1], J_crit = resistivity_model_params[2];
-        Grid current_density = C/(4.0*PI)*(m_pd.curl2D(bi_x,bi_y)).abs();
+        Grid current_density = computeCurrentDensity(bi_x,bi_y,bi_z);
         Grid current_scaling = current_density/J_crit;
         for(int i=0; i<current_scaling.rows(); i++) for(int j=0; j<current_scaling.cols(); j++) if(current_scaling(i,j) < 1.0) current_scaling(i,j) = 0.0;
         diffusivity = eta_1*current_scaling + eta_0;
@@ -204,7 +206,7 @@ void AnomalousResistivity::computeDiffusion(const Grid &bi_x, const Grid &bi_y){
     else if(resistivity_model == "ys_94"){
         assert(resistivity_model_params.size() == 3 && "YS-94 resistivity model requires three parameters: v_c, alpha, and eta_max");
         double v_c = resistivity_model_params[0], alpha = resistivity_model_params[1], eta_max = resistivity_model_params[2];
-        Grid current_density = C/(4.0*PI)*(m_pd.curl2D(bi_x,bi_y)).abs();
+        Grid current_density = computeCurrentDensity(bi_x,bi_y,bi_z);
         Grid electron_drift = current_density/m_pd.m_eqs->grid(IdealMHD::n)/E_CHARGE;
         Grid vel_ratio = electron_drift/v_c;
         diffusivity = (alpha*((vel_ratio - 1).square())).min(eta_max);
@@ -212,7 +214,7 @@ void AnomalousResistivity::computeDiffusion(const Grid &bi_x, const Grid &bi_y){
     }
 }
 
-void AnomalousResistivity::computeTemplate(const Grid &b_x, const Grid &b_y){
+void AnomalousResistivity::computeTemplate(const Grid &b_x, const Grid &b_y, const Grid &curr_density){
     Grid b_mag_2d = (b_x.square() + b_y.square()).sqrt();
     if(template_mode == "frobenius"){
         Grid grad_b_frob_norm = ((m_pd.derivative1D(b_x,0)).square() + (m_pd.derivative1D(b_x,1)).square()
@@ -223,6 +225,8 @@ void AnomalousResistivity::computeTemplate(const Grid &b_x, const Grid &b_y){
         assert(template_mode == "flood_fill");
         std::vector<int> null_location = b_mag_2d.argmin(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
         anomalous_template = b_mag_2d.floodFill({null_location},flood_fill_threshold);
+        if(flood_fill_max_radius > 0.0) anomalous_template = circularMask(flood_fill_max_radius,null_location[0],null_location[1])*anomalous_template;
+        if(flood_fill_min_current > 0.0) anomalous_template = currentThresholdMask(flood_fill_min_current,curr_density)*anomalous_template;
     }
     if(metric_smoothing){
         Grid smoothed_template = Grid::Zero(anomalous_template.rows(),anomalous_template.cols());
@@ -242,6 +246,38 @@ void AnomalousResistivity::computeTemplate(const Grid &b_x, const Grid &b_y){
         anomalous_template = (10.0*anomalous_template).min(1.0);
         anomalous_template = anomalous_template.pow(1.5);
     }
+}
+
+Grid AnomalousResistivity::circularMask(double radius, int i_center, int j_center){
+    const Grid &pos_x = m_pd.m_grids[PlasmaDomain::pos_x], &pos_y = m_pd.m_grids[PlasmaDomain::pos_y];
+    Grid result = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    for(int i=0; i<result.rows(); i++){
+        for(int j=0; j<result.rows(); j++){
+            double dist = std::sqrt(std::pow(pos_x(i,j)-pos_x(i_center,j_center),2.0) + std::pow(pos_y(i,j)-pos_y(i_center,j_center),2.0));
+            if(dist <= radius) result(i,j) = 1.0;
+        }
+    }
+    return result;
+}
+
+Grid AnomalousResistivity::currentThresholdMask(double threshold, const Grid &curr_density){
+    Grid result = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    for(int i=0; i<result.rows(); i++){
+        for(int j=0; j<result.rows(); j++){
+            if(curr_density(i,j) >= threshold) result(i,j) = 1.0;
+        }
+    }
+    return result;
+}
+
+Grid AnomalousResistivity::computeCurrentDensity(const Grid &bi_x, const Grid &bi_y, const Grid &bi_z){
+    std::vector<Grid> current_in_plane = m_pd.curlZ(bi_z);
+    return C/(4.0*PI)*(m_pd.curl2D(bi_x,bi_y).square() + current_in_plane[0].square() + current_in_plane[1].square()).sqrt();
+}
+
+Grid AnomalousResistivity::computeCurrentDensity(){
+    const Grid &bi_x = m_pd.m_eqs->grid(IdealMHD::bi_x), &bi_y = m_pd.m_eqs->grid(IdealMHD::bi_y), &bi_z = m_pd.m_eqs->grid(IdealMHD::bi_z);
+    return computeCurrentDensity(bi_x,bi_y,bi_z);
 }
 
 std::string AnomalousResistivity::commandLineMessage() const
