@@ -19,6 +19,8 @@ class AnomalousResistivity : public Module {
         std::string template_mode{"flood_fill"};
         double frobenius_metric_coeff{1.0e50};
         double flood_fill_threshold{1.0};
+        std::vector<int> null_location;
+        double flood_fill_argmin_radius{5.0e9};
 
         bool metric_smoothing{true}; // = true;
         double smoothing_sigma{3.0};
@@ -42,6 +44,7 @@ class AnomalousResistivity : public Module {
         int curr_num_subcycles;
         Grid smoothing_kernel;
         
+        std::vector<int> argminLocalized(std::vector<int> center, const Grid &quantity, const Grid &pos_x, const Grid &pos_y, double radius);
         Grid circularMask(double radius, int i_center, int j_center);
         Grid currentThresholdMask(double threshold, const Grid &curr_density);
         void computeDiffusion(const Grid &bi_x, const Grid &bi_y, const Grid &bi_z);

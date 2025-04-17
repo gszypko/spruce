@@ -21,6 +21,8 @@ void AnomalousResistivity::setupModule(){
     joule_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     anomalous_template = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     avg_heating = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    Grid b_mag_2d = ((m_pd.m_grids[PlasmaDomain::be_x]+m_pd.m_eqs->grid(IdealMHD::bi_x)).square() + (m_pd.m_grids[PlasmaDomain::be_y]+m_pd.m_eqs->grid(IdealMHD::bi_y)).square()).sqrt();
+    null_location = b_mag_2d.argmin(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
     if(metric_smoothing){
         assert(smoothing_sigma > 0.0 && "smoothing_sigma must be a positive number");
         kernel_radius = nearbyint(4.0*smoothing_sigma);
@@ -52,7 +54,8 @@ void AnomalousResistivity::parseModuleConfigs(std::vector<std::string> lhs, std:
         else if(this_lhs == "metric_smoothing") metric_smoothing = (this_rhs == "true");
         else if(this_lhs == "time_integrator") time_integrator = this_rhs;
         else if(this_lhs == "template_mode") template_mode = this_rhs;
-        else if(this_lhs == "flood_fill_max_radius") flood_fill_max_radius = std::stod(this_rhs);
+        else if(this_lhs == "flood_fill_max_radius") flood_fill_max_radius = std::stod(this_rhs); 
+        else if(this_lhs == "flood_fill_argmin_radius") flood_fill_argmin_radius = std::stod(this_rhs); 
         else if(this_lhs == "flood_fill_min_current") flood_fill_min_current = std::stod(this_rhs);
         else if(this_lhs == "resistivity_model") resistivity_model = this_rhs;
         else if(this_lhs == "gradient_correction") gradient_correction = (this_rhs == "true");
@@ -223,7 +226,7 @@ void AnomalousResistivity::computeTemplate(const Grid &b_x, const Grid &b_y, con
         anomalous_template = (frobenius_metric_coeff*anomalous_template).min(1.0);
     } else {
         assert(template_mode == "flood_fill");
-        std::vector<int> null_location = b_mag_2d.argmin(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
+        null_location = argminLocalized(null_location,b_mag_2d,m_pd.m_grids[PlasmaDomain::pos_x],m_pd.m_grids[PlasmaDomain::pos_y],flood_fill_argmin_radius);
         anomalous_template = b_mag_2d.floodFill({null_location},flood_fill_threshold);
         if(flood_fill_max_radius > 0.0) anomalous_template = circularMask(flood_fill_max_radius,null_location[0],null_location[1])*anomalous_template;
         if(flood_fill_min_current > 0.0) anomalous_template = currentThresholdMask(flood_fill_min_current,curr_density)*anomalous_template;
@@ -247,6 +250,28 @@ void AnomalousResistivity::computeTemplate(const Grid &b_x, const Grid &b_y, con
         anomalous_template = anomalous_template.pow(1.5);
     }
 }
+
+// Returns the (i,j) coordinates of the minimum value in a circle located at index coordinates center with radius radius.
+std::vector<int> AnomalousResistivity::argminLocalized(std::vector<int> center, const Grid &quantity, const Grid &pos_x, const Grid &pos_y, double radius){
+    std::vector<int> curr_argmin = center;
+    double curr_min = quantity(center[0],center[1]);
+    int il=center[0], iu=center[0], jl=center[1], ju=center[1];
+    for( ; il>=m_pd.m_xl; il--) if( std::abs(pos_x(center[0],center[1]) - pos_x(il,center[1])) > radius ) break;
+    for( ; iu<=m_pd.m_xu; iu++) if( std::abs(pos_x(center[0],center[1]) - pos_x(iu,center[1])) > radius ) break;
+    for( ; jl>=m_pd.m_yl; jl--) if( std::abs(pos_y(center[0],center[1]) - pos_y(center[0],jl)) > radius ) break;
+    for( ; ju<=m_pd.m_yu; ju++) if( std::abs(pos_y(center[0],center[1]) - pos_y(center[0],ju)) > radius ) break;
+
+    for(int i=il; i<=iu; i++){
+      for(int j=jl; j<=ju; j++){
+        if(quantity(i,j) < curr_min && std::sqrt(std::pow(pos_x(center[0],center[1]) - pos_x(i,j),2.0) + std::pow(pos_y(center[0],center[1]) - pos_y(i,j),2.0)) <= radius){
+          curr_min = quantity(i,j);
+          curr_argmin = {i,j};
+        }
+      }
+    }
+    assert(curr_min < std::numeric_limits<double>::max() && "Something went wrong in the localized argmin calculation");
+    return curr_argmin;
+  }
 
 Grid AnomalousResistivity::circularMask(double radius, int i_center, int j_center){
     const Grid &pos_x = m_pd.m_grids[PlasmaDomain::pos_x], &pos_y = m_pd.m_grids[PlasmaDomain::pos_y];
