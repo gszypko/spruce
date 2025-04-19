@@ -57,6 +57,7 @@ void AnomalousResistivity::parseModuleConfigs(std::vector<std::string> lhs, std:
         else if(this_lhs == "flood_fill_max_radius") flood_fill_max_radius = std::stod(this_rhs); 
         else if(this_lhs == "flood_fill_argmin_radius") flood_fill_argmin_radius = std::stod(this_rhs); 
         else if(this_lhs == "flood_fill_min_current") flood_fill_min_current = std::stod(this_rhs);
+        else if(this_lhs == "flood_fill_current_ramp_length") flood_fill_current_ramp_length = std::stod(this_rhs);
         else if(this_lhs == "resistivity_model") resistivity_model = this_rhs;
         else if(this_lhs == "gradient_correction") gradient_correction = (this_rhs == "true");
         else if(this_lhs == "resistivity_model_params"){
@@ -229,7 +230,7 @@ void AnomalousResistivity::computeTemplate(const Grid &b_x, const Grid &b_y, con
         null_location = argminLocalized(null_location,b_mag_2d,m_pd.m_grids[PlasmaDomain::pos_x],m_pd.m_grids[PlasmaDomain::pos_y],flood_fill_argmin_radius);
         anomalous_template = b_mag_2d.floodFill({null_location},flood_fill_threshold);
         if(flood_fill_max_radius > 0.0) anomalous_template = circularMask(flood_fill_max_radius,null_location[0],null_location[1])*anomalous_template;
-        if(flood_fill_min_current > 0.0) anomalous_template = currentThresholdMask(flood_fill_min_current,curr_density)*anomalous_template;
+        if(flood_fill_min_current > 0.0) anomalous_template = currentThresholdMask(flood_fill_min_current,flood_fill_current_ramp_length,curr_density)*anomalous_template;
     }
     if(metric_smoothing){
         Grid smoothed_template = Grid::Zero(anomalous_template.rows(),anomalous_template.cols());
@@ -285,11 +286,15 @@ Grid AnomalousResistivity::circularMask(double radius, int i_center, int j_cente
     return result;
 }
 
-Grid AnomalousResistivity::currentThresholdMask(double threshold, const Grid &curr_density){
+Grid AnomalousResistivity::currentThresholdMask(double threshold, double ramp_length, const Grid &curr_density){
     Grid result = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     for(int i=0; i<result.rows(); i++){
         for(int j=0; j<result.rows(); j++){
-            if(curr_density(i,j) >= threshold) result(i,j) = 1.0;
+            // if(curr_density(i,j) >= threshold) result(i,j) = 1.0;
+            result(i,j) = (curr_density(i,j) - threshold)/ramp_length + 0.5;
+            // clamp between zero and one
+            result(i,j) = std::max(result(i,j),0.0);
+            result(i,j) = std::min(result(i,j),1.0);
         }
     }
     return result;
