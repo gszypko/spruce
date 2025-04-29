@@ -21,6 +21,7 @@ namespace SolarUtils {
   //std_dev_x and std_dev_y are the standard deviation of the distribution in the x
   //and y directions, in units of grid cell widths
   Grid GaussianGrid(int xdim, int ydim, double min, double max, double std_dev_x, double std_dev_y, double center_x, double center_y);
+  Grid GaussianGridRotated(int xdim, int ydim, double min, double max, double std_dev_x, double std_dev_y, double center_x, double center_y, double angle_deg);
   //In version where distribution center is unspecified, placed at center of domain
   Grid GaussianGrid(const Grid& pos_x, const Grid& pos_y, double min, double max, double std_dev_x, double std_dev_y);
 }

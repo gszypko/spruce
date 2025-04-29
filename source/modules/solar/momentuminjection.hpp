@@ -21,6 +21,7 @@ class MomentumInjection : public Module {
         double max_accel; //maximum acceleration to apply, reached at center of gaussian injection template
         double stddev_x, stddev_y; //std devs of injection template
         double center_x, center_y; //center coords of injection template, in grid coords
+        double template_angle{0.0}; //angle, in degrees, to rotate the template clockwise (does NOT affect acceleration direction)
         std::vector<double> dir; //components of a vector describing the direction of acceleration; will be normalized automatically
         std::vector<Grid> accel_template;
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;

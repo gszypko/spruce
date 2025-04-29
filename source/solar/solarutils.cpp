@@ -81,5 +81,20 @@ namespace SolarUtils {
     return result;
   }
 
-
+  // Like GaussianGrid, but rotated by angle_deg degrees clockwise. Angle must be in range (-90 deg, 90 deg)
+  Grid GaussianGridRotated(int xdim, int ydim, double min, double max, double std_dev_x, double std_dev_y,
+                            double center_x, double center_y, double angle_deg){
+    assert(angle_deg > -90.0 && angle_deg < 90.0 && "GaussianGridRotated requires angles between -90 deg and +90 deg");
+    if(angle_deg == 0.0) return GaussianGrid(xdim,ydim,min,max,std_dev_x,std_dev_y,center_x,center_y);
+    Grid result(xdim,ydim);
+    for(int i=0; i<xdim; i++){
+      for(int j=0; j<ydim; j++){
+        double x_eff = ((double)i-center_x)*std::cos(angle_deg*PI/180.0) - ((double)j-center_y)*std::sin(angle_deg*PI/180.0);
+        double y_eff = ((double)i-center_x)*std::sin(angle_deg*PI/180.0) + ((double)j-center_y)*std::cos(angle_deg*PI/180.0);
+        result(i,j) = (max-min)*std::exp(-0.5*std::pow(x_eff/std_dev_x,2.0))*std::exp(-0.5*std::pow(y_eff/std_dev_y,2.0)) + min;
+      }
+    }
+    return result;
+  }
+  
 }
