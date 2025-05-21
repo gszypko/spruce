@@ -31,11 +31,13 @@ void PlasmaDomain::run(double time_duration,double cluster_time)
     // store data for output flags
     bool store_cond_1 = m_iter_output_interval > 0 && m_iter%m_iter_output_interval == 0;
     bool store_cond_2 = m_time_output_interval > 0.0 && new_time_iter > old_time_iter;
-    if (store_cond_1 || store_cond_2) storeGrids();
-    // reset cumulative quantities between outputs
-    if(m_multispecies_mode) {
-      m_cumulative_electron_heating = Grid::Zero(m_xdim,m_ydim);
-      m_cumulative_ion_heating = m_cumulative_electron_heating;
+    if (store_cond_1 || store_cond_2){
+      storeGrids();
+      // reset cumulative quantities between outputs
+      if(m_multispecies_mode) {
+        m_cumulative_electron_heating = Grid::Zero(m_xdim,m_ydim);
+        m_cumulative_ion_heating = m_cumulative_electron_heating;
+      }
     }
     // write grid data to file
     if (m_write_interval > 0 && m_store_counter > 0 && m_store_counter%m_write_interval == 0){
