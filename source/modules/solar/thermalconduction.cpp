@@ -31,6 +31,8 @@ void ThermalConduction::parseModuleConfigs(std::vector<std::string> lhs, std::ve
 void ThermalConduction::setupModule(){
     if(output_to_file) avg_change = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     else avg_change = Grid::Zero(1,1);
+    if(flux_saturation) saturation = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    else saturation = Grid::Zero(1,1);
     if(time_integrator == "") time_integrator = "euler";
     assert((time_integrator == "euler" || time_integrator == "rk2" || time_integrator == "rk4")
             && "Invalid time integrator given for Thermal Conduction module");
@@ -44,8 +46,15 @@ void ThermalConduction::iterateModule(double dt){
     //Subcycle to simulate field-aligned thermal conduction
     Grid thermal_energy = m_pd.m_eqs->grid(IdealMHD::thermal_energy), temp = m_pd.m_eqs->grid(IdealMHD::temp), m_n = m_pd.m_eqs->grid(IdealMHD::n);
     std::vector<Grid> b_hat = {m_pd.m_eqs->grid(IdealMHD::b_hat_x), m_pd.m_eqs->grid(IdealMHD::b_hat_y)};
+    std::vector<Grid> sat_terms;
     // Grid thermal_energy_next;
-    if(output_to_file) avg_change = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    if(output_to_file){
+        avg_change = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+        if(flux_saturation) {
+            saturation = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+            sat_terms = saturationTerms(temp);
+        }
+    }
     double dt_subcycle = (dt/(double)curr_num_subcycles);
     Grid old_thermal_energy = thermal_energy;
     if(time_integrator == "euler") for(int subcycle = 0; subcycle < curr_num_subcycles; subcycle++){
@@ -87,7 +96,10 @@ void ThermalConduction::iterateModule(double dt){
             temp = ((m_pd.m_adiabatic_index - 1.0)*thermal_energy/(2*K_B*m_n)).max(m_pd.temp_min);
         }
     }
-    if(output_to_file) avg_change = (thermal_energy - old_thermal_energy)/dt;
+    if(output_to_file) {
+        avg_change = (thermal_energy - old_thermal_energy)/dt;
+        if(flux_saturation) saturation = (sat_terms[0]*avg_change + sat_terms[1]) - avg_change;
+    }
     if(m_pd.m_multispecies_mode) {
         m_pd.m_cumulative_electron_heating += 0.5*(thermal_energy - old_thermal_energy);
         m_pd.m_cumulative_ion_heating += 0.5*(thermal_energy - old_thermal_energy);
@@ -111,7 +123,7 @@ Grid ThermalConduction::thermalEnergyDerivative(Grid &m_temp, std::vector<Grid> 
     for(int i : {0,1}) term_total[i] = 5.0/2.0*m_temp.pow(3.0/2.0)*gradt[i]*b_dot_gradt + m_temp.pow(5.0/2.0)*(term1[i] + term2[i] + term3[i]);
     Grid result = (weakening_factor*KAPPA_0)*((m_temp.pow(5.0/2.0) * b_dot_gradt * m_pd.divergence2D(b_hat)) + Grid::DotProduct2D(b_hat,term_total));
     if(flux_saturation) {
-        std::vector<Grid> sat_terms = saturationTerms();
+        std::vector<Grid> sat_terms = saturationTerms(m_temp);
         result = sat_terms[0]*result + sat_terms[1];
     }
     return result;
@@ -127,7 +139,7 @@ int ThermalConduction::numberSubcycles(double dt){
         Grid field_temp_gradient = m_pd.derivative1D(m_pd.m_eqs->grid(IdealMHD::temp),0)*m_pd.m_eqs->grid(IdealMHD::b_hat_x)
                                 + m_pd.derivative1D(m_pd.m_eqs->grid(IdealMHD::temp),1)*m_pd.m_eqs->grid(IdealMHD::b_hat_y);
         if(field_temp_gradient.abs().max() == 0.0) return 0;
-        Grid kappa_modified = saturatedKappa();
+        Grid kappa_modified = saturatedKappa(m_pd.m_eqs->grid(IdealMHD::temp));
         dt_subcycle = K_B/kappa_modified*(m_pd.m_eqs->grid(IdealMHD::rho)/m_pd.m_ion_mass)*m_pd.m_grids[PlasmaDomain::d_x]*m_pd.m_grids[PlasmaDomain::d_y];
     }
     double min_dt_subcycle = std::max(epsilon*dt_subcycle.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu),dt_subcycle_min);
@@ -175,15 +187,15 @@ void ThermalConduction::saturateConductiveFlux(Grid &flux_out_x, Grid &flux_out_
 
 //NOTE: This computes the temperature-dependent kappa factor, i.e. kappa_0*temp^5/2 in the unsaturated case
 //such that the heat flux is kappa * grad(T)
-Grid ThermalConduction::saturatedKappa() const {
+Grid ThermalConduction::saturatedKappa(const Grid &temp) const {
     Grid kappa_modified(m_pd.m_xdim,m_pd.m_ydim,0.0);
     Grid con_flux_x(m_pd.m_xdim,m_pd.m_ydim,0.0);
     Grid con_flux_y(m_pd.m_xdim,m_pd.m_ydim,0.0);
-    Grid field_temp_gradient = m_pd.derivative1D(m_pd.m_eqs->grid(IdealMHD::temp),0)*m_pd.m_eqs->grid(IdealMHD::b_hat_x)
-                            + m_pd.derivative1D(m_pd.m_eqs->grid(IdealMHD::temp),1)*m_pd.m_eqs->grid(IdealMHD::b_hat_y);
-    fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_pd.m_eqs->grid(IdealMHD::temp), m_pd.m_eqs->grid(IdealMHD::rho),
+    Grid field_temp_gradient = m_pd.derivative1D(temp,0)*m_pd.m_eqs->grid(IdealMHD::b_hat_x)
+                            + m_pd.derivative1D(temp,1)*m_pd.m_eqs->grid(IdealMHD::b_hat_y);
+    fieldAlignedConductiveFlux(con_flux_x, con_flux_y, temp, m_pd.m_eqs->grid(IdealMHD::rho),
                                 m_pd.m_eqs->grid(IdealMHD::b_hat_x), m_pd.m_eqs->grid(IdealMHD::b_hat_y), (weakening_factor*KAPPA_0));
-    saturateConductiveFlux(con_flux_x, con_flux_y, m_pd.m_eqs->grid(IdealMHD::rho), m_pd.m_eqs->grid(IdealMHD::temp));
+    saturateConductiveFlux(con_flux_x, con_flux_y, m_pd.m_eqs->grid(IdealMHD::rho), temp);
     Grid flux_mag = (con_flux_x.square() + con_flux_y.square()).sqrt();
     kappa_modified = (flux_mag/field_temp_gradient).abs();
     return kappa_modified;
@@ -194,14 +206,14 @@ Grid ThermalConduction::saturatedKappa() const {
 //saturationCoefficient is the multiplicative factor to multiply into the computed energy ROC
 //saturationAdditiveFactor is the quantity to add to the compute energy ROC
 //Applying both of the above to the computed energy ROC is equivalent to applying flux saturation to the heat flux
-std::vector<Grid> ThermalConduction::saturationTerms() const {
+std::vector<Grid> ThermalConduction::saturationTerms(const Grid &temp) const {
     Grid con_flux_x(m_pd.m_xdim,m_pd.m_ydim,0.0);
     Grid con_flux_y(m_pd.m_xdim,m_pd.m_ydim,0.0);
-    fieldAlignedConductiveFlux(con_flux_x, con_flux_y, m_pd.m_eqs->grid(IdealMHD::temp), m_pd.m_eqs->grid(IdealMHD::rho),
+    fieldAlignedConductiveFlux(con_flux_x, con_flux_y, temp, m_pd.m_eqs->grid(IdealMHD::rho),
                                 m_pd.m_eqs->grid(IdealMHD::b_hat_x), m_pd.m_eqs->grid(IdealMHD::b_hat_y), (weakening_factor*KAPPA_0));
     Grid flux_mag = (con_flux_x.square() + con_flux_y.square()).sqrt();
     std::vector<Grid> raw_flux = {con_flux_x,con_flux_y};
-    saturateConductiveFlux(con_flux_x, con_flux_y, m_pd.m_eqs->grid(IdealMHD::rho), m_pd.m_eqs->grid(IdealMHD::temp));
+    saturateConductiveFlux(con_flux_x, con_flux_y, m_pd.m_eqs->grid(IdealMHD::rho), temp);
     Grid sat_flux_mag = (con_flux_x.square() + con_flux_y.square()).sqrt();
     Grid coefficient(m_pd.m_xdim,m_pd.m_ydim,0.0);
     for(int i=0; i<m_pd.m_xdim; i++) for (int j=0; j<m_pd.m_ydim; j++){
@@ -218,6 +230,9 @@ void ThermalConduction::fileOutput(std::vector<std::string>& var_names, std::vec
         if (avg_change.size() == 1) avg_change = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
         var_names.push_back("thermal_conduction");
         var_grids.push_back(avg_change);
+        if (saturation.size() == 1) saturation = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+        var_names.push_back("flux_saturation");
+        var_grids.push_back(saturation);
     }
 }
 

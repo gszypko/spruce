@@ -28,6 +28,7 @@ class ThermalConduction : public Module {
         bool output_to_file = false;
         double weakening_factor{1.0};
         Grid avg_change;
+        Grid saturation;
         std::string time_integrator;
         bool inactive_mode = false; //when true, module will compute the change in thermal energy (allowing for output), but WON'T apply it to the simulation
         int numberSubcycles(double dt);
@@ -35,8 +36,8 @@ class ThermalConduction : public Module {
         void fieldAlignedConductiveFlux(Grid &flux_out_x, Grid &flux_out_y, const Grid &temp, const Grid &rho,
                                             const Grid &b_hat_x, const Grid &b_hat_y, double k0) const;
         void saturateConductiveFlux(Grid &flux_out_x, Grid &flux_out_y, const Grid &rho, const Grid &temp) const;
-        Grid saturatedKappa() const;
-        std::vector<Grid> saturationTerms() const;
+        Grid saturatedKappa(const Grid &temp) const;
+        std::vector<Grid> saturationTerms(const Grid &temp) const;
         Grid thermalEnergyDerivative(Grid &m_temp, std::vector<Grid> b_hat) const;
 };
 
