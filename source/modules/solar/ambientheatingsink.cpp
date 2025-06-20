@@ -19,6 +19,7 @@ void AmbientHeatingSink::parseModuleConfigs(std::vector<std::string> lhs, std::v
         else if(this_lhs == "exp_scale_height") exp_scale_height = std::stod(this_rhs);
         else if(this_lhs == "center_x") center_x = std::stod(this_rhs);
         else if(this_lhs == "half_width") half_width = std::stod(this_rhs);
+        else if(this_lhs == "ms_electron_heating_fraction") ms_electron_heating_fraction = std::stod(this_rhs);
         else std::cerr << lhs[i] << " config not recognized.\n";
     }
 }
@@ -28,14 +29,15 @@ void AmbientHeatingSink::setupModule(){
                                 *(-1.0*m_pd.m_grids[PlasmaDomain::pos_y]/exp_scale_height).exp()
                                 *((1.0 - ((m_pd.m_grids[PlasmaDomain::pos_x] - center_x)/half_width).square()).max(0.0));
     else reduction = m_pd.m_ghost_zone_mask*heating_rate;
+    assert(ms_electron_heating_fraction >= 0.0 && ms_electron_heating_fraction <= 1.0 && "Ambient Heating Sink MS electron heating fraction must be between 0 and 1");
 }
 
 void AmbientHeatingSink::postIterateModule(double dt){
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) -= dt*reduction;
     m_pd.m_eqs->propagateChanges();
     if(m_pd.m_multispecies_mode) {
-        m_pd.m_cumulative_electron_heating -= 0.5*m_pd.m_ghost_zone_mask*reduction*dt;
-        m_pd.m_cumulative_ion_heating -= 0.5*m_pd.m_ghost_zone_mask*reduction*dt;
+        if(ms_electron_heating_fraction < 1.0) m_pd.m_cumulative_ion_heating -= (1.0 - ms_electron_heating_fraction)*m_pd.m_ghost_zone_mask*reduction*dt;
+        if(ms_electron_heating_fraction > 0.0) m_pd.m_cumulative_electron_heating -= ms_electron_heating_fraction*m_pd.m_ghost_zone_mask*reduction*dt;
     }
 }
 

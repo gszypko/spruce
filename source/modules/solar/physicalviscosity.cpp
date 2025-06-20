@@ -25,8 +25,9 @@ void PhysicalViscosity::parseModuleConfigs(std::vector<std::string> lhs, std::ve
         else if(this_lhs == "heating_on") heating_on = (this_rhs == "true");
         else if(this_lhs == "force_on") force_on = (this_rhs == "true");
         else if(this_lhs == "inactive_mode") inactive_mode = (this_rhs == "true");
-        else if(lhs[i] == "gradient_correction") gradient_correction = (rhs[i] == "true");
+        else if(this_lhs == "gradient_correction") gradient_correction = (rhs[i] == "true");
         else if(this_lhs == "time_integrator") time_integrator = this_rhs;
+        else if(this_lhs == "ms_electron_heating_fraction") ms_electron_heating_fraction = std::stod(this_rhs);
         else std::cerr << this_lhs << " config not recognized.\n";
     }
 }
@@ -39,6 +40,7 @@ void PhysicalViscosity::setupModule(){
     if(time_integrator == "") time_integrator = "euler";
     assert((time_integrator == "euler" || time_integrator == "rk2")
             && "Invalid time integrator given for Physical Viscosity module");
+    assert(ms_electron_heating_fraction >= 0.0 && ms_electron_heating_fraction <= 1.0 && "Physical Viscosity MS electron heating fraction must be between 0 and 1");
 }
 
 Grid PhysicalViscosity::computeHeating(const std::vector<Grid>& v, const std::vector<Grid>& b_hat, const Grid& temperature){
@@ -168,7 +170,10 @@ void PhysicalViscosity::iterateModule(double dt){
         }
         if(heating_on && !inactive_mode){
             thermal_energy += heating*dt_subcycle;
-            if(m_pd.m_multispecies_mode) m_pd.m_cumulative_ion_heating += heating*dt_subcycle;
+            if(m_pd.m_multispecies_mode){
+                if(ms_electron_heating_fraction < 1.0) m_pd.m_cumulative_ion_heating += (1.0 - ms_electron_heating_fraction)*heating*dt_subcycle;
+                if(ms_electron_heating_fraction > 0.0) m_pd.m_cumulative_electron_heating += ms_electron_heating_fraction*heating*dt_subcycle;
+            }
 
             thermal_energy = thermal_energy.max(m_pd.thermal_energy_min);
             temperature = ((m_pd.m_adiabatic_index - 1.0)*thermal_energy/(2*K_B*m_n)).max(m_pd.temp_min);
@@ -217,7 +222,10 @@ void PhysicalViscosity::iterateModule(double dt){
             }
             if(heating_on && !inactive_mode){
                 thermal_energy += heating*dt_subcycle;
-                if(m_pd.m_multispecies_mode) m_pd.m_cumulative_ion_heating += heating*dt_subcycle;
+                if(m_pd.m_multispecies_mode) {
+                    if(ms_electron_heating_fraction < 1.0) m_pd.m_cumulative_ion_heating += (1.0 - ms_electron_heating_fraction)*heating*dt_subcycle;
+                    if(ms_electron_heating_fraction > 0.0) m_pd.m_cumulative_electron_heating += ms_electron_heating_fraction*heating*dt_subcycle;
+                }
 
                 thermal_energy = thermal_energy.max(m_pd.thermal_energy_min);
                 temperature = ((m_pd.m_adiabatic_index - 1.0)*thermal_energy/(2*K_B*m_n)).max(m_pd.temp_min);

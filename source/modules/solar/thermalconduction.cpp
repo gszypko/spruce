@@ -24,6 +24,7 @@ void ThermalConduction::parseModuleConfigs(std::vector<std::string> lhs, std::ve
         else if(this_lhs == "time_integrator") time_integrator = this_rhs;
         else if(this_lhs == "inactive_mode") inactive_mode = (this_rhs == "true");
         else if(this_lhs == "weakening_factor")  weakening_factor = std::stod(this_rhs);
+        else if(this_lhs == "ms_electron_heating_fraction") ms_electron_heating_fraction = std::stod(this_rhs);
         else std::cerr << this_lhs << " config not recognized for Thermal Conduction Module.\n";
     }
 }
@@ -36,6 +37,7 @@ void ThermalConduction::setupModule(){
     if(time_integrator == "") time_integrator = "euler";
     assert((time_integrator == "euler" || time_integrator == "rk2" || time_integrator == "rk4")
             && "Invalid time integrator given for Thermal Conduction module");
+    assert(ms_electron_heating_fraction >= 0.0 && ms_electron_heating_fraction <= 1.0 && "Thermal Conduction MS electron heating fraction must be between 0 and 1");
 }
 
 void ThermalConduction::preIterateModule(double dt){
@@ -101,7 +103,8 @@ void ThermalConduction::iterateModule(double dt){
         if(flux_saturation) saturation = (sat_terms[0]*avg_change + sat_terms[1]) - avg_change;
     }
     if(m_pd.m_multispecies_mode) {
-        m_pd.m_cumulative_electron_heating += (thermal_energy - old_thermal_energy);
+        if(ms_electron_heating_fraction < 1.0) m_pd.m_cumulative_ion_heating += (1.0 - ms_electron_heating_fraction)*(thermal_energy - old_thermal_energy);
+        if(ms_electron_heating_fraction > 0.0) m_pd.m_cumulative_electron_heating += ms_electron_heating_fraction*(thermal_energy - old_thermal_energy);
     }
     if(inactive_mode) return;
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) = thermal_energy;

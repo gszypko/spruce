@@ -28,6 +28,7 @@ class RadiativeLosses : public Module {
         std::string time_integrator;
         bool inactive_mode = false; //when true, module will compute the change in thermal energy (allowing for output), but WON'T apply it to the simulation
         bool prevent_subcycling = false; //when true, loss rates won't be allowed to get high enough to dominate the fluid time scales
+        double ms_electron_heating_fraction{1.0}; //fraction of direct heating energy given to the electrons, for multispecies analysis (remainder given to ions)
         Grid computeLosses(const Grid &temp, const Grid &n) const;
         Grid computeLosses() const;
         int numberSubcycles(double dt);

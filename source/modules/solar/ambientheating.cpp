@@ -20,6 +20,7 @@ void AmbientHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vecto
         else if(this_lhs == "split_exp_mode") split_exp_mode = (this_rhs == "true");
         else if(this_lhs == "split_exp_scale_height") split_exp_scale_height = std::stod(this_rhs);
         else if(this_lhs == "split_exp_start_height") split_exp_start_height = std::stod(this_rhs);
+        else if(this_lhs == "ms_electron_heating_fraction") ms_electron_heating_fraction = std::stod(this_rhs);
         else std::cerr << lhs[i] << " config not recognized.\n";
     }
 }
@@ -35,14 +36,15 @@ void AmbientHeating::setupModule(){
         }
     }
     else heating = m_pd.m_ghost_zone_mask*heating_rate;
+    assert(ms_electron_heating_fraction >= 0.0 && ms_electron_heating_fraction <= 1.0 && "Ambient Heating MS electron heating fraction must be between 0 and 1");
 }
 
 void AmbientHeating::postIterateModule(double dt){
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) += dt*heating;
     m_pd.m_eqs->propagateChanges();
     if(m_pd.m_multispecies_mode) {
-        m_pd.m_cumulative_electron_heating += 0.5*m_pd.m_ghost_zone_mask*heating*dt;
-        m_pd.m_cumulative_ion_heating += 0.5*m_pd.m_ghost_zone_mask*heating*dt;
+        if(ms_electron_heating_fraction < 1.0) m_pd.m_cumulative_ion_heating += (1.0 - ms_electron_heating_fraction)*m_pd.m_ghost_zone_mask*heating*dt;
+        if(ms_electron_heating_fraction > 0.0) m_pd.m_cumulative_electron_heating += ms_electron_heating_fraction*m_pd.m_ghost_zone_mask*heating*dt;
     }
 }
 

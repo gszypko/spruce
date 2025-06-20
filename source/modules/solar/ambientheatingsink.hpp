@@ -25,6 +25,7 @@ class AmbientHeatingSink : public Module {
         double exp_scale_height;
         double center_x; //horizontal position of heating reduction, in cm
         double half_width; //half of the total width of the heating reduction (with parabolic profile falloff), in cm
+        double ms_electron_heating_fraction{0.5}; //fraction of direct heating energy given to the electrons, for multispecies analysis (remainder given to ions)
         Grid reduction;     
 };
 

@@ -30,6 +30,7 @@ class PhysicalViscosity : public Module {
         bool output_to_file = false;
         bool inactive_mode = false; //when true, module will compute the change in thermal energy (allowing for output), but WON'T apply it to the simulation
         bool gradient_correction = false;
+        double ms_electron_heating_fraction{0.0}; //fraction of direct heating energy given to the electrons, for multispecies analysis (remainder given to ions)
         std::string time_integrator;
         Grid avg_heating;
         std::vector<Grid> avg_force; //average over single timstep, across subcycles

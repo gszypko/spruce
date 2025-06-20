@@ -32,15 +32,15 @@ class AnomalousResistivity : public Module {
 
         bool gradient_correction{false};
 
+        double ms_electron_heating_fraction{0.0}; //fraction of direct heating energy given to the electrons, for multispecies analysis (remainder given to ions)
+
         Grid diffusivity;
         bool output_to_file = false;
-        // bool multispecies_output_mode = false; //When true, output the cumulative direct heating since the previous output. Can be combined with output_to_file.
         Grid anomalous_template;
         double flood_fill_max_radius{-1.0};
         double flood_fill_min_current{-1.0};
         Grid joule_heating;
         Grid avg_heating;
-        // Grid cumulative_heating;
         int kernel_radius;  
         int curr_num_subcycles;
         Grid smoothing_kernel;

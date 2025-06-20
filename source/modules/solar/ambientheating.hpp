@@ -25,6 +25,7 @@ class AmbientHeating : public Module {
         bool split_exp_mode{false};
         double split_exp_scale_height;
         double split_exp_start_height;
+        double ms_electron_heating_fraction{0.5}; //fraction of direct heating energy given to the electrons, for multispecies analysis (remainder given to ions)
         Grid heating;     
 };
 

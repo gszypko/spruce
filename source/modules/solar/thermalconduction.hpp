@@ -31,6 +31,7 @@ class ThermalConduction : public Module {
         Grid saturation;
         std::string time_integrator;
         bool inactive_mode = false; //when true, module will compute the change in thermal energy (allowing for output), but WON'T apply it to the simulation
+        double ms_electron_heating_fraction{1.0}; //fraction of direct heating energy given to the electrons, for multispecies analysis (remainder given to ions)
         int numberSubcycles(double dt);
         Grid oneDimConductiveFlux(const Grid &temp, const Grid &rho, double k0, int index) const;
         void fieldAlignedConductiveFlux(Grid &flux_out_x, Grid &flux_out_y, const Grid &temp, const Grid &rho,

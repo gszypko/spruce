@@ -25,6 +25,7 @@ void RadiativeLosses::parseModuleConfigs(std::vector<std::string> lhs, std::vect
         else if(this_lhs == "time_integrator") time_integrator = this_rhs;
         else if(this_lhs == "inactive_mode") inactive_mode = (this_rhs == "true");
         else if(this_lhs == "prevent_subcycling") prevent_subcycling = (this_rhs == "true");
+        else if(this_lhs == "ms_electron_heating_fraction") ms_electron_heating_fraction = std::stod(this_rhs);
         else std::cerr << this_lhs << " config not recognized.\n";
     }
 }
@@ -34,6 +35,7 @@ void RadiativeLosses::setupModule(){
     assert((time_integrator == "euler" || time_integrator == "rk2" || time_integrator == "rk4")
             && "Invalid time integrator given for Thermal Conduction module");
     if(output_to_file) avg_losses = Grid(m_pd.m_xdim,m_pd.m_ydim,0.0);
+    assert(ms_electron_heating_fraction >= 0.0 && ms_electron_heating_fraction <= 1.0 && "Rad. Losses MS electron heating fraction must be between 0 and 1");
 }
 
 void RadiativeLosses::preIterateModule(double dt){
@@ -89,7 +91,10 @@ void RadiativeLosses::iterateModule(double dt){
     }
 
     if(output_to_file) avg_losses = (thermal_energy - old_thermal_energy)/dt;
-    if(m_pd.m_multispecies_mode) m_pd.m_cumulative_electron_heating += (thermal_energy - old_thermal_energy);
+    if(m_pd.m_multispecies_mode) {
+        if(ms_electron_heating_fraction < 1.0) m_pd.m_cumulative_ion_heating += (1.0 - ms_electron_heating_fraction)*(thermal_energy - old_thermal_energy);
+        if(ms_electron_heating_fraction > 0.0) m_pd.m_cumulative_electron_heating += ms_electron_heating_fraction*(thermal_energy - old_thermal_energy);
+    }
     if(inactive_mode) return;
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) = thermal_energy;
     m_pd.m_eqs->propagateChanges();
