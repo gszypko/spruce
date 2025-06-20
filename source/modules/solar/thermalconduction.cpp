@@ -101,8 +101,7 @@ void ThermalConduction::iterateModule(double dt){
         if(flux_saturation) saturation = (sat_terms[0]*avg_change + sat_terms[1]) - avg_change;
     }
     if(m_pd.m_multispecies_mode) {
-        m_pd.m_cumulative_electron_heating += 0.5*(thermal_energy - old_thermal_energy);
-        m_pd.m_cumulative_ion_heating += 0.5*(thermal_energy - old_thermal_energy);
+        m_pd.m_cumulative_electron_heating += (thermal_energy - old_thermal_energy);
     }
     if(inactive_mode) return;
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) = thermal_energy;
