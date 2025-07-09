@@ -1,44 +1,53 @@
 #!/usr/bin/env python3
 # mhs_terradas/denormalize.py
 # Undoes unit normalization in output from mhs_terradas/compute.py
-# and generates a .state file compatible with mhdtoy
+# and generates a .state file compatible with SPRUCE
+# Takes in two separate normalized.txt files for an AR and a CH,
+# and superimposes them into a single denormalized .state file
+
+# Usage: ./denormalize_join.py AR_directory CH_directory output_folder [output_filename]
+# AR_folder is the path to a folder containing a "normalized.txt" file representing a closed-field solution
+# CH_folder is the path to a folder containing a "normalized.txt" file representing an open-field solution
+# output_folder is the path to a folder to place the final .state file (creates the folder if it doesn't exist)
+# output_filename, optionally, is the name of the output file that will be saved to output_folder; defaults to mhs.state
 
 import csv
 import numpy as np
 import os
 import sys
 
-TRIXI_MODE = False
 NOGRAV_MODE = False
 
+# Denormalization parameters
 BETA = 0.004
-b_0 = [-125.0*30.0*0.1,20.0*30.0*0.1] #G
+T_C = [1.0e6,1.0e6] #K
+b_0 = [-375.0,60.0] #G
 press_00 = [BETA*b_0[0]**2/(8.0*np.pi),BETA*b_0[1]**2/(8.0*np.pi)]
-T_C = 1.0e6 #K
+
+# Physical constants
 MU = 0.5*1.6726e-24 #g
 K_B = 1.3807e-16 #erg K^-1
-if NOGRAV_MODE:
-    G = 0.0
-    H = 6007869626.05265
-else:
-    G = 2.748e4 #cm s^-2
-    H = K_B*T_C/MU/G
 GAMMA = 5.0/3.0
 ION_MASS = 1.6726e-24 #g
 
-# OVERLAP = 20
+if NOGRAV_MODE:
+    G = 0.0
+    H = 6007869626.05265 #cm
+else:
+    G = 2.748e4 #cm s^-2
+    H = [K_B*T_C[0]/MU/G,K_B*T_C[1]/MU/G]
 
 if len(sys.argv) < 4:
-    print("Need to specify AR directory, CH directory, output folder, and optionally output filename")
+    print("Need to specify AR folder, CH folder, output folder, and optionally output filename")
     exit()
 
 in_directory_ar = sys.argv[1]
 if not os.path.exists(in_directory_ar):
-    print("AR Input directory does not exist")
+    print("AR Input folder does not exist")
     exit()
 in_directory_ch = sys.argv[2]
 if not os.path.exists(in_directory_ar):
-    print("CH Input directory does not exist")
+    print("CH Input folder does not exist")
     exit()
 
 in_filename_ar = in_directory_ar + "/normalized.txt"
@@ -64,6 +73,7 @@ comments = []
 xdim = []
 ydim = []
 
+# Read in data from normalized AR and CH files
 for in_filename in [in_filename_ar,in_filename_ch]:
     this_vars = {}
     this_comments = []
@@ -92,7 +102,7 @@ for in_filename in [in_filename_ar,in_filename_ch]:
 
 assert ydim[0] == ydim[1]
 
-
+# Apply calculations to get final (normalized) variables for both the AR and CH states
 counter = 0
 for this_var in vars:
     zero = np.zeros((xdim[counter],ydim[counter]))
@@ -114,26 +124,24 @@ for this_var in vars:
 
 assert xdim[0] == xdim[1] and ydim[0] == ydim[1]
 
+# Write denormalized result to output file, while applying superposition of the two solutions
 with open(out_path+"/"+out_filename, 'w', newline='') as f:
     writer = csv.writer(f)
-    if not TRIXI_MODE:
-        for comment in comments: writer.writerows(comment)
-        writer.writerow(["#","JOINED INTO INTERCHANGE RECONNECTION REGION"])
-        writer.writerow(["#","DENORMALIZATION FACTORS:"])
-        writer.writerow(["#","BETA","B_0_AR","B_0_CH","T_C","G","MU","K_B","GAMMA","ION_MASS"])
-        writer.writerow(["#",str(BETA),str(b_0[0]),str(b_0[1]),str(T_C),str(G),str(MU),str(K_B),str(GAMMA),str(ION_MASS)])
+    for comment in comments: writer.writerows(comment)
+    writer.writerow(["#","JOINED INTO INTERCHANGE RECONNECTION REGION"])
+    writer.writerow(["#","DENORMALIZATION FACTORS:"])
+    writer.writerow(["#","BETA","B_0_AR","B_0_CH","T_C","G","MU","K_B","GAMMA","ION_MASS"])
+    writer.writerow(["#",str(BETA),str(b_0[0]),str(b_0[1]),str(T_C),str(G),str(MU),str(K_B),str(GAMMA),str(ION_MASS)])
     writer.writerow(["xdim","ydim"])
     writer.writerow([str(xdim[0]),str(ydim[0])])
-    if not TRIXI_MODE:
-        writer.writerow(["ion_mass"])
-        writer.writerow([str(ION_MASS)])
+    writer.writerow(["ion_mass"])
+    writer.writerow([str(ION_MASS)])
     writer.writerow(["adiabatic_index"])
     writer.writerow([str(GAMMA)])
-    if not TRIXI_MODE:
-        writer.writerow(["t=0"])
+    writer.writerow(["t=0"])
     names = ["d_x","d_y","pos_x","pos_y","rho","temp","mom_x","mom_y","mom_z","be_x","be_y","be_z","bi_x","bi_y","bi_z","grav_x","grav_y"]
-    mults = [[H,H,H,H,press_00[0]*MU/K_B/T_C,T_C,zero,zero,zero,b_0[0],b_0[0],b_0[0],b_0[0],b_0[0],b_0[0],G,G],\
-                [H,H,H,H,press_00[1]*MU/K_B/T_C,T_C,zero,zero,zero,b_0[1],b_0[1],b_0[1],b_0[1],b_0[1],b_0[1],G,G]]
+    mults = [[H[0],H[0],H[0],H[0],press_00[0]*MU/K_B/(T_C[0]),(T_C[0]),zero,zero,zero,b_0[0],b_0[0],b_0[0],b_0[0],b_0[0],b_0[0],G,G],\
+                [H[1],H[1],H[1],H[1],press_00[1]*MU/K_B/(T_C[1]),(T_C[1]),zero,zero,zero,b_0[1],b_0[1],b_0[1],b_0[1],b_0[1],b_0[1],G,G]]
     for i in range(len(names)):
         name = names[i]
         ar_var = mults[0][i]*(vars[0][name])
@@ -146,28 +154,6 @@ with open(out_path+"/"+out_filename, 'w', newline='') as f:
             combined_var = (ar_var*ar_rho + ch_var*ch_rho)/(ar_rho+ch_rho)
         else:
             combined_var =  ar_var + ch_var
-        if TRIXI_MODE:            
-            # writer.writerow([name])
-            # writer.writerows(combined_var)
-            # grids[n] = (grids[rho]/m_pd.m_ion_mass).max(m_pd.density_min);
-            # grids[press] = 2*grids[n]*K_B*grids[temp].max(m_pd.temp_min);
-            # grids[thermal_energy] = grids[press]/(m_pd.m_adiabatic_index - 1.0);
-            if name in ["d_x","d_y","pos_x","pos_y","grav_x","grav_y","rho","mom_x","mom_y","mom_z"]:
-                writer.writerow([name])
-                writer.writerows(combined_var)
-            elif name in ["temp"]:
-                number_density = (mults[0][names.index("rho")]*(vars[0]["rho"]) + mults[1][names.index("rho")]*(vars[1]["rho"]))/ION_MASS
-                pressure = 2.0*number_density*K_B*combined_var
-                thermal_energy = pressure/(GAMMA - 1.0)
-                writer.writerow(["thermal_energy"])
-                writer.writerows(thermal_energy)
-            elif name in ["be_x","be_y","be_z"]:
-                external_name = name
-                internal_name = external_name.replace("e","i")
-                combined_var = combined_var + mults[0][names.index(internal_name)]*(vars[0][internal_name]) + mults[1][names.index(internal_name)]*(vars[1][internal_name])
-                writer.writerow([name.replace("e","")])
-                writer.writerows(combined_var/np.sqrt(4.0*np.pi))
-        else:
-            writer.writerow([name])
-            writer.writerows(combined_var)
+        writer.writerow([name])
+        writer.writerows(combined_var)
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 # mhs_terradas/compute.py
 # Computes normalized magnetohydrostatic solution for
 # analytically-defined (at boundary) coronal hole or
@@ -6,6 +7,20 @@
 # Output (normalized.txt) should be fed to mhs_terradas/denormalize.py
 # to generate a .state file in physical units
 # Implementation of J. Terradas et al. 2022, A&A, http://arxiv.org/abs/2202.06800
+
+# All quantities in this script are normalized to the following quantities:
+# Magnetic field - reference magnetic field B_0
+# Pressure - reference pressure, equal to reference plasma beta times B_0
+# Temperature - reference coronal temperature T_C, the "background" temperature at bottom boundary outside of CH or AR
+# Distance - the pressure scale height k_B*T_C/(mu*g)
+
+# The normalized results include two magnetic fields: B0, the potential field solution,
+# and B1, the perturbation field solution. The total field is B0 + B1, but the exact strength of the
+# perturbation field is set when denormalizing to physical parameters (according to the plasma beta)
+
+# Usage: ./compute.py output_directory
+# output_directory is a folder to put all output into (normalized.txt and several plots),
+# which will be created if it doesn't already exist
 
 import scipy.special as sp
 import numpy as np
@@ -17,50 +32,59 @@ import sys
 import os
 import csv
 
-if len(sys.argv) != 3:
-    print("Need to specify output directory, ACTIVE_REGION")
-    exit()
-out_directory = sys.argv[1]
-ACTIVE_REGION = sys.argv[2] == "T"
-# GAUSSIAN = sys.argv[3] == "T"
+# If False, a Coronal Hole. Sets whether one or two magnetic poles are included.
+ACTIVE_REGION = True
+
+# If False, Parabolic. Sets the particular functional form of the lower-boundary magnetic potential.
+# Gaussian is more computationally expensive.
 GAUSSIAN = False
 
+# When True, sets gravity to zero. If the temperature scale-height chi is set to zero, this gives a potential field solution.
 NOGRAV_MODE = False
 
-if not os.path.exists(out_directory):
-    os.makedirs(out_directory)
-
 DOMAIN_WIDTH = 8.0
-DOMAIN_HEIGHT = 12.0
-X_DIM = 202
-Z_DIM = 302
-# N_GHOST = 1
+DOMAIN_HEIGHT = 8.0
+X_DIM = 200+2
+Z_DIM = 200+2
+# Note - calculation throws away one cell along all edges of the domain, so we add two to the desired X_DIM and Z_DIM
 
-Z_NONUNIFORM_START = 302
-Z_NONUNIFORM_FACTOR = 1.0
+# When NONUNIFORM_MODE is set to True, allows for the output grid cells to get progressively taller with height
+# Above index Z_NONUNIFORM_START, each cell is Z_NONUNIFORM_FACTOR times taller than the cell below it
+# Z_NONUNIFORM_FACTOR also gets Z_NONUNIFORM_FACTOR_FACTOR times greater with each cell
+NONUNIFORM_MODE = False
+Z_NONUNIFORM_START = 100
+Z_NONUNIFORM_FACTOR = 1.05
 Z_NONUNIFORM_FACTOR_FACTOR = 1.0
 
 if ACTIVE_REGION:
     X_1 = 2.25 #location of center for CH; location of one magnetic pole for AR
     X_2 = 1.75 #location of other magnetic pole for AR; not used for CH
 else: #CORONAL_HOLE
+    # WARNING - The state generation will fail (produce unphysical pressures) if X_1 and the domain
+    # boundaries are chosen such that the minimum value of A, a_ref in this case, becomes zero.
+    # A very close value to the intended value of X_1 should work if this issue arises
     X_1 = -2.0 #location of center for CH; location of one magnetic pole for AR
     X_2 = 0.0 #location of other magnetic pole for AR; not used for CH
+
+# Relative (signed) magnitudes of the magnetic poles
+# In the coronal hole case, B_2_MULT is not used
 B_1_MULT = -1.0
 B_2_MULT = 1.0
 
-# In units of P_C and T_C, respectively
 PRESS_AR = 40.0
 TEMP_AR = 4.0
 PRESS_CH = 0.25
 TEMP_CH = 0.8
 
-CHI = 20.0 # pressure scale height (along field lines)
-# BETA = 0.004
+CHI = 20.0 # temperature scale height (along field lines)
 
+# Width parameter for lower-boundary magnetic profile
 W_0 = 0.2 # for gaussian profile
 X_0 = 0.2 # for parabolic profile
 
+# This script uses multithreading for the most computationally intensive step (computing the perturbation field).
+# This controls number of threads used. Worth experimenting with for best performance on your specific hardware.
+MULTITHREADS = 2
 
 def a_boundary_parabolic(x_0, b_0):
     def parabolic(x):
@@ -79,7 +103,6 @@ def a_boundary(x):
     else: func = a_boundary_parabolic(X_0,1)
     if ACTIVE_REGION: return B_1_MULT*func(x-X_1) + B_2_MULT*func(x-X_2)
     else: return func(x-X_1)
-
 
 def compute_b(a, x_pos, z_pos):
     result_x = np.zeros_like(a)
@@ -130,20 +153,18 @@ def compute_a0_from_boundary(x,z,num_bins=1000):
     return (z>0.0)*(result) + (z==0.0)*a_boundary(x)
 
 def press_profile_ch(a, a_ref, p_ch):
-    if NOGRAV_MODE: return (1.0/p_ch - 1.0)*(a_ref/a_ref)**2 + 1.0
-    else: return (1.0/p_ch - 1.0)*(a/a_ref)**2 + 1.0
+    if NOGRAV_MODE: return (1.0 - p_ch)*(a_ref/a_ref)**2 + p_ch
+    else: return (1.0 - p_ch)*(a/a_ref)**2 + p_ch
 
 def temp_profile_ch(a, a_ref, t_ch):
     return (1.0 - t_ch)*(a/a_ref)**2 + t_ch
-    # return (1.0 - t_ch)*(a_ref/a_ref)**2 + t_ch
 
 def press_profile_ar(a, a_ref, p_ar):
-    if NOGRAV_MODE: return (1.0 - 1.0/p_ar)*(a_ref/a_ref)**2 + (1.0/p_ar)
-    else: return (1.0 - 1.0/p_ar)*(a/a_ref)**2 + (1.0/p_ar)
+    if NOGRAV_MODE: return (p_ar - 1.0)*(a_ref/a_ref)**2 + 1.0
+    else: return (p_ar - 1.0)*(a/a_ref)**2 + 1.0
 
 def temp_profile_ar(a, a_ref, t_ar):
     return (t_ar - 1.0)*(a/a_ref)**2 + 1.0
-    # return (t_ar - 1.0)*(a_ref/a_ref)**2 + 1.0
 
 def press_profile(a,a_ref):
     if ACTIVE_REGION: return press_profile_ar(a,a_ref,PRESS_AR)
@@ -170,19 +191,17 @@ def pressure(a, z, a_ref):
 
 def press_profile_ch_deriv(a, a_ref, p_ch):
     if NOGRAV_MODE: return 0.0*a
-    else: return 2.0*(1.0/p_ch - 1.0)*(a/a_ref)
+    else: return 2.0*(1.0 - p_ch)*(a/(a_ref**2))
 
 def temp_profile_ch_deriv(a, a_ref, t_ch):
-    return 2.0*(1.0 - t_ch)*(a/a_ref)
-    # return 0.0*a
+    return 2.0*(1.0 - t_ch)*(a/(a_ref**2))
 
 def press_profile_ar_deriv(a, a_ref, p_ar):
     if NOGRAV_MODE: return 0.0*a
-    else: return 2.0*(1.0 - 1.0/p_ar)*(a/a_ref)
+    else: return 2.0*(p_ar - 1.0)*(a/(a_ref**2))
 
 def temp_profile_ar_deriv(a, a_ref, t_ar):
-    return 2.0*(t_ar - 1.0)*(a/a_ref)
-    # return 0.0*a
+    return 2.0*(t_ar - 1.0)*(a/(a_ref**2))
 
 def press_profile_deriv(a,a_ref):
     if ACTIVE_REGION: return press_profile_ar_deriv(a,a_ref,PRESS_AR)
@@ -251,8 +270,13 @@ def mp_compute_a1(x,z,t_bins=200,s_bins=200):
 
 if __name__ == '__main__':
 
-    # x = np.linspace(-DOMAIN_WIDTH*(1.0/2.0 + N_GHOST/X_DIM),DOMAIN_WIDTH*(1.0/2.0 + N_GHOST/X_DIM),X_DIM + 2*N_GHOST)
-    # z = np.linspace(-N_GHOST*DOMAIN_HEIGHT/Z_DIM,DOMAIN_HEIGHT*(1.0 + N_GHOST/Z_DIM),Z_DIM + 2*N_GHOST)
+    if len(sys.argv) != 2:
+        print("Usage: ./compute.py output_directory")
+        exit()
+    out_directory = sys.argv[1]
+    if not os.path.exists(out_directory):
+        os.makedirs(out_directory)
+
     x = np.linspace(-DOMAIN_WIDTH/2.0,DOMAIN_WIDTH/2.0,X_DIM)
     z = np.linspace(0.0,DOMAIN_HEIGHT,Z_DIM)
 
@@ -275,20 +299,16 @@ if __name__ == '__main__':
     zero = np.zeros_like(x_2d)
     one = np.ones_like(x_2d)
 
-    # Computing full-domain A and B from boundary
+    # Compute full-domain A and B for potential field 
     full_a0 = compute_a0_from_boundary(x_2d,z_2d)
     if ACTIVE_REGION:
         a_ref = np.max(full_a0)
     else:
-        a_ref = np.min(full_a0)
+        if abs(np.min(full_a0)) < abs(np.max(full_a0)):
+            a_ref = np.max(full_a0)
+        else:
+            a_ref = np.min(full_a0)
     full_b0 = compute_b(full_a0,x,z)
-    if ACTIVE_REGION: streamplot_pow = 1.5
-    else: streamplot_pow = 2.0
-    full_b0_mag = np.sqrt(full_b0[0][:,1]**2 + full_b0[1][:,1]**2)**streamplot_pow
-    full_b0_mag_norm = full_b0_mag/np.trapz(full_b0_mag)
-    cdf = [np.trapz(full_b0_mag_norm[:(i+1)]) for i in range(len(full_b0_mag_norm))]
-    if ACTIVE_REGION: stream_points = np.interp(np.linspace(0.55,0.95,num=17),cdf,x)
-    else: stream_points = np.interp(np.linspace(0.05,0.95,num=17),cdf,x)
 
     plot_extent = (x[0]-0.5*dx_1d[0],x[-1]+0.5*dx_1d[-1],z[0]-0.5*dz_1d[0],z[-1]+0.5*dz_1d[-1])
 
@@ -302,30 +322,35 @@ if __name__ == '__main__':
     full_b0_x_uniform = interp_x(x_uniform_grid, z_uniform_grid)
     full_b0_z_uniform = interp_z(x_uniform_grid, z_uniform_grid)
 
-    # plt.subplots()
-    # plt.imshow(np.transpose(full_a0),origin='lower',extent=plot_extent)
     fig, ax = plt.subplots()
     im = NonUniformImage(ax, animated=False, origin='lower', extent=plot_extent,\
         interpolation='nearest')
     im.set_clim(vmin=np.min(full_a0),vmax=np.max(full_a0))
     im.set_data(x,z,np.transpose(full_a0))
-    # im.set_data(x,z,np.transpose(full_b0[0]))
-    # im.set_data(x,z,np.transpose(full_b0[1]))
     ax.add_image(im)
-    # ax.set_aspect('equal')
     ax.set(xlim=(x[0],x[-1]), ylim=(z[0],z[-1]))
     fig.colorbar(im,label=r'$A/B_0h$')
-    # ax.streamplot(x,z,full_b0[0].transpose(),full_b0[1].transpose(),start_points=np.column_stack((stream_points,np.zeros_like(stream_points))),color=(0.0,0.0,0.0,0.2),density=100,linewidth=1.0,arrowstyle='->',maxlength=100.0)
+
+    # Add field lines to potential field plot
+    if ACTIVE_REGION: streamplot_pow = 1.5
+    else: streamplot_pow = 2.0
+    full_b0_mag = np.sqrt(full_b0[0][:,1]**2 + full_b0[1][:,1]**2)**streamplot_pow
+    full_b0_mag_norm = full_b0_mag/np.trapz(full_b0_mag)
+    cdf = [np.trapz(full_b0_mag_norm[:(i+1)]) for i in range(len(full_b0_mag_norm))]
+    if ACTIVE_REGION: stream_points = np.interp(np.linspace(0.55,0.95,num=17),cdf,x)
+    else: stream_points = np.interp(np.linspace(0.05,0.95,num=17),cdf,x)
     ax.streamplot(x_uniform,z_uniform,\
         full_b0_x_uniform,full_b0_z_uniform,\
             start_points=np.column_stack((stream_points,z[1]*np.ones_like(stream_points))),\
                 color=(0.0,0.0,0.0,0.2),broken_streamlines=False,linewidth=1.0,arrowstyle='->')
+
     plt.title("Potential Field")
     plt.xlabel(r'$x/h$')
     plt.ylabel(r'$z/h$')
     plt.tight_layout()
     plt.savefig(out_directory+"/potential.png")
-
+    
+    # Compute the perturbation to the field that balances pressure gradients
     full_a1 = np.zeros_like(full_a0)
     t_bins = 200
     s_bins = 200
@@ -348,20 +373,18 @@ if __name__ == '__main__':
             args_list.append((x[i],z[j]))
     print("Computing perturbation field...")
     print(f"[{' '*100}]0%",end='\r')
-    with mp.Pool(processes=2,initializer=init_worker, initargs=(pc0,pc1,precomps[0].shape,counter,total)) as pool:
+    with mp.Pool(processes=MULTITHREADS,initializer=init_worker, initargs=(pc0,pc1,precomps[0].shape,counter,total)) as pool:
         full_a1 = np.reshape(pool.starmap(mp_compute_a1, args_list),(X_DIM,Z_DIM))
     print(f"[{'█'*100}]100%",end='\r')
     print('',end=None)
-
     full_b1 = compute_b(full_a1,x,z)
 
-    # Computing pressure and temperature according to Terradas profile
+    # Compile full pressure and temperature according to Terradas profile, and plot
     temp = temperature(full_a0,z_2d,a_ref)
     press = np.zeros_like(temp)
     for i in range(press.shape[0]):
         for j in range(press.shape[1]):
             press[i,j] = pressure(full_a0[i,j],z_2d[i,j],a_ref)
-
 
     plt.figure(1)
     plt.imshow(np.transpose(temp),origin='lower',extent=plot_extent)
@@ -381,6 +404,7 @@ if __name__ == '__main__':
     plt.tight_layout()
     plt.savefig(out_directory+"/pressure.png")
 
+    # Write (normalized) results out to file
     with open(out_directory+"/normalized.txt", 'w', newline='') as f:
         writer = csv.writer(f)
         labels = ["#","CHI"]
@@ -410,4 +434,3 @@ if __name__ == '__main__':
         for i in range(len(names)):
             writer.writerow([names[i]])
             writer.writerows(grids[i][1:-1,1:-1])
-            # writer.writerows(grids[i][N_GHOST:-N_GHOST,N_GHOST:-N_GHOST])

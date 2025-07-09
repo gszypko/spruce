@@ -1,27 +1,36 @@
 #!/usr/bin/env python3
 # mhs_terradas/denormalize.py
 # Undoes unit normalization in output from mhs_terradas/compute.py
-# and generates a .state file compatible with mhdtoy
+# and generates a .state file compatible with SPRUCE
+# Takes in a single normalized.txt file
+
+# Usage: ./denormalize.py input_folder output_folder [output_filename]
+# input_folder is the path to a folder containing a "normalized.txt" file representing a solution from mhs_terradas/compute.py
+# output_folder is the path to a folder to place the final .state file (creates the folder if it doesn't exist)
+# output_filename, optionally, is the name of the output file that will be saved to output_folder; defaults to mhs.state
 
 import csv
 import numpy as np
 import os
 import sys
 
-BETA = 0.004
-B_0 = -125.0*30.0 #G
-PRESS_00 = BETA*B_0**2/(8.0*np.pi) #dyn cm^-2
-T_C = 1.0e6 #K
+# Denormalization parameters (can easily choose between different sets of parameters by setting INDEX)
+INDEX = 0
+BETA = 0.004*0.05
+B_0 = [-375.0,60.0][INDEX] #G
+PRESS_00 = [BETA*B_0**2/(8.0*np.pi),BETA*B_0**2/(8.0*np.pi)][INDEX]
+T_C = [1.0e6,1.0e6][INDEX] #K
+
+# Physical constants
 G = 2.748e4 #cm s^-2
 MU = 0.5*1.6726e-24 #g
 K_B = 1.3807e-16 #erg K^-1
-H = K_B*T_C/MU/G
-GAMMA = 5.0/3.0
+GAMMA = 5.0/3.0 #adiabatic index
 ION_MASS = 1.6726e-24 #g
-
+H = K_B*T_C/MU/G
 
 if len(sys.argv) < 3:
-    print("Need to specify input directory, output folder, and optionally output filename")
+    print("Usage: ./denormalize.py input_folder output_folder [output_filename]")
     exit()
 
 in_directory = sys.argv[1]
@@ -48,6 +57,7 @@ comments = []
 xdim = 0
 ydim = 0
 
+# Read in normalized.txt file
 with open(in_filename, newline='') as f:
     reader = csv.reader(f)
     line = next(reader)
@@ -65,6 +75,7 @@ with open(in_filename, newline='') as f:
             assert(len(curr_grid[-1]) == ydim)
         vars[curr_name] = np.asarray(curr_grid).astype(np.float64)
 
+# Apply calculations to get to final (normalized) variables
 zero = np.zeros((xdim,ydim))
 one = np.ones((xdim,ydim))
 vars["rho"] = vars["press"]/vars["temp"]
@@ -81,6 +92,7 @@ vars["be_y"] = vars["b0_y"]
 for name in ["press","b0_x","b0_y","b1_x","b1_y"]:
     vars.pop(name)
 
+# Write out to file the denormalized variables
 with open(out_path+"/"+out_filename, 'w', newline='') as f:
     writer = csv.writer(f)
     writer.writerows(comments)
