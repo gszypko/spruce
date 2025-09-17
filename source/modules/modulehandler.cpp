@@ -20,6 +20,7 @@
 #include "ambientheatingsink.hpp"
 #include "physicalviscosity.hpp"
 #include "divcleaning.hpp"
+#include "boundaryoutflow.hpp"
 
 ModuleHandler::ModuleHandler(PlasmaDomain &pd): m_pd(pd) {}
 
@@ -105,6 +106,7 @@ void ModuleHandler::instantiateModule(const std::string &module_name, std::ifstr
     else if(module_name == "ambient_heating_sink") m_modules.push_back(std::unique_ptr<Module>(new AmbientHeatingSink(m_pd)));
     else if(module_name == "physical_viscosity") m_modules.push_back(std::unique_ptr<Module>(new PhysicalViscosity(m_pd)));
     else if(module_name == "div_cleaning") m_modules.push_back(std::unique_ptr<Module>(new DivCleaning(m_pd)));
+    else if(module_name == "boundary_outflow") m_modules.push_back(std::unique_ptr<Module>(new BoundaryOutflow(m_pd)));
     else assert(false && "Module name was not recognized");
     m_modules.back()->configureModule(in_file);
 }

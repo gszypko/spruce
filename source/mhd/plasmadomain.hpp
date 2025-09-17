@@ -77,6 +77,7 @@ private: //*********************************************************************
   friend class ThermalConduction;
   friend class TracerParticles;
   friend class MassInjection;
+  friend class BoundaryOutflow;
   friend class CoulombExplosion;
   friend class EICThermalization;
   friend class Viscosity;
