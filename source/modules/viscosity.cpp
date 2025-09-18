@@ -312,10 +312,10 @@ Grid Viscosity::getBoundaryViscosity(double strength,double length) const
                                        + (y - y_center).square()/std::pow((y_max - y_center),2.0);
         double s_length = length/std::min((x_max - x_center),(y_max - y_center)); //apply scale length parameter to semiminor axis
         
-        if(shape_parts[0] == "exp") result = (2.3*(elliptical_radial_s - 0.9)/s_length).exp()*strength;
+        if(shape_parts[0] == "exp") result = (2.3*(elliptical_radial_s - 0.9).min(0.0)/s_length).exp()*strength;
         else {
             assert(shape_parts[0] == "gaussian" && "boundary_falloff_shape in Viscosity module not recognized");
-            result = (-2.3*((elliptical_radial_s.min(1.0) - 1.0)/s_length).square()).exp()*strength;
+            result = (-2.3*((elliptical_radial_s - 0.9).min(0.0)/s_length).square()).exp()*strength;
         }
     }
 
