@@ -29,7 +29,7 @@ void AmbientHeating::setupModule(){
     if(exp_mode){
         heating = m_pd.m_ghost_zone_mask*exp_base_heating_rate*(-1.0*m_pd.m_grids[PlasmaDomain::pos_y]/exp_scale_height).exp();
         if(split_exp_mode){
-            assert(split_exp_scale_height >= exp_scale_height && "Split (upper) scale height must be larger than lower one.");
+            // assert(split_exp_scale_height >= exp_scale_height && "Split (upper) scale height must be larger than lower one.");
             double split_base_heating_rate = exp_base_heating_rate*std::exp((exp_scale_height - split_exp_scale_height)*split_exp_start_height/(exp_scale_height*split_exp_scale_height));
             Grid other_heating = m_pd.m_ghost_zone_mask*split_base_heating_rate*(-1.0*m_pd.m_grids[PlasmaDomain::pos_y]/split_exp_scale_height).exp();
             heating = heating.max(other_heating);
