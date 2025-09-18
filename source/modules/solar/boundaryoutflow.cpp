@@ -48,8 +48,8 @@ Grid BoundaryOutflow::constructBoundaryAccel(double strength,double length) cons
     const Grid& y = m_pd.grid("pos_y");
 
     if (boundary=="x_bound_1") return (-2.3*(x - x.min())/length).exp()*strength;
-    else if (boundary=="x_bound_2") return (-2.3*(x - x.max())/length).exp()*strength;
-    else if (boundary=="y_bound_2") return (-2.3*(y - y.max())/length).exp()*strength;
+    else if (boundary=="x_bound_2") return (2.3*(x - x.max())/length).exp()*strength;
+    else if (boundary=="y_bound_2") return (2.3*(y - y.max())/length).exp()*strength;
     else if (boundary=="y_bound_1") return (-2.3*(y - y.min())/length).exp()*strength;
     else assert(false && "BoundaryOutflow boundary config must be {x,y}_bound_{1,2}");
 }
