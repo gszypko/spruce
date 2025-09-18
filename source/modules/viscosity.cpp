@@ -88,7 +88,8 @@ void Viscosity::setupModule()
             && "Invalid hyperviscous time integrator given for Viscosity module");
 
     if(m_boundary_falloff_shape == "") m_boundary_falloff_shape = "gaussian";
-    assert((m_boundary_falloff_shape == "gaussian" || m_boundary_falloff_shape == "exp")
+    assert((m_boundary_falloff_shape == "gaussian" || m_boundary_falloff_shape == "exp"
+            || m_boundary_falloff_shape == "exp_elliptical" || m_boundary_falloff_shape == "gaussian_elliptical")
             && "Invalid boundary falloff shape given for Viscosity module");
 
     // initialize viscosity grids
@@ -280,26 +281,42 @@ Grid Viscosity::getBoundaryViscosity(double strength,double length) const
     Grid result = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     const Grid& x = m_pd.grid("pos_x");
     const Grid& y = m_pd.grid("pos_y");
+    double x_max = x.max(), y_max = y.max();
+    double x_min = x.min(), y_min = y.min();
     if(m_boundary_falloff_shape == "gaussian"){
         // left boundary
-        result += (-2.3*((x - x.min())/length).square()).exp()*strength;
+        result += (-2.3*((x - x_min)/length).square()).exp()*strength;
         // right boundary
-        result += (-2.3*((x - x.max())/length).square()).exp()*strength;
+        result += (-2.3*((x - x_max)/length).square()).exp()*strength;
         // top boundary
-        result += (-2.3*((y - y.max())/length).square()).exp()*strength;
+        result += (-2.3*((y - y_max)/length).square()).exp()*strength;
         // bottom boundary
-        result += (-2.3*((y - y.min())/length).square()).exp()*strength;
+        result += (-2.3*((y - y_min)/length).square()).exp()*strength;
     }
-    else{
-        assert(m_boundary_falloff_shape == "exp" && "boundary_falloff_shape in Viscosity module must be either gaussian or exp");
+    else if(m_boundary_falloff_shape == "exp") {
         // left boundary
-        result += (-2.3*(x - x.min())/length).exp()*strength;
+        result += (-2.3*(x - x_min)/length).exp()*strength;
         // right boundary
-        result += (2.3*(x - x.max())/length).exp()*strength;
+        result += (2.3*(x - x_max)/length).exp()*strength;
         // top boundary
-        result += (2.3*(y - y.max())/length).exp()*strength;
+        result += (2.3*(y - y_max)/length).exp()*strength;
         // bottom boundary
-        result += (-2.3*(y - y.min())/length).exp()*strength;
+        result += (-2.3*(y - y_min)/length).exp()*strength;
+    } else {
+        std::vector<std::string> shape_parts = splitString(m_boundary_falloff_shape,'_');
+        assert(shape_parts.size() == 2 && shape_parts[1] == "elliptical" && "boundary_falloff_shape in Viscosity module not recognized");
+        double x_center = 0.5*(x_min + x_max);
+        double y_center = 0.5*(y_min + y_max);
+        // for the ellipse with axes given by the domain bounds, this param = 1 at the edge of the ellipse and 0 at the center of the domain
+        Grid elliptical_radial_s = (x - x_center).square()/std::pow((x_max - x_center),2.0)
+                                       + (y - y_center).square()/std::pow((y_max - y_center),2.0);
+        double s_length = length/std::min((x_max - x_center),(y_max - y_center)); //apply scale length parameter to semiminor axis
+        
+        if(shape_parts[0] == "exp") result = (2.3*(elliptical_radial_s - 0.9)/s_length).exp()*strength;
+        else {
+            assert(shape_parts[0] == "gaussian" && "boundary_falloff_shape in Viscosity module not recognized");
+            result = (-2.3*((elliptical_radial_s.min(1.0) - 1.0)/s_length).square()).exp()*strength;
+        }
     }
 
     // call to function min ensures that viscosity value cannot exceed strength
