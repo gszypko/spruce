@@ -295,9 +295,9 @@ Grid Viscosity::getBoundaryViscosity(double strength,double length) const
         // left boundary
         result += (-2.3*(x - x.min())/length).exp()*strength;
         // right boundary
-        result += (-2.3*(x - x.max())/length).exp()*strength;
+        result += (2.3*(x - x.max())/length).exp()*strength;
         // top boundary
-        result += (-2.3*(y - y.max())/length).exp()*strength;
+        result += (2.3*(y - y.max())/length).exp()*strength;
         // bottom boundary
         result += (-2.3*(y - y.min())/length).exp()*strength;
     }
