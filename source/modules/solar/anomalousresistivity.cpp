@@ -40,7 +40,6 @@ void AnomalousResistivity::setupModule(){
     assert((resistivity_model == "time_scale" || resistivity_model == "syntelis_19"
                 || resistivity_model == "gudiksen_11" || resistivity_model == "ys_94")
             && "Invalid resistivity model given for Anomalous Resistivity module");
-    assert(ms_electron_heating_fraction >= 0.0 && ms_electron_heating_fraction <= 1.0 && "Anom. Resistivity MS electron heating fraction must be between 0 and 1");
 }
 
 void AnomalousResistivity::parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs){
@@ -68,7 +67,6 @@ void AnomalousResistivity::parseModuleConfigs(std::vector<std::string> lhs, std:
             resistivity_model_params = b;
         }
         else if(this_lhs == "flood_fill_threshold") flood_fill_threshold = std::stod(this_rhs);
-        else if(this_lhs == "ms_electron_heating_fraction") ms_electron_heating_fraction = std::stod(this_rhs);
         else std::cerr << this_lhs << " config not recognized.\n";
     }
 }
@@ -168,8 +166,7 @@ void AnomalousResistivity::iterateModule(double dt){
     }
     if(output_to_file) avg_heating = (thermal_energy - old_thermal_energy)/dt;
     if(m_pd.m_multispecies_mode) {
-        if(ms_electron_heating_fraction < 1.0) m_pd.m_cumulative_ion_heating += (1.0 - ms_electron_heating_fraction)*(thermal_energy - old_thermal_energy);
-        if(ms_electron_heating_fraction > 0.0) m_pd.m_cumulative_electron_heating += ms_electron_heating_fraction*(thermal_energy - old_thermal_energy);
+        m_pd.m_cumulative_joule_heating += (thermal_energy - old_thermal_energy);
     }
 
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) = thermal_energy;

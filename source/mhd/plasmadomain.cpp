@@ -55,6 +55,7 @@ PlasmaDomain::PlasmaDomain(const fs::path &out_path, const fs::path &config_path
   if(m_multispecies_mode) {
     m_cumulative_electron_heating = Grid::Zero(m_xdim,m_ydim);
     m_cumulative_ion_heating = m_cumulative_electron_heating;
+    m_cumulative_joule_heating = m_cumulative_electron_heating;
   }
   
   // overwrite the init.state file if new simulation with overwrite flag
@@ -94,7 +95,7 @@ void PlasmaDomain::initOutputContainer()
     num_grids_to_record++;
   }
   int num_lines_per_iter = 1+2*num_grids_to_record;
-  if(m_multispecies_mode) num_lines_per_iter += 4; //two each for cumulative_electron_heating and cumulative_ion_heating
+  if(m_multispecies_mode) num_lines_per_iter += 6; //two each for cumulative_electron_heating and cumulative_ion_heating and cumulative_joule_heating
   // initialize size of m_data_to_write and the capacity of each element
   if (m_write_interval > 0){
     m_data_to_write.resize(m_write_interval*num_lines_per_iter);

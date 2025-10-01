@@ -24,6 +24,7 @@ class LocalizedHeating : public Module {
         double stddev_x, stddev_y;
         double center_x, center_y;
         Grid heating_template;
+        double ms_electron_heating_fraction{0.0}; //fraction of direct heating energy given to the electrons, for multispecies analysis (remainder given to ions)
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
 };
 

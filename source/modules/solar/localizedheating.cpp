@@ -22,11 +22,13 @@ void LocalizedHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vec
         else if(this_lhs == "stddev_y") stddev_y = std::stod(this_rhs);
         else if(this_lhs == "center_x") center_x = std::stod(this_rhs);
         else if(this_lhs == "center_y") center_y = std::stod(this_rhs);
+        else if(this_lhs == "ms_electron_heating_fraction") ms_electron_heating_fraction = std::stod(this_rhs);
         else std::cerr << this_lhs << " config not recognized.\n";
     }
 }
 
 void LocalizedHeating::preIterateModule(double dt){
+    assert(ms_electron_heating_fraction >= 0.0 && ms_electron_heating_fraction <= 1.0 && "Localized Heating MS electron heating fraction must be between 0 and 1");
     if(heating_template.size() != 1) return;
     heating_template = SolarUtils::GaussianGrid(m_pd.m_xdim,m_pd.m_ydim,-1.0e-2*max_heating_rate,
                                                 max_heating_rate,stddev_x,stddev_y,center_x,center_y).max(0.0);
@@ -50,6 +52,10 @@ void LocalizedHeating::postIterateModule(double dt){
     if(m_pd.m_time < start_time || m_pd.m_time > start_time+duration) return;
     m_pd.m_eqs->grid(IdealMHD::thermal_energy) += m_pd.m_ghost_zone_mask*(dt*heating_template);
     m_pd.m_eqs->propagateChanges();
+    if(m_pd.m_multispecies_mode) {
+        if(ms_electron_heating_fraction < 1.0) m_pd.m_cumulative_ion_heating += (1.0 - ms_electron_heating_fraction)*m_pd.m_ghost_zone_mask*(dt*heating_template);
+        if(ms_electron_heating_fraction > 0.0) m_pd.m_cumulative_electron_heating += ms_electron_heating_fraction*m_pd.m_ghost_zone_mask*(dt*heating_template);
+    }
 }
 
 std::string LocalizedHeating::commandLineMessage() const

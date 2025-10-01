@@ -37,6 +37,7 @@ void PlasmaDomain::run(double time_duration,double cluster_time)
       if(m_multispecies_mode) {
         m_cumulative_electron_heating = Grid::Zero(m_xdim,m_ydim);
         m_cumulative_ion_heating = m_cumulative_electron_heating;
+        m_cumulative_joule_heating = m_cumulative_electron_heating;
       }
     }
     // write grid data to file

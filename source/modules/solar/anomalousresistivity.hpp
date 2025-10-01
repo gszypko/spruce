@@ -32,8 +32,6 @@ class AnomalousResistivity : public Module {
 
         bool gradient_correction{false};
 
-        double ms_electron_heating_fraction{0.0}; //fraction of direct heating energy given to the electrons, for multispecies analysis (remainder given to ions)
-
         Grid diffusivity;
         bool output_to_file = false;
         Grid anomalous_template;

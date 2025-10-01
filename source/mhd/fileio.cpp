@@ -174,6 +174,12 @@ void PlasmaDomain::storeGrids()
       assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
       m_data_to_write[m_lines_recorded] = m_cumulative_ion_heating.format(',','\n',m_write_precision);
       m_lines_recorded++;
+      assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
+      m_data_to_write[m_lines_recorded] = "cumulative_joule_heating\n";
+      m_lines_recorded++;
+      assert(m_lines_recorded<m_data_to_write.size() && m_data_to_write[m_lines_recorded].empty());
+      m_data_to_write[m_lines_recorded] = m_cumulative_joule_heating.format(',','\n',m_write_precision);
+      m_lines_recorded++;
   }
 
   // write grids from modules

@@ -132,7 +132,7 @@ private: //*********************************************************************
   
   // Grids for multispecies post-processing
   bool m_multispecies_mode = false;
-  Grid m_cumulative_electron_heating, m_cumulative_ion_heating;
+  Grid m_cumulative_electron_heating, m_cumulative_ion_heating, m_cumulative_joule_heating;
 
   // ion properties
   double m_ion_mass; //in g
