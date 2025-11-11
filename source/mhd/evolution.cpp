@@ -244,11 +244,19 @@ void PlasmaDomain::reflectBoundaryExtrapolate(std::vector<Grid>& grids, int i1, 
   }
   // m_mom_x(i1,j1) = 0.0; m_mom_x(i2,j2) = 0.0; m_mom_x(i3,j3) = 0.0;
   // m_mom_y(i1,j1) = 0.0; m_mom_y(i2,j2) = 0.0; m_mom_y(i3,j3) = 0.0;
+  bool x_boundary = (j1 == j2);
   for(std::vector<int> mom : m_eqs->momenta()){
     for(int v : mom){
-      m_eqs->grid(v)(i1,j1) = 0.0;
-      m_eqs->grid(v)(i2,j2) = 0.0;
-      m_eqs->grid(v)(i3,j3) = 0.0;
+      // boundary-perpendicular case
+      if((m_eqs->index2name(v).back() == 'x' && x_boundary) || (m_eqs->index2name(v).back() == 'y' && !x_boundary)){
+        m_eqs->grid(v)(i1,j1) = -1.0*m_eqs->grid(v)(i3,j3);
+        m_eqs->grid(v)(i2,j2) = -1.0*m_eqs->grid(v)(i3,j3);
+        // m_eqs->grid(v)(i1,j1) = 0.0;
+        // m_eqs->grid(v)(i2,j2) = 0.0;
+      } else { // boundary-parallel case
+        m_eqs->grid(v)(i1,j1) = m_eqs->grid(v)(i3,j3);
+        m_eqs->grid(v)(i2,j2) = m_eqs->grid(v)(i3,j3);
+      }
     }
   }
 }
