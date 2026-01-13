@@ -3,6 +3,7 @@ import math
 import sys
 import aia_response as aia
 import scipy.ndimage
+import fnmatch
 
 fullnames = {
   'rho': "Density",
@@ -28,8 +29,9 @@ fullnames = {
   'dt_rad': "Radiative Losses Timestep",
   'n': "Density",
   'beta': "Plasma Beta",
-  'div_be': "Background Field Divergence",
-  'div_bi': "Induced Field Divergence",
+  'div_be': "Mag. Background Field Div., over Total Field",
+  'div_bi': "Mag. Induced Field Div., over Total Field",
+  'div_b': "Mag. Total Field Div., over Total Field",
   'b_mag': "Field Magnitude",
   'field_heating': "Field-Based Heating Rate",
   'roc': "Radius of Curvature",
@@ -49,8 +51,74 @@ fullnames = {
   'losses_over_rad': "Radiative and Conductive Losses",
   'joule_heating': "Joule Heating",
   'joule_heating_temp': "Joule Heating",
-  'diff_time_scale': "Time Scale of Magnetic Diffusion"
+  'diff_time_scale': "Time Scale of Magnetic Diffusion",
+  'cumulative_electron_heating': "Cumulative Electron Heating (b/w sim time steps)",
+  'cumulative_ion_heating': "Cumulative Ion Heating (b/w sim time steps)",
+  'cumulative_direct_heating': "All Cumulative Direct Heating (b/w sim time steps)",
+  'cumulative_electron_heating_temp': "Cumulative Electron Heating (b/w sim time steps)",
+  'cumulative_ion_heating_temp': "Cumulative Ion Heating (b/w sim time steps)",
+  'viscous_heating': "Physical Viscosity Heating",
+  'viscous_heating_temp': "Physical Viscosity Heating",
+  'aia_composite': "094"+r'$\mathrm{\AA}$'+",335"+r'$\mathrm{\AA}$'+",193"+r'$\mathrm{\AA}$'
 }
+
+shortnames = {
+  'rho': "Density",
+  'temp': "Temp.",
+  'press': "Press.",
+  'rad': "Rad. Loss Rate",
+  'thermal_energy': "Thermal Energy Density",
+  'be': "Background B Mag.",
+  'bi': "Induced B Mag.",
+  'bi_x': "X Induced B Field",
+  'bi_y': "Y Induced B Field",
+  'bi_z': "Z Induced B Field",
+  'b_x': "X B Field",
+  'b_y': "Y B Field",
+  'b_z': "Z B Field",
+  'b': "B Field",
+  'v': "Vel.",
+  'v_x': "X Vel.",
+  'v_y': "Y Vel.",
+  'v_z': "Z Vel.",
+  'dt': "CFL Timestep",
+  'dt_thermal': "Thermal Cond. Timestep",
+  'dt_rad': "Rad. Losses Timestep",
+  'n': "Density",
+  'beta': "Plasma Beta",
+  'div_be': "Mag. Background Field Div., over Total Field",
+  'div_bi': "Mag. Induced Field Div., over Total Field",
+  'div_b': "Mag. Total Field Div., over Total Field",
+  'b_mag': "B Mag.",
+  'field_heating': "Field-Based Heating Rate",
+  'roc': "Radius of Curvature",
+  'xia_heat': "Heating Heuristic from Xia et al. 2014",
+  'xia_comp': "Xia et al. 2014 Heating",
+  'current_density': "Current Density Magnitude",
+  'current_density_z': "Z Current Density",
+  'anomalous_factor': "Anomalous Resistivity Factor",
+  'thermal_conduction': "Thermal Cond.",
+  'thermal_conduction_temp': "Thermal Cond.",
+  'heating': "Heating Required for Balance",
+  'field_heating_vs_heating': "Field Heating vs. Heating Required",
+  'anomalous_diffusivity': "Anomalous Magnetic Diffusivity",
+  'diffusivity': "Magnetic Diffusivity (Before Template)",
+  'anomalous_template': "Anom. Template",
+  'lambda': "Lambda(T) Suppression Factor",
+  'losses_over_rad': "Radiative and Conductive Losses",
+  'joule_heating': "Joule Heating",
+  'joule_heating_temp': "Joule Heating",
+  'diff_time_scale': "Time Scale of Magnetic Diffusion",
+  'cumulative_electron_heating': "Cumulative Electron Heating (b/w sim time steps)",
+  'cumulative_ion_heating': "Cumulative Ion Heating (b/w sim time steps)",
+  'cumulative_direct_heating': "All Cumulative Direct Heating (b/w sim time steps)",
+  'cumulative_electron_heating_temp': "Cumulative Electron Heating (b/w sim time steps)",
+  'cumulative_ion_heating_temp': "Cumulative Ion Heating (b/w sim time steps)",
+  'viscous_heating': "Physical Viscosity Heating",
+  'viscous_heating_temp': "Physical Viscosity Heating",
+  'aia_composite': "094"+r'$\mathrm{\AA}$'+",335"+r'$\mathrm{\AA}$'+",193"+r'$\mathrm{\AA}$'
+}
+
 fullunits = {
   'rho': r'g cm$^{-3}$',
   'temp': r'K',
@@ -75,8 +143,9 @@ fullunits = {
   'dt_rad': r's',
   'n': r'cm$^{-3}$',
   'beta': r'Log',
-  'div_b': r'G cm$^{-1}$',
-  'div_bi': r'G cm$^{-1}$',
+  'div_be': r'G cm$^{-1}$',
+  'div_bi': r'cm$^{-1}$',
+  'div_b': r'cm$^{-1}$',
   'b_mag': r'G',
   'field_heating': r'erg cm$^{-3}$ s$^{-1}$',
   'roc': r'Mm',
@@ -95,21 +164,30 @@ fullunits = {
   'losses_over_rad': r'Fraction of Rad. Loss',
   'joule_heating': r'erg cm$^{-3}$ s$^{-1}$',
   'joule_heating_temp': r'K s$^{-1}$',
-  'diff_time_scale': r's'
+  'diff_time_scale': r's',
+  'cumulative_electron_heating': r'erg cm$^{-3}$',
+  'cumulative_ion_heating': r'erg cm$^{-3}$',
+  'cumulative_direct_heating': r'erg cm$^{-3}$',
+  'cumulative_electron_heating_temp': r'K',
+  'cumulative_ion_heating_temp': r'K',
+  'viscous_heating': r'erg cm$^{-3}$ s$^{-1}$',
+  'viscous_heating_temp': r'K s$^{-1}$'
 }
 
 symlogthresholds = {
-  ("div_bi","div_be","diffusivity"): 1e-25,
+  ("div_bi","div_be","div_b","diffusivity"): 1e-16,
   ("dt","dt_thermal","dt_rad","b_mag","xia_heat"): 1e-8,
   ("xia_comp","field_heating_vs_heating"): 1e-2,
   ("current_density",): 1e-1,
   ("thermal_conduction",): 1e-6,
-  ("thermal_conduction_temp",): 1e0,
+  ("viscous_heating_temp","joule_heating_temp","thermal_conduction_temp"): 1e0,
   ("rad","heating"): 1e-8,
   ("lambda",): 1e-1,
   ("rho",): 1e-15,
   ("losses_over_rad",): 1e0,
-  ("joule_heating",): 1e-4
+  ("joule_heating",): 1e-4,
+  ("cumulative_electron_heating","cumulative_ion_heating",'cumulative_direct_heating'): 1e-8,
+  ("cumulative_electron_heating_temp","cumulative_ion_heating_temp"): 1e2  
 }
 
 file_vars_dict = {
@@ -123,15 +201,20 @@ file_vars_dict = {
   ("roc",): ("bi_x","bi_y"),
   ("beta",): ("press","bi_x","bi_y","bi_z"),
   ("b_mag",): ("bi_x","bi_y","bi_z"),
-  ("div_b","div_bi"): ("bi_x","bi_y"),
+  ("div_be","div_bi","div_b"): ("bi_x","bi_y"),
   ("lambda",): ("rad","n","temp"),
   ("losses_over_rad",): ("rad","thermal_conduction"),
   ("joule_heating_temp",): ("joule_heating","n"),
   ("thermal_conduction_temp",): ("thermal_conduction","n"),
+  ("viscous_heating_temp",): ("viscous_heating","n"),
+  ("cumulative_electron_heating_temp",): ("cumulative_electron_heating","rho"),
+  ("cumulative_ion_heating_temp",): ("cumulative_ion_heating","rho"),
+  ("cumulative_direct_heating",): ("cumulative_ion_heating","cumulative_electron_heating"),
   ("b_x",): ("bi_x",),
   ("b_y",): ("bi_y",),
   ("b_z",): ("bi_z",),
-  ("diff_time_scale",): ("anomalous_diffusivity",)
+  ("diff_time_scale",): ("anomalous_diffusivity",),
+  ("aia_composite",): ("n","temp")
 }
 
 
@@ -223,6 +306,22 @@ def apply_contour_computation(output_var, file_vars, x, y, bx, by, bz):
   elif output_var == "b_z":
     for i in range(len(file_vars[0])):
         var.append(file_vars[0][i]+bz)
+  elif output_var == "cumulative_electron_heating_temp":
+    for i in range(len(file_vars[0])):
+      result = file_vars[0][i]/(1.380649e-16*file_vars[1][i]/1.6726e-24)
+      var.append(result)
+  elif output_var == "cumulative_ion_heating_temp":
+    for i in range(len(file_vars[0])):
+      result = file_vars[0][i]/(1.380649e-16*file_vars[1][i]/1.6726e-24)
+      var.append(result)
+  elif output_var == "cumulative_direct_heating":
+    for i in range(len(file_vars[0])):
+      result = file_vars[0][i]+file_vars[1][i]
+      var.append(result)
+  elif output_var == "viscous_heating_temp":
+    for i in range(len(file_vars[0])):
+      result = file_vars[0][i]/(1.380649e-16*file_vars[1][i])
+      var.append(result)
   elif output_var == "joule_heating_temp":
     for i in range(len(file_vars[0])):
       result = file_vars[0][i]/(1.380649e-16*file_vars[1][i])
@@ -336,8 +435,37 @@ def apply_contour_computation(output_var, file_vars, x, y, bx, by, bz):
       var.append(field_mag)
   elif output_var == "div_bi":
     for i in range(len(file_vars[0])):
-      divergence = np.abs(div(file_vars[0][i],file_vars[1][i],x,y))
+      divergence = np.abs(div(file_vars[0][i],file_vars[1][i],x,y))/np.sqrt((bx+file_vars[0][i])**2 + (by+file_vars[1][i])**2)
+      # divergence = (div(file_vars[0][i],file_vars[1][i],x,y))/np.sqrt((bx+file_vars[0][i])**2 + (by+file_vars[1][i])**2)
       var.append(divergence)
+  elif output_var == "div_be":
+    for i in range(len(file_vars[0])):
+      divergence = np.abs(div(bx,by,x,y))/np.sqrt((bx+file_vars[0][i])**2 + (by+file_vars[1][i])**2)
+      var.append(divergence)
+  elif output_var == "div_b":
+    for i in range(len(file_vars[0])):
+      divergence = (div(bx+file_vars[0][i],by+file_vars[1][i],x,y))/np.sqrt((bx+file_vars[0][i])**2 + (by+file_vars[1][i])**2)
+      var.append(divergence)
+  elif output_var == "aia_composite": #094,335,193
+    maxR = 0
+    maxG = 0
+    maxB = 0
+    for i in range(len(file_vars[0])):
+      respR = (file_vars[0][i])**2*aia.response("094A",file_vars[1][i])
+      respG = (file_vars[0][i])**2*aia.response("335A",file_vars[1][i])
+      respB = (file_vars[0][i])**2*aia.response("193A",file_vars[1][i])
+      maxR = max(maxR,np.max(respR))
+      maxG = max(maxG,np.max(respG))
+      maxB = max(maxB,np.max(respB))
+    for i in range(len(file_vars[0])):
+      respR = (file_vars[0][i])**2*aia.response("094A",file_vars[1][i])
+      respG = (file_vars[0][i])**2*aia.response("335A",file_vars[1][i])
+      respB = (file_vars[0][i])**2*aia.response("193A",file_vars[1][i])
+      a_0 = 0.001
+      respR = np.arcsinh((respR/maxR)/a_0)/np.arcsinh(1.0/a_0)
+      respG = np.arcsinh((respG/maxG)/a_0)/np.arcsinh(1.0/a_0)
+      respB = np.arcsinh((respB/maxB)/a_0)/np.arcsinh(1.0/a_0)
+      var.append(np.array([respR,respG,respB]).transpose((1,2,0)))
   elif aia.is_filter(output_var):
     for i in range(len(file_vars[0])):
       resp = aia.response(output_var,file_vars[1][i])
@@ -355,6 +483,13 @@ def extract_tracer_particles_from_file(filename, display_interval, start_time, e
   line = input_file.readline()
   output_number = 0
   t = []
+
+  label_regex_list = []
+  for i in range(len(label_list)-1,-1,-1):
+    if "*" in label_list[i]:
+      print(label_list[i])
+      label_regex_list.append(label_list.pop(i))
+
   while True:
     #read through to next time step (or file end)
     while line and line[0:2] != "t=":
@@ -379,7 +514,6 @@ def extract_tracer_particles_from_file(filename, display_interval, start_time, e
     curr_set = ([],[])
     curr_labels = []
 
-    print(time)
     line = input_file.readline()
     while line and line[0:2] != "t=":
       comment_split = line.split('#')
@@ -389,26 +523,25 @@ def extract_tracer_particles_from_file(filename, display_interval, start_time, e
       else:
         comment = ""
       
-      # print(comment)
       use_line = True
       if streamline_mode and not (comment == "" or comment[0] == 's'):
         use_line = False
-      if len(label_list) != 0 and comment not in label_list:
-        use_line = False
-      # print(use_line)
+      if (len(label_list) != 0 or len(label_regex_list) != 0) and comment not in label_list:
+        if len(label_regex_list) == 0 or not any(fnmatch.fnmatch(comment,pat) for pat in label_regex_list):
+          use_line = False
       if use_line:
-        # print("added")
         curr_labels.append(comment)
         curr_x,curr_y = comment_split[0].split(',')
-        curr_set[0].append(float(''.join(curr_x.split())))
-        curr_set[1].append(float(''.join(curr_y.split())))
+        curr_set[0].append(float(''.join(curr_x.split()))/1e8)
+        curr_set[1].append(float(''.join(curr_y.split()))/1e8)
 
       line = input_file.readline()
     output_number += 1
     t.append(time)
-    
+
     particle_sets.append(curr_set)
     particle_labels.append(curr_labels)
+
 
     if not line:
       break
