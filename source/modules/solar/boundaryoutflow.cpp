@@ -20,11 +20,13 @@ void BoundaryOutflow::parseModuleConfigs(std::vector<std::string> lhs, std::vect
         if(this_lhs == "max_accel") max_accel = std::stod(this_rhs);
         else if(this_lhs == "falloff_length") falloff_length = std::stod(this_rhs);
         else if(this_lhs == "boundary") boundary = this_rhs;
+        else if(this_lhs == "falloff_shape") falloff_shape = this_rhs;
         else std::cerr << this_lhs << " config not recognized.\n";
     }
 }
 
 void BoundaryOutflow::setupModule(){
+    assert((falloff_shape == "exp" || falloff_shape == "gaussian") && "BoundaryOutflow shape must be exp or gaussian");
     accel_template = constructBoundaryAccel(max_accel,falloff_length);
 }
 
@@ -52,6 +54,7 @@ Grid BoundaryOutflow::constructBoundaryAccel(double strength,double length) cons
     else if (boundary=="x_bound_2") xu = m_pd.m_xu_dt;
     else if (boundary=="y_bound_2") yu = m_pd.m_yu_dt;
     else if (boundary=="y_bound_1") yl = m_pd.m_yl_dt;
+    else assert(false && "BoundaryOutflow boundary config must be {x,y}_bound_{1,2}");
     for(int i = xl; i <= xu; i++){
         for(int j = yl; j <= yu; j++){
         ghost_mask_withboundary(i,j) = 1.0;
@@ -59,10 +62,18 @@ Grid BoundaryOutflow::constructBoundaryAccel(double strength,double length) cons
     }
 
     Grid result;
-    if (boundary=="x_bound_1") result = (-2.3*(x - x.min())/length).exp()*strength;
-    else if (boundary=="x_bound_2") result = (2.3*(x - x.max())/length).exp()*strength;
-    else if (boundary=="y_bound_2") result = (2.3*(y - y.max())/length).exp()*strength;
-    else if (boundary=="y_bound_1") result = (-2.3*(y - y.min())/length).exp()*strength;
-    else assert(false && "BoundaryOutflow boundary config must be {x,y}_bound_{1,2}");
+    if(falloff_shape == "exp"){
+        if (boundary=="x_bound_1") result = (-2.3*(x - x.min())/length).exp()*strength;
+        else if (boundary=="x_bound_2") result = (2.3*(x - x.max())/length).exp()*strength;
+        else if (boundary=="y_bound_2") result = (2.3*(y - y.max())/length).exp()*strength;
+        else if (boundary=="y_bound_1") result = (-2.3*(y - y.min())/length).exp()*strength;
+    } else if(falloff_shape == "gaussian"){
+        if (boundary=="x_bound_1") result = (-2.3*((x - x.min())/length).square()).exp()*strength;
+        else if (boundary=="x_bound_2") result = (2.3*((x - x.max())/length).square()).exp()*strength;
+        else if (boundary=="y_bound_2") result = (2.3*((y - y.max())/length).square()).exp()*strength;
+        else if (boundary=="y_bound_1") result = (-2.3*((y - y.min())/length).square()).exp()*strength;
+    } else {
+        assert(false && "Unexpected option for BoundaryOutflow falloff_shape");
+    }
     return ghost_mask_withboundary*result;
 }

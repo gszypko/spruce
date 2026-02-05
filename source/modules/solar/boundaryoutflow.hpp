@@ -18,6 +18,7 @@ class BoundaryOutflow : public Module {
         double falloff_length; //scale height of exponential falloff from boundary
         Grid accel_template;
         std::string boundary{"y_bound_2"};
+        std::string falloff_shape{"exp"};
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
         Grid constructBoundaryAccel(double strength,double length) const;
 };
