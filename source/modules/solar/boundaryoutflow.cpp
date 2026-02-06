@@ -69,8 +69,8 @@ Grid BoundaryOutflow::constructBoundaryAccel(double strength,double length) cons
         else if (boundary=="y_bound_1") result = (-2.3*(y - y.min())/length).exp()*strength;
     } else if(falloff_shape == "gaussian"){
         if (boundary=="x_bound_1") result = (-2.3*((x - x.min())/length).square()).exp()*strength;
-        else if (boundary=="x_bound_2") result = (2.3*((x - x.max())/length).square()).exp()*strength;
-        else if (boundary=="y_bound_2") result = (2.3*((y - y.max())/length).square()).exp()*strength;
+        else if (boundary=="x_bound_2") result = (-2.3*((-x + x.max())/length).square()).exp()*strength;
+        else if (boundary=="y_bound_2") result = (-2.3*((-y + y.max())/length).square()).exp()*strength;
         else if (boundary=="y_bound_1") result = (-2.3*((y - y.min())/length).square()).exp()*strength;
     } else {
         assert(false && "Unexpected option for BoundaryOutflow falloff_shape");
