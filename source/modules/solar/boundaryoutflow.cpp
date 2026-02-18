@@ -21,6 +21,7 @@ void BoundaryOutflow::parseModuleConfigs(std::vector<std::string> lhs, std::vect
         else if(this_lhs == "falloff_length") falloff_length = std::stod(this_rhs);
         else if(this_lhs == "boundary") boundary = this_rhs;
         else if(this_lhs == "falloff_shape") falloff_shape = this_rhs;
+        else if(this_lhs == "feather_length") feather_length = std::stod(this_rhs);
         else std::cerr << this_lhs << " config not recognized.\n";
     }
 }
@@ -74,6 +75,15 @@ Grid BoundaryOutflow::constructBoundaryAccel(double strength,double length) cons
         else if (boundary=="y_bound_1") result = (-2.3*((y - y.min())/length).square()).exp()*strength;
     } else {
         assert(false && "Unexpected option for BoundaryOutflow falloff_shape");
+    }
+
+    if(feather_length > 0.0){
+        if (boundary=="x_bound_1" || boundary=="x_bound_2") result *= ((-2.3*((y - (y.max()-2.0*feather_length)).max(0.0)/feather_length).square()).exp()
+                                                                        *(-2.3*((y - (y.min()+2.0*feather_length)).min(0.0)/feather_length).square()).exp()
+                                                                          -0.01).max(0.0);
+        else if (boundary=="y_bound_1" || boundary=="y_bound_2") result *= ((-2.3*((x - (x.max()-2.0*feather_length)).max(0.0)/feather_length).square()).exp()
+                                                                            *(-2.3*((x - (x.min()+2.0*feather_length)).min(0.0)/feather_length).square()).exp()
+                                                                             -0.01).max(0.0);
     }
     return ghost_mask_withboundary*result;
 }
