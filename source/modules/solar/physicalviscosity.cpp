@@ -5,6 +5,7 @@
 #include "constants.hpp"
 #include <iostream>
 #include <cassert>
+#include <cmath>
 
 PhysicalViscosity::PhysicalViscosity(PlasmaDomain &pd): Module(pd) {
     assert(dynamic_cast<IdealMHD*>(m_pd.m_eqs.get()) && \
@@ -251,20 +252,20 @@ void PhysicalViscosity::iterateModule(double dt){
 Grid PhysicalViscosity::constructCoefficientGrid(double strength,double ramp_length,double buffer_length) const
 {
     if(ramp_length == 0.0) return strength*Grid::Ones(m_pd.m_xdim,m_pd.m_ydim);
-    // initialize grids and references to PlasmaDomain grids
+
     const Grid& x = m_pd.grid("pos_x");
     const Grid& y = m_pd.grid("pos_y");
-    // note: the choice of the 2.3 coefficient ensures that the exponential reaches about 1% after 1 full length
-    // left boundary
-    Grid result = 1.01*(-2.3*((-x + (x.min()+ramp_length+buffer_length)).max(0.0)/ramp_length).square()).exp() - 0.01;
-    // right boundary
-    result = result.min(1.01*(-2.3*((x - (x.max()-ramp_length-buffer_length)).max(0.0)/ramp_length).square()).exp() - 0.01);
-    // top boundary
-    result = result.min(1.01*(-2.3*((y - (y.max()-ramp_length-buffer_length)).max(0.0)/ramp_length).square()).exp() - 0.01);
-    // bottom boundary
-    result = result.min(1.01*(-2.3*((-y + (y.min()+ramp_length+buffer_length)).max(0.0)/ramp_length).square()).exp() - 0.01);
-    // piecewise minimum calls ensure that the corners a constructed correctly
-    result = result.max(0.0);
+    double x_max = x.max(), y_max = y.max();
+    double x_min = x.min(), y_min = y.min();
+    double x_center = 0.5*(x_min + x_max);
+    double y_center = 0.5*(y_min + y_max);
+    // for the ellipse with axes given by the domain bounds, this param = 1 at the edge of the ellipse and 0 at the center of the domain
+    Grid elliptical_radial_s = (x - x_center).square()/std::pow((x_max - x_center),2.0)
+                                    + (y - y_center).square()/std::pow((y_max - y_center),2.0);
+    double s_length = ramp_length/std::min((x_max - x_center),(y_max - y_center)); //apply scale length parameter to semiminor axis
+    // 2*s_length gives a zero-coefficient layer of at least ~ramp_length around the entire ellipse
+    Grid result = 1.0/0.99*((-2.3*((elliptical_radial_s + 2.0*s_length - 1.0).max(0.0)/s_length).square()).exp() - 0.01).max(0.0); //gaussian falloff
+
     return strength*result;
 }
 
