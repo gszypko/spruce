@@ -22,6 +22,7 @@ void BoundaryOutflow::parseModuleConfigs(std::vector<std::string> lhs, std::vect
         else if(this_lhs == "boundary") boundary = this_rhs;
         else if(this_lhs == "falloff_shape") falloff_shape = this_rhs;
         else if(this_lhs == "feather_length") feather_length = std::stod(this_rhs);
+        else if(this_lhs == "field_aligned_mode") field_aligned_mode = (this_rhs == "true");        
         else std::cerr << this_lhs << " config not recognized.\n";
     }
 }
@@ -32,10 +33,26 @@ void BoundaryOutflow::setupModule(){
 }
 
 void BoundaryOutflow::postIterateModule(double dt){
-    if (boundary=="x_bound_1" || boundary=="x_bound_2")
-        m_pd.m_eqs->grid(IdealMHD::mom_x) += (dt*accel_template*m_pd.m_eqs->grid(IdealMHD::rho));
-    else if (boundary=="y_bound_1" || boundary=="y_bound_2")
-        m_pd.m_eqs->grid(IdealMHD::mom_y) += (dt*accel_template*m_pd.m_eqs->grid(IdealMHD::rho));
+    if (boundary=="x_bound_1" || boundary=="x_bound_2"){
+        if(field_aligned_mode){
+            Grid dot = m_pd.m_eqs->grid(IdealMHD::b_hat_x)*accel_template;
+            m_pd.m_eqs->grid(IdealMHD::mom_x) += (dt*dot*m_pd.m_eqs->grid(IdealMHD::b_hat_x)*m_pd.m_eqs->grid(IdealMHD::rho));
+            m_pd.m_eqs->grid(IdealMHD::mom_y) += (dt*dot*m_pd.m_eqs->grid(IdealMHD::b_hat_y)*m_pd.m_eqs->grid(IdealMHD::rho));
+        }
+        else{
+            m_pd.m_eqs->grid(IdealMHD::mom_x) += (dt*accel_template*m_pd.m_eqs->grid(IdealMHD::rho));
+        }
+    }
+    else if (boundary=="y_bound_1" || boundary=="y_bound_2"){
+        if(field_aligned_mode){
+            Grid dot = m_pd.m_eqs->grid(IdealMHD::b_hat_y)*accel_template;
+            m_pd.m_eqs->grid(IdealMHD::mom_x) += (dt*dot*m_pd.m_eqs->grid(IdealMHD::b_hat_x)*m_pd.m_eqs->grid(IdealMHD::rho));
+            m_pd.m_eqs->grid(IdealMHD::mom_y) += (dt*dot*m_pd.m_eqs->grid(IdealMHD::b_hat_y)*m_pd.m_eqs->grid(IdealMHD::rho));
+        }
+        else{
+            m_pd.m_eqs->grid(IdealMHD::mom_y) += (dt*accel_template*m_pd.m_eqs->grid(IdealMHD::rho));
+        }
+    }
     m_pd.m_eqs->propagateChanges();
 }
 

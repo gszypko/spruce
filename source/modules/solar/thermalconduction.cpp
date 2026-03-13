@@ -100,7 +100,7 @@ void ThermalConduction::iterateModule(double dt){
     }
     if(output_to_file) {
         avg_change = (thermal_energy - old_thermal_energy)/dt;
-        if(flux_saturation) saturation = (sat_terms[0]*avg_change + sat_terms[1]) - avg_change;
+        if(flux_saturation) saturation = sat_terms[0];
     }
     if(m_pd.m_multispecies_mode) {
         if(ms_electron_heating_fraction < 1.0) m_pd.m_cumulative_ion_heating += (1.0 - ms_electron_heating_fraction)*(thermal_energy - old_thermal_energy);

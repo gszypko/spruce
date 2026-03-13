@@ -20,6 +20,7 @@ class BoundaryOutflow : public Module {
         Grid accel_template;
         std::string boundary{"y_bound_2"};
         std::string falloff_shape{"exp"};
+        bool field_aligned_mode{false};
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
         Grid constructBoundaryAccel(double strength,double length) const;
 };

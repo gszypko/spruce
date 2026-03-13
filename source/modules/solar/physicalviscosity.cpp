@@ -74,7 +74,7 @@ int PhysicalViscosity::computeViscousSubcycles(double dt){
             if(v_mag(i,j) == 0.0) directional_factor(i,j) = 4.0; //set to maximum to be safe, in the ambiguous local v=0 case
         }
     }
-    Grid timescale = (m_pd.m_grids[PlasmaDomain::d_x]*m_pd.m_grids[PlasmaDomain::d_y])*m_pd.m_eqs->grid(IdealMHD::rho)/(directional_factor*3.0*coeff_grid.max(0.001*coeff)*(m_pd.m_eqs->grid(IdealMHD::temp).pow(2.5)));
+    Grid timescale = (m_pd.m_grids[PlasmaDomain::d_x]*m_pd.m_grids[PlasmaDomain::d_y])*m_pd.m_eqs->grid(IdealMHD::rho)/(directional_factor*3.0*coeff_grid.max(0.000001*coeff)*(m_pd.m_eqs->grid(IdealMHD::temp).pow(2.5)));
     double min_dt_subcycle = epsilon*timescale.min(m_pd.m_xl,m_pd.m_yl,m_pd.m_xu,m_pd.m_yu);
     return (int)(dt/min_dt_subcycle) + 1;
 }
