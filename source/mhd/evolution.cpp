@@ -249,13 +249,17 @@ void PlasmaDomain::reflectBoundaryExtrapolate(std::vector<Grid>& grids, int i1, 
     for(int v : mom){
       // boundary-perpendicular case
       if((m_eqs->index2name(v).back() == 'x' && x_boundary) || (m_eqs->index2name(v).back() == 'y' && !x_boundary)){
-        m_eqs->grid(v)(i1,j1) = -1.0*m_eqs->grid(v)(i3,j3);
-        m_eqs->grid(v)(i2,j2) = -1.0*m_eqs->grid(v)(i3,j3);
-        // m_eqs->grid(v)(i1,j1) = 0.0;
-        // m_eqs->grid(v)(i2,j2) = 0.0;
+        // m_eqs->grid(v)(i1,j1) = -1.0*m_eqs->grid(v)(i3,j3);
+        // m_eqs->grid(v)(i2,j2) = -1.0*m_eqs->grid(v)(i3,j3);
+        m_eqs->grid(v)(i1,j1) = 0.0;
+        m_eqs->grid(v)(i2,j2) = 0.0;
+        m_eqs->grid(v)(i3,j3) = 0.0;
       } else { // boundary-parallel case
-        m_eqs->grid(v)(i1,j1) = m_eqs->grid(v)(i3,j3);
-        m_eqs->grid(v)(i2,j2) = m_eqs->grid(v)(i3,j3);
+        // m_eqs->grid(v)(i1,j1) = m_eqs->grid(v)(i3,j3);
+        // m_eqs->grid(v)(i2,j2) = m_eqs->grid(v)(i3,j3);
+        m_eqs->grid(v)(i1,j1) = 0.0;
+        m_eqs->grid(v)(i2,j2) = 0.0;
+        m_eqs->grid(v)(i3,j3) = 0.0;
       }
     }
   }
