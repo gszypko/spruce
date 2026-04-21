@@ -19,6 +19,7 @@ class LocalizedHeating : public Module {
         std::string commandLineMessage() const override;
     private:
         double start_time;
+        double ramp_time{0.0};
         double duration;
         double max_heating_rate;
         double stddev_x, stddev_y;

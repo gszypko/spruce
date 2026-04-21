@@ -22,6 +22,7 @@ void LocalizedHeating::parseModuleConfigs(std::vector<std::string> lhs, std::vec
         else if(this_lhs == "stddev_y") stddev_y = std::stod(this_rhs);
         else if(this_lhs == "center_x") center_x = std::stod(this_rhs);
         else if(this_lhs == "center_y") center_y = std::stod(this_rhs);
+        else if(this_lhs == "ramp_time") ramp_time = std::stod(this_rhs);
         else if(this_lhs == "ms_electron_heating_fraction") ms_electron_heating_fraction = std::stod(this_rhs);
         else std::cerr << this_lhs << " config not recognized.\n";
     }
@@ -50,7 +51,14 @@ void LocalizedHeating::preIterateModule(double dt){
 
 void LocalizedHeating::postIterateModule(double dt){
     if(m_pd.m_time < start_time || m_pd.m_time > start_time+duration) return;
-    m_pd.m_eqs->grid(IdealMHD::thermal_energy) += m_pd.m_ghost_zone_mask*(dt*heating_template);
+    double t = m_pd.m_time - start_time;
+    double ramp_factor = 1.0;
+    if(t < ramp_time && t <= 0.5*duration){
+        ramp_factor = t / ramp_time;
+    } else if(t > duration - ramp_time && t > 0.5*duration){
+        ramp_factor = (duration - t)/ramp_time;
+    }
+    m_pd.m_eqs->grid(IdealMHD::thermal_energy) += m_pd.m_ghost_zone_mask*(dt*ramp_factor*heating_template);
     m_pd.m_eqs->propagateChanges();
     if(m_pd.m_multispecies_mode) {
         if(ms_electron_heating_fraction < 1.0) m_pd.m_cumulative_ion_heating += (1.0 - ms_electron_heating_fraction)*m_pd.m_ghost_zone_mask*(dt*heating_template);
