@@ -230,9 +230,9 @@ double BoundaryOutflow::computeMeanOutflow() const
             else if (boundary=="x_bound_2" && b_hat_x(i,j) < 0.0) summand *= -1.0;
             else if (boundary=="y_bound_2" && b_hat_y(i,j) < 0.0) summand *= -1.0;
             else if (boundary=="y_bound_1" && b_hat_y(i,j) > 0.0) summand *= -1.0;
-            sum += summand;
+            sum = std::max(sum,summand);
         }
     }
-    return sum / (double)(cells);
+    return sum;
 }
 
