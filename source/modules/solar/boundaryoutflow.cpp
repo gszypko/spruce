@@ -38,8 +38,8 @@ void BoundaryOutflow::setupModule(){
 
 void BoundaryOutflow::postIterateModule(double dt){
     curr_accel = max_accel;
+    mean_outflow = computeMeanOutflow();
     if(dynamic_mode){
-        mean_outflow = computeMeanOutflow();
         curr_accel = (dynamic_target_speed - mean_outflow)/dynamic_time;
         curr_accel = std::min(curr_accel,max_accel);
         curr_accel = std::max(curr_accel,0.0);
@@ -68,7 +68,7 @@ void BoundaryOutflow::postIterateModule(double dt){
 
 std::string BoundaryOutflow::commandLineMessage() const
 {
-    std::string result = boundary + " boundary outflow enforced (mean " + std::to_string(mean_outflow) + " cm/s outflow)";
+    std::string result = boundary + " boundary outflow enforced (max " + std::to_string(mean_outflow) + " cm/s outflow)";
     if(dynamic_mode) result = result + " (dynamic accel. " + std::to_string(curr_accel) +" cm/s^2)";
     return result;
 }
@@ -219,20 +219,18 @@ double BoundaryOutflow::computeMeanOutflow() const
     const Grid& v_x = m_pd.m_eqs->grid(IdealMHD::v_x);
     const Grid& v_y = m_pd.m_eqs->grid(IdealMHD::v_y);
 
-    int cells = 0;
-    double sum = 0.0;
+    double max = -1.0*dynamic_target_speed;
     for(int i = xl; i <= xu; i++){
         for(int j = yl; j <= yu; j++){
-            cells++;
-            double summand = b_hat_x(i,j)*v_x(i,j) + b_hat_y(i,j)*v_y(i,j);
+            double curr = b_hat_x(i,j)*v_x(i,j) + b_hat_y(i,j)*v_y(i,j);
             //correct for orientation of field to ensure we are targeting outflow
-            if (boundary=="x_bound_1" && b_hat_x(i,j) > 0.0) summand *= -1.0;
-            else if (boundary=="x_bound_2" && b_hat_x(i,j) < 0.0) summand *= -1.0;
-            else if (boundary=="y_bound_2" && b_hat_y(i,j) < 0.0) summand *= -1.0;
-            else if (boundary=="y_bound_1" && b_hat_y(i,j) > 0.0) summand *= -1.0;
-            sum = std::max(sum,summand);
+            if (boundary=="x_bound_1" && b_hat_x(i,j) > 0.0) curr *= -1.0;
+            else if (boundary=="x_bound_2" && b_hat_x(i,j) < 0.0) curr *= -1.0;
+            else if (boundary=="y_bound_2" && b_hat_y(i,j) < 0.0) curr *= -1.0;
+            else if (boundary=="y_bound_1" && b_hat_y(i,j) > 0.0) curr *= -1.0;
+            max = std::max(max,curr);
         }
     }
-    return sum;
+    return max;
 }
 
