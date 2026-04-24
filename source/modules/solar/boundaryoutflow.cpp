@@ -31,7 +31,7 @@ void BoundaryOutflow::parseModuleConfigs(std::vector<std::string> lhs, std::vect
 }
 
 void BoundaryOutflow::setupModule(){
-    assert((falloff_shape == "exp" || falloff_shape == "gaussian") && "BoundaryOutflow shape must be exp or gaussian");
+    assert((falloff_shape == "exp" || falloff_shape == "gaussian" || falloff_shape == "flat") && "BoundaryOutflow shape must be exp or gaussian or flat");
     accel_template = constructBoundaryAccel(falloff_length,feather_length);
     mean_outflow = computeMeanOutflow();
 }
@@ -91,7 +91,7 @@ Grid BoundaryOutflow::constructBoundaryAccel(double length, double feather) cons
         }
     }
 
-    Grid result;
+    Grid result = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
     if(falloff_shape == "exp"){
         if (boundary=="x_bound_1") result = (-2.3*(x - x.min())/length).exp();
         else if (boundary=="x_bound_2") result = (2.3*(x - x.max())/length).exp();
@@ -102,6 +102,26 @@ Grid BoundaryOutflow::constructBoundaryAccel(double length, double feather) cons
         else if (boundary=="x_bound_2") result = (-2.3*((-x + x.max())/length).square()).exp();
         else if (boundary=="y_bound_2") result = (-2.3*((-y + y.max())/length).square()).exp();
         else if (boundary=="y_bound_1") result = (-2.3*((y - y.min())/length).square()).exp();
+    } else if(falloff_shape == "flat"){
+        double x_extremum = 0.0, y_extremum = 0.0;
+        if (boundary=="x_bound_1") x_extremum = x.min();
+        else if (boundary=="x_bound_2") x_extremum = x.max();
+        else if (boundary=="y_bound_2") y_extremum = y.max();
+        else if (boundary=="y_bound_1") y_extremum = y.min();
+        if (boundary=="x_bound_1" || boundary=="x_bound_2") {
+            for(int i = xl; i <= xu; i++){
+                for(int j = yl; j <= yu; j++){
+                    if(std::abs(x(i,j) - x_extremum) <= length) result(i,j) = 1.0;
+                }
+            }
+        }
+        if (boundary=="y_bound_1" || boundary=="y_bound_2") {
+            for(int i = xl; i <= xu; i++){
+                for(int j = yl; j <= yu; j++){
+                    if(std::abs(y(i,j) - y_extremum) <= length) result(i,j) = 1.0;
+                }
+            }
+        }
     } else {
         assert(false && "Unexpected option for BoundaryOutflow falloff_shape");
     }
