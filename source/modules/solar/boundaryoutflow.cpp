@@ -69,7 +69,7 @@ void BoundaryOutflow::postIterateModule(double dt){
 std::string BoundaryOutflow::commandLineMessage() const
 {
     std::string result = boundary + " boundary outflow enforced (max " + std::to_string(mean_outflow) + " cm/s outflow)";
-    if(dynamic_mode) result = result + " (dynamic accel. " + std::to_string(curr_accel) +" cm/s^2)";
+    result = result + " (accel. " + std::to_string(curr_accel) +" cm/s^2)";
     return result;
 }
 
