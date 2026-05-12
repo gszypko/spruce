@@ -19,6 +19,7 @@ void BoundaryOutflow::parseModuleConfigs(std::vector<std::string> lhs, std::vect
         std::string this_rhs = rhs[i];
         if(this_lhs == "max_accel") max_accel = std::stod(this_rhs);
         else if(this_lhs == "falloff_length") falloff_length = std::stod(this_rhs);
+        else if(this_lhs == "level_distance") level_distance = std::stod(this_rhs);
         else if(this_lhs == "boundary") boundary = this_rhs;
         else if(this_lhs == "falloff_shape") falloff_shape = this_rhs;
         else if(this_lhs == "feather_length") feather_length = std::stod(this_rhs);
@@ -31,7 +32,7 @@ void BoundaryOutflow::parseModuleConfigs(std::vector<std::string> lhs, std::vect
 }
 
 void BoundaryOutflow::setupModule(){
-    assert((falloff_shape == "exp" || falloff_shape == "gaussian" || falloff_shape == "flat") && "BoundaryOutflow shape must be exp or gaussian or flat");
+    assert((falloff_shape == "exp" || falloff_shape == "gaussian" || falloff_shape == "flat" || falloff_shape == "linear") && "BoundaryOutflow shape must be exp or gaussian or flat");
     accel_template = constructBoundaryAccel(falloff_length,feather_length);
     mean_outflow = computeMeanOutflow();
 }
@@ -92,6 +93,7 @@ Grid BoundaryOutflow::constructBoundaryAccel(double length, double feather) cons
     }
 
     Grid result = Grid::Zero(m_pd.m_xdim,m_pd.m_ydim);
+    
     if(falloff_shape == "exp"){
         if (boundary=="x_bound_1") result = (-2.3*(x - x.min())/length).exp();
         else if (boundary=="x_bound_2") result = (2.3*(x - x.max())/length).exp();
@@ -102,6 +104,14 @@ Grid BoundaryOutflow::constructBoundaryAccel(double length, double feather) cons
         else if (boundary=="x_bound_2") result = (-2.3*((-x + x.max())/length).square()).exp();
         else if (boundary=="y_bound_2") result = (-2.3*((-y + y.max())/length).square()).exp();
         else if (boundary=="y_bound_1") result = (-2.3*((y - y.min())/length).square()).exp();
+    } else if(falloff_shape == "linear"){
+        Grid one = Grid::Ones(m_pd.m_xdim,m_pd.m_ydim);
+        Grid r = one;
+        if (boundary=="x_bound_1") r = x - level_distance;
+        else if (boundary=="x_bound_2") r = level_distance - x;
+        else if (boundary=="y_bound_2") r = level_distance - y;
+        else if (boundary=="y_bound_1") r = y - level_distance;
+        result = (one - (r).max(0.0)/length).max(0.0);
     } else if(falloff_shape == "flat"){
         double x_extremum = 0.0, y_extremum = 0.0;
         if (boundary=="x_bound_1") x_extremum = x.min();

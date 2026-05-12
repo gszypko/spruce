@@ -21,6 +21,7 @@ class BoundaryOutflow : public Module {
         double dynamic_time{1.0};
         double dynamic_target_speed{0.0};
         double curr_accel{0.0};
+        double level_distance{0.0};
         Grid accel_template;
         std::string boundary{"y_bound_2"};
         std::string falloff_shape{"exp"};
