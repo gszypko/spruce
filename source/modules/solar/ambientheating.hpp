@@ -20,6 +20,7 @@ class AmbientHeating : public Module {
         void parseModuleConfigs(std::vector<std::string> lhs, std::vector<std::string> rhs) override;
         double heating_rate{0.0};
         bool exp_mode{false};
+        bool density_mode{false};
         double exp_base_heating_rate;
         double exp_scale_height;
         bool split_exp_mode{false};
